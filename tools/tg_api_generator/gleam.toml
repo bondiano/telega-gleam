@@ -1,0 +1,14 @@
+name = "tg_api_generator"
+version = "1.0.0"
+
+description = "Generate Telegram API bindings from the official reference."
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleam_json = ">= 2.3.0 and < 3.0.0"
+simplifile = ">= 2.2.0 and < 3.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

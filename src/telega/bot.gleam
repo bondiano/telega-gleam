@@ -233,10 +233,11 @@ fn start_bot_instance(
   session_key session_key: String,
   parent_subject parent_subject: RootBotInstanceSubject(session),
 ) -> Result(BotInstanceSubject(session), actor.StartError) {
-  actor.start_spec(actor.Spec(
+  actor.Spec(
     init: fn() {
       let actor_subj = process.new_subject()
       process.send(parent_subject, actor_subj)
+
       let selector =
         process.new_selector()
         |> process.selecting(actor_subj, function.identity)
@@ -259,7 +260,8 @@ fn start_bot_instance(
     },
     loop: handle_bot_instance_message,
     init_timeout: 10_000,
-  ))
+  )
+  |> actor.start_spec()
 }
 
 // Bot Instance --------------------------------------------------------------------

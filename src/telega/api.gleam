@@ -78,9 +78,7 @@ pub fn set_webhook(
 /// Use this method to get current webhook status.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getwebhookinfo
-pub fn get_webhook_info(
-  config config: TelegramApiConfig,
-) -> Result(WebhookInfo, String) {
+pub fn get_webhook_info(config config) -> Result(WebhookInfo, String) {
   new_get_request(config, path: "getWebhookInfo", query: None)
   |> fetch(config)
   |> map_response(model.decode_webhook_info)
@@ -96,9 +94,7 @@ pub fn delete_webhook(config config: TelegramApiConfig) -> Result(Bool, String) 
 }
 
 /// The same as [delete_webhook](#delete_webhook) but also drops all pending updates.
-pub fn delete_webhook_and_drop_updates(
-  config config: TelegramApiConfig,
-) -> Result(Bool, String) {
+pub fn delete_webhook_and_drop_updates(config config) -> Result(Bool, String) {
   new_get_request(
     config,
     path: "deleteWebhook",
@@ -418,7 +414,7 @@ fn map_response(
 }
 
 // TODO: decode error
-fn response_decoder(result_decoder: fn(Dynamic) -> Result(a, List(DecodeError))) {
+fn response_decoder(result_decoder) {
   dynamic.decode2(
     ApiResponse,
     dynamic.field("ok", dynamic.bool),
