@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/erlang/process.{type Subject}
 import gleam/function
@@ -349,7 +350,7 @@ pub type Hears {
 fn hears_check(text: String, hear: Hears) -> Bool {
   case hear {
     HearText(str) -> text == str
-    HearTexts(strs) -> list.contains(strs, text)
+    HearTexts(strings) -> list.contains(strings, text)
     HearRegex(re) -> regexp.check(re, text)
     HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
   }
@@ -396,30 +397,24 @@ fn do_handle(
     HandleText(handle), TextUpdate(text: text, ..) ->
       Some(handle(new_context(bot, update), text))
     HandleHears(hear, handle), TextUpdate(text: text, ..) -> {
-      case hears_check(text, hear) {
-        True -> Some(handle(new_context(bot, update), text))
-        False -> None
-      }
+      use <- bool.guard(hears_check(text, hear), None)
+      Some(handle(new_context(bot, update), text))
     }
-    HandleCommand(command, handle), CommandUpdate(command: update_command, ..) ->
-      case update_command.command == command {
-        True -> Some(handle(new_context(bot, update), update_command))
-        False -> None
-      }
+    HandleCommand(command, handle), CommandUpdate(command: update_command, ..) -> {
+      use <- bool.guard(update_command.command == command, None)
+      Some(handle(new_context(bot, update), update_command))
+    }
     HandleCommands(commands, handle), CommandUpdate(command: update_command, ..)
     -> {
-      case list.contains(commands, update_command.command) {
-        True -> Some(handle(new_context(bot, update), update_command))
-        False -> None
-      }
+      use <- bool.guard(list.contains(commands, update_command.command), None)
+      Some(handle(new_context(bot, update), update_command))
     }
     HandleCallbackQuery(filter, handle), CallbackQueryUpdate(raw: raw, ..) ->
       case raw.data {
-        Some(data) ->
-          case regexp.check(filter.re, data) {
-            True -> Some(handle(new_context(bot, update), data, raw.id))
-            False -> None
-          }
+        Some(data) -> {
+          use <- bool.guard(regexp.check(filter.re, data), None)
+          Some(handle(new_context(bot, update), data, raw.id))
+        }
         None -> None
       }
     _, _ -> None

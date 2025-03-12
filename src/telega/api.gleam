@@ -72,7 +72,7 @@ pub fn set_webhook(
     query: None,
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to get current webhook status.
@@ -83,7 +83,7 @@ pub fn get_webhook_info(
 ) -> Result(WebhookInfo, String) {
   new_get_request(config, path: "getWebhookInfo", query: None)
   |> fetch(config)
-  |> map_resonse(model.decode_webhook_info)
+  |> map_response(model.decode_webhook_info)
 }
 
 /// Use this method to remove webhook integration if you decide to switch back to [getUpdates](https://core.telegram.org/bots/api#getupdates).
@@ -92,7 +92,7 @@ pub fn get_webhook_info(
 pub fn delete_webhook(config config: TelegramApiConfig) -> Result(Bool, String) {
   new_get_request(config, path: "deleteWebhook", query: None)
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// The same as [delete_webhook](#delete_webhook) but also drops all pending updates.
@@ -105,7 +105,7 @@ pub fn delete_webhook_and_drop_updates(
     query: Some([#("drop_pending_updates", "true")]),
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to log out from the cloud Bot API server before launching the bot locally.
@@ -116,7 +116,7 @@ pub fn delete_webhook_and_drop_updates(
 pub fn log_out(config config: TelegramApiConfig) -> Result(Bool, String) {
   new_get_request(config, path: "logOut", query: None)
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to close the bot instance before moving it from one local server to another.
@@ -127,7 +127,7 @@ pub fn log_out(config config: TelegramApiConfig) -> Result(Bool, String) {
 pub fn close(config config: TelegramApiConfig) -> Result(Bool, String) {
   new_get_request(config, path: "close", query: None)
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to send text messages with additional parameters.
@@ -146,7 +146,7 @@ pub fn send_message(
     query: None,
   )
   |> fetch(config)
-  |> map_resonse(model.decode_message)
+  |> map_response(model.decode_message)
 }
 
 /// Use this method to change the list of the bot's commands. See [commands documentation](https://core.telegram.org/bots/features#commands) for more details about bot commands.
@@ -182,7 +182,7 @@ pub fn set_my_commands(
     query: None,
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to delete the list of the bot's commands for the given scope and user language.
@@ -206,7 +206,7 @@ pub fn delete_my_commands(
     query: None,
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to get the current list of the bot's commands for the given scope and user language.
@@ -229,7 +229,7 @@ pub fn get_my_commands(
     body: json.to_string(body_json),
   )
   |> fetch(config)
-  |> map_resonse(model.decode_bot_command)
+  |> map_response(model.decode_bot_command)
 }
 
 /// Use this method to send an animated emoji that will display a random value.
@@ -248,7 +248,7 @@ pub fn send_dice(
     body: json.to_string(body_json),
   )
   |> fetch(config)
-  |> map_resonse(model.decode_message)
+  |> map_response(model.decode_message)
 }
 
 /// A simple method for testing your bot's authentication token.
@@ -257,7 +257,7 @@ pub fn send_dice(
 pub fn get_me(config config: TelegramApiConfig) -> Result(User, String) {
   new_get_request(config, path: "getMe", query: None)
   |> fetch(config)
-  |> map_resonse(model.decode_user)
+  |> map_response(model.decode_user)
 }
 
 /// Use this method to send answers to callback queries sent from inline keyboards.
@@ -278,7 +278,7 @@ pub fn answer_callback_query(
     body: json.to_string(body_json),
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 /// Use this method to edit text and game messages.
@@ -298,7 +298,7 @@ pub fn edit_message_text(
     body: json.to_string(body_json),
   )
   |> fetch(config)
-  |> map_resonse(model.decode_edit_message_text_result)
+  |> map_response(model.decode_edit_message_text_result)
 }
 
 /// Use this method to forward messages of any kind. Service messages and messages with protected content can't be forwarded.
@@ -318,7 +318,7 @@ pub fn forward_message(
     body: json.to_string(body_json),
   )
   |> fetch(config)
-  |> map_resonse(model.decode_message)
+  |> map_response(model.decode_message)
 }
 
 /// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns True on success.
@@ -336,7 +336,7 @@ pub fn set_chat_menu_button(
       |> json.to_string(),
   )
   |> fetch(config)
-  |> map_resonse(dynamic.bool)
+  |> map_response(dynamic.bool)
 }
 
 fn build_url(config: TelegramApiConfig, path: String) -> String {
@@ -349,7 +349,7 @@ pub fn get_file(
 ) -> Result(File, String) {
   new_get_request(config, path: "getFile", query: Some([#("file_id", file_id)]))
   |> fetch(config)
-  |> map_resonse(model.decode_file)
+  |> map_response(model.decode_file)
 }
 
 fn new_post_request(
@@ -403,7 +403,7 @@ fn api_to_request(
   })
 }
 
-fn map_resonse(
+fn map_response(
   response: Result(Response(String), String),
   result_decoder: fn(Dynamic) -> Result(a, List(DecodeError)),
 ) -> Result(a, String) {
