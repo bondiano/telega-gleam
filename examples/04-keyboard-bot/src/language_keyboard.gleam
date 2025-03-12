@@ -45,7 +45,7 @@ pub fn option_to_language(option: String) {
 pub fn build_keyboard_callback_data() {
   keyboard.new_callback_data(
     id: keyboard_id,
-    serilize: fn(data: Language) {
+    serialize: fn(data: Language) {
       case data {
         Russian -> "russian"
         English -> "english"

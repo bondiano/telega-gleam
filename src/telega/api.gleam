@@ -332,7 +332,7 @@ pub fn set_chat_menu_button(
     config:,
     path: "setChatMenuButton",
     query: None,
-    body: model.encode_set_chat_menu_button_parametes(parameters)
+    body: model.encode_set_chat_menu_button_parameters(parameters)
       |> json.to_string(),
   )
   |> fetch(config)

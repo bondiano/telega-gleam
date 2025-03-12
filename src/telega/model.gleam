@@ -2226,7 +2226,7 @@ pub type SetChatMenuButtonParameters {
   )
 }
 
-pub fn encode_set_chat_menu_button_parametes(
+pub fn encode_set_chat_menu_button_parameters(
   params: SetChatMenuButtonParameters,
 ) -> Json {
   json_object_filter_nulls([

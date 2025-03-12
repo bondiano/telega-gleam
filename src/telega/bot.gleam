@@ -20,7 +20,7 @@ import telega/update.{
 
 // Registry --------------------------------------------------------------------
 
-type RegestrySubject =
+type RegistrySubject =
   Subject(RegistryMessage)
 
 type RootBotInstanceSubject(session) =
@@ -35,7 +35,7 @@ type Registry(session) {
     bot_info: User,
     session_settings: SessionSettings(session),
     handlers: List(Handler(session)),
-    registry_subject: RegestrySubject,
+    registry_subject: RegistrySubject,
     bot_instances_subject: RootBotInstanceSubject(session),
   )
 }
@@ -147,9 +147,9 @@ pub fn start_registry(
   config config: Config,
   handlers handlers: List(Handler(session)),
   session_settings session_settings: SessionSettings(session),
-  root_subject root_subject: Subject(RegestrySubject),
+  root_subject root_subject: Subject(RegistrySubject),
   bot_info bot_info: User,
-) -> Result(RegestrySubject, actor.StartError) {
+) -> Result(RegistrySubject, actor.StartError) {
   actor.start_spec(actor.Spec(
     init: fn() {
       let registry_subject = process.new_subject()

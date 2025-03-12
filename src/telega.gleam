@@ -38,14 +38,14 @@ pub opaque type TelegaBuilder(session) {
 
 /// Check if a path is the webhook path for the bot.
 ///
-/// Usefull if you plan to implement own adapter.
+/// Useful if you plan to implement own adapter.
 pub fn is_webhook_path(telega: Telega(session), path: String) -> Bool {
   telega.config.webhook_path == path
 }
 
 /// Check if a secret token is valid.
 ///
-/// Usefull if you plan to implement own adapter.
+/// Useful if you plan to implement own adapter.
 pub fn is_secret_token_valid(telega: Telega(session), token: String) -> Bool {
   telega.config.secret_token == token
 }
@@ -223,7 +223,7 @@ fn nil_session_settings(builder: TelegaBuilder(Nil)) -> TelegaBuilder(Nil) {
 }
 
 /// Initialize a Telega instance with a `Nil` session.
-/// Usefulwhen you don't need to persist the session.
+/// Useful when you don't need to persist the session.
 pub fn init_nil_session(
   builder: TelegaBuilder(Nil),
 ) -> Result(Telega(Nil), String) {

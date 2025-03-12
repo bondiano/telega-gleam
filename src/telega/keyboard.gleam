@@ -1,4 +1,4 @@
-//// This module contains the keyboard constructors and usefull utilities to work with keyboards
+//// This module contains the keyboard constructors and useful utilities to work with keyboards
 
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -151,7 +151,7 @@ pub fn filter_inline_keyboard_query(
 pub opaque type KeyboardCallbackData(data) {
   KeyboardCallbackData(
     id: String,
-    serilize: fn(data) -> String,
+    serialize: fn(data) -> String,
     deserialize: fn(String) -> data,
     delimiter: String,
   )
@@ -169,10 +169,10 @@ pub type KeyboardCallback(data) {
 /// Create a new callback data for inline keyboard buttons
 pub fn new_callback_data(
   id id: String,
-  serilize serilize: fn(data) -> String,
+  serialize serialize: fn(data) -> String,
   deserialize deserialize: fn(String) -> data,
 ) {
-  KeyboardCallbackData(id:, serilize:, deserialize:, delimiter: ":")
+  KeyboardCallbackData(id:, serialize:, deserialize:, delimiter: ":")
 }
 
 /// Change the delimiter for the callback data, usefull if you need to use `:` in the id
@@ -189,7 +189,7 @@ pub fn pack_callback(
   data data: data,
 ) -> KeyboardCallback(data) {
   let payload =
-    callback_data.id <> callback_data.delimiter <> callback_data.serilize(data)
+    callback_data.id <> callback_data.delimiter <> callback_data.serialize(data)
 
   KeyboardCallback(data:, payload:, callback_data:, id: callback_data.id)
 }

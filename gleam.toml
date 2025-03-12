@@ -8,7 +8,7 @@ links = [
     { title = "Examples", href = "https://github.com/bondiano/telega-gleam/tree/master/examples" },
 ]
 
-gleam = ">= 1.7.0"
+gleam = ">= 1.9.1"
 target = "erlang"
 
 [dependencies]
