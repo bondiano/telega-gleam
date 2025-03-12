@@ -78,7 +78,7 @@ pub fn main() {
 }
 ```
 
-Replace `"your bot token from @BotFather"` with the token you received from the BotFather. Set the `url` and `webhook_path` to your server's URL and the desired path for the webhook. If you don't have a server yet, you can use [ngrok](https://ngrok.com/) or [localtunne](https://localtunnel.me/) to create a tunnel to your local machine.
+Replace `"your bot token from @BotFather"` with the token you received from the BotFather. Set the `url` and `webhook_path` to your server's URL and the desired path for the webhook. If you don't have a server yet, you can use [ngrok](https://ngrok.com/) or [localtunnel](https://localtunnel.me/) to create a tunnel to your local machine.
 
 Then run the bot:
 

@@ -12,13 +12,13 @@ import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/model as telega_model
 import telega/reply
-import wisp.{type Response}
+import wisp
 import wisp/wisp_mist
 
 type BotContext =
   Context(NameBotSession)
 
-fn middleware(req, bot, handle_request) -> Response {
+fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
@@ -27,7 +27,7 @@ fn middleware(req, bot, handle_request) -> Response {
   handle_request(req)
 }
 
-fn handle_request(bot, req) -> Response {
+fn handle_request(bot, req) {
   use req <- middleware(req, bot)
 
   case wisp.path_segments(req) {
@@ -36,10 +36,7 @@ fn handle_request(bot, req) -> Response {
   }
 }
 
-fn set_name_command_handler(
-  ctx: BotContext,
-  _,
-) -> Result(NameBotSession, String) {
+fn set_name_command_handler(ctx: BotContext, _) {
   use <- bool.guard(ctx.session.state != WaitName, Ok(ctx.session))
   use <- telega.log_context(ctx, "set_name command")
 
@@ -47,10 +44,7 @@ fn set_name_command_handler(
   |> result.map(fn(_) { NameBotSession(name: ctx.session.name, state: SetName) })
 }
 
-fn set_name_message_handler(
-  ctx: BotContext,
-  name,
-) -> Result(NameBotSession, String) {
+fn set_name_message_handler(ctx: BotContext, name) {
   use <- bool.guard(ctx.session.state != SetName, Ok(ctx.session))
   use <- telega.log_context(ctx, "set_name")
 
@@ -58,17 +52,14 @@ fn set_name_message_handler(
   |> result.map(fn(_) { NameBotSession(name: name, state: WaitName) })
 }
 
-fn get_name_command_handler(
-  ctx: BotContext,
-  _,
-) -> Result(NameBotSession, String) {
+fn get_name_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "get_name command")
 
   reply.with_text(ctx, "Your name is: " <> ctx.session.name)
   |> result.map(fn(_) { ctx.session })
 }
 
-fn start_command_handler(ctx, _) -> Result(NameBotSession, String) {
+fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
   telega_api.set_my_commands(

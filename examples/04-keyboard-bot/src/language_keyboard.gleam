@@ -6,10 +6,7 @@ const keyboard_id = "language"
 pub type LanguageInlineKeyboardData =
   KeyboardCallbackData(Language)
 
-pub fn new_inline_keyboard(
-  lang: Language,
-  callback_data: LanguageInlineKeyboardData,
-) {
+pub fn new_inline_keyboard(lang, callback_data) {
   keyboard.new_inline([
     [
       keyboard.inline_button(
@@ -24,7 +21,7 @@ pub fn new_inline_keyboard(
   ])
 }
 
-pub fn new_keyboard(lang: Language) {
+pub fn new_keyboard(lang) {
   let buttons_row = case lang {
     Russian -> [keyboard.button(t_english_button_text(lang))]
     English -> [keyboard.button(t_russian_button_text(lang))]
@@ -34,7 +31,7 @@ pub fn new_keyboard(lang: Language) {
   |> keyboard.one_time
 }
 
-pub fn option_to_language(option: String) {
+pub fn option_to_language(option) {
   case option {
     "🇷🇺 Russian" -> Russian
     "🇬🇧 Английский" -> English
@@ -45,13 +42,13 @@ pub fn option_to_language(option: String) {
 pub fn build_keyboard_callback_data() {
   keyboard.new_callback_data(
     id: keyboard_id,
-    serialize: fn(data: Language) {
+    serialize: fn(data) {
       case data {
         Russian -> "russian"
         English -> "english"
       }
     },
-    deserialize: fn(payload: String) {
+    deserialize: fn(payload) {
       case payload {
         "russian" -> Russian
         "english" -> English
@@ -61,14 +58,14 @@ pub fn build_keyboard_callback_data() {
   )
 }
 
-fn t_russian_button_text(lang: Language) {
+fn t_russian_button_text(lang) {
   case lang {
     Russian -> "✅ 🇷🇺 Русский"
     English -> "🇷🇺 Russian"
   }
 }
 
-fn t_english_button_text(lang: Language) {
+fn t_english_button_text(lang) {
   case lang {
     Russian -> "🇬🇧 Английский"
     English -> "✅ 🇬🇧 English"

@@ -4,26 +4,15 @@ import gleam/erlang/process
 import gleam/option.{None, Some}
 import gleam/result
 import mist
-import telega.{type Telega}
+import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
-import telega/bot.{type Context}
 import telega/model as telega_model
 import telega/reply
-import wisp.{type Request, type Response}
+import wisp
 import wisp/wisp_mist
 
-type Bot =
-  Telega(Nil)
-
-type NilContext =
-  Context(Nil)
-
-fn middleware(
-  req: Request,
-  bot: Bot,
-  handle_request: fn(Request) -> Response,
-) -> Response {
+fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
@@ -32,7 +21,7 @@ fn middleware(
   handle_request(req)
 }
 
-fn handle_request(bot: Bot, req: Request) -> Response {
+fn handle_request(bot, req) {
   use req <- middleware(req, bot)
 
   case wisp.path_segments(req) {
@@ -41,14 +30,14 @@ fn handle_request(bot: Bot, req: Request) -> Response {
   }
 }
 
-fn dice_command_handler(ctx: NilContext, _) -> Result(Nil, String) {
+fn dice_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "dice")
 
   reply.with_dice(ctx, None)
   |> result.map(fn(_) { Nil })
 }
 
-fn start_command_handler(ctx: NilContext, _) -> Result(Nil, String) {
+fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
   telega_api.set_my_commands(

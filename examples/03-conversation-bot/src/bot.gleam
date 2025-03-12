@@ -35,10 +35,7 @@ fn handle_request(bot, req) -> Response {
   }
 }
 
-fn set_name_command_handler(
-  ctx: BotContext,
-  _,
-) -> Result(NameBotSession, String) {
+fn set_name_command_handler(ctx, _) -> Result(NameBotSession, String) {
   use <- telega.log_context(ctx, "set_name command")
   use _ <- result.try(reply.with_text(ctx, "What's your name?"))
   use ctx, name <- telega.wait_text(ctx)
