@@ -6,11 +6,12 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import justin
 import simplifile
 
 const scrapped_file = "./tg_api.generated.json"
 
-const output_file = "../../src/telega/generated_model.gleam"
+const output_file = "../../src/telega/model.gleam"
 
 pub type GenericType {
   GenericType(name: String, subtypes: List(String))
@@ -222,7 +223,7 @@ fn generate_model_type(model: Model) -> String {
 }
 
 fn generate_model_decoder(model: Model) -> String {
-  let fn_name = string.lowercase(model.name) <> "_decoder"
+  let fn_name = justin.snake_case(model.name) <> "_decoder"
 
   // Generate decoder function signature
   let signature =
@@ -242,7 +243,7 @@ fn generate_model_decoder(model: Model) -> String {
         ["boolean"] -> "decode.bool"
         ["bool"] -> "decode.bool"
         ["true"] -> "decode.bool"
-        [type_name] -> string.lowercase(type_name) <> "_decoder()"
+        [type_name] -> justin.snake_case(type_name) <> "_decoder()"
         ["int", "str"] -> "int_or_string_decoder()"
         ["file", "str"] -> "file_or_string_decoder()"
         ["array", "int"] -> "decode.list(decode.int)"
@@ -256,13 +257,13 @@ fn generate_model_decoder(model: Model) -> String {
             "str" -> "decode.string"
             s -> s
           }
-          |> string.lowercase
+          |> justin.snake_case()
           |> string.replace("(", "")
           |> string.replace(")", "")
           <> "_decoder()))"
         ["array", type_name] ->
           "decode.list("
-          <> case string.lowercase(type_name) {
+          <> case justin.snake_case(type_name) {
             "str" -> "decode.string"
             s -> s <> "_decoder()"
           }
@@ -331,7 +332,7 @@ fn generate_generic_type(generic: GenericType) -> String {
 }
 
 fn generate_generic_decoder(generic: GenericType) -> String {
-  let fn_name = string.lowercase(generic.name) <> "_decoder"
+  let fn_name = justin.snake_case(generic.name) <> "_decoder"
 
   // Generate decoder function signature
   let signature =
@@ -343,9 +344,9 @@ fn generate_generic_decoder(generic: GenericType) -> String {
   // Generate case statement for each subtype
   let cases =
     list.map(generic.subtypes, fn(subtype) {
-      let variant_name = "\"" <> string.lowercase(subtype) <> "\""
+      let variant_name = "\"" <> justin.snake_case(subtype) <> "\""
       let constructor_name = subtype <> generic.name
-      let decoder_name = string.lowercase(subtype) <> "_decoder()"
+      let decoder_name = justin.snake_case(subtype) <> "_decoder()"
 
       "    "
       <> variant_name

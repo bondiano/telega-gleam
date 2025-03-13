@@ -169,6 +169,7 @@ pub fn handle_callback_query(
   ])
 }
 
+/// Wait for a callback query and continue with the given function.
 pub fn wait_callback_query(
   ctx ctx: Context(session),
   filter filter: CallbackQueryFilter,

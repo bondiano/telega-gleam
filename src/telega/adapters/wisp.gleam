@@ -45,7 +45,7 @@ pub fn handle_bot(
       case telega.handle_update(telega, message) {
         Ok(_) -> wisp.ok()
         Error(error) -> {
-          log.error("Failed to handle message: " <> error)
+          log.error("Failed to handle message:\n" <> error)
           wisp.internal_server_error()
         }
       }

@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -32,7 +33,7 @@ pub type Command {
 /// Decode a update from the Telegram API to `Update` instance.
 pub fn decode(json: Dynamic) -> Result(Update, String) {
   use raw_update <- result.try(
-    model.decode_update(json)
+    decode.run(json, model.update_decoder())
     |> result.map_error(fn(e) { "Cannot decode update: " <> string.inspect(e) }),
   )
   use <- try_decode_to_callback_query(raw_update)
@@ -43,7 +44,7 @@ pub fn decode(json: Dynamic) -> Result(Update, String) {
 
 fn try_decode_to_callback_query(
   raw_update: ModelUpdate,
-  on_none: fn() -> Result(Update, String),
+  on_none,
 ) -> Result(Update, String) {
   case raw_update.callback_query {
     Some(callback_query) ->
@@ -55,10 +56,7 @@ fn try_decode_to_callback_query(
   }
 }
 
-fn try_to_decode_message_or_command(
-  raw_update: ModelUpdate,
-  on_none: fn() -> Result(Update, String),
-) {
+fn try_to_decode_message_or_command(raw_update: ModelUpdate, on_none) {
   case raw_update.message {
     Some(message) -> {
       case message.text {
@@ -89,7 +87,7 @@ fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
       case message.entities {
         Some(entities) -> {
           let is_command_entity = fn(entity: MessageEntity) -> Bool {
-            entity.entity_type == "bot_command"
+            entity.type_ == "bot_command"
             && entity.offset == 0
             && entity.length == string.length(text)
           }
