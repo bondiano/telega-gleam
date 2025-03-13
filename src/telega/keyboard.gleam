@@ -9,9 +9,8 @@ import telega/bot.{
   type CallbackQueryFilter, type Hears, CallbackQueryFilter, HearTexts,
 }
 import telega/model.{
-  type InlineKeyboardButton, type KeyboardButton, type ReplyMarkup,
-  InlineKeyboardButton, KeyboardButton, ReplyInlineKeyboardMarkup,
-  ReplyKeyboardMarkup,
+  type InlineKeyboardButton, type KeyboardButton, type ReplyKeyboardMarkup,
+  InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup,
 }
 
 // Keyboard -------------------------------------------------------------------------------------------
@@ -46,7 +45,7 @@ pub fn hear(keyboard: Keyboard) -> Hears {
 }
 
 /// Build a reply markup for `Message` from a keyboard
-pub fn build(keyboard: Keyboard) -> ReplyMarkup {
+pub fn build(keyboard: Keyboard) -> ReplyKeyboardMarkup {
   ReplyKeyboardMarkup(
     keyboard: keyboard.buttons,
     resize_keyboard: keyboard.resize_keyboard,
@@ -108,8 +107,8 @@ pub fn new_inline(buttons: List(List(InlineKeyboardButton))) -> InlineKeyboard {
 }
 
 /// Build a reply markup for `Message` from an inline keyboard
-pub fn build_inline(keyboard: InlineKeyboard) -> ReplyMarkup {
-  ReplyInlineKeyboardMarkup(inline_keyboard: keyboard.buttons)
+pub fn build_inline(keyboard: InlineKeyboard) {
+  model.InlineKeyboardMarkup(inline_keyboard: keyboard.buttons)
 }
 
 /// Create a new inline button
@@ -127,6 +126,8 @@ pub fn inline_button(
     switch_inline_query_current_chat: None,
     switch_inline_query_chosen_chat: None,
     web_app: None,
+    callback_game: None,
+    copy_text: None,
   )
 }
 

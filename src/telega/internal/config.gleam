@@ -16,7 +16,7 @@ pub type Config {
   )
 }
 
-/// Creates a new Bot with the given options.
+/// Simplify the creation of a new config.
 ///
 /// If `secret_token` is not provided, a random one will be generated.
 pub fn new(

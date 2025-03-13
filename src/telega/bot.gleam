@@ -116,14 +116,14 @@ fn add_bot_instance(
           )
         Error(e) -> {
           log.error(
-            "Failed to send message to bot instance: " <> string.inspect(e),
+            "Failed to send message to bot instance:\n" <> string.inspect(e),
           )
           actor.continue(registry)
         }
       }
     }
     Error(e) -> {
-      log.error(e)
+      log.error("Failed to start bot instance:\n" <> e)
       actor.continue(registry)
     }
   }
@@ -133,7 +133,7 @@ fn add_bot_instance(
 pub fn set_webhook(config config: Config) -> Result(Bool, String) {
   api.set_webhook(
     config.api,
-    model.SetWebhookParameters(
+    api.SetWebhookParameters(
       url: config.server_url <> "/" <> config.webhook_path,
       max_connections: None,
       ip_address: None,

@@ -2,11 +2,7 @@ import gleam/option.{type Option}
 import gleam/result
 import telega/api
 import telega/bot.{type Context}
-import telega/model.{
-  type AnswerCallbackQueryParameters, type EditMessageTextParameters,
-  type EditMessageTextResult, type ForwardMessageParameters,
-  type Message as ModelMessage, type ReplyMarkup, type SendDiceParameters,
-}
+import telega/model.{type Message as ModelMessage}
 
 /// Use this method to send text messages.
 ///
@@ -17,9 +13,9 @@ pub fn with_text(
 ) -> Result(ModelMessage, String) {
   api.send_message(
     ctx.config.api,
-    parameters: model.new_send_message_parameters(
+    parameters: api.new_send_message_parameters(
       text: text,
-      chat_id: model.Stringed(ctx.key),
+      chat_id: model.Str(ctx.key),
     ),
   )
 }
@@ -30,15 +26,15 @@ pub fn with_text(
 pub fn with_markup(
   ctx ctx: Context(session),
   text text: String,
-  markup reply_markup: ReplyMarkup,
+  markup reply_markup: model.ReplyKeyboardMarkup,
 ) {
   api.send_message(
     ctx.config.api,
-    parameters: model.new_send_message_parameters(
+    parameters: api.new_send_message_parameters(
       text: text,
-      chat_id: model.Stringed(ctx.key),
+      chat_id: model.Str(ctx.key),
     )
-      |> model.set_send_message_parameters_reply_markup(reply_markup),
+      |> api.set_send_message_parameters_reply_markup(reply_markup),
   )
 }
 
@@ -47,12 +43,12 @@ pub fn with_markup(
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
 pub fn with_dice(
   ctx ctx: Context(session),
-  parameters parameters: Option(SendDiceParameters),
+  parameters parameters: Option(api.SendDiceParameters),
 ) -> Result(ModelMessage, String) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
-      model.new_send_dice_parameters(model.Stringed(ctx.key))
+      api.new_send_dice_parameters(model.Str(ctx.key))
     })
 
   api.send_dice(ctx.config.api, parameters)
@@ -64,8 +60,8 @@ pub fn with_dice(
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
   ctx ctx: Context(session),
-  parameters parameters: EditMessageTextParameters,
-) -> Result(EditMessageTextResult, String) {
+  parameters parameters: api.EditMessageTextParameters,
+) -> Result(model.Message, String) {
   api.edit_message_text(ctx.config.api, parameters)
 }
 
@@ -75,8 +71,8 @@ pub fn edit_text(
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward(
   ctx ctx: Context(session),
-  parameters parameters: ForwardMessageParameters,
-) -> Result(ModelMessage, String) {
+  parameters parameters: api.ForwardMessageParameters,
+) -> Result(model.Message, String) {
   api.forward_message(ctx.config.api, parameters)
 }
 
@@ -87,7 +83,7 @@ pub fn forward(
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
   ctx ctx: Context(session),
-  parameters parameters: AnswerCallbackQueryParameters,
+  parameters parameters: api.AnswerCallbackQueryParameters,
 ) -> Result(Bool, String) {
   api.answer_callback_query(ctx.config.api, parameters)
 }
