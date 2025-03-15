@@ -1,4 +1,4 @@
-name = "tg_api_generator"
+name = "tg_model_generator"
 version = "1.0.0"
 
 description = "Generate Telegram API bindings from the official reference."
