@@ -16,11 +16,9 @@ import gleam/result
 import gleam/string
 import telega/log
 import telega/model.{
-  type BotCommand, type BotCommandScope, type File, type InlineKeyboardButton,
-  type InlineKeyboardMarkup, type IntOrString, type KeyboardButton,
-  type LinkPreviewOptions, type LoginUrl, type Message as ModelMessage,
+  type BotCommand, type BotCommandScope, type File, type InlineKeyboardMarkup,
+  type IntOrString, type LinkPreviewOptions, type Message as ModelMessage,
   type MessageEntity, type ReplyKeyboardMarkup, type ReplyParameters,
-  type SwitchInlineQueryChosenChat, type User,
 }
 
 const default_retry_delay = 1000
@@ -461,7 +459,7 @@ fn send_with_retry(
   let response = httpc.send(api_request)
 
   case retries {
-    0 -> response |> result.map_error(dynamic.from)
+    0 -> result.map_error(response, dynamic.from)
     _ -> {
       case response {
         Ok(response) -> {
@@ -528,7 +526,7 @@ pub fn encode_answer_callback_query_parameters(
   let url = #("url", json.nullable(params.url, json.string))
   let cache_time = #("cache_time", json.nullable(params.cache_time, json.int))
 
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     callback_query_id,
     text,
     show_alert,
@@ -564,39 +562,41 @@ pub fn encode_bot_command_parameters(
 pub fn bot_command_scope_to_json(scope: BotCommandScope) {
   case scope {
     model.BotCommandScopeDefaultBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("default"))])
+      model.json_object_filter_nulls([#("type", json.string("default"))])
     model.BotCommandScopeAllPrivateChatsBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("all_private_chats"))])
+      model.json_object_filter_nulls([
+        #("type", json.string("all_private_chats")),
+      ])
     model.BotCommandScopeAllGroupChatsBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("all_group_chats"))])
+      model.json_object_filter_nulls([#("type", json.string("all_group_chats"))])
     model.BotCommandScopeAllChatAdministratorsBotCommandScope(_) ->
-      json_object_filter_nulls([
+      model.json_object_filter_nulls([
         #("type", json.string("all_chat_administrators")),
       ])
     model.BotCommandScopeChatBotCommandScope(model.BotCommandScopeChat(
       chat_id: chat_id,
       ..,
     )) ->
-      json_object_filter_nulls([
+      model.json_object_filter_nulls([
         #("type", json.string("chat")),
-        #("chat_id", encode_int_or_string(chat_id)),
+        #("chat_id", model.encode_int_or_string(chat_id)),
       ])
     model.BotCommandScopeChatAdministratorsBotCommandScope(model.BotCommandScopeChatAdministrators(
       chat_id: chat_id,
       ..,
     )) ->
-      json_object_filter_nulls([
+      model.json_object_filter_nulls([
         #("type", json.string("chat_administrators")),
-        #("chat_id", encode_int_or_string(chat_id)),
+        #("chat_id", model.encode_int_or_string(chat_id)),
       ])
     model.BotCommandScopeChatMemberBotCommandScope(model.BotCommandScopeChatMember(
       chat_id: chat_id,
       user_id: user_id,
       ..,
     )) ->
-      json_object_filter_nulls([
+      model.json_object_filter_nulls([
         #("type", json.string("chat_member")),
-        #("chat_id", encode_int_or_string(chat_id)),
+        #("chat_id", model.encode_int_or_string(chat_id)),
         #("user_id", json.int(user_id)),
       ])
   }
@@ -652,7 +652,7 @@ pub fn encode_edit_message_text_parameters(
 ) -> Json {
   let chat_id = #(
     "chat_id",
-    json.nullable(params.chat_id, encode_int_or_string),
+    json.nullable(params.chat_id, model.encode_int_or_string),
   )
   let message_id = #("message_id", json.nullable(params.message_id, json.int))
   let inline_message_id = #(
@@ -666,18 +666,21 @@ pub fn encode_edit_message_text_parameters(
   )
   let entities = #(
     "entities",
-    json.nullable(params.entities, json.array(_, encode_message_entity)),
+    json.nullable(params.entities, json.array(_, model.encode_message_entity)),
   )
   let link_preview_options = #(
     "link_preview_options",
-    json.nullable(params.link_preview_options, encode_link_preview_options),
+    json.nullable(
+      params.link_preview_options,
+      model.encode_link_preview_options,
+    ),
   )
   let reply_markup = #(
     "reply_markup",
-    json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    json.nullable(params.reply_markup, model.encode_inline_keyboard_markup),
   )
 
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     chat_id,
     message_id,
     inline_message_id,
@@ -711,9 +714,9 @@ pub type ForwardMessageParameters {
 pub fn encode_forward_message_parameters(
   params: ForwardMessageParameters,
 ) -> Json {
-  json_object_filter_nulls([
-    #("chat_id", encode_int_or_string(params.chat_id)),
-    #("from_chat_id", encode_int_or_string(params.from_chat_id)),
+  model.json_object_filter_nulls([
+    #("chat_id", model.encode_int_or_string(params.chat_id)),
+    #("from_chat_id", model.encode_int_or_string(params.from_chat_id)),
     #("message_id", json.int(params.message_id)),
     #(
       "disable_notification",
@@ -724,7 +727,7 @@ pub fn encode_forward_message_parameters(
   ])
 }
 
-// SendDice ------------------------------------------------------------------------------------------------------------
+// SendDiceParameters ------------------------------------------------------------------------------------------------------------
 
 pub type SendDiceParameters {
   SendDiceParameters(
@@ -756,7 +759,7 @@ pub fn new_send_dice_parameters(
 }
 
 pub fn encode_send_dice_parameters(params: SendDiceParameters) -> Json {
-  let chat_id = #("chat_id", encode_int_or_string(params.chat_id))
+  let chat_id = #("chat_id", model.encode_int_or_string(params.chat_id))
   let message_thread_id = #(
     "message_thread_id",
     json.nullable(params.message_thread_id, json.int),
@@ -772,10 +775,10 @@ pub fn encode_send_dice_parameters(params: SendDiceParameters) -> Json {
   )
   let reply_parameters = #(
     "reply_parameters",
-    json.nullable(params.reply_parameters, encode_reply_keyboard_markup),
+    json.nullable(params.reply_parameters, model.encode_reply_keyboard_markup),
   )
 
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     chat_id,
     message_thread_id,
     emoji,
@@ -850,7 +853,7 @@ pub fn encode_send_message_parameters(
   )
   let chat_id = #(
     "chat_id",
-    encode_int_or_string(send_message_parameters.chat_id),
+    model.encode_int_or_string(send_message_parameters.chat_id),
   )
 
   let message_thread_id = #(
@@ -866,14 +869,14 @@ pub fn encode_send_message_parameters(
     "entities",
     json.nullable(send_message_parameters.entities, json.array(
       _,
-      encode_message_entity,
+      model.encode_message_entity,
     )),
   )
   let link_preview_options = #(
     "link_preview_options",
     json.nullable(
       send_message_parameters.link_preview_options,
-      encode_link_preview_options,
+      model.encode_link_preview_options,
     ),
   )
   let disable_notification = #(
@@ -888,18 +891,18 @@ pub fn encode_send_message_parameters(
     "reply_parameters",
     json.nullable(
       send_message_parameters.reply_parameters,
-      encode_reply_parameters,
+      model.encode_reply_parameters,
     ),
   )
   let reply_markup = #(
     "reply_markup",
     json.nullable(
       send_message_parameters.reply_markup,
-      encode_reply_keyboard_markup,
+      model.encode_reply_keyboard_markup,
     ),
   )
 
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     business_connection_id,
     chat_id,
     message_thread_id,
@@ -928,134 +931,12 @@ pub type SetChatMenuButtonParameters {
 pub fn encode_set_chat_menu_button_parameters(
   params: SetChatMenuButtonParameters,
 ) -> Json {
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     #("chat_id", json.nullable(params.chat_id, json.int)),
-    #("menu_button", json.nullable(params.menu_button, encode_menu_button)),
-  ])
-}
-
-// MenuButton --------------------------------------------------------------------------------------------------------
-
-pub fn encode_menu_button(menu_button: model.MenuButton) -> Json {
-  case menu_button {
-    model.MenuButtonCommandsMenuButton(model.MenuButtonCommands(..)) ->
-      json_object_filter_nulls([#("type", json.string("commands"))])
-    model.MenuButtonWebAppMenuButton(model.MenuButtonWebApp(
-      web_app: web_app,
-      ..,
-    )) ->
-      json_object_filter_nulls([
-        #("type", json.string("web_app")),
-        #("web_app", encode_web_app_info(web_app)),
-      ])
-    model.MenuButtonDefaultMenuButton(model.MenuButtonDefault(..)) ->
-      json_object_filter_nulls([#("type", json.string("default"))])
-  }
-}
-
-// InlineKeyboardMarkup ----------------------------------------------------------------------------------------------
-
-pub fn encode_inline_keyboard_markup(
-  inline_keyboard_markup: InlineKeyboardMarkup,
-) -> Json {
-  let inline_keyboard = #(
-    "inline_keyboard",
-    json.array(inline_keyboard_markup.inline_keyboard, json.array(
-      _,
-      encode_inline_keyboard_button,
-    )),
-  )
-
-  json_object_filter_nulls([inline_keyboard])
-}
-
-// InlineKeyboardButton ----------------------------------------------------------------------------------------------
-
-pub fn encode_inline_keyboard_button(
-  inline_keyboard_button: InlineKeyboardButton,
-) -> Json {
-  let text = #("text", json.string(inline_keyboard_button.text))
-  let url = #("url", json.nullable(inline_keyboard_button.url, json.string))
-  let callback_data = #(
-    "callback_data",
-    json.nullable(inline_keyboard_button.callback_data, json.string),
-  )
-  let web_app = #(
-    "web_app",
-    json.nullable(inline_keyboard_button.web_app, encode_web_app_info),
-  )
-  let login_url = #(
-    "login_url",
-    json.nullable(inline_keyboard_button.login_url, encode_login_url),
-  )
-  let switch_inline_query = #(
-    "switch_inline_query",
-    json.nullable(inline_keyboard_button.switch_inline_query, json.string),
-  )
-  let switch_inline_query_current_chat = #(
-    "switch_inline_query_current_chat",
-    json.nullable(
-      inline_keyboard_button.switch_inline_query_current_chat,
-      json.string,
+    #(
+      "menu_button",
+      json.nullable(params.menu_button, model.encode_menu_button),
     ),
-  )
-  let switch_inline_query_chosen_chat = #(
-    "switch_inline_query_chosen_chat",
-    json.nullable(
-      inline_keyboard_button.switch_inline_query_chosen_chat,
-      encode_switch_inline_query_chosen_chat,
-    ),
-  )
-  let pay = #("pay", json.nullable(inline_keyboard_button.pay, json.bool))
-
-  json_object_filter_nulls([
-    text,
-    url,
-    callback_data,
-    web_app,
-    login_url,
-    switch_inline_query,
-    switch_inline_query_current_chat,
-    switch_inline_query_chosen_chat,
-    pay,
-  ])
-}
-
-// SwitchInlineQueryChosenChat --------------------------------------------------------------------------------------
-
-pub fn encode_switch_inline_query_chosen_chat(
-  switch_inline_query_chosen_chat: SwitchInlineQueryChosenChat,
-) -> Json {
-  let query = #(
-    "query",
-    json.nullable(switch_inline_query_chosen_chat.query, json.string),
-  )
-  let allow_user_chats = #(
-    "allow_user_chats",
-    json.nullable(switch_inline_query_chosen_chat.allow_user_chats, json.bool),
-  )
-  let allow_bot_chats = #(
-    "allow_bot_chats",
-    json.nullable(switch_inline_query_chosen_chat.allow_bot_chats, json.bool),
-  )
-  let allow_group_chats = #(
-    "allow_group_chats",
-    json.nullable(switch_inline_query_chosen_chat.allow_group_chats, json.bool),
-  )
-  let allow_channel_chats = #(
-    "allow_channel_chats",
-    json.nullable(
-      switch_inline_query_chosen_chat.allow_channel_chats,
-      json.bool,
-    ),
-  )
-
-  json_object_filter_nulls([
-    query,
-    allow_user_chats,
-    allow_bot_chats,
-    allow_group_chats,
-    allow_channel_chats,
   ])
 }
 
@@ -1084,7 +965,7 @@ pub type SetWebhookParameters {
 }
 
 pub fn encode_set_webhook_parameters(params: SetWebhookParameters) -> Json {
-  json_object_filter_nulls([
+  model.json_object_filter_nulls([
     #("url", json.string(params.url)),
     #("max_connections", json.nullable(params.max_connections, json.int)),
     #("ip_address", json.nullable(params.ip_address, json.string)),
@@ -1098,225 +979,4 @@ pub fn encode_set_webhook_parameters(params: SetWebhookParameters) -> Json {
     ),
     #("secret_token", json.nullable(params.secret_token, json.string)),
   ])
-}
-
-// WebAppInfo --------------------------------------------------------------------------------------------------------
-
-pub fn encode_web_app_info(info: model.WebAppInfo) -> Json {
-  json_object_filter_nulls([#("url", json.string(info.url))])
-}
-
-// ReplyParameters ----------------------------------------------------------------------------------------------------
-
-pub fn encode_reply_parameters(reply_parameters: ReplyParameters) -> Json {
-  let message_id = #("message_id", json.int(reply_parameters.message_id))
-  let chat_id = #(
-    "chat_id",
-    json.nullable(reply_parameters.chat_id, encode_int_or_string),
-  )
-  let allow_sending_without_reply = #(
-    "allow_sending_without_reply",
-    json.nullable(reply_parameters.allow_sending_without_reply, json.bool),
-  )
-  let quote = #("quote", json.nullable(reply_parameters.quote, json.string))
-  let quote_parse_mode = #(
-    "quote_parse_mode",
-    json.nullable(reply_parameters.quote_parse_mode, json.string),
-  )
-  let quote_entities = #(
-    "quote_entities",
-    json.nullable(reply_parameters.quote_entities, json.array(
-      _,
-      encode_message_entity,
-    )),
-  )
-  let quote_position = #(
-    "quote_position",
-    json.nullable(reply_parameters.quote_position, json.int),
-  )
-
-  json_object_filter_nulls([
-    message_id,
-    chat_id,
-    allow_sending_without_reply,
-    quote,
-    quote_parse_mode,
-    quote_entities,
-    quote_position,
-  ])
-}
-
-// KeyboardButton ----------------------------------------------------------------------------------------------------
-
-pub fn encode_keyboard_button(keyboard_button: KeyboardButton) -> Json {
-  let text = #("text", json.string(keyboard_button.text))
-  json_object_filter_nulls([text])
-}
-
-// ReplyKeyboardMarkup ------------------------------------------------------------------------------------------------
-
-pub fn encode_reply_keyboard_button(
-  reply_keyboard_button: List(KeyboardButton),
-) -> Json {
-  let text = #(
-    "text",
-    json.array(reply_keyboard_button, encode_keyboard_button),
-  )
-  json_object_filter_nulls([text])
-}
-
-pub fn encode_reply_keyboard_markup(
-  reply_keyboard_markup: ReplyKeyboardMarkup,
-) -> Json {
-  let keyboard = #(
-    "keyboard",
-    json.array(reply_keyboard_markup.keyboard, encode_reply_keyboard_button),
-  )
-  let resize_keyboard = #(
-    "resize_keyboard",
-    json.nullable(reply_keyboard_markup.resize_keyboard, json.bool),
-  )
-  let one_time_keyboard = #(
-    "one_time_keyboard",
-    json.nullable(reply_keyboard_markup.one_time_keyboard, json.bool),
-  )
-  let selective = #(
-    "selective",
-    json.nullable(reply_keyboard_markup.selective, json.bool),
-  )
-
-  json_object_filter_nulls([
-    keyboard,
-    resize_keyboard,
-    one_time_keyboard,
-    selective,
-  ])
-}
-
-// MessageEntity ------------------------------------------------------------------------------------------------------
-
-pub fn encode_message_entity(message_entity: MessageEntity) -> Json {
-  let entity_type = #("entity_type", json.string(message_entity.type_))
-  let offset = #("offset", json.int(message_entity.offset))
-  let length = #("length", json.int(message_entity.length))
-  let url = #("url", json.nullable(message_entity.url, json.string))
-  let user = #("user", json.nullable(message_entity.user, encode_user))
-  let language = #(
-    "language",
-    json.nullable(message_entity.language, json.string),
-  )
-  let custom_emoji_id = #(
-    "custom_emoji_id",
-    json.nullable(message_entity.custom_emoji_id, json.string),
-  )
-
-  json_object_filter_nulls([
-    entity_type,
-    offset,
-    length,
-    url,
-    user,
-    language,
-    custom_emoji_id,
-  ])
-}
-
-// User --------------------------------------------------------------------------------------------------------------
-
-pub fn encode_user(user: User) -> Json {
-  let id = #("id", json.int(user.id))
-  let is_bot = #("is_bot", json.bool(user.is_bot))
-  let first_name = #("first_name", json.string(user.first_name))
-  let last_name = #("last_name", json.nullable(user.last_name, json.string))
-  let username = #("username", json.nullable(user.username, json.string))
-  let language_code = #(
-    "language_code",
-    json.nullable(user.language_code, json.string),
-  )
-  let is_premium = #("is_premium", json.nullable(user.is_premium, json.bool))
-  let added_to_attachment_menu = #(
-    "added_to_attachment_menu",
-    json.nullable(user.added_to_attachment_menu, json.bool),
-  )
-
-  json_object_filter_nulls([
-    id,
-    is_bot,
-    first_name,
-    last_name,
-    username,
-    language_code,
-    is_premium,
-    added_to_attachment_menu,
-  ])
-}
-
-// LinkPreviewOptions ------------------------------------------------------------------------------------------------
-
-pub fn encode_link_preview_options(
-  link_preview_options: LinkPreviewOptions,
-) -> Json {
-  json_object_filter_nulls([
-    #("is_disabled", json.nullable(link_preview_options.is_disabled, json.bool)),
-    #("url", json.nullable(link_preview_options.url, json.string)),
-    #(
-      "prefer_small_media",
-      json.nullable(link_preview_options.prefer_small_media, json.bool),
-    ),
-    #(
-      "prefer_large_media",
-      json.nullable(link_preview_options.prefer_large_media, json.bool),
-    ),
-    #(
-      "show_above_text",
-      json.nullable(link_preview_options.show_above_text, json.bool),
-    ),
-  ])
-}
-
-// LoginUrl ----------------------------------------------------------------------------------------------------------
-pub fn encode_login_url(login_url: LoginUrl) -> Json {
-  let url = #("url", json.string(login_url.url))
-  let forward_text = #(
-    "forward_text",
-    json.nullable(login_url.forward_text, json.string),
-  )
-  let bot_username = #(
-    "bot_username",
-    json.nullable(login_url.bot_username, json.string),
-  )
-  let request_write_access = #(
-    "request_write_access",
-    json.nullable(login_url.request_write_access, json.bool),
-  )
-
-  json_object_filter_nulls([
-    url,
-    forward_text,
-    bot_username,
-    request_write_access,
-  ])
-}
-
-// Common ------------------------------------------------------------------------------------------------------------
-
-fn encode_int_or_string(value: model.IntOrString) -> Json {
-  case value {
-    model.Int(value) -> json.int(value)
-    model.Str(value) -> json.string(value)
-  }
-}
-
-fn json_object_filter_nulls(entries: List(#(String, Json))) -> Json {
-  let null = json.null()
-
-  entries
-  |> list.filter(fn(entry) {
-    let #(_, value) = entry
-    case value == null {
-      True -> False
-      False -> True
-    }
-  })
-  |> json.object
 }

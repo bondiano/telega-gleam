@@ -10,19 +10,15 @@ defmodule TgApiScrapper do
   defstruct models: [], methods: [], generics: []
 
   defmodule Generic do
-    defstruct [:name, :subtypes]
+    defstruct [:name, :subtypes, :discriminator]
   end
 
   defmodule Model do
     defstruct [:name, :description, params: []]
   end
 
-  defmodule Method do
-    defstruct [:name, :type, :return, :description, params: []]
-  end
-
   defmodule Param do
-    defstruct [:name, :type, :description, optional: false]
+    defstruct [:name, :type, :description, :one_of, optional: false]
   end
 
   @url "https://core.telegram.org/bots/api"
@@ -47,8 +43,25 @@ defmodule TgApiScrapper do
     "BackgroundFill",
     "BackgroundType"
   ]
-
-  @zero_parameters ["getMe", "getWebhookInfo", "logOut", "close"]
+  @generic_discriminator_by_type %{
+    "InlineQueryResult" => "type",
+    "InputMessageContent" => "type",
+    "PassportElementError" => "type",
+    "ChatMember" => "status",
+    "BotCommandScope" => "type",
+    "MenuButton" => "type",
+    "InputMedia" => "type",
+    "MaybeInaccessibleMessage" => "type",
+    "ChatBoostSource" => "type",
+    "MessageOrigin" => "type",
+    "ReactionType" => "type",
+    "PaidMedia" => "type",
+    "InputPaidMedia" => "type",
+    "RevenueWithdrawalState" => "type",
+    "TransactionPartner" => "type",
+    "BackgroundFill" => "type",
+    "BackgroundType" => "type"
+  }
 
   @output_path Path.expand("./tg_api.generated.json", __DIR__)
 
@@ -82,7 +95,8 @@ defmodule TgApiScrapper do
 
       name in @generic_types ->
         Logger.info("Generic: #{name}")
-        generic = extract_generic(name, rest)
+        discriminator = @generic_discriminator_by_type[name]
+        generic = extract_generic(name, discriminator, rest)
         result = %{result | generics: result.generics ++ [generic]}
         analyze_html(rest, result)
 
@@ -104,9 +118,6 @@ defmodule TgApiScrapper do
         end
 
       true ->
-        Logger.info("Method: #{name}")
-        method = extract_method(name, rest)
-        result = %{result | methods: result.methods ++ [method]}
         analyze_html(rest, result)
     end
   end
@@ -127,12 +138,10 @@ defmodule TgApiScrapper do
     %TgApiScrapper.Model{name: name, description: description, params: []}
   end
 
-  defp extract_generic(name, tree) do
+  defp extract_generic(name, discriminator, tree) do
     Logger.debug("Extracting generic: #{name}")
-
     subtypes = tree |> find_next("ul") |> Floki.find("li") |> Enum.map(&Floki.text/1)
-
-    %TgApiScrapper.Generic{name: name, subtypes: subtypes}
+    %TgApiScrapper.Generic{name: name, subtypes: subtypes, discriminator: discriminator}
   end
 
   defp extract_model(name, tree) do
@@ -146,26 +155,6 @@ defmodule TgApiScrapper do
   defp extract_model_description([{"p", _, text} | _]), do: text
   defp extract_model_description(_), do: "No description available."
 
-  defp extract_method(name, tree) do
-    type = if String.starts_with?(name, "get"), do: "get", else: "post"
-    description = tree |> find_next("p") |> Floki.text()
-    returned = description |> extract_return_type()
-
-    params =
-      case name in @zero_parameters do
-        true -> []
-        false -> tree |> find_next("table") |> extract_table_params()
-      end
-
-    %TgApiScrapper.Method{
-      name: name,
-      type: type,
-      return: returned,
-      description: description,
-      params: params
-    }
-  end
-
   defp extract_table_params(table) do
     table |> Floki.find("tr") |> Enum.drop(1) |> Enum.map(&table_row_to_param/1)
   end
@@ -177,7 +166,20 @@ defmodule TgApiScrapper do
     opt = Enum.count(opt_row) == 1
     description = extra_row |> Floki.text()
 
-    %TgApiScrapper.Param{name: name, type: types, optional: opt, description: description}
+    one_of =
+      if String.contains?(description, "one of") do
+        Regex.scan(~r{“([^”]+)”}, description) |> Enum.map(&List.last/1)
+      else
+        nil
+      end
+
+    %TgApiScrapper.Param{
+      name: name,
+      type: types,
+      optional: opt,
+      description: description,
+      one_of: one_of
+    }
   end
 
   defp extract_table_row(row) do
@@ -235,81 +237,6 @@ defmodule TgApiScrapper do
         []
     end
   end
-
-  @simple_return_r ~r{(?:r|R)eturns (?:the |a )?([^\s]+)}
-  @as_object_r ~r{(?:r|R)eturns the (?:.+ )?(?:as |a |as a )([^\s]+)}
-  @is_returned_r ~r{([^\s]+) (?:object )?is returned}
-
-  @all_type_regexes_r [@as_object_r, @simple_return_r, @is_returned_r]
-
-  defp extract_return_type(type) do
-    post_ts = [
-      "Returns information about the created topic as a ",
-      "Returns basic information about the bot in form of a ",
-      "Returns the uploaded "
-    ]
-
-    cond do
-      String.contains?(type, "Returns an Array of Update") ->
-        [["array", "Update"]]
-
-      String.contains?(type, "On success, an array of Messages") ->
-        [["array", "Message"]]
-
-      String.contains?(type, "File object is returned") ->
-        ["File"]
-
-      String.contains?(type, "Returns an Array of GameHighScore") ->
-        [["array", "GameHighScore"]]
-
-      String.contains?(type, "Returns an Array of ChatMember") ->
-        [["array", "ChatMember"]]
-
-      String.contains?(type, "Returns an Array of BotCommand") ->
-        [["array", "BotCommand"]]
-
-      String.contains?(type, "Returns an Array of Sticker") ->
-        [["array", "Sticker"]]
-
-      String.contains?(
-        type,
-        "On success, if the message is not an inline message"
-      ) ->
-        # Special case for setGameScore and stopMessageLiveLocation https://core.telegram.org/bots/api#setgamescore
-        ["Message", "true"]
-
-      Enum.any?(post_ts, &String.contains?(type, &1)) ->
-        t = Enum.find(post_ts, &String.contains?(type, &1))
-
-        typ = type |> String.split(t) |> Enum.at(1) |> String.split() |> Enum.at(0) |> good_type()
-
-        [typ]
-
-      true ->
-        Enum.reduce_while(@all_type_regexes_r, ["any"], fn r, acc ->
-          case Regex.run(r, type) do
-            nil ->
-              {:cont, acc}
-
-            match ->
-              {:halt, match |> Enum.take(-1) |> Enum.map(&good_type/1)}
-          end
-        end)
-    end
-  end
-
-  defp good_type(type) when is_binary(type) do
-    type = type |> String.trim(".") |> String.trim(",") |> String.trim()
-
-    case type do
-      "Int" -> "int"
-      "String" -> "str"
-      "True" -> "true"
-      other -> other
-    end
-  end
-
-  defp good_type(type), do: type
 
   defp upper?(string) do
     f = String.first(string)

@@ -14,7 +14,7 @@ const scrapped_file = "./tg_api.generated.json"
 const output_file = "../../src/telega/model.gleam"
 
 pub type GenericType {
-  GenericType(name: String, subtypes: List(String))
+  GenericType(name: String, subtypes: List(String), discriminator: String)
 }
 
 pub type Param {
@@ -25,27 +25,15 @@ pub type Model {
   Model(name: String, params: List(Param), description: Option(String))
 }
 
-pub type Method {
-  Method(
-    name: String,
-    params: List(Param),
-    returns: List(String),
-    description: Option(String),
-  )
-}
-
 pub type ApiDefinition {
-  ApiDefinition(
-    generics: List(GenericType),
-    models: List(Model),
-    methods: List(Method),
-  )
+  ApiDefinition(generics: List(GenericType), models: List(Model))
 }
 
 fn decode_generic_type() {
   use name <- decode.field("name", decode.string)
   use subtypes <- decode.field("subtypes", decode.list(decode.string))
-  decode.success(GenericType(name: name, subtypes: subtypes))
+  use discriminator <- decode.field("discriminator", decode.string)
+  decode.success(GenericType(name:, subtypes:, discriminator:))
 }
 
 fn decode_param() {
@@ -72,12 +60,7 @@ fn decode_param() {
 
   use description <- decode.field("description", decode.string)
   use optional <- decode.field("optional", decode.bool)
-  decode.success(Param(
-    name: name,
-    type_: type_list,
-    description: description,
-    optional: optional,
-  ))
+  decode.success(Param(name:, type_: type_list, description:, optional:))
 }
 
 fn decode_model() {
@@ -85,47 +68,14 @@ fn decode_model() {
   use params <- decode.field("params", decode.list(decode_param()))
   use description <- decode.field("description", decode.optional(decode.string))
 
-  decode.success(Model(name: name, params: params, description: description))
-}
-
-fn decode_method() {
-  use name <- decode.field("name", decode.string)
-  use params <- decode.field("params", decode.list(decode_param()))
-  use returns <- decode.field(
-    "return",
-    decode.one_of(decode.list(decode.string), or: [
-      decode.string |> decode.map(fn(single) { [single] }),
-      decode.list(decode.list(decode.string))
-        |> decode.map(fn(nested) {
-          case nested {
-            [["array", single]] -> [single]
-            [] -> ["List(String)"]
-            _ -> []
-          }
-        }),
-    ]),
-  )
-
-  use description <- decode.field("description", decode.optional(decode.string))
-
-  decode.success(Method(
-    name: name,
-    params: params,
-    returns: returns,
-    description: description,
-  ))
+  decode.success(Model(name:, params:, description:))
 }
 
 fn decode_api_definition() {
   use generics <- decode.field("generics", decode.list(decode_generic_type()))
   use models <- decode.field("models", decode.list(decode_model()))
-  use methods <- decode.field("methods", decode.list(decode_method()))
 
-  decode.success(ApiDefinition(
-    generics: generics,
-    models: models,
-    methods: methods,
-  ))
+  decode.success(ApiDefinition(generics: generics, models: models))
 }
 
 fn map_type(type_: String) -> String {
@@ -222,19 +172,97 @@ fn generate_model_type(model: Model) -> String {
   }
 }
 
+fn get_encoder_for_type(
+  type_: List(String),
+  field_access: String,
+  optional: Bool,
+) -> String {
+  let base_encoder = case type_ {
+    ["int"] -> "json.int"
+    ["float"] -> "json.float"
+    ["string"] | ["str"] -> "json.string"
+    ["boolean"] | ["bool"] | ["true"] -> "json.bool"
+    ["array", inner_type] -> {
+      case inner_type {
+        "int" -> "json.array(_, json.int)"
+        "float" -> "json.array(_, json.float)"
+        "string" | "str" -> "json.array(_, json.string)"
+        "bool" | "boolean" -> "json.array(_, json.bool)"
+        other ->
+          case string.starts_with(other, "List(") {
+            True -> {
+              let inner =
+                string.replace(other, "List(", "") |> string.replace(")", "")
+              "fn(outer_list) { json.array(outer_list, fn(inner_list) { json.array(inner_list, encode_"
+              <> justin.snake_case(inner)
+              <> ")})}"
+            }
+            False -> "json.array(_, encode_" <> justin.snake_case(other) <> ")"
+          }
+      }
+    }
+    ["int", "str"] -> "encode_int_or_string"
+    ["file", "str"] -> "encode_file_or_string"
+    [single] -> "encode_" <> justin.snake_case(single)
+    multiple -> {
+      let encoder_name =
+        list.map(multiple, justin.snake_case) |> string.join("_or_")
+        <> "_encoder"
+      "encode_" <> encoder_name
+    }
+  }
+
+  case optional {
+    True -> "json.nullable(" <> field_access <> ", " <> base_encoder <> ")"
+    False -> base_encoder <> "(" <> field_access <> ")"
+  }
+}
+
+fn generate_model_encoder(model: Model) -> String {
+  let fn_name = "encode_" <> justin.snake_case(model.name)
+  let param_name = justin.snake_case(model.name)
+
+  let signature =
+    "pub fn "
+    <> fn_name
+    <> "("
+    <> case model.params {
+      [] -> "_" <> param_name
+      _ -> param_name
+    }
+    <> ": "
+    <> model.name
+    <> ") -> Json {\n"
+
+  case model.params {
+    [] -> signature <> "json_object_filter_nulls([])\n}\n"
+    _ -> {
+      let fields =
+        list.map(model.params, fn(param) {
+          let field_access = param_name <> "." <> map_param_name(param.name)
+          let encoder =
+            get_encoder_for_type(param.type_, field_access, param.optional)
+          "#(\"" <> param.name <> "\", " <> encoder <> ")"
+        })
+
+      signature
+      <> "json_object_filter_nulls([\n"
+      <> string.join(fields, ",\n")
+      <> ",\n  ])\n}\n"
+    }
+  }
+}
+
 fn generate_model_decoder(model: Model) -> String {
   let fn_name = justin.snake_case(model.name) <> "_decoder"
 
-  // Generate decoder function signature
   let signature =
     "pub fn " <> fn_name <> "() -> decode.Decoder(" <> model.name <> ") {\n"
 
-  // Generate field decoders for each parameter
   let fields =
     list.map(model.params, fn(param) {
       let field_name = param.name
 
-      // Choose the right decoder based on the parameter type
       let decoder = case param.type_ {
         ["int"] -> "decode.int"
         ["float"] -> "decode.float"
@@ -287,7 +315,6 @@ fn generate_model_decoder(model: Model) -> String {
 
   let fields_str = string.join(fields, "\n")
 
-  // Generate the constructor
   let constructor =
     "    decode.success("
     <> model.name
@@ -296,7 +323,6 @@ fn generate_model_decoder(model: Model) -> String {
       _ -> "(\n"
     }
 
-  // Field assignments
   let field_assignments = case model.params {
     [] -> ""
     _ ->
@@ -309,7 +335,6 @@ fn generate_model_decoder(model: Model) -> String {
       |> string.join(",\n")
   }
 
-  // Close the constructor
   let closing = case model.params {
     [] -> ")\n}\n"
     _ -> "))\n}\n"
@@ -326,7 +351,7 @@ fn generate_generic_type(generic: GenericType) -> String {
 
   "pub type "
   <> generic.name
-  <> " {\n  "
+  <> " {\n"
   <> string.join(subtypes, "\n")
   <> "\n}\n"
 }
@@ -334,39 +359,37 @@ fn generate_generic_type(generic: GenericType) -> String {
 fn generate_generic_decoder(generic: GenericType) -> String {
   let fn_name = justin.snake_case(generic.name) <> "_decoder"
 
-  // Generate decoder function signature
   let signature =
     "pub fn " <> fn_name <> "() -> decode.Decoder(" <> generic.name <> ") {\n"
 
-  // Generate the variant field extraction
-  let variant_field = "  use variant <- decode.field(\"type\", decode.string)\n"
+  let variant_field =
+    "  use variant <- decode.field(\""
+    <> generic.discriminator
+    <> "\", decode.string)\n"
 
-  // Generate case statement for each subtype
   let cases =
     list.map(generic.subtypes, fn(subtype) {
       let variant_name = "\"" <> justin.snake_case(subtype) <> "\""
       let constructor_name = subtype <> generic.name
       let decoder_name = justin.snake_case(subtype) <> "_decoder()"
 
-      "    "
+      ""
       <> variant_name
       <> " -> {\n"
-      <> "      use value <- decode.field(\"value\", "
+      <> "use value <- decode.field(\"value\", "
       <> decoder_name
       <> ")\n"
-      <> "      decode.success("
+      <> "decode.success("
       <> constructor_name
       <> "(value))\n"
-      <> "    }"
+      <> "}"
     })
 
   let cases_str = string.join(cases, "\n")
 
-  // Generate the default case
   let default_case =
     "\n    _ -> panic as \"Invalid variant for " <> generic.name <> "\"\n"
 
-  // Assemble the complete function
   signature
   <> variant_field
   <> "  case variant {\n"
@@ -375,18 +398,70 @@ fn generate_generic_decoder(generic: GenericType) -> String {
   <> "  }\n}\n"
 }
 
-const prelude = "import gleam/dynamic/decode
+fn generate_generic_encoder(generic: GenericType) -> String {
+  let fn_name = "encode_" <> justin.snake_case(generic.name)
+
+  let signature =
+    "pub fn " <> fn_name <> "(value: " <> generic.name <> ") -> Json {\n"
+
+  let cases =
+    list.map(generic.subtypes, fn(subtype) {
+      let constructor_name = subtype <> generic.name
+
+      constructor_name
+      <> "(inner_value) -> encode_"
+      <> justin.snake_case(subtype)
+      <> "(inner_value)\n"
+    })
+
+  let cases_str = string.join(cases, "\n")
+
+  signature <> "  case value {\n" <> cases_str <> "\n  }\n}\n"
+}
+
+const header = "import gleam/dynamic/decode
 import gleam/option.{type Option}
+import gleam/json.{type Json}
+import gleam/list
 
 // This file is auto-generated from the Telegram Bot API documentation.
-// Do not edit it manually.\n\n
+// Do not edit it manually.\n"
+
+const footer = "pub type FileOrString {
+  FileV(value: File)
+  StringV(string: String)
+}
+
+pub fn file_or_string_decoder() -> decode.Decoder(FileOrString) {
+  use variant <- decode.field(\"type\", decode.string)
+  case variant {
+    \"file_v\" -> {
+      use value <- decode.field(\"value\", file_decoder())
+      decode.success(FileV(value:))
+    }
+    \"string\" -> {
+      use string <- decode.field(\"string\", decode.string)
+      decode.success(StringV(string:))
+    }
+    _ -> decode.failure(StringV(\"\"), \"FileOrString\")
+  }
+}
+
+pub fn encode_file_or_string(value: FileOrString) -> Json {
+  case value {
+    FileV(value) -> encode_file(value)
+    StringV(string) -> json.string(string)
+  }
+}
+
+// Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
   Int(value: Int)
   Str(value: String)
 }
 
-fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
+pub fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
   use variant <- decode.field(\"type\", decode.string)
   case variant {
     \"int\" -> {
@@ -401,40 +476,46 @@ fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
   }
 }
 
-pub type FileOrString {
-  FileV(value: File)
-  StringV(string: String)
+pub fn encode_int_or_string(value: IntOrString) -> Json {
+  case value {
+    Int(value) -> json.int(value)
+    Str(value) -> json.string(value)
+  }
 }
 
-fn file_or_string_decoder() -> decode.Decoder(FileOrString) {
-  use variant <- decode.field(\"type\", decode.string)
-  case variant {
-    \"file_v\" -> {
-      use value <- decode.field(\"value\", file_decoder())
-      decode.success(FileV(value:))
-    }
-    \"string\" -> {
-      use string <- decode.field(\"string\", decode.string)
-      decode.success(StringV(string:))
-    }
-    _ -> decode.failure(StringV(\"\"), \"FileOrString\")
-  }
+pub fn json_object_filter_nulls(entries: List(#(String, Json))) -> Json {
+  let null = json.null()
+
+  entries
+  |> list.filter(fn(entry) {
+    let #(_, value) = entry
+    value != null
+  })
+  |> json.object
 }"
 
 fn generate_code(api: ApiDefinition) -> String {
   let model_types = list.map(api.models, generate_model_type)
   let model_decoders = list.map(api.models, generate_model_decoder)
+  let model_encoders = list.map(api.models, generate_model_encoder)
   let generic_types = list.map(api.generics, generate_generic_type)
   let generic_decoders = list.map(api.generics, generate_generic_decoder)
+  let generic_encoders = list.map(api.generics, generate_generic_encoder)
 
-  prelude
+  header
   <> string.join(generic_types, "\n")
   <> "\n"
   <> string.join(model_types, "\n")
   <> "\n"
   <> string.join(model_decoders, "\n")
   <> "\n"
+  <> string.join(model_encoders, "\n")
+  <> "\n"
   <> string.join(generic_decoders, "\n")
+  <> "\n"
+  <> string.join(generic_encoders, "\n")
+  <> "\n"
+  <> footer
 }
 
 fn parse_api_definition(json) {
