@@ -287,7 +287,6 @@ fn generate_model_decoder(model: Model) -> String {
 
   let fields_str = string.join(fields, "\n")
 
-  // Generate the constructor
   let constructor =
     "    decode.success("
     <> model.name
@@ -296,7 +295,6 @@ fn generate_model_decoder(model: Model) -> String {
       _ -> "(\n"
     }
 
-  // Field assignments
   let field_assignments = case model.params {
     [] -> ""
     _ ->
@@ -318,6 +316,179 @@ fn generate_model_decoder(model: Model) -> String {
   signature <> fields_str <> "\n" <> constructor <> field_assignments <> closing
 }
 
+fn generate_model_encoder(model: Model) -> String {
+  let fn_name = "encode_" <> justin.snake_case(model.name)
+  let param_name = justin.snake_case(model.name)
+
+  let signature =
+    "pub fn "
+    <> fn_name
+    <> "("
+    <> case model.params {
+      [] -> "_" <> param_name
+      _ -> param_name
+    }
+    <> ": "
+    <> model.name
+    <> ") -> Json {\n"
+
+  // Проверяем, есть ли параметры
+  case model.params {
+    // Если параметров нет, возвращаем пустой массив
+    [] -> signature <> "  json_object_filter_nulls([])\n}\n"
+
+    // Если параметры есть, генерируем их список
+    _ -> {
+      let fields =
+        list.map(model.params, fn(param) {
+          let field_name = param.name
+          let field_access = param_name <> "." <> map_param_name(field_name)
+
+          let encoder = case param.type_ {
+            ["int"] ->
+              case param.optional {
+                True -> "json.nullable(" <> field_access <> ", json.int)"
+                False -> "json.int(" <> field_access <> ")"
+              }
+            ["float"] ->
+              case param.optional {
+                True -> "json.nullable(" <> field_access <> ", json.float)"
+                False -> "json.float(" <> field_access <> ")"
+              }
+            ["string"] | ["str"] ->
+              case param.optional {
+                True -> "json.nullable(" <> field_access <> ", json.string)"
+                False -> "json.string(" <> field_access <> ")"
+              }
+            ["boolean"] | ["bool"] | ["true"] ->
+              case param.optional {
+                True -> "json.nullable(" <> field_access <> ", json.bool)"
+                False -> "json.bool(" <> field_access <> ")"
+              }
+            ["array", type_name] -> {
+              case type_name {
+                "int" ->
+                  case param.optional {
+                    True ->
+                      "json.nullable("
+                      <> field_access
+                      <> ", json.array(_, json.int))"
+                    False -> "json.array(" <> field_access <> ", json.int)"
+                  }
+                "float" ->
+                  case param.optional {
+                    True ->
+                      "json.nullable("
+                      <> field_access
+                      <> ", json.array(_, json.float))"
+                    False -> "json.array(" <> field_access <> ", json.float)"
+                  }
+                "string" | "str" ->
+                  case param.optional {
+                    True ->
+                      "json.nullable("
+                      <> field_access
+                      <> ", json.array(_, json.string))"
+                    False -> "json.array(" <> field_access <> ", json.string)"
+                  }
+                "bool" | "boolean" ->
+                  case param.optional {
+                    True ->
+                      "json.nullable("
+                      <> field_access
+                      <> ", json.array(_, json.bool))"
+                    False -> "json.array(" <> field_access <> ", json.bool)"
+                  }
+                other ->
+                  case string.starts_with(other, "List(") {
+                    True -> {
+                      let inner_type =
+                        string.replace(other, "List(", "")
+                        |> string.replace(")", "")
+                      case param.optional {
+                        True ->
+                          "json.nullable("
+                          <> field_access
+                          <> ", fn(outer_list) { "
+                          <> "json.array(outer_list, fn(inner_list) { "
+                          <> "json.array(inner_list, encode_"
+                          <> justin.snake_case(inner_type)
+                          <> ")"
+                          <> "})"
+                          <> "})"
+                        False ->
+                          "json.array("
+                          <> field_access
+                          <> ", fn(inner_list) { "
+                          <> "json.array(inner_list, encode_"
+                          <> justin.snake_case(inner_type)
+                          <> ")"
+                          <> "})"
+                      }
+                    }
+                    False -> {
+                      case param.optional {
+                        True ->
+                          "json.nullable("
+                          <> field_access
+                          <> ", json.array(_, encode_"
+                          <> justin.snake_case(other)
+                          <> "))"
+                        False ->
+                          "json.array("
+                          <> field_access
+                          <> ", encode_"
+                          <> justin.snake_case(other)
+                          <> ")"
+                      }
+                    }
+                  }
+              }
+            }
+            ["int", "str"] ->
+              case param.optional {
+                True ->
+                  "json.nullable(" <> field_access <> ", encode_int_or_string)"
+                False -> "encode_int_or_string(" <> field_access <> ")"
+              }
+            ["file", "str"] ->
+              case param.optional {
+                True ->
+                  "json.nullable(" <> field_access <> ", encode_file_or_string)"
+                False -> "encode_file_or_string(" <> field_access <> ")"
+              }
+            [single] ->
+              case param.optional {
+                True ->
+                  "json.nullable("
+                  <> field_access
+                  <> ", encode_"
+                  <> justin.snake_case(single)
+                  <> ")"
+                False ->
+                  "encode_"
+                  <> justin.snake_case(single)
+                  <> "("
+                  <> field_access
+                  <> ")"
+              }
+            _ ->
+              panic as { "Unknown type: " <> { param.type_ |> string.inspect } }
+          }
+
+          "    #(\"" <> field_name <> "\", " <> encoder <> ")"
+        })
+
+      let fields_str = string.join(fields, ",\n")
+
+      signature
+      <> "  json_object_filter_nulls([\n"
+      <> fields_str
+      <> ",\n  ])\n}\n"
+    }
+  }
+}
+
 fn generate_generic_type(generic: GenericType) -> String {
   let subtypes =
     list.map(generic.subtypes, fn(subtype) {
@@ -326,7 +497,7 @@ fn generate_generic_type(generic: GenericType) -> String {
 
   "pub type "
   <> generic.name
-  <> " {\n  "
+  <> " {\n"
   <> string.join(subtypes, "\n")
   <> "\n}\n"
 }
@@ -334,14 +505,11 @@ fn generate_generic_type(generic: GenericType) -> String {
 fn generate_generic_decoder(generic: GenericType) -> String {
   let fn_name = justin.snake_case(generic.name) <> "_decoder"
 
-  // Generate decoder function signature
   let signature =
     "pub fn " <> fn_name <> "() -> decode.Decoder(" <> generic.name <> ") {\n"
 
-  // Generate the variant field extraction
   let variant_field = "  use variant <- decode.field(\"type\", decode.string)\n"
 
-  // Generate case statement for each subtype
   let cases =
     list.map(generic.subtypes, fn(subtype) {
       let variant_name = "\"" <> justin.snake_case(subtype) <> "\""
@@ -362,11 +530,9 @@ fn generate_generic_decoder(generic: GenericType) -> String {
 
   let cases_str = string.join(cases, "\n")
 
-  // Generate the default case
   let default_case =
     "\n    _ -> panic as \"Invalid variant for " <> generic.name <> "\"\n"
 
-  // Assemble the complete function
   signature
   <> variant_field
   <> "  case variant {\n"
@@ -375,18 +541,78 @@ fn generate_generic_decoder(generic: GenericType) -> String {
   <> "  }\n}\n"
 }
 
-const prelude = "import gleam/dynamic/decode
+fn generate_generic_encoder(generic: GenericType) -> String {
+  let fn_name = "encode_" <> justin.snake_case(generic.name)
+
+  let signature =
+    "pub fn " <> fn_name <> "(value: " <> generic.name <> ") -> Json {\n"
+
+  let cases =
+    list.map(generic.subtypes, fn(subtype) {
+      let constructor_name = subtype <> generic.name
+
+      "    "
+      <> constructor_name
+      <> "(inner_value) -> {\n"
+      <> "      json.object([\n"
+      <> "        #(\"type\", json.string(\""
+      <> justin.snake_case(subtype)
+      <> "\")),\n"
+      <> "        #(\"value\", encode_"
+      <> justin.snake_case(subtype)
+      <> "(inner_value)),\n"
+      <> "      ])\n"
+      <> "    }"
+    })
+
+  let cases_str = string.join(cases, "\n")
+
+  signature <> "  case value {\n" <> cases_str <> "\n  }\n}\n"
+}
+
+const header = "import gleam/dynamic/decode
 import gleam/option.{type Option}
+import gleam/json.{type Json}
+import gleam/list
 
 // This file is auto-generated from the Telegram Bot API documentation.
-// Do not edit it manually.\n\n
+// Do not edit it manually.\n"
+
+const footer = "pub type FileOrString {
+  FileV(value: File)
+  StringV(string: String)
+}
+
+pub fn file_or_string_decoder() -> decode.Decoder(FileOrString) {
+  use variant <- decode.field(\"type\", decode.string)
+  case variant {
+    \"file_v\" -> {
+      use value <- decode.field(\"value\", file_decoder())
+      decode.success(FileV(value:))
+    }
+    \"string\" -> {
+      use string <- decode.field(\"string\", decode.string)
+      decode.success(StringV(string:))
+    }
+    _ -> decode.failure(StringV(\"\"), \"FileOrString\")
+  }
+}
+
+pub fn encode_file_or_string(value: FileOrString) -> Json {
+  case value {
+    FileV(value) -> encode_file(value)
+    StringV(string) -> json.string(string)
+  }
+}
+
+// Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
   Int(value: Int)
   Str(value: String)
 }
 
-fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
+pub fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
   use variant <- decode.field(\"type\", decode.string)
   case variant {
     \"int\" -> {
@@ -401,40 +627,46 @@ fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
   }
 }
 
-pub type FileOrString {
-  FileV(value: File)
-  StringV(string: String)
+pub fn encode_int_or_string(value: IntOrString) -> Json {
+  case value {
+    Int(value) -> json.int(value)
+    Str(value) -> json.string(value)
+  }
 }
 
-fn file_or_string_decoder() -> decode.Decoder(FileOrString) {
-  use variant <- decode.field(\"type\", decode.string)
-  case variant {
-    \"file_v\" -> {
-      use value <- decode.field(\"value\", file_decoder())
-      decode.success(FileV(value:))
-    }
-    \"string\" -> {
-      use string <- decode.field(\"string\", decode.string)
-      decode.success(StringV(string:))
-    }
-    _ -> decode.failure(StringV(\"\"), \"FileOrString\")
-  }
+pub fn json_object_filter_nulls(entries: List(#(String, Json))) -> Json {
+  let null = json.null()
+
+  entries
+  |> list.filter(fn(entry) {
+    let #(_, value) = entry
+    value != null
+  })
+  |> json.object
 }"
 
 fn generate_code(api: ApiDefinition) -> String {
   let model_types = list.map(api.models, generate_model_type)
   let model_decoders = list.map(api.models, generate_model_decoder)
+  let model_encoders = list.map(api.models, generate_model_encoder)
   let generic_types = list.map(api.generics, generate_generic_type)
   let generic_decoders = list.map(api.generics, generate_generic_decoder)
+  let generic_encoders = list.map(api.generics, generate_generic_encoder)
 
-  prelude
+  header
   <> string.join(generic_types, "\n")
   <> "\n"
   <> string.join(model_types, "\n")
   <> "\n"
   <> string.join(model_decoders, "\n")
   <> "\n"
+  <> string.join(model_encoders, "\n")
+  <> "\n"
   <> string.join(generic_decoders, "\n")
+  <> "\n"
+  <> string.join(generic_encoders, "\n")
+  <> "\n"
+  <> footer
 }
 
 fn parse_api_definition(json) {
