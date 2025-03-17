@@ -3,8 +3,10 @@ import gleam/json.{type Json}
 import gleam/list
 import gleam/option.{type Option}
 
-// This file is auto-generated from the Telegram Bot API documentation.
-// Do not edit it manually.
+// This file was mostly auto-generated from the Telegram Bot API documentation.
+// But I have to edit it for API params and generic types as a lot of cases
+// are not supported by the auto-generated code.
+
 pub type MaybeInaccessibleMessage {
   MessageMaybeInaccessibleMessage(Message)
   InaccessibleMessageMaybeInaccessibleMessage(InaccessibleMessage)
@@ -1488,7 +1490,7 @@ pub type ReplyKeyboardMarkup {
     /// Optional. The placeholder to be shown in the input field when the keyboard is active; 1-64 characters
     input_field_placeholder: Option(String),
     /// Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply to a message in the same chat and forum topic, sender of the original message.
-    /// 
+    ///
     /// Example: A user requests to change the bot's language, bot replies to the request with a keyboard to select the new language. Other users in the group don't see the keyboard.
     selective: Option(Bool),
   )
@@ -1576,7 +1578,7 @@ pub type ReplyKeyboardRemove {
     /// Requests clients to remove the custom keyboard (user will not be able to summon this keyboard; if you want to hide the keyboard from sight but keep it accessible, use one_time_keyboard in ReplyKeyboardMarkup)
     remove_keyboard: Bool,
     /// Optional. Use this parameter if you want to remove the keyboard for specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply to a message in the same chat and forum topic, sender of the original message.
-    /// 
+    ///
     /// Example: A user votes in a poll, bot returns confirmation message in reply to the vote and removes the keyboard for that user, while still showing the keyboard with poll options to users who haven't voted yet.
     selective: Option(Bool),
   )
@@ -1606,7 +1608,7 @@ pub type InlineKeyboardButton {
     /// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Not supported for messages sent on behalf of a Telegram Business account.
     switch_inline_query: Option(String),
     /// Optional. If set, pressing the button will insert the bot's username and the specified inline query in the current chat's input field. May be empty, in which case only the bot's username will be inserted.
-    /// 
+    ///
     /// This offers a quick way for the user to open your bot in inline mode in the same chat - good for selecting something from multiple options. Not supported in channels and for messages sent on behalf of a Telegram Business account.
     switch_inline_query_current_chat: Option(String),
     /// Optional. If set, pressing the button will prompt the user to select one of their chats of the specified type, open that chat and insert the bot's username and the specified inline query in the input field. Not supported for messages sent on behalf of a Telegram Business account.
@@ -1614,11 +1616,11 @@ pub type InlineKeyboardButton {
     /// Optional. Description of the button that copies the specified text to the clipboard.
     copy_text: Option(CopyTextButton),
     /// Optional. Description of the game that will be launched when the user presses the button.
-    /// 
+    ///
     /// NOTE: This type of button must always be the first button in the first row.
     callback_game: Option(CallbackGame),
     /// Optional. Specify True, to send a Pay button. Substrings “” and “XTR” in the buttons's text will be replaced with a Telegram Star icon.
-    /// 
+    ///
     /// NOTE: This type of button must always be the first button in the first row and can only be used in invoice messages.
     pay: Option(Bool),
   )
@@ -1628,7 +1630,7 @@ pub type InlineKeyboardButton {
 pub type LoginUrl {
   LoginUrl(
     /// An HTTPS URL to be opened with user authorization data added to the query string when the button is pressed. If the user refuses to provide authorization data, the original URL without information about the user will be opened. The data added is the same as described in Receiving authorization data.
-    /// 
+    ///
     /// NOTE: You must always check the hash of the received data to verify the authentication and the integrity of the data as described in Checking authorization.
     url: String,
     /// Optional. New text of the button in forwarded messages.
@@ -2674,7 +2676,7 @@ pub type InlineQueryResultsButton {
     /// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to switch back to the inline mode using the method switchInlineQuery inside the Web App.
     web_app: Option(WebAppInfo),
     /// Optional. Deep-linking parameter for the /start message sent to the bot when a user presses the button. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed.
-    /// 
+    ///
     /// Example: An inline bot that sends YouTube videos can ask the user to connect the bot to their YouTube account to adapt search results accordingly. To do this, it displays a 'Connect your YouTube account' button above the results, or even before showing any. The user presses the button, switches to a private chat with the bot and, in doing so, passes a start parameter that instructs the bot to return an OAuth link. Once done, the bot can offer a switch_inline button so that the user can easily return to the chat where they wanted to use the bot's inline capabilities.
     start_parameter: Option(String),
   )
@@ -13151,40 +13153,41 @@ pub fn encode_game_high_score(game_high_score: GameHighScore) -> Json {
   ])
 }
 
+fn maybe_inaccessible_message_message_decoder() {
+  use message <- decode.then(message_decoder())
+  decode.success(MessageMaybeInaccessibleMessage(message))
+}
+
+fn maybe_inaccessible_message_inaccessible_message_decoder() {
+  use value <- decode.then(inaccessible_message_decoder())
+  decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
+}
+
 pub fn maybe_inaccessible_message_decoder() -> decode.Decoder(
   MaybeInaccessibleMessage,
 ) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "message" -> {
-      use value <- decode.field("value", message_decoder())
-      decode.success(MessageMaybeInaccessibleMessage(value))
-    }
-    "inaccessible_message" -> {
-      use value <- decode.field("value", inaccessible_message_decoder())
-      decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
-    }
-    _ -> panic as "Invalid variant for MaybeInaccessibleMessage"
-  }
+  decode.one_of(maybe_inaccessible_message_message_decoder(), [
+    maybe_inaccessible_message_inaccessible_message_decoder(),
+  ])
 }
 
 pub fn message_origin_decoder() -> decode.Decoder(MessageOrigin) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "message_origin_user" -> {
-      use value <- decode.field("value", message_origin_user_decoder())
+    "user" -> {
+      use value <- decode.then(message_origin_user_decoder())
       decode.success(MessageOriginUserMessageOrigin(value))
     }
-    "message_origin_hidden_user" -> {
-      use value <- decode.field("value", message_origin_hidden_user_decoder())
+    "hidden_user" -> {
+      use value <- decode.then(message_origin_hidden_user_decoder())
       decode.success(MessageOriginHiddenUserMessageOrigin(value))
     }
-    "message_origin_chat" -> {
-      use value <- decode.field("value", message_origin_chat_decoder())
+    "chat" -> {
+      use value <- decode.then(message_origin_chat_decoder())
       decode.success(MessageOriginChatMessageOrigin(value))
     }
-    "message_origin_channel" -> {
-      use value <- decode.field("value", message_origin_channel_decoder())
+    "channel" -> {
+      use value <- decode.then(message_origin_channel_decoder())
       decode.success(MessageOriginChannelMessageOrigin(value))
     }
     _ -> panic as "Invalid variant for MessageOrigin"
@@ -13194,16 +13197,16 @@ pub fn message_origin_decoder() -> decode.Decoder(MessageOrigin) {
 pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "paid_media_preview" -> {
-      use value <- decode.field("value", paid_media_preview_decoder())
+    "preview" -> {
+      use value <- decode.then(paid_media_preview_decoder())
       decode.success(PaidMediaPreviewPaidMedia(value))
     }
-    "paid_media_photo" -> {
-      use value <- decode.field("value", paid_media_photo_decoder())
+    "photo" -> {
+      use value <- decode.then(paid_media_photo_decoder())
       decode.success(PaidMediaPhotoPaidMedia(value))
     }
-    "paid_media_video" -> {
-      use value <- decode.field("value", paid_media_video_decoder())
+    "video" -> {
+      use value <- decode.then(paid_media_video_decoder())
       decode.success(PaidMediaVideoPaidMedia(value))
     }
     _ -> panic as "Invalid variant for PaidMedia"
@@ -13213,19 +13216,16 @@ pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
 pub fn background_fill_decoder() -> decode.Decoder(BackgroundFill) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "background_fill_solid" -> {
-      use value <- decode.field("value", background_fill_solid_decoder())
+    "solid" -> {
+      use value <- decode.then(background_fill_solid_decoder())
       decode.success(BackgroundFillSolidBackgroundFill(value))
     }
-    "background_fill_gradient" -> {
-      use value <- decode.field("value", background_fill_gradient_decoder())
+    "gradient" -> {
+      use value <- decode.then(background_fill_gradient_decoder())
       decode.success(BackgroundFillGradientBackgroundFill(value))
     }
-    "background_fill_freeform_gradient" -> {
-      use value <- decode.field(
-        "value",
-        background_fill_freeform_gradient_decoder(),
-      )
+    "freeform_gradient" -> {
+      use value <- decode.then(background_fill_freeform_gradient_decoder())
       decode.success(BackgroundFillFreeformGradientBackgroundFill(value))
     }
     _ -> panic as "Invalid variant for BackgroundFill"
@@ -13235,20 +13235,20 @@ pub fn background_fill_decoder() -> decode.Decoder(BackgroundFill) {
 pub fn background_type_decoder() -> decode.Decoder(BackgroundType) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "background_type_fill" -> {
-      use value <- decode.field("value", background_type_fill_decoder())
+    "fill" -> {
+      use value <- decode.then(background_type_fill_decoder())
       decode.success(BackgroundTypeFillBackgroundType(value))
     }
-    "background_type_wallpaper" -> {
-      use value <- decode.field("value", background_type_wallpaper_decoder())
+    "wallpaper" -> {
+      use value <- decode.then(background_type_wallpaper_decoder())
       decode.success(BackgroundTypeWallpaperBackgroundType(value))
     }
-    "background_type_pattern" -> {
-      use value <- decode.field("value", background_type_pattern_decoder())
+    "pattern" -> {
+      use value <- decode.then(background_type_pattern_decoder())
       decode.success(BackgroundTypePatternBackgroundType(value))
     }
-    "background_type_chat_theme" -> {
-      use value <- decode.field("value", background_type_chat_theme_decoder())
+    "chat_theme" -> {
+      use value <- decode.then(background_type_chat_theme_decoder())
       decode.success(BackgroundTypeChatThemeBackgroundType(value))
     }
     _ -> panic as "Invalid variant for BackgroundType"
@@ -13258,28 +13258,28 @@ pub fn background_type_decoder() -> decode.Decoder(BackgroundType) {
 pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
   use variant <- decode.field("status", decode.string)
   case variant {
-    "chat_member_owner" -> {
-      use value <- decode.field("value", chat_member_owner_decoder())
+    "creator" -> {
+      use value <- decode.then(chat_member_owner_decoder())
       decode.success(ChatMemberOwnerChatMember(value))
     }
-    "chat_member_administrator" -> {
-      use value <- decode.field("value", chat_member_administrator_decoder())
+    "administrator" -> {
+      use value <- decode.then(chat_member_administrator_decoder())
       decode.success(ChatMemberAdministratorChatMember(value))
     }
-    "chat_member_member" -> {
-      use value <- decode.field("value", chat_member_member_decoder())
+    "member" -> {
+      use value <- decode.then(chat_member_member_decoder())
       decode.success(ChatMemberMemberChatMember(value))
     }
-    "chat_member_restricted" -> {
-      use value <- decode.field("value", chat_member_restricted_decoder())
+    "restricted" -> {
+      use value <- decode.then(chat_member_restricted_decoder())
       decode.success(ChatMemberRestrictedChatMember(value))
     }
-    "chat_member_left" -> {
-      use value <- decode.field("value", chat_member_left_decoder())
+    "left" -> {
+      use value <- decode.then(chat_member_left_decoder())
       decode.success(ChatMemberLeftChatMember(value))
     }
-    "chat_member_banned" -> {
-      use value <- decode.field("value", chat_member_banned_decoder())
+    "banned" -> {
+      use value <- decode.then(chat_member_banned_decoder())
       decode.success(ChatMemberBannedChatMember(value))
     }
     _ -> panic as "Invalid variant for ChatMember"
@@ -13289,16 +13289,16 @@ pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
 pub fn reaction_type_decoder() -> decode.Decoder(ReactionType) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "reaction_type_emoji" -> {
-      use value <- decode.field("value", reaction_type_emoji_decoder())
+    "emoji" -> {
+      use value <- decode.then(reaction_type_emoji_decoder())
       decode.success(ReactionTypeEmojiReactionType(value))
     }
-    "reaction_type_custom_emoji" -> {
-      use value <- decode.field("value", reaction_type_custom_emoji_decoder())
+    "custom_emoji" -> {
+      use value <- decode.then(reaction_type_custom_emoji_decoder())
       decode.success(ReactionTypeCustomEmojiReactionType(value))
     }
-    "reaction_type_paid" -> {
-      use value <- decode.field("value", reaction_type_paid_decoder())
+    "paid" -> {
+      use value <- decode.then(reaction_type_paid_decoder())
       decode.success(ReactionTypePaidReactionType(value))
     }
     _ -> panic as "Invalid variant for ReactionType"
@@ -13308,47 +13308,34 @@ pub fn reaction_type_decoder() -> decode.Decoder(ReactionType) {
 pub fn bot_command_scope_decoder() -> decode.Decoder(BotCommandScope) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "bot_command_scope_default" -> {
-      use value <- decode.field("value", bot_command_scope_default_decoder())
+    "default" -> {
+      use value <- decode.then(bot_command_scope_default_decoder())
       decode.success(BotCommandScopeDefaultBotCommandScope(value))
     }
-    "bot_command_scope_all_private_chats" -> {
-      use value <- decode.field(
-        "value",
-        bot_command_scope_all_private_chats_decoder(),
-      )
+    "all_private_chats" -> {
+      use value <- decode.then(bot_command_scope_all_private_chats_decoder())
       decode.success(BotCommandScopeAllPrivateChatsBotCommandScope(value))
     }
-    "bot_command_scope_all_group_chats" -> {
-      use value <- decode.field(
-        "value",
-        bot_command_scope_all_group_chats_decoder(),
-      )
+    "all_group_chats" -> {
+      use value <- decode.then(bot_command_scope_all_group_chats_decoder())
       decode.success(BotCommandScopeAllGroupChatsBotCommandScope(value))
     }
-    "bot_command_scope_all_chat_administrators" -> {
-      use value <- decode.field(
-        "value",
+    "all_chat_administrators" -> {
+      use value <- decode.then(
         bot_command_scope_all_chat_administrators_decoder(),
       )
       decode.success(BotCommandScopeAllChatAdministratorsBotCommandScope(value))
     }
-    "bot_command_scope_chat" -> {
-      use value <- decode.field("value", bot_command_scope_chat_decoder())
+    "chat" -> {
+      use value <- decode.then(bot_command_scope_chat_decoder())
       decode.success(BotCommandScopeChatBotCommandScope(value))
     }
-    "bot_command_scope_chat_administrators" -> {
-      use value <- decode.field(
-        "value",
-        bot_command_scope_chat_administrators_decoder(),
-      )
+    "chat_administrators" -> {
+      use value <- decode.then(bot_command_scope_chat_administrators_decoder())
       decode.success(BotCommandScopeChatAdministratorsBotCommandScope(value))
     }
-    "bot_command_scope_chat_member" -> {
-      use value <- decode.field(
-        "value",
-        bot_command_scope_chat_member_decoder(),
-      )
+    "chat_member" -> {
+      use value <- decode.then(bot_command_scope_chat_member_decoder())
       decode.success(BotCommandScopeChatMemberBotCommandScope(value))
     }
     _ -> panic as "Invalid variant for BotCommandScope"
@@ -13358,16 +13345,16 @@ pub fn bot_command_scope_decoder() -> decode.Decoder(BotCommandScope) {
 pub fn menu_button_decoder() -> decode.Decoder(MenuButton) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "menu_button_commands" -> {
-      use value <- decode.field("value", menu_button_commands_decoder())
+    "commands" -> {
+      use value <- decode.then(menu_button_commands_decoder())
       decode.success(MenuButtonCommandsMenuButton(value))
     }
-    "menu_button_web_app" -> {
-      use value <- decode.field("value", menu_button_web_app_decoder())
+    "web_app" -> {
+      use value <- decode.then(menu_button_web_app_decoder())
       decode.success(MenuButtonWebAppMenuButton(value))
     }
-    "menu_button_default" -> {
-      use value <- decode.field("value", menu_button_default_decoder())
+    "default" -> {
+      use value <- decode.then(menu_button_default_decoder())
       decode.success(MenuButtonDefaultMenuButton(value))
     }
     _ -> panic as "Invalid variant for MenuButton"
@@ -13377,16 +13364,16 @@ pub fn menu_button_decoder() -> decode.Decoder(MenuButton) {
 pub fn chat_boost_source_decoder() -> decode.Decoder(ChatBoostSource) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "chat_boost_source_premium" -> {
-      use value <- decode.field("value", chat_boost_source_premium_decoder())
+    "premium" -> {
+      use value <- decode.then(chat_boost_source_premium_decoder())
       decode.success(ChatBoostSourcePremiumChatBoostSource(value))
     }
-    "chat_boost_source_gift_code" -> {
-      use value <- decode.field("value", chat_boost_source_gift_code_decoder())
+    "gift_code" -> {
+      use value <- decode.then(chat_boost_source_gift_code_decoder())
       decode.success(ChatBoostSourceGiftCodeChatBoostSource(value))
     }
-    "chat_boost_source_giveaway" -> {
-      use value <- decode.field("value", chat_boost_source_giveaway_decoder())
+    "giveaway" -> {
+      use value <- decode.then(chat_boost_source_giveaway_decoder())
       decode.success(ChatBoostSourceGiveawayChatBoostSource(value))
     }
     _ -> panic as "Invalid variant for ChatBoostSource"
@@ -13396,24 +13383,24 @@ pub fn chat_boost_source_decoder() -> decode.Decoder(ChatBoostSource) {
 pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "input_media_animation" -> {
-      use value <- decode.field("value", input_media_animation_decoder())
+    "animation" -> {
+      use value <- decode.then(input_media_animation_decoder())
       decode.success(InputMediaAnimationInputMedia(value))
     }
-    "input_media_document" -> {
-      use value <- decode.field("value", input_media_document_decoder())
+    "document" -> {
+      use value <- decode.then(input_media_document_decoder())
       decode.success(InputMediaDocumentInputMedia(value))
     }
-    "input_media_audio" -> {
-      use value <- decode.field("value", input_media_audio_decoder())
+    "audio" -> {
+      use value <- decode.then(input_media_audio_decoder())
       decode.success(InputMediaAudioInputMedia(value))
     }
-    "input_media_photo" -> {
-      use value <- decode.field("value", input_media_photo_decoder())
+    "photo" -> {
+      use value <- decode.then(input_media_photo_decoder())
       decode.success(InputMediaPhotoInputMedia(value))
     }
-    "input_media_video" -> {
-      use value <- decode.field("value", input_media_video_decoder())
+    "video" -> {
+      use value <- decode.then(input_media_video_decoder())
       decode.success(InputMediaVideoInputMedia(value))
     }
     _ -> panic as "Invalid variant for InputMedia"
@@ -13423,12 +13410,12 @@ pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
 pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "input_paid_media_photo" -> {
-      use value <- decode.field("value", input_paid_media_photo_decoder())
+    "photo" -> {
+      use value <- decode.then(input_paid_media_photo_decoder())
       decode.success(InputPaidMediaPhotoInputPaidMedia(value))
     }
-    "input_paid_media_video" -> {
-      use value <- decode.field("value", input_paid_media_video_decoder())
+    "video" -> {
+      use value <- decode.then(input_paid_media_video_decoder())
       decode.success(InputPaidMediaVideoInputPaidMedia(value))
     }
     _ -> panic as "Invalid variant for InputPaidMedia"
@@ -13438,113 +13425,137 @@ pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
 pub fn inline_query_result_decoder() -> decode.Decoder(InlineQueryResult) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "inline_query_result_cached_audio" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_audio_decoder(),
+    "audio" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_cached_audio_decoder())
+          decode.success(InlineQueryResultCachedAudioInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(inline_query_result_cached_audio_decoder())
+            decode.success(InlineQueryResultCachedAudioInlineQueryResult(value))
+          },
+        ],
       )
-      decode.success(InlineQueryResultCachedAudioInlineQueryResult(value))
     }
-    "inline_query_result_cached_document" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_document_decoder(),
+    "document" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_document_decoder())
+          decode.success(InlineQueryResultDocumentInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(
+              inline_query_result_cached_document_decoder(),
+            )
+            decode.success(InlineQueryResultCachedDocumentInlineQueryResult(
+              value,
+            ))
+          },
+        ],
       )
-      decode.success(InlineQueryResultCachedDocumentInlineQueryResult(value))
     }
-    "inline_query_result_cached_gif" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_gif_decoder(),
+    "gif" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_gif_decoder())
+          decode.success(InlineQueryResultGifInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(inline_query_result_cached_gif_decoder())
+            decode.success(InlineQueryResultCachedGifInlineQueryResult(value))
+          },
+        ],
       )
-      decode.success(InlineQueryResultCachedGifInlineQueryResult(value))
     }
-    "inline_query_result_cached_mpeg4_gif" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_mpeg4_gif_decoder(),
+    "mpeg4_gif" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_mpeg4_gif_decoder())
+          decode.success(InlineQueryResultMpeg4GifInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(
+              inline_query_result_cached_mpeg4_gif_decoder(),
+            )
+            decode.success(InlineQueryResultCachedMpeg4GifInlineQueryResult(
+              value,
+            ))
+          },
+        ],
       )
-      decode.success(InlineQueryResultCachedMpeg4GifInlineQueryResult(value))
     }
-    "inline_query_result_cached_photo" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_photo_decoder(),
+    "photo" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_photo_decoder())
+          decode.success(InlineQueryResultPhotoInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(inline_query_result_cached_photo_decoder())
+            decode.success(InlineQueryResultCachedPhotoInlineQueryResult(value))
+          },
+        ],
       )
-      decode.success(InlineQueryResultCachedPhotoInlineQueryResult(value))
     }
-    "inline_query_result_cached_sticker" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_sticker_decoder(),
+    "video" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_video_decoder())
+          decode.success(InlineQueryResultVideoInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(inline_query_result_cached_video_decoder())
+            decode.success(InlineQueryResultCachedVideoInlineQueryResult(value))
+          },
+        ],
       )
+    }
+    "voice" -> {
+      decode.one_of(
+        {
+          use value <- decode.then(inline_query_result_voice_decoder())
+          decode.success(InlineQueryResultVoiceInlineQueryResult(value))
+        },
+        or: [
+          {
+            use value <- decode.then(inline_query_result_cached_voice_decoder())
+            decode.success(InlineQueryResultCachedVoiceInlineQueryResult(value))
+          },
+        ],
+      )
+    }
+    "sticker" -> {
+      use value <- decode.then(inline_query_result_cached_sticker_decoder())
       decode.success(InlineQueryResultCachedStickerInlineQueryResult(value))
     }
-    "inline_query_result_cached_video" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_video_decoder(),
-      )
-      decode.success(InlineQueryResultCachedVideoInlineQueryResult(value))
-    }
-    "inline_query_result_cached_voice" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_cached_voice_decoder(),
-      )
-      decode.success(InlineQueryResultCachedVoiceInlineQueryResult(value))
-    }
-    "inline_query_result_article" -> {
-      use value <- decode.field("value", inline_query_result_article_decoder())
+    "article" -> {
+      use value <- decode.then(inline_query_result_article_decoder())
       decode.success(InlineQueryResultArticleInlineQueryResult(value))
     }
-    "inline_query_result_audio" -> {
-      use value <- decode.field("value", inline_query_result_audio_decoder())
-      decode.success(InlineQueryResultAudioInlineQueryResult(value))
-    }
-    "inline_query_result_contact" -> {
-      use value <- decode.field("value", inline_query_result_contact_decoder())
+    "contact" -> {
+      use value <- decode.then(inline_query_result_contact_decoder())
       decode.success(InlineQueryResultContactInlineQueryResult(value))
     }
-    "inline_query_result_game" -> {
-      use value <- decode.field("value", inline_query_result_game_decoder())
+    "game" -> {
+      use value <- decode.then(inline_query_result_game_decoder())
       decode.success(InlineQueryResultGameInlineQueryResult(value))
     }
-    "inline_query_result_document" -> {
-      use value <- decode.field("value", inline_query_result_document_decoder())
-      decode.success(InlineQueryResultDocumentInlineQueryResult(value))
-    }
-    "inline_query_result_gif" -> {
-      use value <- decode.field("value", inline_query_result_gif_decoder())
-      decode.success(InlineQueryResultGifInlineQueryResult(value))
-    }
-    "inline_query_result_location" -> {
-      use value <- decode.field("value", inline_query_result_location_decoder())
+    "location" -> {
+      use value <- decode.then(inline_query_result_location_decoder())
       decode.success(InlineQueryResultLocationInlineQueryResult(value))
     }
-    "inline_query_result_mpeg4_gif" -> {
-      use value <- decode.field(
-        "value",
-        inline_query_result_mpeg4_gif_decoder(),
-      )
-      decode.success(InlineQueryResultMpeg4GifInlineQueryResult(value))
-    }
-    "inline_query_result_photo" -> {
-      use value <- decode.field("value", inline_query_result_photo_decoder())
-      decode.success(InlineQueryResultPhotoInlineQueryResult(value))
-    }
-    "inline_query_result_venue" -> {
-      use value <- decode.field("value", inline_query_result_venue_decoder())
+    "venue" -> {
+      use value <- decode.then(inline_query_result_venue_decoder())
       decode.success(InlineQueryResultVenueInlineQueryResult(value))
     }
-    "inline_query_result_video" -> {
-      use value <- decode.field("value", inline_query_result_video_decoder())
-      decode.success(InlineQueryResultVideoInlineQueryResult(value))
-    }
-    "inline_query_result_voice" -> {
-      use value <- decode.field("value", inline_query_result_voice_decoder())
-      decode.success(InlineQueryResultVoiceInlineQueryResult(value))
-    }
+
     _ -> panic as "Invalid variant for InlineQueryResult"
   }
 }
@@ -13553,32 +13564,23 @@ pub fn input_message_content_decoder() -> decode.Decoder(InputMessageContent) {
   use variant <- decode.field("type", decode.string)
   case variant {
     "input_text_message_content" -> {
-      use value <- decode.field("value", input_text_message_content_decoder())
+      use value <- decode.then(input_text_message_content_decoder())
       decode.success(InputTextMessageContentInputMessageContent(value))
     }
     "input_location_message_content" -> {
-      use value <- decode.field(
-        "value",
-        input_location_message_content_decoder(),
-      )
+      use value <- decode.then(input_location_message_content_decoder())
       decode.success(InputLocationMessageContentInputMessageContent(value))
     }
     "input_venue_message_content" -> {
-      use value <- decode.field("value", input_venue_message_content_decoder())
+      use value <- decode.then(input_venue_message_content_decoder())
       decode.success(InputVenueMessageContentInputMessageContent(value))
     }
     "input_contact_message_content" -> {
-      use value <- decode.field(
-        "value",
-        input_contact_message_content_decoder(),
-      )
+      use value <- decode.then(input_contact_message_content_decoder())
       decode.success(InputContactMessageContentInputMessageContent(value))
     }
     "input_invoice_message_content" -> {
-      use value <- decode.field(
-        "value",
-        input_invoice_message_content_decoder(),
-      )
+      use value <- decode.then(input_invoice_message_content_decoder())
       decode.success(InputInvoiceMessageContentInputMessageContent(value))
     }
     _ -> panic as "Invalid variant for InputMessageContent"
@@ -13590,27 +13592,18 @@ pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
 ) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "revenue_withdrawal_state_pending" -> {
-      use value <- decode.field(
-        "value",
-        revenue_withdrawal_state_pending_decoder(),
-      )
+    "pending" -> {
+      use value <- decode.then(revenue_withdrawal_state_pending_decoder())
       decode.success(RevenueWithdrawalStatePendingRevenueWithdrawalState(value))
     }
-    "revenue_withdrawal_state_succeeded" -> {
-      use value <- decode.field(
-        "value",
-        revenue_withdrawal_state_succeeded_decoder(),
-      )
+    "succeeded" -> {
+      use value <- decode.then(revenue_withdrawal_state_succeeded_decoder())
       decode.success(RevenueWithdrawalStateSucceededRevenueWithdrawalState(
         value,
       ))
     }
-    "revenue_withdrawal_state_failed" -> {
-      use value <- decode.field(
-        "value",
-        revenue_withdrawal_state_failed_decoder(),
-      )
+    "failed" -> {
+      use value <- decode.then(revenue_withdrawal_state_failed_decoder())
       decode.success(RevenueWithdrawalStateFailedRevenueWithdrawalState(value))
     }
     _ -> panic as "Invalid variant for RevenueWithdrawalState"
@@ -13620,41 +13613,32 @@ pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
 pub fn transaction_partner_decoder() -> decode.Decoder(TransactionPartner) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "transaction_partner_user" -> {
-      use value <- decode.field("value", transaction_partner_user_decoder())
+    "user" -> {
+      use value <- decode.then(transaction_partner_user_decoder())
       decode.success(TransactionPartnerUserTransactionPartner(value))
     }
-    "transaction_partner_chat" -> {
-      use value <- decode.field("value", transaction_partner_chat_decoder())
+    "chat" -> {
+      use value <- decode.then(transaction_partner_chat_decoder())
       decode.success(TransactionPartnerChatTransactionPartner(value))
     }
-    "transaction_partner_affiliate_program" -> {
-      use value <- decode.field(
-        "value",
-        transaction_partner_affiliate_program_decoder(),
-      )
+    "affiliate_program" -> {
+      use value <- decode.then(transaction_partner_affiliate_program_decoder())
       decode.success(TransactionPartnerAffiliateProgramTransactionPartner(value))
     }
-    "transaction_partner_fragment" -> {
-      use value <- decode.field("value", transaction_partner_fragment_decoder())
+    "fragment" -> {
+      use value <- decode.then(transaction_partner_fragment_decoder())
       decode.success(TransactionPartnerFragmentTransactionPartner(value))
     }
-    "transaction_partner_telegram_ads" -> {
-      use value <- decode.field(
-        "value",
-        transaction_partner_telegram_ads_decoder(),
-      )
+    "telegram_ads" -> {
+      use value <- decode.then(transaction_partner_telegram_ads_decoder())
       decode.success(TransactionPartnerTelegramAdsTransactionPartner(value))
     }
-    "transaction_partner_telegram_api" -> {
-      use value <- decode.field(
-        "value",
-        transaction_partner_telegram_api_decoder(),
-      )
+    "telegram_api" -> {
+      use value <- decode.then(transaction_partner_telegram_api_decoder())
       decode.success(TransactionPartnerTelegramApiTransactionPartner(value))
     }
-    "transaction_partner_other" -> {
-      use value <- decode.field("value", transaction_partner_other_decoder())
+    "other" -> {
+      use value <- decode.then(transaction_partner_other_decoder())
       decode.success(TransactionPartnerOtherTransactionPartner(value))
     }
     _ -> panic as "Invalid variant for TransactionPartner"
@@ -13662,67 +13646,50 @@ pub fn transaction_partner_decoder() -> decode.Decoder(TransactionPartner) {
 }
 
 pub fn passport_element_error_decoder() -> decode.Decoder(PassportElementError) {
-  use variant <- decode.field("type", decode.string)
+  use variant <- decode.field("sourse", decode.string)
   case variant {
-    "passport_element_error_data_field" -> {
-      use value <- decode.field(
-        "value",
-        passport_element_error_data_field_decoder(),
-      )
+    "data" -> {
+      use value <- decode.then(passport_element_error_data_field_decoder())
       decode.success(PassportElementErrorDataFieldPassportElementError(value))
     }
-    "passport_element_error_front_side" -> {
-      use value <- decode.field(
-        "value",
-        passport_element_error_front_side_decoder(),
-      )
+    "front_side" -> {
+      use value <- decode.then(passport_element_error_front_side_decoder())
       decode.success(PassportElementErrorFrontSidePassportElementError(value))
     }
-    "passport_element_error_reverse_side" -> {
-      use value <- decode.field(
-        "value",
-        passport_element_error_reverse_side_decoder(),
-      )
+    "reverse_side" -> {
+      use value <- decode.then(passport_element_error_reverse_side_decoder())
       decode.success(PassportElementErrorReverseSidePassportElementError(value))
     }
-    "passport_element_error_selfie" -> {
-      use value <- decode.field(
-        "value",
-        passport_element_error_selfie_decoder(),
-      )
+    "selfie" -> {
+      use value <- decode.then(passport_element_error_selfie_decoder())
       decode.success(PassportElementErrorSelfiePassportElementError(value))
     }
-    "passport_element_error_file" -> {
-      use value <- decode.field("value", passport_element_error_file_decoder())
+    "file" -> {
+      use value <- decode.then(passport_element_error_file_decoder())
       decode.success(PassportElementErrorFilePassportElementError(value))
     }
-    "passport_element_error_files" -> {
-      use value <- decode.field("value", passport_element_error_files_decoder())
+    "files" -> {
+      use value <- decode.then(passport_element_error_files_decoder())
       decode.success(PassportElementErrorFilesPassportElementError(value))
     }
-    "passport_element_error_translation_file" -> {
-      use value <- decode.field(
-        "value",
+    "translation_file" -> {
+      use value <- decode.then(
         passport_element_error_translation_file_decoder(),
       )
       decode.success(PassportElementErrorTranslationFilePassportElementError(
         value,
       ))
     }
-    "passport_element_error_translation_files" -> {
-      use value <- decode.field(
-        "value",
+    "translation_files" -> {
+      use value <- decode.then(
         passport_element_error_translation_files_decoder(),
       )
       decode.success(PassportElementErrorTranslationFilesPassportElementError(
         value,
       ))
     }
-    "passport_element_error_unspecified" -> {
-      use value <- decode.field(
-        "value",
-        passport_element_error_unspecified_decoder(),
-      )
+    "unspecified" -> {
+      use value <- decode.then(passport_element_error_unspecified_decoder())
       decode.success(PassportElementErrorUnspecifiedPassportElementError(value))
     }
     _ -> panic as "Invalid variant for PassportElementError"
@@ -14072,11 +14039,11 @@ pub fn file_or_string_decoder() -> decode.Decoder(FileOrString) {
   use variant <- decode.field("type", decode.string)
   case variant {
     "file_v" -> {
-      use value <- decode.field("value", file_decoder())
+      use value <- decode.then(file_decoder())
       decode.success(FileV(value:))
     }
     "string" -> {
-      use string <- decode.field("string", decode.string)
+      use string <- decode.then(decode.string)
       decode.success(StringV(string:))
     }
     _ -> decode.failure(StringV(""), "FileOrString")
@@ -14101,11 +14068,11 @@ pub fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
   use variant <- decode.field("type", decode.string)
   case variant {
     "int" -> {
-      use value <- decode.field("value", decode.int)
+      use value <- decode.then(decode.int)
       decode.success(Int(value:))
     }
     "str" -> {
-      use value <- decode.field("value", decode.string)
+      use value <- decode.then(decode.string)
       decode.success(Str(value:))
     }
     _ -> decode.failure(Int(0), "IntOrString")
