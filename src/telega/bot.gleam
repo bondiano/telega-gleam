@@ -133,13 +133,14 @@ fn add_bot_instance(
 pub fn set_webhook(config config: Config) -> Result(Bool, String) {
   api.set_webhook(
     config.api,
-    api.SetWebhookParameters(
+    model.SetWebhookParameters(
       url: config.server_url <> "/" <> config.webhook_path,
       max_connections: None,
       ip_address: None,
       allowed_updates: None,
       drop_pending_updates: None,
       secret_token: Some(config.secret_token),
+      certificate: None,
     ),
   )
 }

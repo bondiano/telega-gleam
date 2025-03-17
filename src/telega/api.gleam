@@ -9,16 +9,18 @@ import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response, Response}
 import gleam/httpc
-import gleam/json.{type Json}
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import telega/log
 import telega/model.{
-  type BotCommand, type BotCommandScope, type File, type InlineKeyboardMarkup,
-  type IntOrString, type LinkPreviewOptions, type Message as ModelMessage,
-  type MessageEntity, type ReplyKeyboardMarkup, type ReplyParameters,
+  type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
+  type EditMessageTextParameters, type File, type ForwardMessageParameters,
+  type Message as ModelMessage, type SendDiceParameters,
+  type SendMessageParameters, type SetChatMenuButtonParameters,
+  type SetWebhookParameters,
 }
 
 const default_retry_delay = 1000
@@ -63,7 +65,7 @@ pub fn set_webhook(
   config config: TelegramApiConfig,
   parameters parameters: SetWebhookParameters,
 ) -> Result(Bool, String) {
-  let body = encode_set_webhook_parameters(parameters)
+  let body = model.encode_set_webhook_parameters(parameters)
 
   new_post_request(
     config,
@@ -133,7 +135,7 @@ pub fn send_message(
   config config: TelegramApiConfig,
   parameters parameters: SendMessageParameters,
 ) {
-  let body_json = encode_send_message_parameters(parameters)
+  let body_json = model.encode_send_message_parameters(parameters)
 
   new_post_request(
     config,
@@ -154,8 +156,8 @@ pub fn set_my_commands(
   parameters parameters: Option(BotCommandParameters),
 ) {
   let parameters =
-    option.unwrap(parameters, default_bot_command_parameters())
-    |> encode_bot_command_parameters()
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters()
 
   let body_json =
     json.object([
@@ -190,8 +192,8 @@ pub fn delete_my_commands(
   parameters parameters: Option(BotCommandParameters),
 ) {
   let parameters =
-    option.unwrap(parameters, default_bot_command_parameters())
-    |> encode_bot_command_parameters()
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters()
 
   let body_json = json.object(parameters)
 
@@ -213,8 +215,8 @@ pub fn get_my_commands(
   parameters parameters: Option(BotCommandParameters),
 ) {
   let parameters =
-    option.unwrap(parameters, default_bot_command_parameters())
-    |> encode_bot_command_parameters()
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters()
 
   let body_json = json.object(parameters)
 
@@ -235,7 +237,7 @@ pub fn send_dice(
   config config: TelegramApiConfig,
   parameters parameters: SendDiceParameters,
 ) {
-  let body_json = encode_send_dice_parameters(parameters)
+  let body_json = model.encode_send_dice_parameters(parameters)
 
   new_post_request(
     config:,
@@ -265,7 +267,7 @@ pub fn answer_callback_query(
   config config: TelegramApiConfig,
   parameters parameters: AnswerCallbackQueryParameters,
 ) -> Result(Bool, String) {
-  let body_json = encode_answer_callback_query_parameters(parameters)
+  let body_json = model.encode_answer_callback_query_parameters(parameters)
 
   new_post_request(
     config:,
@@ -285,7 +287,7 @@ pub fn edit_message_text(
   config config: TelegramApiConfig,
   parameters parameters: EditMessageTextParameters,
 ) -> Result(ModelMessage, String) {
-  let body_json = encode_edit_message_text_parameters(parameters)
+  let body_json = model.encode_edit_message_text_parameters(parameters)
 
   new_post_request(
     config:,
@@ -305,7 +307,7 @@ pub fn forward_message(
   config config: TelegramApiConfig,
   parameters parameters: ForwardMessageParameters,
 ) -> Result(ModelMessage, String) {
-  let body_json = encode_forward_message_parameters(parameters)
+  let body_json = model.encode_forward_message_parameters(parameters)
 
   new_post_request(
     config:,
@@ -328,7 +330,7 @@ pub fn set_chat_menu_button(
     config:,
     path: "setChatMenuButton",
     query: None,
-    body: encode_set_chat_menu_button_parameters(parameters)
+    body: model.encode_set_chat_menu_button_parameters(parameters)
       |> json.to_string(),
   )
   |> fetch(config)
@@ -481,502 +483,4 @@ fn send_with_retry(
       }
     }
   }
-}
-
-// AnswerCallbackQueryParameters --------------------------------------------------------------------------------------
-// https://core.telegram.org/bots/api#answercallbackquery
-pub type AnswerCallbackQueryParameters {
-  AnswerCallbackQueryParameters(
-    /// Unique identifier for the query to be answered
-    callback_query_id: String,
-    /// Text of the notification. If not specified, nothing will be shown to the user
-    text: Option(String),
-    /// If true, an alert will be shown by the client instead of a notification at the top of the chat screen. Defaults to false.
-    show_alert: Option(Bool),
-    /// URL that will be opened by the user's client. If you have created a [Game](https://core.telegram.org/bots/api#games), you can use this
-    /// field to redirect the player to your game
-    url: Option(String),
-    /// The maximum amount of time in seconds that the result of the callback query may be cached client-side. Telegram apps will support
-    /// caching starting in version 3.14. Defaults to 0.
-    cache_time: Option(Int),
-  )
-}
-
-pub fn new_answer_callback_query_parameters(
-  callback_query_id: String,
-) -> AnswerCallbackQueryParameters {
-  AnswerCallbackQueryParameters(
-    callback_query_id: callback_query_id,
-    text: None,
-    show_alert: None,
-    url: None,
-    cache_time: None,
-  )
-}
-
-pub fn encode_answer_callback_query_parameters(
-  params: AnswerCallbackQueryParameters,
-) -> Json {
-  let callback_query_id = #(
-    "callback_query_id",
-    json.string(params.callback_query_id),
-  )
-  let text = #("text", json.nullable(params.text, json.string))
-  let show_alert = #("show_alert", json.nullable(params.show_alert, json.bool))
-  let url = #("url", json.nullable(params.url, json.string))
-  let cache_time = #("cache_time", json.nullable(params.cache_time, json.int))
-
-  model.json_object_filter_nulls([
-    callback_query_id,
-    text,
-    show_alert,
-    url,
-    cache_time,
-  ])
-}
-
-// BotCommandParameters ---------------------------------------------------------------------
-
-pub type BotCommandParameters {
-  BotCommandParameters(
-    /// An object, describing scope of users for which the commands are relevant. Defaults to `BotCommandScopeDefault`.
-    scope: Option(BotCommandScope),
-    /// A two-letter ISO 639-1 language code. If empty, commands will be applied to all users from the given scope, for whose language there are no dedicated commands
-    language_code: Option(String),
-  )
-}
-
-pub fn default_bot_command_parameters() -> BotCommandParameters {
-  BotCommandParameters(scope: None, language_code: None)
-}
-
-pub fn encode_bot_command_parameters(
-  params: BotCommandParameters,
-) -> List(#(String, Json)) {
-  [
-    #("scope", json.nullable(params.scope, bot_command_scope_to_json)),
-    #("language_code", json.nullable(params.language_code, json.string)),
-  ]
-}
-
-pub fn bot_command_scope_to_json(scope: BotCommandScope) {
-  case scope {
-    model.BotCommandScopeDefaultBotCommandScope(_) ->
-      model.json_object_filter_nulls([#("type", json.string("default"))])
-    model.BotCommandScopeAllPrivateChatsBotCommandScope(_) ->
-      model.json_object_filter_nulls([
-        #("type", json.string("all_private_chats")),
-      ])
-    model.BotCommandScopeAllGroupChatsBotCommandScope(_) ->
-      model.json_object_filter_nulls([#("type", json.string("all_group_chats"))])
-    model.BotCommandScopeAllChatAdministratorsBotCommandScope(_) ->
-      model.json_object_filter_nulls([
-        #("type", json.string("all_chat_administrators")),
-      ])
-    model.BotCommandScopeChatBotCommandScope(model.BotCommandScopeChat(
-      chat_id: chat_id,
-      ..,
-    )) ->
-      model.json_object_filter_nulls([
-        #("type", json.string("chat")),
-        #("chat_id", model.encode_int_or_string(chat_id)),
-      ])
-    model.BotCommandScopeChatAdministratorsBotCommandScope(model.BotCommandScopeChatAdministrators(
-      chat_id: chat_id,
-      ..,
-    )) ->
-      model.json_object_filter_nulls([
-        #("type", json.string("chat_administrators")),
-        #("chat_id", model.encode_int_or_string(chat_id)),
-      ])
-    model.BotCommandScopeChatMemberBotCommandScope(model.BotCommandScopeChatMember(
-      chat_id: chat_id,
-      user_id: user_id,
-      ..,
-    )) ->
-      model.json_object_filter_nulls([
-        #("type", json.string("chat_member")),
-        #("chat_id", model.encode_int_or_string(chat_id)),
-        #("user_id", json.int(user_id)),
-      ])
-  }
-}
-
-pub fn bot_commands_from(commands: List(#(String, String))) -> List(BotCommand) {
-  commands
-  |> list.map(fn(command) {
-    let #(command, description) = command
-    model.BotCommand(command: command, description: description)
-  })
-}
-
-// EditMessageTextParameters ------------------------------------------------------------------------------------------
-
-pub type EditMessageTextParameters {
-  EditMessageTextParameters(
-    /// Required if _inline_message_id_ is not specified.
-    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
-    chat_id: Option(IntOrString),
-    /// Required if inline_message_id is not specified. Identifier of the message to edit
-    message_id: Option(Int),
-    /// Required if _chat_id_ and _message_id_ are not specified. Identifier of the inline message
-    inline_message_id: Option(String),
-    /// New text of the message, 1-4096 characters after entities parsing
-    text: String,
-    /// Mode for parsing entities in the message text. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.
-    parse_mode: Option(String),
-    /// A JSON-serialized list of special entities that appear in message text, which can be specified instead of _parse_mode_
-    entities: Option(List(MessageEntity)),
-    /// Link preview generation options for the message
-    link_preview_options: Option(LinkPreviewOptions),
-    /// A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards).
-    reply_markup: Option(InlineKeyboardMarkup),
-  )
-}
-
-pub fn default_edit_message_text_parameters() -> EditMessageTextParameters {
-  EditMessageTextParameters(
-    chat_id: None,
-    message_id: None,
-    inline_message_id: None,
-    text: "",
-    parse_mode: None,
-    entities: None,
-    link_preview_options: None,
-    reply_markup: None,
-  )
-}
-
-pub fn encode_edit_message_text_parameters(
-  params: EditMessageTextParameters,
-) -> Json {
-  let chat_id = #(
-    "chat_id",
-    json.nullable(params.chat_id, model.encode_int_or_string),
-  )
-  let message_id = #("message_id", json.nullable(params.message_id, json.int))
-  let inline_message_id = #(
-    "inline_message_id",
-    json.nullable(params.inline_message_id, json.string),
-  )
-  let text = #("text", json.string(params.text))
-  let parse_mode = #(
-    "parse_mode",
-    json.nullable(params.parse_mode, json.string),
-  )
-  let entities = #(
-    "entities",
-    json.nullable(params.entities, json.array(_, model.encode_message_entity)),
-  )
-  let link_preview_options = #(
-    "link_preview_options",
-    json.nullable(
-      params.link_preview_options,
-      model.encode_link_preview_options,
-    ),
-  )
-  let reply_markup = #(
-    "reply_markup",
-    json.nullable(params.reply_markup, model.encode_inline_keyboard_markup),
-  )
-
-  model.json_object_filter_nulls([
-    chat_id,
-    message_id,
-    inline_message_id,
-    text,
-    parse_mode,
-    entities,
-    link_preview_options,
-    reply_markup,
-  ])
-}
-
-// ForwardMessageParameters -------------------------------------------------------------------------------------------
-// https://core.telegram.org/bots/api#forwardmessage
-pub type ForwardMessageParameters {
-  ForwardMessageParameters(
-    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
-    chat_id: IntOrString,
-    /// Unique identifier for the chat where the original message was sent (or channel username in the format `@channelusername`)
-    from_chat_id: IntOrString,
-    /// Message identifier in the chat specified in _from_chat_id_
-    message_id: Int,
-    /// Sends the message silently. Users will receive a notification with no sound.
-    disable_notification: Option(Bool),
-    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
-    message_thread_id: Option(Int),
-    /// Protects the contents of the forwarded message from forwarding and saving
-    protect_content: Option(Bool),
-  )
-}
-
-pub fn encode_forward_message_parameters(
-  params: ForwardMessageParameters,
-) -> Json {
-  model.json_object_filter_nulls([
-    #("chat_id", model.encode_int_or_string(params.chat_id)),
-    #("from_chat_id", model.encode_int_or_string(params.from_chat_id)),
-    #("message_id", json.int(params.message_id)),
-    #(
-      "disable_notification",
-      json.nullable(params.disable_notification, json.bool),
-    ),
-    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
-    #("protect_content", json.nullable(params.protect_content, json.bool)),
-  ])
-}
-
-// SendDiceParameters ------------------------------------------------------------------------------------------------------------
-
-pub type SendDiceParameters {
-  SendDiceParameters(
-    chat_id: IntOrString,
-    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
-    message_thread_id: Option(Int),
-    /// Emoji on which the dice throw animation is based. Currently, must be one of "🎲", "🎯", "🏀", "⚽", "🎳", or "🎰". Dice can have values 1-6 for "🎲", "🎯" and "🎳", values 1-5 for "🏀" and "⚽", and values 1-64 for "🎰". Defaults to "🎲"
-    emoji: Option(String),
-    /// Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.
-    disable_notification: Option(Bool),
-    /// Protects the contents of the sent message from forwarding
-    protect_content: Option(Bool),
-    /// Description of the message to reply to
-    reply_parameters: Option(ReplyKeyboardMarkup),
-  )
-}
-
-pub fn new_send_dice_parameters(
-  chat_id chat_id: model.IntOrString,
-) -> SendDiceParameters {
-  SendDiceParameters(
-    chat_id: chat_id,
-    message_thread_id: None,
-    emoji: None,
-    disable_notification: None,
-    protect_content: None,
-    reply_parameters: None,
-  )
-}
-
-pub fn encode_send_dice_parameters(params: SendDiceParameters) -> Json {
-  let chat_id = #("chat_id", model.encode_int_or_string(params.chat_id))
-  let message_thread_id = #(
-    "message_thread_id",
-    json.nullable(params.message_thread_id, json.int),
-  )
-  let emoji = #("emoji", json.nullable(params.emoji, json.string))
-  let disable_notification = #(
-    "disable_notification",
-    json.nullable(params.disable_notification, json.bool),
-  )
-  let protect_content = #(
-    "protect_content",
-    json.nullable(params.protect_content, json.bool),
-  )
-  let reply_parameters = #(
-    "reply_parameters",
-    json.nullable(params.reply_parameters, model.encode_reply_keyboard_markup),
-  )
-
-  model.json_object_filter_nulls([
-    chat_id,
-    message_thread_id,
-    emoji,
-    disable_notification,
-    protect_content,
-    reply_parameters,
-  ])
-}
-
-// SendMessage ------------------------------------------------------------------------
-
-pub type SendMessageParameters {
-  /// Parameters to send using the [sendMessage](https://core.telegram.org/bots/api#sendmessage) method
-  SendMessageParameters(
-    /// Unique identifier of the business connection on behalf of which the message will be sent
-    business_connection_id: Option(String),
-    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
-    chat_id: IntOrString,
-    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
-    message_thread_id: Option(Int),
-    /// Text of the message to be sent, 1-4096 characters after entities parsing
-    text: String,
-    /// Mode for parsing entities in the message text. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.
-    parse_mode: Option(String),
-    /// A JSON-serialized list of special entities that appear in message text, which can be specified instead of _parse_mode_
-    entities: Option(List(MessageEntity)),
-    /// Link preview generation options for the message
-    link_preview_options: Option(LinkPreviewOptions),
-    /// Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.
-    disable_notification: Option(Bool),
-    /// Protects the contents of the sent message from forwarding and saving
-    protect_content: Option(Bool),
-    /// Description of the message to reply to
-    reply_parameters: Option(ReplyParameters),
-    /// Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove a reply keyboard or to force a reply from the user. Not supported for messages sent on behalf of a business account
-    reply_markup: Option(ReplyKeyboardMarkup),
-  )
-}
-
-pub fn new_send_message_parameters(
-  chat_id chat_id: IntOrString,
-  text text: String,
-) -> SendMessageParameters {
-  SendMessageParameters(
-    chat_id: chat_id,
-    text: text,
-    business_connection_id: None,
-    message_thread_id: None,
-    parse_mode: None,
-    entities: None,
-    link_preview_options: None,
-    disable_notification: None,
-    protect_content: None,
-    reply_parameters: None,
-    reply_markup: None,
-  )
-}
-
-pub fn set_send_message_parameters_reply_markup(
-  params: SendMessageParameters,
-  reply_markup: ReplyKeyboardMarkup,
-) -> SendMessageParameters {
-  SendMessageParameters(..params, reply_markup: Some(reply_markup))
-}
-
-pub fn encode_send_message_parameters(
-  send_message_parameters: SendMessageParameters,
-) -> Json {
-  let business_connection_id = #(
-    "business_connection_id",
-    json.nullable(send_message_parameters.business_connection_id, json.string),
-  )
-  let chat_id = #(
-    "chat_id",
-    model.encode_int_or_string(send_message_parameters.chat_id),
-  )
-
-  let message_thread_id = #(
-    "message_thread_id",
-    json.nullable(send_message_parameters.message_thread_id, json.int),
-  )
-  let text = #("text", json.string(send_message_parameters.text))
-  let parse_mode = #(
-    "parse_mode",
-    json.nullable(send_message_parameters.parse_mode, json.string),
-  )
-  let entities = #(
-    "entities",
-    json.nullable(send_message_parameters.entities, json.array(
-      _,
-      model.encode_message_entity,
-    )),
-  )
-  let link_preview_options = #(
-    "link_preview_options",
-    json.nullable(
-      send_message_parameters.link_preview_options,
-      model.encode_link_preview_options,
-    ),
-  )
-  let disable_notification = #(
-    "disable_notification",
-    json.nullable(send_message_parameters.disable_notification, json.bool),
-  )
-  let protect_content = #(
-    "protect_content",
-    json.nullable(send_message_parameters.protect_content, json.bool),
-  )
-  let reply_parameters = #(
-    "reply_parameters",
-    json.nullable(
-      send_message_parameters.reply_parameters,
-      model.encode_reply_parameters,
-    ),
-  )
-  let reply_markup = #(
-    "reply_markup",
-    json.nullable(
-      send_message_parameters.reply_markup,
-      model.encode_reply_keyboard_markup,
-    ),
-  )
-
-  model.json_object_filter_nulls([
-    business_connection_id,
-    chat_id,
-    message_thread_id,
-    text,
-    parse_mode,
-    entities,
-    link_preview_options,
-    disable_notification,
-    protect_content,
-    reply_parameters,
-    reply_markup,
-  ])
-}
-
-// SetChatMenuButtonParameters ----------------------------------------------------------------------------------------
-
-pub type SetChatMenuButtonParameters {
-  SetChatMenuButtonParameters(
-    /// Unique identifier for the target private chat. If not specified, default bot's menu button will be changed
-    chat_id: Option(Int),
-    /// A JSON-serialized object for the bot's new menu button. Defaults to MenuButtonDefault
-    menu_button: Option(model.MenuButton),
-  )
-}
-
-pub fn encode_set_chat_menu_button_parameters(
-  params: SetChatMenuButtonParameters,
-) -> Json {
-  model.json_object_filter_nulls([
-    #("chat_id", json.nullable(params.chat_id, json.int)),
-    #(
-      "menu_button",
-      json.nullable(params.menu_button, model.encode_menu_button),
-    ),
-  ])
-}
-
-// SetWebhookParameters ----------------------------------------------------------------------------------------------
-
-/// https://core.telegram.org/bots/api#setwebhook
-pub type SetWebhookParameters {
-  SetWebhookParameters(
-    /// HTTPS url to send updates to. Use an empty string to remove webhook integration
-    url: String,
-    // TODO: support certificate
-    // certificate: Option(InputFile),
-    /// Maximum allowed number of simultaneous HTTPS connections to the webhook for update delivery, 1-100. Defaults to 40. Use lower values to limit the load on your bot's server, and higher values to increase your bot's throughput.
-    max_connections: Option(Int),
-    /// The fixed IP address which will be used to send webhook requests instead of the IP address resolved through DNS
-    ip_address: Option(String),
-    /// A JSON-serialized list of the update types you want your bot to receive. For example, specify `["message", "edited_channel_post", "callback_query"]` to only receive updates of these types. See [Update](https://core.telegram.org/bots/api#update) for a complete list of available update types. Specify an empty list to receive all updates regardless of type (default). If not specified, the previous setting will be used.
-    ///
-    /// > Please note that this parameter doesn't affect updates created before the call to the setWebhook, so unwanted updates may be received for a short period of time.
-    allowed_updates: Option(List(String)),
-    /// Pass _True_ to drop all pending updates
-    drop_pending_updates: Option(Bool),
-    /// A secret token to be sent in a header "X-Telegram-Bot-Api-Secret-Token" in every webhook request, 1-256 characters. Only characters A-Z, a-z, 0-9, _ and - are allowed. The header is useful to ensure that the request comes from a webhook set by you.
-    secret_token: Option(String),
-  )
-}
-
-pub fn encode_set_webhook_parameters(params: SetWebhookParameters) -> Json {
-  model.json_object_filter_nulls([
-    #("url", json.string(params.url)),
-    #("max_connections", json.nullable(params.max_connections, json.int)),
-    #("ip_address", json.nullable(params.ip_address, json.string)),
-    #(
-      "allowed_updates",
-      json.nullable(params.allowed_updates, json.array(_, json.string)),
-    ),
-    #(
-      "drop_pending_updates",
-      json.nullable(params.drop_pending_updates, json.bool),
-    ),
-    #("secret_token", json.nullable(params.secret_token, json.string)),
-  ])
 }
