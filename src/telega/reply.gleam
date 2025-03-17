@@ -1,8 +1,11 @@
-import gleam/option.{type Option}
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import telega/api
 import telega/bot.{type Context}
-import telega/model.{type Message as ModelMessage}
+import telega/model.{
+  type Message as ModelMessage, type ReplyKeyboardMarkup,
+  type SendDiceParameters,
+}
 
 /// Use this method to send text messages.
 ///
@@ -13,9 +16,18 @@ pub fn with_text(
 ) -> Result(ModelMessage, String) {
   api.send_message(
     ctx.config.api,
-    parameters: api.new_send_message_parameters(
+    parameters: model.SendMessageParameters(
       text: text,
       chat_id: model.Str(ctx.key),
+      business_connection_id: None,
+      message_thread_id: None,
+      parse_mode: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      reply_parameters: None,
+      reply_markup: None,
     ),
   )
 }
@@ -26,15 +38,23 @@ pub fn with_text(
 pub fn with_markup(
   ctx ctx: Context(session),
   text text: String,
-  markup reply_markup: model.ReplyKeyboardMarkup,
+  markup reply_markup: ReplyKeyboardMarkup,
 ) {
   api.send_message(
     ctx.config.api,
-    parameters: api.new_send_message_parameters(
-      text: text,
+    parameters: model.SendMessageParameters(
       chat_id: model.Str(ctx.key),
-    )
-      |> api.set_send_message_parameters_reply_markup(reply_markup),
+      text: text,
+      reply_markup: Some(reply_markup),
+      business_connection_id: None,
+      message_thread_id: None,
+      parse_mode: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      reply_parameters: None,
+    ),
   )
 }
 
@@ -43,12 +63,19 @@ pub fn with_markup(
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
 pub fn with_dice(
   ctx ctx: Context(session),
-  parameters parameters: Option(api.SendDiceParameters),
+  parameters parameters: Option(SendDiceParameters),
 ) -> Result(ModelMessage, String) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
-      api.new_send_dice_parameters(model.Str(ctx.key))
+      model.SendDiceParameters(
+        chat_id: model.Str(ctx.key),
+        message_thread_id: None,
+        emoji: None,
+        disable_notification: None,
+        protect_content: None,
+        reply_parameters: None,
+      )
     })
 
   api.send_dice(ctx.config.api, parameters)
@@ -60,7 +87,7 @@ pub fn with_dice(
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
   ctx ctx: Context(session),
-  parameters parameters: api.EditMessageTextParameters,
+  parameters parameters: model.EditMessageTextParameters,
 ) -> Result(model.Message, String) {
   api.edit_message_text(ctx.config.api, parameters)
 }
@@ -71,7 +98,7 @@ pub fn edit_text(
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward(
   ctx ctx: Context(session),
-  parameters parameters: api.ForwardMessageParameters,
+  parameters parameters: model.ForwardMessageParameters,
 ) -> Result(model.Message, String) {
   api.forward_message(ctx.config.api, parameters)
 }
@@ -83,7 +110,7 @@ pub fn forward(
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
   ctx ctx: Context(session),
-  parameters parameters: api.AnswerCallbackQueryParameters,
+  parameters parameters: model.AnswerCallbackQueryParameters,
 ) -> Result(Bool, String) {
   api.answer_callback_query(ctx.config.api, parameters)
 }
