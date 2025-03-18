@@ -39,44 +39,43 @@ fn handle_request(bot, req) {
 fn set_name_command_handler(ctx: BotContext, _) {
   use <- bool.guard(ctx.session.state != WaitName, Ok(ctx.session))
   use <- telega.log_context(ctx, "set_name command")
+  use _ <- result.try(reply.with_text(ctx, "What's your name?"))
 
-  reply.with_text(ctx, "What's your name?")
-  |> result.map(fn(_) { NameBotSession(name: ctx.session.name, state: SetName) })
+  Ok(NameBotSession(name: ctx.session.name, state: SetName))
 }
 
 fn set_name_message_handler(ctx: BotContext, name) {
   use <- bool.guard(ctx.session.state != SetName, Ok(ctx.session))
   use <- telega.log_context(ctx, "set_name")
+  use _ <- result.try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
 
-  reply.with_text(ctx, "Your name is: " <> name <> " set!")
-  |> result.map(fn(_) { NameBotSession(name: name, state: WaitName) })
+  Ok(NameBotSession(name: name, state: WaitName))
 }
 
 fn get_name_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "get_name command")
+  use _ <- result.try(reply.with_text(ctx, "Your name is: " <> ctx.session.name))
 
-  reply.with_text(ctx, "Your name is: " <> ctx.session.name)
-  |> result.map(fn(_) { ctx.session })
+  Ok(ctx.session)
 }
 
 fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
-  telega_api.set_my_commands(
+  use _ <- result.try(telega_api.set_my_commands(
     ctx.config.api,
     telega_model.bot_commands_from([
       #("/set_name", "Set name"),
       #("/get_name", "Get name"),
     ]),
     None,
-  )
-  |> result.then(fn(_) {
-    reply.with_text(
-      ctx,
-      "Hello! I'm a Name bot. You can set your name with /set_name command.",
-    )
-    |> result.map(fn(_) { ctx.session })
-  })
+  ))
+  use _ <- result.try(reply.with_text(
+    ctx,
+    "Hello! I'm a Name bot. You can set your name with /set_name command.",
+  ))
+
+  Ok(ctx.session)
 }
 
 fn build_bot() {

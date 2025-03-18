@@ -234,7 +234,7 @@ fn start_bot_instance(
   session_key session_key: String,
   parent_subject parent_subject: RootBotInstanceSubject(session),
 ) -> Result(BotInstanceSubject(session), actor.StartError) {
-  actor.Spec(
+  actor.start_spec(actor.Spec(
     init: fn() {
       let actor_subj = process.new_subject()
       process.send(parent_subject, actor_subj)
@@ -261,8 +261,7 @@ fn start_bot_instance(
     },
     loop: handle_bot_instance_message,
     init_timeout: 1000,
-  )
-  |> actor.start_spec()
+  ))
 }
 
 // Bot Instance --------------------------------------------------------------------
@@ -400,22 +399,22 @@ fn do_handle(
     HandleText(handle), TextUpdate(text: text, ..) ->
       Some(handle(new_context(bot, update), text))
     HandleHears(hear, handle), TextUpdate(text: text, ..) -> {
-      use <- bool.guard(hears_check(text, hear), None)
+      use <- bool.guard(!hears_check(text, hear), None)
       Some(handle(new_context(bot, update), text))
     }
     HandleCommand(command, handle), CommandUpdate(command: update_command, ..) -> {
-      use <- bool.guard(update_command.command == command, None)
+      use <- bool.guard(update_command.command != command, None)
       Some(handle(new_context(bot, update), update_command))
     }
     HandleCommands(commands, handle), CommandUpdate(command: update_command, ..)
     -> {
-      use <- bool.guard(list.contains(commands, update_command.command), None)
+      use <- bool.guard(!list.contains(commands, update_command.command), None)
       Some(handle(new_context(bot, update), update_command))
     }
     HandleCallbackQuery(filter, handle), CallbackQueryUpdate(raw: raw, ..) ->
       case raw.data {
         Some(data) -> {
-          use <- bool.guard(regexp.check(filter.re, data), None)
+          use <- bool.guard(!regexp.check(filter.re, data), None)
           Some(handle(new_context(bot, update), data, raw.id))
         }
         None -> None
