@@ -9,6 +9,7 @@ import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response, Response}
 import gleam/httpc
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -54,10 +55,10 @@ type TelegramApiRequest {
 }
 
 type ApiResponse(result) {
-  ApiResponse(ok: Bool, result: result)
+  ApiSuccessResponse(ok: Bool, result: result)
+  ApiErrorResponse(ok: Bool, error_code: Int, description: String)
 }
 
-// TODO: Support all options from the official reference.
 /// Set the webhook URL using [setWebhook](https://core.telegram.org/bots/api#setwebhook) API.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setwebhook
@@ -411,8 +412,27 @@ fn map_response(
       _,
       result_decoder,
     ))
-    |> result.replace_error("Failed to decode response: " <> response.body)
-    |> result.map(fn(response) { response.result })
+    |> result.map_error(fn(error) {
+      "Failed to decode response: "
+      <> response.body
+      <> " With error: "
+      <> string.inspect(error)
+    })
+    |> result.then(fn(response) {
+      case response {
+        ApiSuccessResponse(result: result, ..) -> {
+          Ok(result)
+        }
+        ApiErrorResponse(error_code: error_code, description: description, ..) -> {
+          Error(
+            "Request failed with code "
+            <> int.to_string(error_code)
+            <> " :\n"
+            <> description,
+          )
+        }
+      }
+    })
   })
   |> result.flatten
 }
@@ -430,12 +450,20 @@ fn parse_api_response(json, result_decoder) {
   })
 }
 
-// TODO: decode error
 fn response_decoder(result_decoder) {
   use ok <- decode.field("ok", decode.bool)
-  use result <- decode.field("result", result_decoder)
 
-  decode.success(ApiResponse(ok: ok, result: result))
+  case ok {
+    True -> {
+      use result <- decode.field("result", result_decoder)
+      decode.success(ApiSuccessResponse(ok:, result:))
+    }
+    False -> {
+      use error_code <- decode.field("error_code", decode.int)
+      use description <- decode.field("description", decode.string)
+      decode.success(ApiErrorResponse(ok:, error_code:, description:))
+    }
+  }
 }
 
 // TODO: add rate limit handling

@@ -32,26 +32,26 @@ fn handle_request(bot, req) {
 
 fn dice_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "dice")
+  use _ <- result.try(reply.with_dice(ctx, None))
 
-  reply.with_dice(ctx, None)
-  |> result.map(fn(_) { Nil })
+  Ok(Nil)
 }
 
 fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
-  telega_api.set_my_commands(
+  use _ <- result.try(telega_api.set_my_commands(
     ctx.config.api,
     telega_model.bot_commands_from([#("/dice", "Roll a dice")]),
     None,
-  )
-  |> result.then(fn(_) {
-    reply.with_text(
-      ctx,
-      "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
-    )
-    |> result.map(fn(_) { Nil })
-  })
+  ))
+
+  use _ <- result.try(reply.with_text(
+    ctx,
+    "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
+  ))
+
+  Ok(Nil)
 }
 
 fn build_bot() {
