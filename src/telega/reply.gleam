@@ -2,10 +2,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import telega/api
 import telega/bot.{type Context}
-import telega/model.{
-  type Message as ModelMessage, type ReplyKeyboardMarkup,
-  type SendDiceParameters,
-}
+import telega/model.{type Message as ModelMessage, type SendDiceParameters}
 
 /// Use this method to send text messages.
 ///
@@ -38,13 +35,13 @@ pub fn with_text(
 pub fn with_markup(
   ctx ctx: Context(session),
   text text: String,
-  markup reply_markup: ReplyKeyboardMarkup,
+  markup reply_markup: model.SendMessageReplyMarkupParameters,
 ) {
   api.send_message(
     ctx.config.api,
     parameters: model.SendMessageParameters(
+      text:,
       chat_id: model.Str(ctx.key),
-      text: text,
       reply_markup: Some(reply_markup),
       business_connection_id: None,
       message_thread_id: None,

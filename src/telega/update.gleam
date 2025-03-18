@@ -34,7 +34,12 @@ pub type Command {
 pub fn decode(json: Dynamic) -> Result(Update, String) {
   use raw_update <- result.try(
     decode.run(json, model.update_decoder())
-    |> result.map_error(fn(e) { "Cannot decode update: " <> string.inspect(e) }),
+    |> result.map_error(fn(e) {
+      "Cannot decode update: "
+      <> string.inspect(json)
+      <> " "
+      <> string.inspect(e)
+    }),
   )
   use <- try_decode_to_callback_query(raw_update)
   use <- try_to_decode_message_or_command(raw_update)

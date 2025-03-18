@@ -289,8 +289,5 @@ pub fn handle_update(
   telega: Telega(session),
   update: Update,
 ) -> Result(Nil, String) {
-  Ok(actor.send(
-    telega.registry_subject,
-    HandleBotRegistryMessage(update: update),
-  ))
+  Ok(actor.send(telega.registry_subject, HandleBotRegistryMessage(update:)))
 }

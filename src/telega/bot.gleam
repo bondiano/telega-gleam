@@ -99,9 +99,9 @@ fn add_bot_instance(
     supervisor.start(supervisor.add(_, registry_actor))
 
   let bot_subject_result =
-    process.receive(registry.bot_instances_subject, 1000)
+    process.receive(registry.bot_instances_subject, 100)
     |> result.map_error(fn(e) {
-      "Failed to start bot instance:\n" <> string.inspect(e)
+      "Failed to start bot instance: " <> string.inspect(e)
     })
 
   case bot_subject_result {
@@ -116,7 +116,7 @@ fn add_bot_instance(
           )
         Error(e) -> {
           log.error(
-            "Failed to send message to bot instance:\n" <> string.inspect(e),
+            "Failed to send message to bot instance: " <> string.inspect(e),
           )
           actor.continue(registry)
         }
@@ -260,7 +260,7 @@ fn start_bot_instance(
       }
     },
     loop: handle_bot_instance_message,
-    init_timeout: 10_000,
+    init_timeout: 1000,
   )
   |> actor.start_spec()
 }
@@ -436,7 +436,7 @@ fn loop_handlers(
           loop_handlers(BotInstance(..bot, session: new_session), update, rest)
         Some(Error(e)) ->
           Error(
-            "Failed to handle message " <> string.inspect(update) <> ":\n" <> e,
+            "Failed to handle message " <> string.inspect(update) <> ": " <> e,
           )
         None -> loop_handlers(bot, update, rest)
       }

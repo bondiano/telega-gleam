@@ -11,7 +11,7 @@ import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/keyboard as telega_keyboard
-import telega/model.{EditMessageTextParameters, Stringed} as telega_model
+import telega/model.{EditMessageTextParameters} as telega_model
 import telega/reply
 import wisp.{type Response}
 import wisp/wisp_mist
@@ -71,7 +71,7 @@ fn change_languages_keyboard(
   use _ <- result.try(reply.with_markup(
     ctx,
     t_change_language_message(language),
-    telega_keyboard.build(keyboard),
+    telega_keyboard.to_markup(keyboard),
   ))
 
   use _, text <- telega.wait_hears(ctx, telega_keyboard.hear(keyboard))
@@ -92,7 +92,7 @@ fn handle_inline_change_language(
   use message <- result.try(reply.with_markup(
     ctx,
     t_change_language_message(language),
-    telega_keyboard.build_inline(keyboard),
+    telega_keyboard.to_inline_markup(keyboard),
   ))
 
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
@@ -112,10 +112,14 @@ fn handle_inline_change_language(
   use _ <- result.try(reply.edit_text(
     ctx,
     EditMessageTextParameters(
-      ..telega_model.default_edit_message_text_parameters(),
       text: t_language_changed_message(language),
       message_id: Some(message.message_id),
-      chat_id: Some(Stringed(ctx.key)),
+      chat_id: Some(telega_model.Str(ctx.key)),
+      entities: None,
+      inline_message_id: None,
+      link_preview_options: None,
+      parse_mode: None,
+      reply_markup: None,
     ),
   ))
 
@@ -127,19 +131,17 @@ fn start_command_handler(
   _,
 ) -> Result(LanguageBotSession, String) {
   use <- telega.log_context(ctx, "start")
-
-  telega_api.set_my_commands(
+  use _ <- result.try(telega_api.set_my_commands(
     ctx.config.api,
     telega_model.bot_commands_from([
       #("/lang", "Shows custom keyboard with languages"),
       #("/lang_inline", "Change language inline"),
     ]),
     None,
-  )
-  |> result.then(fn(_) {
-    reply.with_text(ctx, t_welcome_message(ctx.session.lang))
-    |> result.map(fn(_) { ctx.session })
-  })
+  ))
+  use _ <- result.try(reply.with_text(ctx, t_welcome_message(ctx.session.lang)))
+
+  Ok(ctx.session)
 }
 
 fn build_bot() {
