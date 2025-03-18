@@ -61,8 +61,8 @@ fn build_bot() {
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
-  |> telega.handle_command("dice", dice_command_handler)
   |> telega.handle_command("start", start_command_handler)
+  |> telega.handle_command("dice", dice_command_handler)
   |> telega.init_nil_session
 }
 
@@ -79,5 +79,4 @@ pub fn main() {
     |> mist.start_http
 
   process.sleep_forever()
-  Ok(Nil)
 }
