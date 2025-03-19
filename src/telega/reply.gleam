@@ -4,7 +4,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import telega/api
 import telega/bot.{type Context}
-import telega/model.{type Message as ModelMessage, type SendDiceParameters}
+import telega/model.{type Message, type SendDiceParameters}
 
 /// Use this method to send text messages.
 ///
@@ -12,7 +12,7 @@ import telega/model.{type Message as ModelMessage, type SendDiceParameters}
 pub fn with_text(
   ctx ctx: Context(session),
   text text: String,
-) -> Result(ModelMessage, String) {
+) -> Result(Message, String) {
   api.send_message(
     ctx.config.api,
     parameters: model.SendMessageParameters(
@@ -67,7 +67,7 @@ pub fn with_markup(
 pub fn with_dice(
   ctx ctx: Context(session),
   parameters parameters: Option(SendDiceParameters),
-) -> Result(ModelMessage, String) {
+) -> Result(Message, String) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
@@ -91,7 +91,7 @@ pub fn with_dice(
 pub fn edit_text(
   ctx ctx: Context(session),
   parameters parameters: model.EditMessageTextParameters,
-) -> Result(model.Message, String) {
+) -> Result(Message, String) {
   api.edit_message_text(ctx.config.api, parameters)
 }
 
@@ -102,7 +102,7 @@ pub fn edit_text(
 pub fn forward(
   ctx ctx: Context(session),
   parameters parameters: model.ForwardMessageParameters,
-) -> Result(model.Message, String) {
+) -> Result(Message, String) {
   api.forward_message(ctx.config.api, parameters)
 }
 

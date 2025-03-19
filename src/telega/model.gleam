@@ -15643,7 +15643,7 @@ pub fn encode_edit_message_text_parameters(
 }
 
 // ForwardMessageParameters -------------------------------------------------------------------------------------------
-// https://core.telegram.org/bots/api#forwardmessage
+/// https://core.telegram.org/bots/api#forwardmessage
 pub type ForwardMessageParameters {
   ForwardMessageParameters(
     /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
@@ -15674,6 +15674,53 @@ pub fn encode_forward_message_parameters(
     ),
     #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
     #("protect_content", json.nullable(params.protect_content, json.bool)),
+  ])
+}
+
+// ForwardMessagesParameters -----------------------------------------------------------------------------------------------------
+/// https://core.telegram.org/bots/api#forwardmessages
+pub type ForwardMessagesParameters {
+  ForwardMessagesParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
+    message_thread_id: Option(Int),
+    /// Unique identifier for the chat where the original messages were sent (or channel username in the format `@channelusername`)
+    from_chat_id: IntOrString,
+    /// A JSON-serialized list of 1-100 identifiers of messages in the chat _from_chat_id_ to forward. The identifiers must be specified in a strictly increasing order.
+    message_ids: List(Int),
+    /// Sends the messages [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.
+    disable_notification: Option(Bool),
+    /// Protects the contents of the forwarded messages from forwarding and saving
+    protect_content: Option(Bool),
+  )
+}
+
+pub fn encode_forward_messages_parameters(
+  forward_messages_parameters: ForwardMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(forward_messages_parameters.chat_id)),
+    #(
+      "message_thread_id",
+      json.nullable(forward_messages_parameters.message_thread_id, json.int),
+    ),
+    #(
+      "from_chat_id",
+      encode_int_or_string(forward_messages_parameters.from_chat_id),
+    ),
+    #(
+      "message_ids",
+      json.array(forward_messages_parameters.message_ids, json.int),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(forward_messages_parameters.disable_notification, json.bool),
+    ),
+    #(
+      "protect_content",
+      json.nullable(forward_messages_parameters.protect_content, json.bool),
+    ),
   ])
 }
 

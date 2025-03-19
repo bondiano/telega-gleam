@@ -273,7 +273,7 @@ fn start_bot_instance(
 
 // Bot Instance --------------------------------------------------------------------
 
-/// Handlers context.
+/// Context holds information needed for the bot instance and the current update.
 pub type Context(session) {
   Context(
     key: String,

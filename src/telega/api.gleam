@@ -19,9 +19,10 @@ import telega/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type EditMessageTextParameters, type File, type ForwardMessageParameters,
-  type GetUpdatesParameters, type Message as ModelMessage,
-  type SendDiceParameters, type SendMessageParameters,
-  type SetChatMenuButtonParameters, type SetWebhookParameters,
+  type ForwardMessagesParameters, type GetUpdatesParameters,
+  type Message as ModelMessage, type SendDiceParameters,
+  type SendMessageParameters, type SetChatMenuButtonParameters,
+  type SetWebhookParameters,
 }
 
 const default_retry_delay = 1000
@@ -364,6 +365,25 @@ pub fn get_updates(
   new_get_request(config, path: "getUpdates", query:)
   |> fetch(config)
   |> map_response(decode.list(model.update_decoder()))
+}
+
+/// Use this method to forward multiple messages of any kind. If some of the specified messages can't be found or forwarded, they are skipped. Service messages and messages with protected content can't be forwarded. Album grouping is kept for forwarded messages. On success, an array of [MessageId](https://core.telegram.org/bots/api#messageid) of the sent messages is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#forwardmessages
+pub fn forward_messages(
+  config config: TelegramApiConfig,
+  parameters parameters: ForwardMessagesParameters,
+) {
+  let body_json = model.encode_forward_messages_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "forwardMessage",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
