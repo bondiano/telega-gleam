@@ -9,7 +9,7 @@ import session.{type NameBotSession, NameBotSession, SetName, WaitName}
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
-import telega/bot.{type Context}
+import telega/bot.{type Context, Context}
 import telega/model as telega_model
 import telega/reply
 import wisp
@@ -21,7 +21,7 @@ type BotContext =
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
-  use <- wisp.rescue_crashes
+  use <- wisp.rescue_crashes()
   use <- telega_wisp.handle_bot(req, bot)
   use req <- wisp.handle_head(req)
   handle_request(req)
@@ -37,26 +37,26 @@ fn handle_request(bot, req) {
 }
 
 fn set_name_command_handler(ctx: BotContext, _) {
-  use <- bool.guard(ctx.session.state != WaitName, Ok(ctx.session))
+  use <- bool.guard(ctx.session.state != WaitName, Ok(ctx))
   use <- telega.log_context(ctx, "set_name command")
   use _ <- result.try(reply.with_text(ctx, "What's your name?"))
 
-  Ok(NameBotSession(name: ctx.session.name, state: SetName))
+  bot.next_session(ctx, NameBotSession(name: ctx.session.name, state: SetName))
 }
 
 fn set_name_message_handler(ctx: BotContext, name) {
-  use <- bool.guard(ctx.session.state != SetName, Ok(ctx.session))
+  use <- bool.guard(ctx.session.state != SetName, Ok(ctx))
   use <- telega.log_context(ctx, "set_name")
   use _ <- result.try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
 
-  Ok(NameBotSession(name: name, state: WaitName))
+  bot.next_session(ctx, NameBotSession(name: name, state: WaitName))
 }
 
 fn get_name_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "get_name command")
   use _ <- result.try(reply.with_text(ctx, "Your name is: " <> ctx.session.name))
 
-  Ok(ctx.session)
+  Ok(ctx)
 }
 
 fn start_command_handler(ctx, _) {
@@ -75,7 +75,7 @@ fn start_command_handler(ctx, _) {
     "Hello! I'm a Name bot. You can set your name with /set_name command.",
   ))
 
-  Ok(ctx.session)
+  Ok(ctx)
 }
 
 fn build_bot() {
@@ -89,8 +89,8 @@ fn build_bot() {
   |> telega.handle_command("set_name", set_name_command_handler)
   |> telega.handle_command("get_name", get_name_command_handler)
   |> telega.handle_text(set_name_message_handler)
-  |> session.attach
-  |> telega.init
+  |> session.attach()
+  |> telega.init()
 }
 
 pub fn main() {
@@ -101,10 +101,9 @@ pub fn main() {
   let secret_key_base = wisp.random_string(64)
   let assert Ok(_) =
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
-    |> mist.new
+    |> mist.new()
     |> mist.port(8000)
-    |> mist.start_http
+    |> mist.start_http()
 
   process.sleep_forever()
-  Ok(Nil)
 }

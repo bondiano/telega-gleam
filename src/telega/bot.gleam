@@ -181,9 +181,9 @@ pub fn start_registry(
 pub fn wait_handler(
   ctx: Context(session),
   handler: Handler(session),
-) -> Result(session, String) {
+) -> Result(Context(session), String) {
   process.send(ctx.bot_subject, BotInstanceMessageWaitHandler(handler))
-  Ok(ctx.session)
+  Ok(ctx)
 }
 
 fn new_context(bot: BotInstance(session), update: Update) -> Context(session) {
@@ -206,6 +206,13 @@ pub type SessionSettings(session) {
     // Calls on initialization of the bot instance to get the session.
     get_session: fn(String) -> Result(session, String),
   )
+}
+
+pub fn next_session(
+  ctx ctx: Context(session),
+  session session: session,
+) -> Result(Context(session), String) {
+  Ok(Context(..ctx, session:))
 }
 
 fn get_session_key(update: Update) -> Result(String, String) {
@@ -306,7 +313,7 @@ fn handle_bot_instance_message(
       case bot.active_handler {
         Some(handler) ->
           case do_handle(bot, message, handler) {
-            Some(Ok(new_session)) -> {
+            Some(Ok(Context(session: new_session, ..))) -> {
               actor.send(client, BotInstanceMessageOk)
               actor.continue(
                 BotInstance(..bot, session: new_session, active_handler: None),
@@ -360,28 +367,31 @@ fn hears_check(text: String, hear: Hears) -> Bool {
 
 pub type Handler(session) {
   /// Handle all messages.
-  HandleAll(handler: fn(Context(session)) -> Result(session, String))
+  HandleAll(handler: fn(Context(session)) -> Result(Context(session), String))
   /// Handle a specific command.
   HandleCommand(
     command: String,
-    handler: fn(Context(session), Command) -> Result(session, String),
+    handler: fn(Context(session), Command) -> Result(Context(session), String),
   )
   /// Handle multiple commands.
   HandleCommands(
     commands: List(String),
-    handler: fn(Context(session), Command) -> Result(session, String),
+    handler: fn(Context(session), Command) -> Result(Context(session), String),
   )
   /// Handle text messages.
-  HandleText(handler: fn(Context(session), String) -> Result(session, String))
+  HandleText(
+    handler: fn(Context(session), String) -> Result(Context(session), String),
+  )
   /// Handle text message with a specific substring.
   HandleHears(
     hears: Hears,
-    handler: fn(Context(session), String) -> Result(session, String),
+    handler: fn(Context(session), String) -> Result(Context(session), String),
   )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
-    handler: fn(Context(session), String, String) -> Result(session, String),
+    handler: fn(Context(session), String, String) ->
+      Result(Context(session), String),
   )
 }
 
@@ -393,7 +403,7 @@ fn do_handle(
   bot: BotInstance(session),
   update: Update,
   handler: Handler(session),
-) -> Option(Result(session, String)) {
+) -> Option(Result(Context(session), String)) {
   case handler, update {
     HandleAll(handle), _ -> Some(handle(new_context(bot, update)))
     HandleText(handle), TextUpdate(text: text, ..) ->
@@ -431,7 +441,7 @@ fn loop_handlers(
   case handlers {
     [handler, ..rest] ->
       case do_handle(bot, update, handler) {
-        Some(Ok(new_session)) ->
+        Some(Ok(Context(session: new_session, ..))) ->
           loop_handlers(BotInstance(..bot, session: new_session), update, rest)
         Some(Error(e)) ->
           Error(
@@ -440,5 +450,15 @@ fn loop_handlers(
         None -> loop_handlers(bot, update, rest)
       }
     [] -> bot.session_settings.persist_session(bot.key, bot.session)
+  }
+}
+
+pub fn fmt_update(ctx: Context(session)) -> String {
+  case ctx.update {
+    CommandUpdate(command: command, ..) -> "[command " <> command.command <> "]"
+    TextUpdate(text: text, ..) -> "[text " <> text <> "]"
+    CallbackQueryUpdate(raw: raw, ..) ->
+      "[callback query " <> option.unwrap(raw.data, "no data") <> "]"
+    UnknownUpdate(..) -> "[unknown update]"
   }
 }

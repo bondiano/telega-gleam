@@ -22,7 +22,7 @@ type BotContext =
 fn middleware(req, bot, handle_request) -> Response {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
-  use <- wisp.rescue_crashes
+  use <- wisp.rescue_crashes()
   use <- telega_wisp.handle_bot(req, bot)
   use req <- wisp.handle_head(req)
   handle_request(req)
@@ -60,10 +60,7 @@ fn t_language_changed_message(language) -> String {
   }
 }
 
-fn change_languages_keyboard(
-  ctx: BotContext,
-  _,
-) -> Result(LanguageBotSession, String) {
+fn change_languages_keyboard(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "lang command")
 
   let language = ctx.session.lang
@@ -77,13 +74,10 @@ fn change_languages_keyboard(
   use _, text <- telega.wait_hears(ctx, telega_keyboard.hear(keyboard))
   let language = language_keyboard.option_to_language(text)
   use _ <- result.try(reply.with_text(ctx, t_language_changed_message(language)))
-  Ok(LanguageBotSession(language))
+  bot.next_session(ctx, LanguageBotSession(language))
 }
 
-fn handle_inline_change_language(
-  ctx: BotContext,
-  _,
-) -> Result(LanguageBotSession, String) {
+fn handle_inline_change_language(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "lang_inline command")
 
   let language = ctx.session.lang
@@ -123,13 +117,10 @@ fn handle_inline_change_language(
     ),
   ))
 
-  Ok(LanguageBotSession(language))
+  bot.next_session(ctx, LanguageBotSession(language))
 }
 
-fn start_command_handler(
-  ctx: BotContext,
-  _,
-) -> Result(LanguageBotSession, String) {
+fn start_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "start")
   use _ <- result.try(telega_api.set_my_commands(
     ctx.config.api,
@@ -141,7 +132,7 @@ fn start_command_handler(
   ))
   use _ <- result.try(reply.with_text(ctx, t_welcome_message(ctx.session.lang)))
 
-  Ok(ctx.session)
+  Ok(ctx)
 }
 
 fn build_bot() {
@@ -154,8 +145,8 @@ fn build_bot() {
   |> telega.handle_command("start", start_command_handler)
   |> telega.handle_command("lang", change_languages_keyboard)
   |> telega.handle_command("lang_inline", handle_inline_change_language)
-  |> session.attach
-  |> telega.init
+  |> session.attach()
+  |> telega.init()
 }
 
 pub fn main() {
@@ -166,10 +157,9 @@ pub fn main() {
   let secret_key_base = wisp.random_string(64)
   let assert Ok(_) =
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
-    |> mist.new
+    |> mist.new()
     |> mist.port(8000)
-    |> mist.start_http
+    |> mist.start_http()
 
   process.sleep_forever()
-  Ok(Nil)
 }

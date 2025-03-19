@@ -8,9 +8,9 @@ import gleam/string
 import telega/api
 import telega/bot.{
   type CallbackQueryFilter, type Context, type Handler, type Hears,
-  type RegistryMessage, type SessionSettings, CallbackQueryFilter, Context,
-  HandleAll, HandleBotRegistryMessage, HandleCallbackQuery, HandleCommand,
-  HandleCommands, HandleHears, HandleText, SessionSettings,
+  type RegistryMessage, type SessionSettings, CallbackQueryFilter, HandleAll,
+  HandleBotRegistryMessage, HandleCallbackQuery, HandleCommand, HandleCommands,
+  HandleHears, HandleText, SessionSettings,
 }
 import telega/internal/config.{type Config}
 import telega/log
@@ -68,7 +68,7 @@ pub fn new(
 /// Handles all messages.
 pub fn handle_all(
   bot builder: TelegaBuilder(session),
-  handler handler: fn(Context(session)) -> Result(session, String),
+  handler handler: fn(Context(session)) -> Result(Context(session), String),
 ) -> TelegaBuilder(session) {
   TelegaBuilder(..builder, handlers: [HandleAll(handler), ..builder.handlers])
 }
@@ -76,8 +76,8 @@ pub fn handle_all(
 /// Stops bot message handling and waits for any message.
 pub fn wait_any(
   ctx ctx: Context(session),
-  continue continue: fn(Context(session)) -> Result(session, String),
-) -> Result(session, String) {
+  continue continue: fn(Context(session)) -> Result(Context(session), String),
+) -> Result(Context(session), String) {
   bot.wait_handler(ctx, HandleAll(continue))
 }
 
@@ -85,7 +85,8 @@ pub fn wait_any(
 pub fn handle_command(
   bot builder: TelegaBuilder(session),
   command command: String,
-  handler handler: fn(Context(session), Command) -> Result(session, String),
+  handler handler: fn(Context(session), Command) ->
+    Result(Context(session), String),
 ) -> TelegaBuilder(session) {
   TelegaBuilder(..builder, handlers: [
     HandleCommand(command, handler),
@@ -96,8 +97,9 @@ pub fn handle_command(
 pub fn wait_command(
   ctx ctx: Context(session),
   command command: String,
-  continue continue: fn(Context(session), Command) -> Result(session, String),
-) -> Result(session, String) {
+  continue continue: fn(Context(session), Command) ->
+    Result(Context(session), String),
+) -> Result(Context(session), String) {
   bot.wait_handler(ctx, HandleCommand(command, continue))
 }
 
@@ -105,7 +107,8 @@ pub fn wait_command(
 pub fn handle_commands(
   bot builder: TelegaBuilder(session),
   commands commands: List(String),
-  handler handler: fn(Context(session), Command) -> Result(session, String),
+  handler handler: fn(Context(session), Command) ->
+    Result(Context(session), String),
 ) -> TelegaBuilder(session) {
   TelegaBuilder(..builder, handlers: [
     HandleCommands(commands, handler),
@@ -116,23 +119,26 @@ pub fn handle_commands(
 pub fn wait_commands(
   ctx ctx: Context(session),
   commands commands: List(String),
-  continue continue: fn(Context(session), Command) -> Result(session, String),
-) -> Result(session, String) {
+  continue continue: fn(Context(session), Command) ->
+    Result(Context(session), String),
+) -> Result(Context(session), String) {
   bot.wait_handler(ctx, HandleCommands(commands, continue))
 }
 
 /// Handles text messages.
 pub fn handle_text(
   bot builder: TelegaBuilder(session),
-  handler handler: fn(Context(session), String) -> Result(session, String),
+  handler handler: fn(Context(session), String) ->
+    Result(Context(session), String),
 ) -> TelegaBuilder(session) {
   TelegaBuilder(..builder, handlers: [HandleText(handler), ..builder.handlers])
 }
 
 pub fn wait_text(
   ctx ctx: Context(session),
-  continue continue: fn(Context(session), String) -> Result(session, String),
-) -> Result(session, String) {
+  continue continue: fn(Context(session), String) ->
+    Result(Context(session), String),
+) -> Result(Context(session), String) {
   bot.wait_handler(ctx, HandleText(continue))
 }
 
@@ -140,7 +146,8 @@ pub fn wait_text(
 pub fn handle_hears(
   bot builder: TelegaBuilder(session),
   hears hears: Hears,
-  handler handler: fn(Context(session), String) -> Result(session, String),
+  handler handler: fn(Context(session), String) ->
+    Result(Context(session), String),
 ) -> TelegaBuilder(session) {
   TelegaBuilder(..builder, handlers: [
     HandleHears(hears, handler),
@@ -151,7 +158,8 @@ pub fn handle_hears(
 pub fn wait_hears(
   ctx ctx: Context(session),
   hears hears: Hears,
-  continue continue: fn(Context(session), String) -> Result(session, String),
+  continue continue: fn(Context(session), String) ->
+    Result(Context(session), String),
 ) {
   bot.wait_handler(ctx, HandleHears(hears, continue))
 }
@@ -161,8 +169,8 @@ pub fn handle_callback_query(
   bot builder: TelegaBuilder(session),
   filter filter: CallbackQueryFilter,
   handler handler: fn(Context(session), String, String) ->
-    Result(session, String),
-) -> TelegaBuilder(session) {
+    Result(Context(session), String),
+) {
   TelegaBuilder(..builder, handlers: [
     HandleCallbackQuery(filter, handler),
     ..builder.handlers
@@ -174,20 +182,20 @@ pub fn wait_callback_query(
   ctx ctx: Context(session),
   filter filter: CallbackQueryFilter,
   continue continue: fn(Context(session), String, String) ->
-    Result(session, String),
-) -> Result(session, String) {
+    Result(Context(session), String),
+) -> Result(Context(session), String) {
   bot.wait_handler(ctx, HandleCallbackQuery(filter, continue))
 }
 
 /// Log the message and error message if the handler fails.
 pub fn log_context(
-  ctx: Context(session),
-  prefix: String,
-  handler: fn() -> Result(session, String),
-) -> Result(session, String) {
+  ctx ctx: Context(session),
+  prefix prefix: String,
+  handler handler: fn() -> Result(Context(session), String),
+) {
   let prefix = "[" <> prefix <> "] "
 
-  log.info(prefix <> "Received update: " <> string.inspect(ctx.update))
+  log.info(prefix <> "Received update: " <> bot.fmt_update(ctx))
 
   handler()
   |> result.map_error(fn(e) {
