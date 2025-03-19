@@ -32,7 +32,7 @@ pub fn handle_bot(
   telega telega: Telega(session),
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
-  use <- bool.lazy_guard(!is_bot_request(telega, req), fn() { handler() })
+  use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
   log.info("Received request from Telegram API")
   use json <- wisp.require_json(req)
 

@@ -217,7 +217,7 @@ pub fn get_my_commands(
 ) {
   let parameters =
     option.unwrap(parameters, model.default_bot_command_parameters())
-    |> model.encode_bot_command_parameters()
+    |> model.encode_bot_command_parameters
 
   let body_json = json.object(parameters)
 
@@ -387,7 +387,7 @@ fn new_post_request(
   body body: String,
   query query: Option(List(#(String, String))),
 ) {
-  TelegramApiPostRequest(url: build_url(config, path), body: body, query: query)
+  TelegramApiPostRequest(url: build_url(config, path), body:, query:)
 }
 
 fn new_get_request(
@@ -395,7 +395,7 @@ fn new_get_request(
   path path: String,
   query query: Option(List(#(String, String))),
 ) {
-  TelegramApiGetRequest(url: build_url(config, path), query: query)
+  TelegramApiGetRequest(url: build_url(config, path), query:)
 }
 
 fn set_query(

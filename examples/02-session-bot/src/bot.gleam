@@ -21,7 +21,7 @@ type BotContext =
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
-  use <- wisp.rescue_crashes()
+  use <- wisp.rescue_crashes
   use <- telega_wisp.handle_bot(req, bot)
   use req <- wisp.handle_head(req)
   handle_request(req)
@@ -89,8 +89,8 @@ fn build_bot() {
   |> telega.handle_command("set_name", set_name_command_handler)
   |> telega.handle_command("get_name", get_name_command_handler)
   |> telega.handle_text(set_name_message_handler)
-  |> session.attach()
-  |> telega.init()
+  |> session.attach
+  |> telega.init
 }
 
 pub fn main() {
@@ -101,9 +101,9 @@ pub fn main() {
   let secret_key_base = wisp.random_string(64)
   let assert Ok(_) =
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
-    |> mist.new()
+    |> mist.new
     |> mist.port(8000)
-    |> mist.start_http()
+    |> mist.start_http
 
   process.sleep_forever()
 }

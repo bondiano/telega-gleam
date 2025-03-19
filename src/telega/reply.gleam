@@ -25,6 +25,8 @@ pub fn with_text(
       link_preview_options: None,
       disable_notification: None,
       protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
     ),
@@ -53,6 +55,8 @@ pub fn with_markup(
       disable_notification: None,
       protect_content: None,
       reply_parameters: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
     ),
   )
 }

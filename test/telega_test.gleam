@@ -31,6 +31,6 @@ pub fn set_webhook_test() {
   use <- with_mocked_httpc(Response(200, [], "{\"ok\": true, \"result\": true}"))
 
   create_new_config()
-  |> bot.set_webhook()
+  |> bot.set_webhook
   |> should.equal(Ok(True))
 }

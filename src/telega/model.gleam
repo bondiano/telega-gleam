@@ -15770,6 +15770,10 @@ pub type SendMessageParameters {
     disable_notification: Option(Bool),
     /// Protects the contents of the sent message from forwarding and saving
     protect_content: Option(Bool),
+    /// Pass True to allow up to 1000 messages per second, ignoring [broadcasting limits](https://core.telegram.org/bots/faq#how-can-i-message-all-of-my-bot-39s-subscribers-at-once) for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance
+    allow_paid_broadcast: Option(Bool),
+    /// Unique identifier of the message effect to be added to the message; for private chats only
+    message_effect_id: Option(String),
     /// Description of the message to reply to
     reply_parameters: Option(ReplyParameters),
     /// Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove a reply keyboard or to force a reply from the user. Not supported for messages sent on behalf of a business account

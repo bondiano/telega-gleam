@@ -39,9 +39,9 @@ pub fn main() {
 
   let assert Ok(_) =
     wisp_mist.handler(handle_request(bot, _), wisp.random_string(64))
-    |> mist.new()
+    |> mist.new
     |> mist.port(8000)
-    |> mist.start_http()
+    |> mist.start_http
 
   process.sleep_forever()
 }
