@@ -19,9 +19,9 @@ import telega/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type EditMessageTextParameters, type File, type ForwardMessageParameters,
-  type Message as ModelMessage, type SendDiceParameters,
-  type SendMessageParameters, type SetChatMenuButtonParameters,
-  type SetWebhookParameters,
+  type GetUpdatesParameters, type Message as ModelMessage,
+  type SendDiceParameters, type SendMessageParameters,
+  type SetChatMenuButtonParameters, type SetWebhookParameters,
 }
 
 const default_retry_delay = 1000
@@ -337,6 +337,36 @@ pub fn set_chat_menu_button(
   |> fetch(config)
   |> map_response(decode.bool)
 }
+
+/// Use this method to receive incoming updates using long polling ([wiki](https://en.wikipedia.org/wiki/Push_technology#Long_polling)).
+///
+/// > Notes
+/// > 1. This method will not work if an outgoing webhook is set up.
+/// > 2. In order to avoid getting duplicate updates, recalculate offset after each server response.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getupdates
+pub fn get_updates(
+  config config: TelegramApiConfig,
+  parameters parameters: Option(GetUpdatesParameters),
+) {
+  let query =
+    option.map(parameters, fn(p) {
+      [#("offset", p.offset), #("limit", p.limit), #("timeout", p.timeout)]
+      |> list.filter_map(fn(x) {
+        let #(key, value) = x
+
+        case value {
+          Some(value) -> Ok(#(key, int.to_string(value)))
+          None -> Error(Nil)
+        }
+      })
+    })
+  new_get_request(config, path: "getUpdates", query:)
+  |> fetch(config)
+  |> map_response(decode.list(model.update_decoder()))
+}
+
+// Common Helpers --------------------------------------------------------------------------------------
 
 fn build_url(config: TelegramApiConfig, path: String) -> String {
   config.tg_api_url <> config.token <> "/" <> path

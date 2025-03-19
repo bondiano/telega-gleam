@@ -1,3 +1,5 @@
+/// `reply` provides a convenient way to send messages to the active chat.
+/// It uses the `Context` object to access the chat ID and other necessary information.
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import telega/api
