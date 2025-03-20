@@ -15980,6 +15980,125 @@ pub type GetUpdatesParameters {
   )
 }
 
+// CopyMessageParameters ---------------------------------------------------------------------------------------------
+
+/// https://core.telegram.org/bots/api#copymessage
+pub type CopyMessageParameters {
+  CopyMessageParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
+    message_thread_id: Option(Int),
+    /// Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)
+    from_chat_id: IntOrString,
+    /// Message identifier in the chat specified in from_chat_id
+    message_id: Int,
+    /// New start timestamp for the copied video in the message
+    video_start_timestamp: Option(Int),
+    /// New caption for media, 0-1024 characters after entities parsing. If not specified, the original caption is kept
+    caption: Option(String),
+    /// Mode for parsing entities in the new caption. See formatting options for more details.
+    parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the new caption, which can be specified instead of parse_mode
+    caption_entities: Option(List(MessageEntity)),
+    /// Pass True, if the caption must be shown above the message media. Ignored if a new caption isn't specified.
+    show_caption_above_media: Option(Bool),
+    /// Sends the message silently. Users will receive a notification with no sound.
+    disable_notification: Option(Bool),
+    /// Protects the contents of the sent message from forwarding and saving
+    protect_content: Option(Bool),
+    /// Pass True to allow up to 1000 messages per second, ignoring broadcasting limits for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance
+    allow_paid_broadcast: Option(Bool),
+    /// Description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove a reply keyboard or to force a reply from the user
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_copy_message_parameters(params: CopyMessageParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("from_chat_id", encode_int_or_string(params.from_chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #(
+      "video_start_timestamp",
+      json.nullable(params.video_start_timestamp, json.int),
+    ),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// CopyMessagesParameters --------------------------------------------------------------------------------------------
+
+/// https://core.telegram.org/bots/api#copymessages
+pub type CopyMessagesParameters {
+  CopyMessagesParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
+    message_thread_id: Option(Int),
+    /// Unique identifier for the chat where the original messages were sent (or channel username in the format @channelusername)
+    from_chat_id: IntOrString,
+    /// A JSON-serialized list of 1-100 identifiers of messages in the chat from_chat_id to copy
+    message_ids: List(Int),
+    /// Sends the messages silently. Users will receive a notification with no sound.
+    disable_notification: Option(Bool),
+    /// Protects the contents of the sent messages from forwarding and saving
+    protect_content: Option(Bool),
+    /// Pass True to copy the messages without their captions
+    remove_caption: Option(Bool),
+  )
+}
+
+pub fn encode_copy_messages_parameters(params: CopyMessagesParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("from_chat_id", encode_int_or_string(params.from_chat_id)),
+    #("message_ids", json.array(params.message_ids, json.int)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #("remove_caption", json.nullable(params.remove_caption, json.bool)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {

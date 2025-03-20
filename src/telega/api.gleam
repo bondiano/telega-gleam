@@ -18,6 +18,7 @@ import gleam/string
 import telega/internal/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
+  type CopyMessageParameters, type CopyMessagesParameters,
   type EditMessageTextParameters, type File, type ForwardMessageParameters,
   type ForwardMessagesParameters, type GetUpdatesParameters,
   type Message as ModelMessage, type SendDiceParameters,
@@ -379,6 +380,44 @@ pub fn forward_messages(
   new_post_request(
     config:,
     path: "forwardMessage",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to copy messages of any kind. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#copymessage
+pub fn copy_message(
+  config config: TelegramApiConfig,
+  parameters parameters: CopyMessageParameters,
+) {
+  let body_json = model.encode_copy_message_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "copyMessage",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to copy messages of any kind. If some of the specified messages can't be found or copied, they are skipped. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#copymessages
+pub fn copy_messages(
+  config config: TelegramApiConfig,
+  parameters parameters: CopyMessagesParameters,
+) {
+  let body_json = model.encode_copy_messages_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "copyMessages",
     query: None,
     body: json.to_string(body_json),
   )
