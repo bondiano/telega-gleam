@@ -12,7 +12,6 @@ import gleam/result
 import gleam/string
 import telega/api
 import telega/internal/config.{type Config}
-import telega/log
 import telega/model.{type User}
 import telega/update.{
   type Command, type Update, CallbackQueryUpdate, CommandUpdate, TextUpdate,
@@ -72,10 +71,7 @@ fn handle_registry_message(
             }
             Error(Nil) -> add_bot_instance(registry, session_key, message)
           }
-        Error(e) -> {
-          log.error("Failed to get session key: " <> string.inspect(e))
-          actor.continue(registry)
-        }
+        Error(_e) -> actor.continue(registry)
       }
   }
 }
@@ -114,18 +110,10 @@ fn add_bot_instance(
               bots: dict.insert(registry.bots, session_key, bot_subject),
             ),
           )
-        Error(e) -> {
-          log.error(
-            "Failed to send message to bot instance: " <> string.inspect(e),
-          )
-          actor.continue(registry)
-        }
+        Error(_e) -> actor.continue(registry)
       }
     }
-    Error(e) -> {
-      log.error("Failed to start bot instance:\n" <> e)
-      actor.continue(registry)
-    }
+    Error(_e) -> actor.continue(registry)
   }
 }
 
@@ -319,10 +307,7 @@ fn handle_bot_instance_message(
                 BotInstance(..bot, session: new_session, active_handler: None),
               )
             }
-            Some(Error(e)) -> {
-              log.error("Failed to handle update:\n" <> e)
-              actor.Stop(process.Normal)
-            }
+            Some(Error(_e)) -> actor.Stop(process.Normal)
             None -> {
               actor.send(client, BotInstanceMessageOk)
               actor.continue(bot)
@@ -334,10 +319,7 @@ fn handle_bot_instance_message(
               actor.send(client, BotInstanceMessageOk)
               actor.continue(BotInstance(..bot, session: new_session))
             }
-            Error(e) -> {
-              log.error("Failed to handle update:\n" <> e)
-              actor.Stop(process.Normal)
-            }
+            Error(_e) -> actor.Stop(process.Normal)
           }
       }
     }
@@ -455,10 +437,15 @@ fn loop_handlers(
 
 pub fn fmt_update(ctx: Context(session)) -> String {
   case ctx.update {
-    CommandUpdate(command: command, ..) -> "[command " <> command.command <> "]"
-    TextUpdate(text: text, ..) -> "[text " <> text <> "]"
-    CallbackQueryUpdate(raw: raw, ..) ->
-      "[callback query " <> option.unwrap(raw.data, "no data") <> "]"
-    UnknownUpdate(..) -> "[unknown update]"
+    CommandUpdate(command: command, chat_id: chat_id, ..) ->
+      "command \"" <> command.command <> "\" from " <> int.to_string(chat_id)
+    TextUpdate(text: text, chat_id: chat_id, ..) ->
+      "text \"" <> text <> "\" from " <> int.to_string(chat_id)
+    CallbackQueryUpdate(raw: raw, from_id: from_id) ->
+      "callback query "
+      <> option.unwrap(raw.data, "no data")
+      <> " from "
+      <> int.to_string(from_id)
+    UnknownUpdate(..) -> "unknown"
   }
 }

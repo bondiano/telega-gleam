@@ -1,10 +1,14 @@
 import gleam/bool
 import gleam/erlang/process.{type Subject}
+import gleam/float
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/otp/supervisor
 import gleam/result
 import gleam/string
+import gleam/time/duration
+import gleam/time/timestamp
+
 import telega/api
 import telega/bot.{
   type CallbackQueryFilter, type Context, type Handler, type Hears,
@@ -195,13 +199,25 @@ pub fn log_context(
 ) {
   let prefix = "[" <> prefix <> "] "
 
-  log.info(prefix <> "Received update: " <> bot.fmt_update(ctx))
+  log.info(prefix <> "received update: " <> bot.fmt_update(ctx))
 
-  handler()
-  |> result.map_error(fn(e) {
-    log.error(prefix <> "Handler failed: " <> string.inspect(e))
-    e
-  })
+  let start_time = timestamp.system_time()
+  let result =
+    handler()
+    |> result.map_error(fn(e) {
+      log.error(prefix <> "handler failed: " <> string.inspect(e))
+      e
+    })
+  let end_time = timestamp.system_time()
+  let time =
+    start_time
+    |> timestamp.difference(end_time)
+    |> duration.to_seconds
+    |> float.to_string
+
+  log.info(prefix <> "handler completed in " <> time <> " seconds")
+
+  result
 }
 
 /// Construct a session settings.

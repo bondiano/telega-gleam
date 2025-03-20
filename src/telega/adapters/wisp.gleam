@@ -4,7 +4,6 @@ import gleam/http/response.{Response as HttpResponse}
 import gleam/result
 import telega.{type Telega}
 
-import telega/log
 import telega/update
 import wisp.{
   type Request as WispRequest, type Response as WispResponse,
@@ -33,7 +32,6 @@ pub fn handle_bot(
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
   use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
-  log.info("Received request from Telegram API")
   use json <- wisp.require_json(req)
 
   case update.decode(json) {
@@ -44,16 +42,10 @@ pub fn handle_bot(
       )
       case telega.handle_update(telega, message) {
         Ok(_) -> wisp.ok()
-        Error(error) -> {
-          log.error("Failed to handle message:\n" <> error)
-          wisp.internal_server_error()
-        }
+        Error(_error) -> wisp.internal_server_error()
       }
     }
-    Error(error) -> {
-      log.error("Failed to decode message:\n" <> error)
-      wisp.internal_server_error()
-    }
+    Error(_error) -> wisp.internal_server_error()
   }
 }
 

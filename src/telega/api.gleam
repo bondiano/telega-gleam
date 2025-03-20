@@ -40,7 +40,7 @@ pub type TelegramApiConfig {
 
 pub fn new_api_config(token token: String) -> TelegramApiConfig {
   TelegramApiConfig(
-    token,
+    token:,
     max_retry_attempts: 3,
     tg_api_url: "https://api.telegram.org",
   )
@@ -70,7 +70,7 @@ pub fn set_webhook(
   let body = model.encode_set_webhook_parameters(parameters)
 
   new_post_request(
-    config,
+    config:,
     path: "setWebhook",
     body: json.to_string(body),
     query: None,
@@ -83,7 +83,7 @@ pub fn set_webhook(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getwebhookinfo
 pub fn get_webhook_info(config config) {
-  new_get_request(config, path: "getWebhookInfo", query: None)
+  new_get_request(config:, path: "getWebhookInfo", query: None)
   |> fetch(config)
   |> map_response(model.webhook_info_decoder())
 }
@@ -92,7 +92,7 @@ pub fn get_webhook_info(config config) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletewebhook
 pub fn delete_webhook(config config: TelegramApiConfig) {
-  new_get_request(config, path: "deleteWebhook", query: None)
+  new_get_request(config:, path: "deleteWebhook", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
 }
@@ -100,7 +100,7 @@ pub fn delete_webhook(config config: TelegramApiConfig) {
 /// The same as [delete_webhook](#delete_webhook) but also drops all pending updates.
 pub fn delete_webhook_and_drop_updates(config config) {
   new_get_request(
-    config,
+    config:,
     path: "deleteWebhook",
     query: Some([#("drop_pending_updates", "true")]),
   )
@@ -114,7 +114,7 @@ pub fn delete_webhook_and_drop_updates(config config) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#logout
 pub fn log_out(config config: TelegramApiConfig) {
-  new_get_request(config, path: "logOut", query: None)
+  new_get_request(config:, path: "logOut", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
 }
@@ -125,7 +125,7 @@ pub fn log_out(config config: TelegramApiConfig) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#close
 pub fn close(config config: TelegramApiConfig) {
-  new_get_request(config, path: "close", query: None)
+  new_get_request(config:, path: "close", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
 }
@@ -140,7 +140,7 @@ pub fn send_message(
   let body_json = model.encode_send_message_parameters(parameters)
 
   new_post_request(
-    config,
+    config:,
     path: "sendMessage",
     body: json.to_string(body_json),
     query: None,
@@ -176,7 +176,7 @@ pub fn set_my_commands(
     ])
 
   new_post_request(
-    config,
+    config:,
     path: "setMyCommands",
     body: json.to_string(body_json),
     query: None,
@@ -200,7 +200,7 @@ pub fn delete_my_commands(
   let body_json = json.object(parameters)
 
   new_post_request(
-    config,
+    config:,
     path: "deleteMyCommands",
     body: json.to_string(body_json),
     query: None,
@@ -223,7 +223,7 @@ pub fn get_my_commands(
   let body_json = json.object(parameters)
 
   new_post_request(
-    config,
+    config:,
     path: "getMyCommands",
     query: None,
     body: json.to_string(body_json),
@@ -255,7 +255,7 @@ pub fn send_dice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getme
 pub fn get_me(config config: TelegramApiConfig) {
-  new_get_request(config, path: "getMe", query: None)
+  new_get_request(config:, path: "getMe", query: None)
   |> fetch(config)
   |> map_response(model.user_decoder())
 }
@@ -362,7 +362,7 @@ pub fn get_updates(
         }
       })
     })
-  new_get_request(config, path: "getUpdates", query:)
+  new_get_request(config:, path: "getUpdates", query:)
   |> fetch(config)
   |> map_response(decode.list(model.update_decoder()))
 }
@@ -525,9 +525,7 @@ fn fetch(
 
   send_with_retry(api_request, config.max_retry_attempts)
   |> result.map_error(fn(error) {
-    log.info("Api request failed with error:" <> string.inspect(error))
-
-    dynamic.string(error)
+    decode.run(error, decode.string)
     |> result.unwrap("Failed to send request")
   })
 }

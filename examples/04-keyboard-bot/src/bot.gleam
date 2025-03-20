@@ -61,7 +61,7 @@ fn t_language_changed_message(language) -> String {
 }
 
 fn change_languages_keyboard(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "lang command")
+  use <- telega.log_context(ctx, "change language with keyboard")
 
   let language = ctx.session.lang
   let keyboard = language_keyboard.new_keyboard(language)
@@ -78,7 +78,7 @@ fn change_languages_keyboard(ctx: BotContext, _) {
 }
 
 fn handle_inline_change_language(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "lang_inline command")
+  use <- telega.log_context(ctx, "change language inline")
 
   let language = ctx.session.lang
   let callback_data = language_keyboard.build_keyboard_callback_data()

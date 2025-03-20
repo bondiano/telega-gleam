@@ -10,7 +10,7 @@ pub type Config {
   Config(
     server_url: String,
     webhook_path: String,
-    /// String to compare to X-Telegram-Bot-Api-Secret-Token
+    /// String to compare with X-Telegram-Bot-Api-Secret-Token
     secret_token: String,
     api: TelegramApiConfig,
   )
@@ -24,10 +24,10 @@ pub fn new(
   url server_url: String,
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
-) -> Config {
+) {
   let secret_token =
     option.lazy_unwrap(secret_token, fn() {
-      int.random(1_000_000)
+      int.random(10_000_000)
       |> int.to_string
     })
 
