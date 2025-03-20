@@ -17,7 +17,7 @@ import telega/bot.{
   HandleHears, HandleText, SessionSettings,
 }
 import telega/internal/config.{type Config}
-import telega/log
+import telega/internal/log
 import telega/model.{type User}
 import telega/update.{type Command, type Update}
 

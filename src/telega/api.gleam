@@ -15,7 +15,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
-import telega/log
+import telega/internal/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type EditMessageTextParameters, type File, type ForwardMessageParameters,
