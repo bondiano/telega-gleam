@@ -425,6 +425,25 @@ pub fn copy_messages(
   |> map_response(model.message_decoder())
 }
 
+/// Use this method to send photos. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendphoto
+pub fn send_photo(
+  config config: TelegramApiConfig,
+  parameters parameters: SendPhotoParameters,
+) {
+  let body_json = model.encode_send_photo_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendPhoto",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
 
 fn build_url(config: TelegramApiConfig, path: String) -> String {

@@ -16099,6 +16099,90 @@ pub fn encode_copy_messages_parameters(params: CopyMessagesParameters) -> Json {
   ])
 }
 
+// SendPhotoParameters -----------------------------------------------------------------------------------------------
+
+pub type SendPhotoParameters {
+  SendPhotoParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Photo to send
+    photo: FileOrString,
+    /// Photo caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Show caption above media
+    show_caption_above_media: Option(Bool),
+    /// Cover photo with spoiler animation
+    has_spoiler: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_photo_parameters(params: SendPhotoParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("photo", encode_file_or_string(params.photo)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #("has_spoiler", json.nullable(params.has_spoiler, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
