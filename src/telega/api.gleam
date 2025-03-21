@@ -21,9 +21,9 @@ import telega/model.{
   type CopyMessageParameters, type CopyMessagesParameters,
   type EditMessageTextParameters, type File, type ForwardMessageParameters,
   type ForwardMessagesParameters, type GetUpdatesParameters,
-  type Message as ModelMessage, type SendDiceParameters,
-  type SendMessageParameters, type SetChatMenuButtonParameters,
-  type SetWebhookParameters,
+  type Message as ModelMessage, type SendAudioParameters,
+  type SendDiceParameters, type SendMessageParameters, type SendPhotoParameters,
+  type SetChatMenuButtonParameters, type SetWebhookParameters,
 }
 
 const default_retry_delay = 1000
@@ -442,6 +442,26 @@ pub fn send_photo(
   )
   |> fetch(config)
   |> map_response(model.message_decoder())
+}
+
+/// Use this method to send audio files, if you want Telegram clients to display them in the music player. Your audio must be in the .MP3 or .M4A format. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send audio files of up to 50 MB in size, this limit may be changed in the future.
+///
+/// For sending voice messages, use the [sendVoice](https://core.telegram.org/bots/api#sendvoice) method instead.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendaudio
+pub fn send_audio(
+  config config: TelegramApiConfig,
+  parameters parameters: SendAudioParameters,
+) {
+  let body_json = model.encode_send_audio_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendAudio",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

@@ -16183,6 +16183,93 @@ pub fn encode_send_photo_parameters(params: SendPhotoParameters) -> Json {
   ])
 }
 
+// SendAudioParameters -----------------------------------------------------------------------------------------------
+
+pub type SendAudioParameters {
+  SendAudioParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Audio file to send
+    audio: FileOrString,
+    /// Audio caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Duration of the audio in seconds
+    duration: Option(Int),
+    /// Performer name
+    performer: Option(String),
+    /// Track name
+    title: Option(String),
+    /// Thumbnail of the file
+    thumbnail: Option(FileOrString),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_audio_parameters(params: SendAudioParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("audio", encode_file_or_string(params.audio)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("duration", json.nullable(params.duration, json.int)),
+    #("performer", json.nullable(params.performer, json.string)),
+    #("title", json.nullable(params.title, json.string)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
