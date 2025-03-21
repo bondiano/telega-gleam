@@ -54,6 +54,11 @@ pub fn is_secret_token_valid(telega: Telega(session), token: String) -> Bool {
   telega.config.secret_token == token
 }
 
+/// Helper to get the config for API requests.
+pub fn get_api_config(telega: Telega(session)) -> api.TelegramApiConfig {
+  telega.config.api
+}
+
 /// Create a new Telega instance.
 pub fn new(
   token token: String,

@@ -16270,6 +16270,1119 @@ pub fn encode_send_audio_parameters(params: SendAudioParameters) -> Json {
   ])
 }
 
+// SendDocumentParameters --------------------------------------------------------------------------------------------
+
+pub type SendDocumentParameters {
+  SendDocumentParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// File to send
+    document: FileOrString,
+    /// Thumbnail of the file
+    thumbnail: Option(FileOrString),
+    /// Document caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Disable automatic content type detection
+    disable_content_type_detection: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_document_parameters(params: SendDocumentParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("document", encode_file_or_string(params.document)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "disable_content_type_detection",
+      json.nullable(params.disable_content_type_detection, json.bool),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendVideoParameters -----------------------------------------------------------------------------------------------
+
+pub type SendVideoParameters {
+  SendVideoParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Video to send
+    video: FileOrString,
+    /// Duration of sent video in seconds
+    duration: Option(Int),
+    /// Video width
+    width: Option(Int),
+    /// Video height
+    height: Option(Int),
+    /// Thumbnail of the file
+    thumbnail: Option(FileOrString),
+    /// Cover for the video
+    cover: Option(FileOrString),
+    /// Start timestamp for the video
+    start_timestamp: Option(Int),
+    /// Video caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Show caption above media
+    show_caption_above_media: Option(Bool),
+    /// Cover video with spoiler animation
+    has_spoiler: Option(Bool),
+    /// Video is suitable for streaming
+    supports_streaming: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_video_parameters(params: SendVideoParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("video", encode_file_or_string(params.video)),
+    #("duration", json.nullable(params.duration, json.int)),
+    #("width", json.nullable(params.width, json.int)),
+    #("height", json.nullable(params.height, json.int)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #("cover", json.nullable(params.cover, encode_file_or_string)),
+    #("start_timestamp", json.nullable(params.start_timestamp, json.int)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #("has_spoiler", json.nullable(params.has_spoiler, json.bool)),
+    #("supports_streaming", json.nullable(params.supports_streaming, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendAnimationParameters --------------------------------------------------------------------------------------------
+
+pub type SendAnimationParameters {
+  SendAnimationParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Animation to send
+    animation: FileOrString,
+    /// Duration of sent animation in seconds
+    duration: Option(Int),
+    /// Animation width
+    width: Option(Int),
+    /// Animation height
+    height: Option(Int),
+    /// Thumbnail of the file
+    thumbnail: Option(FileOrString),
+    /// Animation caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Show caption above media
+    show_caption_above_media: Option(Bool),
+    /// Cover animation with spoiler animation
+    has_spoiler: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_animation_parameters(params: SendAnimationParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("animation", encode_file_or_string(params.animation)),
+    #("duration", json.nullable(params.duration, json.int)),
+    #("width", json.nullable(params.width, json.int)),
+    #("height", json.nullable(params.height, json.int)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #("has_spoiler", json.nullable(params.has_spoiler, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendVoiceParameters -----------------------------------------------------------------------------------------------
+
+pub type SendVoiceParameters {
+  SendVoiceParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Audio file to send
+    voice: FileOrString,
+    /// Voice message caption, 0-1024 characters
+    caption: Option(String),
+    /// Mode for parsing entities in the caption
+    parse_mode: Option(String),
+    /// List of special entities in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Duration of the voice message in seconds
+    duration: Option(Int),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_voice_parameters(params: SendVoiceParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("voice", encode_file_or_string(params.voice)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("duration", json.nullable(params.duration, json.int)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendVideoNoteParameters ------------------------------------------------------------------------------------
+
+pub type SendVideoNoteParameters {
+  SendVideoNoteParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Video note to send
+    video_note: FileOrString,
+    /// Duration of sent video in seconds
+    duration: Option(Int),
+    /// Video width and height (diameter)
+    length: Option(Int),
+    /// Thumbnail of the file
+    thumbnail: Option(FileOrString),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_video_note_parameters(
+  params: SendVideoNoteParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("video_note", encode_file_or_string(params.video_note)),
+    #("duration", json.nullable(params.duration, json.int)),
+    #("length", json.nullable(params.length, json.int)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendMediaGroupParameters
+pub type SendMediaGroupParameters {
+  SendMediaGroupParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Array describing messages to be sent (2-10 items)
+    media: List(InputMedia),
+    /// Send messages silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+  )
+}
+
+pub fn encode_send_media_group_parameters(
+  params: SendMediaGroupParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("media", json.array(params.media, encode_input_media)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+  ])
+}
+
+// SendLocationParameters
+pub type SendLocationParameters {
+  SendLocationParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Latitude of the location
+    latitude: Float,
+    /// Longitude of the location
+    longitude: Float,
+    /// Radius of uncertainty for the location (0-1500 meters)
+    horizontal_accuracy: Option(Float),
+    /// Period for location updates (60-86400 seconds)
+    live_period: Option(Int),
+    /// Direction of user movement (1-360 degrees)
+    heading: Option(Int),
+    /// Maximum distance for proximity alerts (1-100000 meters)
+    proximity_alert_radius: Option(Int),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_location_parameters(params: SendLocationParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("latitude", json.float(params.latitude)),
+    #("longitude", json.float(params.longitude)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(params.horizontal_accuracy, json.float),
+    ),
+    #("live_period", json.nullable(params.live_period, json.int)),
+    #("heading", json.nullable(params.heading, json.int)),
+    #(
+      "proximity_alert_radius",
+      json.nullable(params.proximity_alert_radius, json.int),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendVenueParameters
+pub type SendVenueParameters {
+  SendVenueParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Latitude of the venue
+    latitude: Float,
+    /// Longitude of the venue
+    longitude: Float,
+    /// Name of the venue
+    title: String,
+    /// Address of the venue
+    address: String,
+    /// Foursquare identifier
+    foursquare_id: Option(String),
+    /// Foursquare type of the venue
+    foursquare_type: Option(String),
+    /// Google Places identifier
+    google_place_id: Option(String),
+    /// Google Places type
+    google_place_type: Option(String),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_venue_parameters(params: SendVenueParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("latitude", json.float(params.latitude)),
+    #("longitude", json.float(params.longitude)),
+    #("title", json.string(params.title)),
+    #("address", json.string(params.address)),
+    #("foursquare_id", json.nullable(params.foursquare_id, json.string)),
+    #("foursquare_type", json.nullable(params.foursquare_type, json.string)),
+    #("google_place_id", json.nullable(params.google_place_id, json.string)),
+    #("google_place_type", json.nullable(params.google_place_type, json.string)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendContactParameters
+pub type SendContactParameters {
+  SendContactParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Contact's phone number
+    phone_number: String,
+    /// Contact's first name
+    first_name: String,
+    /// Contact's last name
+    last_name: Option(String),
+    /// Additional data about the contact in vCard format
+    vcard: Option(String),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_contact_parameters(params: SendContactParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("phone_number", json.string(params.phone_number)),
+    #("first_name", json.string(params.first_name)),
+    #("last_name", json.nullable(params.last_name, json.string)),
+    #("vcard", json.nullable(params.vcard, json.string)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendPollParameters
+pub type SendPollParameters {
+  SendPollParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Poll question (1-300 characters)
+    question: String,
+    /// Mode for parsing entities in the question
+    question_parse_mode: Option(String),
+    /// List of special entities in the question
+    question_entities: Option(List(MessageEntity)),
+    /// List of answer options (2-10 items)
+    options: List(String),
+    /// Whether the poll is anonymous
+    is_anonymous: Option(Bool),
+    /// Poll type ("quiz" or "regular")
+    type_: Option(String),
+    /// Whether multiple answers are allowed
+    allows_multiple_answers: Option(Bool),
+    /// Correct answer option ID (0-based)
+    correct_option_id: Option(Int),
+    /// Text shown for incorrect answers
+    explanation: Option(String),
+    /// Mode for parsing entities in the explanation
+    explanation_parse_mode: Option(String),
+    /// List of special entities in the explanation
+    explanation_entities: Option(List(MessageEntity)),
+    /// Poll active period in seconds (5-600)
+    open_period: Option(Int),
+    /// Poll close time (Unix timestamp)
+    close_date: Option(Int),
+    /// Whether the poll is closed
+    is_closed: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_poll_parameters(params: SendPollParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("question", json.string(params.question)),
+    #(
+      "question_parse_mode",
+      json.nullable(params.question_parse_mode, json.string),
+    ),
+    #(
+      "question_entities",
+      json.nullable(params.question_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("options", json.array(params.options, json.string)),
+    #("is_anonymous", json.nullable(params.is_anonymous, json.bool)),
+    #("type", json.nullable(params.type_, json.string)),
+    #(
+      "allows_multiple_answers",
+      json.nullable(params.allows_multiple_answers, json.bool),
+    ),
+    #("correct_option_id", json.nullable(params.correct_option_id, json.int)),
+    #("explanation", json.nullable(params.explanation, json.string)),
+    #(
+      "explanation_parse_mode",
+      json.nullable(params.explanation_parse_mode, json.string),
+    ),
+    #(
+      "explanation_entities",
+      json.nullable(params.explanation_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("open_period", json.nullable(params.open_period, json.int)),
+    #("close_date", json.nullable(params.close_date, json.int)),
+    #("is_closed", json.nullable(params.is_closed, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// SendChatActionParameters ------------------------------------------------------------------------------------------
+
+pub type ChatAction {
+  Typing
+  UploadPhoto
+  RecordVideo
+  UploadVideo
+  RecordVoice
+  UploadVoice
+  UploadDocument
+  ChooseSticker
+  FindLocation
+  RecordVideoNote
+  UploadVideoNote
+}
+
+fn encode_chat_action(action: ChatAction) -> String {
+  case action {
+    Typing -> "typing"
+    UploadPhoto -> "upload_photo"
+    RecordVideo -> "record_video"
+    UploadVideo -> "upload_video"
+    RecordVoice -> "record_voice"
+    UploadVoice -> "upload_voice"
+    UploadDocument -> "upload_document"
+    ChooseSticker -> "choose_sticker"
+    FindLocation -> "find_location"
+    RecordVideoNote -> "record_video_note"
+    UploadVideoNote -> "upload_video_note"
+  }
+}
+
+pub type SendChatActionParameters {
+  SendChatActionParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread
+    message_thread_id: Option(Int),
+    /// Type of action to broadcast
+    action: ChatAction,
+  )
+}
+
+pub fn encode_send_chat_action_parameters(
+  params: SendChatActionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("action", json.string(encode_chat_action(params.action))),
+  ])
+}
+
+// SendInvoiceParameters ---------------------------------------------------------------------------------------------
+
+pub type SendInvoiceParameters {
+  SendInvoiceParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Product name, 1-32 characters
+    title: String,
+    /// Product description, 1-255 characters
+    description: String,
+    /// Bot-defined invoice payload, 1-128 bytes
+    payload: String,
+    /// Payment provider token
+    provider_token: Option(String),
+    /// Three-letter ISO 4217 currency code
+    currency: String,
+    /// Price breakdown
+    prices: List(LabeledPrice),
+    /// Maximum accepted amount for tips
+    max_tip_amount: Option(Int),
+    /// Suggested amounts of tips
+    suggested_tip_amounts: Option(List(Int)),
+    /// Unique deep-linking parameter
+    start_parameter: Option(String),
+    /// JSON-serialized data about the invoice
+    provider_data: Option(String),
+    /// URL of the product photo
+    photo_url: Option(String),
+    /// Photo size in bytes
+    photo_size: Option(Int),
+    /// Photo width
+    photo_width: Option(Int),
+    /// Photo height
+    photo_height: Option(Int),
+    /// Require user's full name
+    need_name: Option(Bool),
+    /// Require user's phone number
+    need_phone_number: Option(Bool),
+    /// Require user's email address
+    need_email: Option(Bool),
+    /// Require user's shipping address
+    need_shipping_address: Option(Bool),
+    /// Send phone number to provider
+    send_phone_number_to_provider: Option(Bool),
+    /// Send email to provider
+    send_email_to_provider: Option(Bool),
+    /// Final price depends on shipping method
+    is_flexible: Option(Bool),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Inline keyboard markup
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_send_invoice_parameters(params: SendInvoiceParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("title", json.string(params.title)),
+    #("description", json.string(params.description)),
+    #("payload", json.string(params.payload)),
+    #("provider_token", json.nullable(params.provider_token, json.string)),
+    #("currency", json.string(params.currency)),
+    #("prices", json.array(params.prices, encode_labeled_price)),
+    #("max_tip_amount", json.nullable(params.max_tip_amount, json.int)),
+    #(
+      "suggested_tip_amounts",
+      json.nullable(params.suggested_tip_amounts, json.array(_, json.int)),
+    ),
+    #("start_parameter", json.nullable(params.start_parameter, json.string)),
+    #("provider_data", json.nullable(params.provider_data, json.string)),
+    #("photo_url", json.nullable(params.photo_url, json.string)),
+    #("photo_size", json.nullable(params.photo_size, json.int)),
+    #("photo_width", json.nullable(params.photo_width, json.int)),
+    #("photo_height", json.nullable(params.photo_height, json.int)),
+    #("need_name", json.nullable(params.need_name, json.bool)),
+    #("need_phone_number", json.nullable(params.need_phone_number, json.bool)),
+    #("need_email", json.nullable(params.need_email, json.bool)),
+    #(
+      "need_shipping_address",
+      json.nullable(params.need_shipping_address, json.bool),
+    ),
+    #(
+      "send_phone_number_to_provider",
+      json.nullable(params.send_phone_number_to_provider, json.bool),
+    ),
+    #(
+      "send_email_to_provider",
+      json.nullable(params.send_email_to_provider, json.bool),
+    ),
+    #("is_flexible", json.nullable(params.is_flexible, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// CreateInvoiceLinkParameters ---------------------------------------------------------------------------------------
+
+pub type CreateInvoiceLinkParameters {
+  CreateInvoiceLinkParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Product name, 1-32 characters
+    title: String,
+    /// Product description, 1-255 characters
+    description: String,
+    /// Bot-defined invoice payload, 1-128 bytes
+    payload: String,
+    /// Payment provider token
+    provider_token: Option(String),
+    /// Three-letter ISO 4217 currency code
+    currency: String,
+    /// Price breakdown
+    prices: List(LabeledPrice),
+    /// Subscription period in seconds
+    subscription_period: Option(Int),
+    /// Maximum accepted amount for tips
+    max_tip_amount: Option(Int),
+    /// Suggested amounts of tips
+    suggested_tip_amounts: Option(List(Int)),
+    /// JSON-serialized data about the invoice
+    provider_data: Option(String),
+    /// URL of the product photo
+    photo_url: Option(String),
+    /// Photo size in bytes
+    photo_size: Option(Int),
+    /// Photo width
+    photo_width: Option(Int),
+    /// Photo height
+    photo_height: Option(Int),
+    /// Require user's full name
+    need_name: Option(Bool),
+    /// Require user's phone number
+    need_phone_number: Option(Bool),
+    /// Require user's email address
+    need_email: Option(Bool),
+    /// Require user's shipping address
+    need_shipping_address: Option(Bool),
+    /// Send phone number to provider
+    send_phone_number_to_provider: Option(Bool),
+    /// Send email to provider
+    send_email_to_provider: Option(Bool),
+    /// Final price depends on shipping method
+    is_flexible: Option(Bool),
+  )
+}
+
+pub fn encode_create_invoice_link_parameters(
+  params: CreateInvoiceLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("title", json.string(params.title)),
+    #("description", json.string(params.description)),
+    #("payload", json.string(params.payload)),
+    #("provider_token", json.nullable(params.provider_token, json.string)),
+    #("currency", json.string(params.currency)),
+    #("prices", json.array(params.prices, encode_labeled_price)),
+    #(
+      "subscription_period",
+      json.nullable(params.subscription_period, json.int),
+    ),
+    #("max_tip_amount", json.nullable(params.max_tip_amount, json.int)),
+    #(
+      "suggested_tip_amounts",
+      json.nullable(params.suggested_tip_amounts, json.array(_, json.int)),
+    ),
+    #("provider_data", json.nullable(params.provider_data, json.string)),
+    #("photo_url", json.nullable(params.photo_url, json.string)),
+    #("photo_size", json.nullable(params.photo_size, json.int)),
+    #("photo_width", json.nullable(params.photo_width, json.int)),
+    #("photo_height", json.nullable(params.photo_height, json.int)),
+    #("need_name", json.nullable(params.need_name, json.bool)),
+    #("need_phone_number", json.nullable(params.need_phone_number, json.bool)),
+    #("need_email", json.nullable(params.need_email, json.bool)),
+    #(
+      "need_shipping_address",
+      json.nullable(params.need_shipping_address, json.bool),
+    ),
+    #(
+      "send_phone_number_to_provider",
+      json.nullable(params.send_phone_number_to_provider, json.bool),
+    ),
+    #(
+      "send_email_to_provider",
+      json.nullable(params.send_email_to_provider, json.bool),
+    ),
+    #("is_flexible", json.nullable(params.is_flexible, json.bool)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {

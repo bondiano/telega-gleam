@@ -1,5 +1,6 @@
 /// `reply` provides a convenient way to send messages to the active chat.
 /// It uses the `Context` object to access the chat ID and other necessary information.
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import telega/api
@@ -135,5 +136,93 @@ pub fn with_file_link(
     <> ctx.config.secret_token
     <> "/"
     <> file_path,
+  )
+}
+
+///  Use this method to send a native poll.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendpoll
+pub fn with_poll(
+  ctx ctx: Context(session),
+  question question: String,
+  options options: List(String),
+) {
+  api.send_poll(
+    ctx.config.api,
+    parameters: model.SendPollParameters(
+      question:,
+      options:,
+      chat_id: model.Str(ctx.key),
+      message_thread_id: None,
+      disable_notification: None,
+      protect_content: None,
+      reply_parameters: None,
+      type_: None,
+      reply_markup: None,
+      allow_paid_broadcast: None,
+      allows_multiple_answers: None,
+      business_connection_id: None,
+      close_date: None,
+      correct_option_id: None,
+      explanation: None,
+      explanation_entities: None,
+      explanation_parse_mode: None,
+      is_anonymous: None,
+      is_closed: None,
+      message_effect_id: None,
+      open_period: None,
+      question_entities: None,
+      question_parse_mode: None,
+    ),
+  )
+}
+
+/// Use this method to send invoices.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
+pub fn with_invoice(
+  ctx ctx: Context(session),
+  title title: String,
+  description description: String,
+  payload payload: String,
+  currency currency: String,
+  prices prices: List(#(String, Int)),
+) {
+  api.send_invoice(
+    ctx.config.api,
+    parameters: model.SendInvoiceParameters(
+      title:,
+      description:,
+      payload:,
+      currency:,
+      prices: list.map(prices, fn(price) {
+        let #(label, amount) = price
+        model.LabeledPrice(label:, amount:)
+      }),
+      chat_id: model.Str(ctx.key),
+      message_thread_id: None,
+      disable_notification: None,
+      protect_content: None,
+      reply_parameters: None,
+      message_effect_id: None,
+      reply_markup: None,
+      allow_paid_broadcast: None,
+      is_flexible: None,
+      max_tip_amount: None,
+      suggested_tip_amounts: None,
+      provider_token: None,
+      provider_data: None,
+      photo_height: None,
+      photo_size: None,
+      photo_url: None,
+      photo_width: None,
+      send_email_to_provider: None,
+      send_phone_number_to_provider: None,
+      start_parameter: None,
+      need_email: None,
+      need_name: None,
+      need_phone_number: None,
+      need_shipping_address: None,
+    ),
   )
 }

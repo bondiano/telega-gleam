@@ -19,11 +19,18 @@ import telega/internal/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
-  type EditMessageTextParameters, type File, type ForwardMessageParameters,
-  type ForwardMessagesParameters, type GetUpdatesParameters,
-  type Message as ModelMessage, type SendAudioParameters,
-  type SendDiceParameters, type SendMessageParameters, type SendPhotoParameters,
-  type SetChatMenuButtonParameters, type SetWebhookParameters,
+  type CreateInvoiceLinkParameters, type EditMessageTextParameters, type File,
+  type ForwardMessageParameters, type ForwardMessagesParameters,
+  type GetUpdatesParameters, type Message as ModelMessage,
+  type SendAnimationParameters, type SendAudioParameters,
+  type SendChatActionParameters, type SendContactParameters,
+  type SendDiceParameters, type SendDocumentParameters,
+  type SendInvoiceParameters, type SendLocationParameters,
+  type SendMediaGroupParameters, type SendMessageParameters,
+  type SendPhotoParameters, type SendPollParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SetChatMenuButtonParameters,
+  type SetWebhookParameters,
 }
 
 const default_retry_delay = 1000
@@ -462,6 +469,257 @@ pub fn send_audio(
     body: json.to_string(body_json),
   )
   |> fetch(config)
+}
+
+/// Use this method to send general files. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send files of any type of up to 50 MB in size, this limit may be changed in the future.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#senddocument
+pub fn send_document(
+  config config: TelegramApiConfig,
+  parameters parameters: SendDocumentParameters,
+) {
+  let body_json = model.encode_send_document_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendDocument",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send video files, Telegram clients support MPEG4 videos (other formats may be sent as Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendvideo
+pub fn send_video(
+  config config: TelegramApiConfig,
+  parameters parameters: SendVideoParameters,
+) {
+  let body_json = model.encode_send_video_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendVideo",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send animation files (GIF or H.264/MPEG-4 AVC video without sound). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send animation files of up to 50 MB in size, this limit may be changed in the future.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendanimation
+pub fn send_animation(
+  config config: TelegramApiConfig,
+  parameters parameters: SendAnimationParameters,
+) {
+  let body_json = model.encode_send_animation_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendAnimation",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send audio files, if you want Telegram clients to display the file as a playable voice message. For this to work, your audio must be in an .ogg file encoded with OPUS (other formats may be sent as Audio or Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send voice messages of up to 50 MB in size, this limit may be changed in the future.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendvoice
+pub fn send_voice(
+  config config: TelegramApiConfig,
+  parameters parameters: SendVoiceParameters,
+) {
+  let body_json = model.encode_send_voice_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendVoice",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send video messages. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendvideonote
+pub fn send_video_note(
+  config config: TelegramApiConfig,
+  parameters parameters: SendVideoNoteParameters,
+) {
+  let body_json = model.encode_send_video_note_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendVideoNote",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send a group of photos, videos, documents or audio files as an album. Documents and audio files can be only grouped in an album with the first item having a filename. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
+pub fn send_media_group(
+  config config: TelegramApiConfig,
+  parameters parameters: SendMediaGroupParameters,
+) {
+  let body_json = model.encode_send_media_group_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendMediaGroup",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send point on the map. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendlocation
+pub fn send_location(
+  config config: TelegramApiConfig,
+  parameters parameters: SendLocationParameters,
+) {
+  let body_json = model.encode_send_location_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendLocation",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send information about a venue. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendvenue
+pub fn send_venue(
+  config config: TelegramApiConfig,
+  parameters parameters: SendVenueParameters,
+) {
+  let body_json = model.encode_send_venue_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendVenue",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send phone contacts. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendcontact
+pub fn send_contact(
+  config config: TelegramApiConfig,
+  parameters parameters: SendContactParameters,
+) {
+  let body_json = model.encode_send_contact_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendContact",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send a native poll. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendpoll
+pub fn send_poll(
+  config config: TelegramApiConfig,
+  parameters parameters: SendPollParameters,
+) {
+  let body_json = model.encode_send_poll_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendPoll",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method when you need to tell the user that something is happening on the bot's side. The status is set for 5 seconds or less (when a message arrives from your bot, Telegram clients clear its typing status). Returns True on success.
+///
+/// > Example: The [ImageBot](https://t.me/imagebot) needs some time to process a request and upload the image. Instead of sending a text message along the lines of “Retrieving image, please wait…”, the bot may use [sendChatAction](https://core.telegram.org/bots/api#sendchataction) with action = upload_photo. The user will see a “sending photo” status for the bot.
+///
+/// We only recommend using this method when a response from the bot will take a noticeable amount of time to arrive.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendchataction
+pub fn send_chat_action(
+  config config: TelegramApiConfig,
+  parameters parameters: SendChatActionParameters,
+) {
+  let body_json = model.encode_send_chat_action_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendChatAction",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to send invoices. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
+pub fn send_invoice(
+  config config: TelegramApiConfig,
+  parameters parameters: SendInvoiceParameters,
+) {
+  let body_json = model.encode_send_invoice_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendInvoice",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to create a link for an invoice.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#createinvoicelink
+pub fn create_invoice_link(
+  config config: TelegramApiConfig,
+  parameters parameters: CreateInvoiceLinkParameters,
+) -> Result(String, String) {
+  let body_json = model.encode_create_invoice_link_parameters(parameters)
+
+  new_post_request(
+    config,
+    path: "createInvoiceLink",
+    body: json.to_string(body_json),
+    query: None,
+  )
+  |> fetch(config)
+  |> map_response(decode.string)
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
