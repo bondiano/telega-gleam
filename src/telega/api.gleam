@@ -21,15 +21,17 @@ import telega/model.{
   type CopyMessageParameters, type CopyMessagesParameters,
   type CreateInvoiceLinkParameters, type EditMessageTextParameters, type File,
   type ForwardMessageParameters, type ForwardMessagesParameters,
-  type GetUpdatesParameters, type Message as ModelMessage,
+  type GetStickerSetParameters, type GetUpdatesParameters,
+  type GetUserProfilePhotosParameters, type Message as ModelMessage,
   type SendAnimationParameters, type SendAudioParameters,
   type SendChatActionParameters, type SendContactParameters,
   type SendDiceParameters, type SendDocumentParameters,
   type SendInvoiceParameters, type SendLocationParameters,
   type SendMediaGroupParameters, type SendMessageParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendVenueParameters,
-  type SendVideoNoteParameters, type SendVideoParameters,
-  type SendVoiceParameters, type SetChatMenuButtonParameters,
+  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
+  type SendVenueParameters, type SendVideoNoteParameters,
+  type SendVideoParameters, type SendVoiceParameters,
+  type SetChatMenuButtonParameters, type SetMessageReactionParameters,
   type SetWebhookParameters,
 }
 
@@ -720,6 +722,82 @@ pub fn create_invoice_link(
   )
   |> fetch(config)
   |> map_response(decode.string)
+}
+
+/// Use this method to change the chosen reactions on a message. Service messages of some types can't be reacted to. Automatically forwarded messages from a channel to its discussion group have the same available reactions as messages in the channel. Bots can't use paid reactions. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmessagereaction
+pub fn set_message_reaction(
+  config config: TelegramApiConfig,
+  parameters parameters: SetMessageReactionParameters,
+) {
+  let body_json = model.encode_set_message_reaction_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "setMessageReaction",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get a list of profile pictures for a user. Returns a [UserProfilePhotos](https://core.telegram.org/bots/api#userprofilephotos) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getuserprofilephotos
+pub fn get_user_profile_photos(
+  config config: TelegramApiConfig,
+  parameters parameters: GetUserProfilePhotosParameters,
+) {
+  let body_json = model.encode_get_user_profile_photos_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "getUserProfilePhotos",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.user_profile_photos_decoder())
+}
+
+/// Use this method to send static .WEBP, [animated](https://telegram.org/blog/animated-stickers) .TGS, or [video](https://telegram.org/blog/video-stickers-better-reactions/ru?ln=a) .WEBM stickers. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendsticker
+pub fn send_sticker(
+  config config: TelegramApiConfig,
+  parameters parameters: SendStickerParameters,
+) {
+  let body_json = model.encode_send_sticker_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "sendSticker",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to get a sticker set. On success, a [StickerSet](https://core.telegram.org/bots/api#stickerset) object is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getstickerset
+pub fn get_sticker_set(
+  config config: TelegramApiConfig,
+  parameters parameters: GetStickerSetParameters,
+) {
+  let body_json = model.encode_get_sticker_set_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "getStickerSet",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.sticker_set_decoder())
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

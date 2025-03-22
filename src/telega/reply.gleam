@@ -139,7 +139,7 @@ pub fn with_file_link(
   )
 }
 
-///  Use this method to send a native poll.
+/// Use this method to send a native poll.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendpoll
 pub fn with_poll(
@@ -223,6 +223,31 @@ pub fn with_invoice(
       need_name: None,
       need_phone_number: None,
       need_shipping_address: None,
+    ),
+  )
+}
+
+/// Use this method to send a sticker.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendsticker
+pub fn with_sticker(
+  ctx ctx: Context(session),
+  sticker sticker: model.FileOrString,
+) -> Result(Message, String) {
+  api.send_sticker(
+    ctx.config.api,
+    parameters: model.SendStickerParameters(
+      sticker:,
+      chat_id: model.Str(ctx.key),
+      message_thread_id: None,
+      disable_notification: None,
+      protect_content: None,
+      reply_parameters: None,
+      allow_paid_broadcast: None,
+      business_connection_id: None,
+      message_effect_id: None,
+      emoji: None,
+      reply_markup: None,
     ),
   )
 }

@@ -16280,9 +16280,9 @@ pub type SendDocumentParameters {
     business_connection_id: Option(String),
     /// Unique identifier for the target message thread (topic)
     message_thread_id: Option(Int),
-    /// File to send
+    /// File to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. [More information on Sending Files »](https://core.telegram.org/bots/api#sending-files)
     document: FileOrString,
-    /// Thumbnail of the file
+    /// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. [More information on Sending Files »](https://core.telegram.org/bots/api#sending-files)
     thumbnail: Option(FileOrString),
     /// Document caption, 0-1024 characters
     caption: Option(String),
@@ -17380,6 +17380,136 @@ pub fn encode_create_invoice_link_parameters(
       json.nullable(params.send_email_to_provider, json.bool),
     ),
     #("is_flexible", json.nullable(params.is_flexible, json.bool)),
+  ])
+}
+
+// SendStickerParameters ---------------------------------------------------------------------------------------------
+
+pub type SendStickerParameters {
+  SendStickerParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target message thread (topic)
+    message_thread_id: Option(Int),
+    /// Sticker to send
+    sticker: FileOrString,
+    /// Emoji associated with the sticker
+    emoji: Option(String),
+    /// Send message silently
+    disable_notification: Option(Bool),
+    /// Protect content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Allow paid broadcast
+    allow_paid_broadcast: Option(Bool),
+    /// Message effect identifier
+    message_effect_id: Option(String),
+    /// Reply parameters
+    reply_parameters: Option(ReplyParameters),
+    /// Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn encode_send_sticker_parameters(params: SendStickerParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("sticker", encode_file_or_string(params.sticker)),
+    #("emoji", json.nullable(params.emoji, json.string)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+// GetStickerSetParameters -------------------------------------------------------------------------------------------
+
+pub type GetStickerSetParameters {
+  GetStickerSetParameters(
+    /// Name of the sticker set
+    name: String,
+  )
+}
+
+pub fn encode_get_sticker_set_parameters(
+  params: GetStickerSetParameters,
+) -> Json {
+  json_object_filter_nulls([#("name", json.string(params.name))])
+}
+
+// SetMessageReactionParameters --------------------------------------------------------------------------------------
+
+pub type SetMessageReactionParameters {
+  SetMessageReactionParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Identifier of the target message
+    message_id: Int,
+    /// List of reaction types to set on the message
+    reaction: Option(List(ReactionType)),
+    /// Whether to set the reaction with a big animation
+    is_big: Option(Bool),
+  )
+}
+
+pub fn encode_set_message_reaction_parameters(
+  params: SetMessageReactionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #(
+      "reaction",
+      json.nullable(params.reaction, json.array(_, encode_reaction_type)),
+    ),
+    #("is_big", json.nullable(params.is_big, json.bool)),
+  ])
+}
+
+// GetUserProfilePhotosParameters ------------------------------------------------------------------------------------
+
+pub type GetUserProfilePhotosParameters {
+  GetUserProfilePhotosParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Sequential number of the first photo to be returned (0-based)
+    offset: Option(Int),
+    /// Limits the number of photos to be retrieved (1-100)
+    limit: Option(Int),
+  )
+}
+
+pub fn encode_get_user_profile_photos_parameters(
+  params: GetUserProfilePhotosParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("offset", json.nullable(params.offset, json.int)),
+    #("limit", json.nullable(params.limit, json.int)),
   ])
 }
 
