@@ -19,8 +19,11 @@ import telega/internal/log
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
-  type CreateInvoiceLinkParameters, type EditMessageTextParameters, type File,
-  type ForwardMessageParameters, type ForwardMessagesParameters,
+  type CreateInvoiceLinkParameters, type DeleteMessageParameters,
+  type DeleteMessagesParameters, type EditMessageCaptionParameters,
+  type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
+  type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
+  type File, type ForwardMessageParameters, type ForwardMessagesParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
   type GetUserProfilePhotosParameters, type Message as ModelMessage,
   type SendAnimationParameters, type SendAudioParameters,
@@ -32,7 +35,8 @@ import telega/model.{
   type SendVenueParameters, type SendVideoNoteParameters,
   type SendVideoParameters, type SendVoiceParameters,
   type SetChatMenuButtonParameters, type SetMessageReactionParameters,
-  type SetWebhookParameters,
+  type SetWebhookParameters, type StopMessageLiveLocationParameters,
+  type StopPollParameters,
 }
 
 const default_retry_delay = 1000
@@ -289,26 +293,6 @@ pub fn answer_callback_query(
   )
   |> fetch(config)
   |> map_response(decode.bool)
-}
-
-/// Use this method to edit text and game messages.
-/// On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
-pub fn edit_message_text(
-  config config: TelegramApiConfig,
-  parameters parameters: EditMessageTextParameters,
-) -> Result(ModelMessage, String) {
-  let body_json = model.encode_edit_message_text_parameters(parameters)
-
-  new_post_request(
-    config:,
-    path: "editMessageText",
-    query: None,
-    body: json.to_string(body_json),
-  )
-  |> fetch(config)
-  |> map_response(model.message_decoder())
 }
 
 /// Use this method to forward messages of any kind. Service messages and messages with protected content can't be forwarded.
@@ -798,6 +782,186 @@ pub fn get_sticker_set(
   )
   |> fetch(config)
   |> map_response(model.sticker_set_decoder())
+}
+
+/// Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
+pub fn edit_message_text(
+  config config: TelegramApiConfig,
+  parameters parameters: EditMessageTextParameters,
+) -> Result(ModelMessage, String) {
+  let body_json = model.encode_edit_message_text_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "editMessageText",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to edit captions of messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagecaption
+pub fn edit_message_caption(
+  config config: TelegramApiConfig,
+  parameters parameters: EditMessageCaptionParameters,
+) {
+  let body_json = model.encode_edit_message_caption_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "editMessageCaption",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to edit animation, audio, document, photo, or video messages, or to add media to text messages. If a message is part of a message album, then it can be edited only to an audio for audio albums, only to a document for document albums and to a photo or a video otherwise. When an inline message is edited, a new file can't be uploaded; use a previously uploaded file via its file_id or specify a URL. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagemedia
+pub fn edit_message_media(
+  config config: TelegramApiConfig,
+  parameters parameters: EditMessageMediaParameters,
+) {
+  let body_json = model.encode_edit_message_media_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "editMessageMedia",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to edit live location messages. A location can be edited until its live_period expires or editing is explicitly disabled by a call to stopMessageLiveLocation. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagelivelocation
+pub fn edit_message_live_location(
+  config config: TelegramApiConfig,
+  parameters parameters: EditMessageLiveLocationParameters,
+) {
+  let body_json = model.encode_edit_message_live_location_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "editMessageLiveLocation",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to stop updating a live location message before live_period expires. On success, if the message is not an inline message, the edited Message is returned, otherwise True is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#stopmessagelivelocation
+pub fn stop_message_live_location(
+  config config: TelegramApiConfig,
+  parameters parameters: StopMessageLiveLocationParameters,
+) {
+  let body_json = model.encode_stop_message_live_location_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "stopMessageLiveLocation",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to edit only the reply markup of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagereplymarkup
+pub fn edit_message_reply_markup(
+  config config: TelegramApiConfig,
+  parameters parameters: EditMessageReplyMarkupParameters,
+) {
+  let body_json = model.encode_edit_message_reply_markup_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "editMessageReplyMarkup",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to stop a poll which was sent by the bot. On success, the stopped Poll is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#stoppoll
+pub fn stop_poll(
+  config config: TelegramApiConfig,
+  parameters parameters: StopPollParameters,
+) {
+  let body_json = model.encode_stop_poll_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "stopPoll",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(model.poll_decoder())
+}
+
+/// Use this method to delete a message, including service messages, with the following limitations:
+/// - A message can only be deleted if it was sent less than 48 hours ago.
+/// - Service messages about a supergroup, channel, or forum topic creation can't be deleted.
+/// - A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.
+/// - Bots can delete outgoing messages in private chats, groups, and supergroups.
+/// - Bots can delete incoming messages in private chats.
+/// - Bots granted can_post_messages permissions can delete outgoing messages in channels.
+/// - If the bot is an administrator of a group, it can delete any message there.
+/// - If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.
+/// Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletemessage
+pub fn delete_message(
+  config config: TelegramApiConfig,
+  parameters parameters: DeleteMessageParameters,
+) {
+  let body_json = model.encode_delete_message_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "deleteMessage",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete multiple messages simultaneously. If some of the specified messages can't be found, they are skipped. Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletemessagessimultaneously
+pub fn delete_messages(
+  config config: TelegramApiConfig,
+  parameters parameters: DeleteMessagesParameters,
+) {
+  let body_json = model.encode_delete_messages_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "deleteMessages",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

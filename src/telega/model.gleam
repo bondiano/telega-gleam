@@ -17513,6 +17513,295 @@ pub fn encode_get_user_profile_photos_parameters(
   ])
 }
 
+// EditMessageCaptionParameters --------------------------------------------------------------------------------------
+
+pub type EditMessageCaptionParameters {
+  EditMessageCaptionParameters(
+    /// Unique identifier of the business connection on behalf of which the message to be edited was sent
+    business_connection_id: Option(String),
+    /// Required if _inline_message_id_ is not specified. Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: Option(IntOrString),
+    /// Required if _inline_message_id_ is not specified. Identifier of the message to edit
+    message_id: Option(Int),
+    /// Required if _chat_id_ and _message_id_ are not specified. Identifier of the inline message
+    inline_message_id: Option(String),
+    /// New text of the message, 1-4096 characters after entities parsing
+    caption: Option(String),
+    /// Mode for parsing entities in the message text. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.
+    parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in message text, which can be specified instead of _parse_mode_
+    caption_entities: Option(List(MessageEntity)),
+    /// Link preview generation options for the message
+    show_caption_above_media: Option(Bool),
+    /// A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards).
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_edit_message_caption_parameters(
+  params: EditMessageCaptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// EditMessageMediaParameters ----------------------------------------------------------------------------------------
+
+pub type EditMessageMediaParameters {
+  EditMessageMediaParameters(
+    /// Unique identifier of the business connection on behalf of which the message to be edited was sent
+    business_connection_id: Option(String),
+    /// Required if _inline_message_id_ is not specified. Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: Option(IntOrString),
+    /// Required if inline_message_id is not specified. Identifier of the message to edit
+    message_id: Option(Int),
+    /// Required if chat_id and message_id are not specified. Identifier of the inline message
+    inline_message_id: Option(String),
+    /// A JSON-serialized object for a new media content of the message
+    media: InputMedia,
+    /// A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards).
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_edit_message_media_parameters(
+  params: EditMessageMediaParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+    #("media", encode_input_media(params.media)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// EditMessageLiveLocationParameters
+
+pub type EditMessageLiveLocationParameters {
+  EditMessageLiveLocationParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat
+    chat_id: Option(IntOrString),
+    /// Identifier of the message to edit
+    message_id: Option(Int),
+    /// Identifier of the inline message
+    inline_message_id: Option(String),
+    /// Latitude of new location
+    latitude: Float,
+    /// Longitude of new location
+    longitude: Float,
+    /// Period for location updates
+    live_period: Option(Int),
+    /// Radius of uncertainty for the location
+    horizontal_accuracy: Option(Float),
+    /// Direction of movement
+    heading: Option(Int),
+    /// Maximum distance for proximity alerts
+    proximity_alert_radius: Option(Int),
+    /// Inline keyboard markup
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_edit_message_live_location_parameters(
+  params: EditMessageLiveLocationParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+    #("latitude", json.float(params.latitude)),
+    #("longitude", json.float(params.longitude)),
+    #("live_period", json.nullable(params.live_period, json.int)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(params.horizontal_accuracy, json.float),
+    ),
+    #("heading", json.nullable(params.heading, json.int)),
+    #(
+      "proximity_alert_radius",
+      json.nullable(params.proximity_alert_radius, json.int),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// StopMessageLiveLocationParameters
+pub type StopMessageLiveLocationParameters {
+  StopMessageLiveLocationParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat
+    chat_id: Option(IntOrString),
+    /// Identifier of the message to stop
+    message_id: Option(Int),
+    /// Identifier of the inline message
+    inline_message_id: Option(String),
+    /// Inline keyboard markup
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_stop_message_live_location_parameters(
+  params: StopMessageLiveLocationParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// EditMessageReplyMarkupParameters ----------------------------------------------------------------------------------
+
+pub type EditMessageReplyMarkupParameters {
+  EditMessageReplyMarkupParameters(
+    /// Unique identifier of the business connection on behalf of which the message to be edited was sent
+    business_connection_id: Option(String),
+    /// Required if _inline_message_id_ is not specified. Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: Option(IntOrString),
+    /// Required if _inline_message_id_ is not specified. Identifier of the message to edit
+    message_id: Option(Int),
+    /// Required if _chat_id_ and _message_id_ are not specified. Identifier of the inline message
+    inline_message_id: Option(String),
+    /// A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards)
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_edit_message_reply_markup_parameters(
+  params: EditMessageReplyMarkupParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// StopPollParameters ------------------------------------------------------------------------------------------------
+
+pub type StopPollParameters {
+  StopPollParameters(
+    /// Unique identifier of the business connection on behalf of which the message to be edited was sent
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Identifier of the original message with the poll
+    message_id: Int,
+    /// A JSON-serialized object for a new message [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards)
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_stop_poll_parameters(params: StopPollParameters) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// DeleteMessageParameters
+pub type DeleteMessageParameters {
+  DeleteMessageParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Identifier of the message to delete
+    message_id: Int,
+  )
+}
+
+pub fn encode_delete_message_parameters(params: DeleteMessageParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+  ])
+}
+
+// DeleteMessagesParameters
+
+pub type DeleteMessagesParameters {
+  DeleteMessagesParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// A JSON-serialized list of 1-100 identifiers of messages to delete
+    message_ids: List(Int),
+  )
+}
+
+pub fn encode_delete_messages_parameters(
+  params: DeleteMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_ids", json.array(params.message_ids, json.int)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
