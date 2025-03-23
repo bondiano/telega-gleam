@@ -3,7 +3,12 @@
 [![Package Version](https://img.shields.io/hexpm/v/telega)](https://hex.pm/packages/telega)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/telega/)
 
+<a href="#" target="blank">
+  <img src="./docs/logo.png" alt="Telega" width="233" style="display: block; margin: 0 auto;" />
+</a>
+
 A [Gleam](https://gleam.run/) library for the Telegram Bot API.
+
 
 ## It provides
 

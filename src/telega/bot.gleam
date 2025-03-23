@@ -446,6 +446,6 @@ pub fn fmt_update(ctx: Context(session)) -> String {
       <> option.unwrap(raw.data, "no data")
       <> " from "
       <> int.to_string(from_id)
-    UnknownUpdate(..) -> "unknown"
+    UnknownUpdate(update) -> "unknown: " <> string.inspect(update)
   }
 }
