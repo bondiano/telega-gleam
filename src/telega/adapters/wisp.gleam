@@ -39,10 +39,9 @@ pub fn handle_bot(
       use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
         HttpResponse(401, [], WispEmptyBody)
       })
-      case telega.handle_update(telega, message) {
-        Ok(_) -> wisp.ok()
-        Error(_error) -> wisp.internal_server_error()
-      }
+
+      telega.handle_update(telega, message)
+      wisp.ok()
     }
     Error(_error) -> wisp.internal_server_error()
   }

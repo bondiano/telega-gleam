@@ -28,5 +28,6 @@ pub fn attach(bot) {
       table.insert(session_table, [#(key, session)])
       Ok(session)
     },
+    default_session: fn() { LanguageBotSession(lang: English) },
   )
 }

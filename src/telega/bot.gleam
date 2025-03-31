@@ -1,351 +1,271 @@
-import gleam/bool
-import gleam/dict.{type Dict}
 import gleam/erlang/process.{type Subject}
 import gleam/function
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
-import gleam/otp/supervisor
 import gleam/regexp.{type Regexp}
 import gleam/result
 import gleam/string
-import telega/api
+
 import telega/internal/config.{type Config}
+import telega/internal/registry.{type RegistrySubject}
+
+import telega/api
 import telega/model.{type User}
 import telega/update.{
   type Command, type Update, CallbackQueryUpdate, CommandUpdate, TextUpdate,
   UnknownUpdate,
 }
 
-// Registry --------------------------------------------------------------------
-
-type RegistrySubject =
-  Subject(RegistryMessage)
-
-type RootBotInstanceSubject(session) =
-  Subject(Subject(BotInstanceMessage(session)))
-
-type Registry(session) {
-  /// Registry works as routing for chat_id to bot instance.
-  /// If no bot instance in registry, it will create a new one.
-  Registry(
-    bots: Dict(String, RegistryItem(session)),
+/// Stores information about runned bot instance
+pub opaque type Bot(session) {
+  Bot(
+    self: BotSubject,
     config: Config,
     bot_info: User,
     session_settings: SessionSettings(session),
     handlers: List(Handler(session)),
-    registry_subject: RegistrySubject,
-    bot_instances_subject: RootBotInstanceSubject(session),
+    registry_subject: RegistrySubject(ChatInstanceMessage(session)),
   )
 }
 
-type BotInstanceSubject(session) =
-  Subject(BotInstanceMessage(session))
+pub type BotSubject =
+  Subject(BotMessage)
 
-type RegistryItem(session) =
-  BotInstanceSubject(session)
-
-pub type RegistryMessage {
-  HandleBotRegistryMessage(update: Update)
+pub opaque type BotMessage {
+  // CancelConversationBotMessage(chat_id: Int)
+  HandleUpdateBotMessage(update: Update, reply_with: Subject(Option(Nil)))
 }
 
-fn try_send_update(registry_item: RegistryItem(session), update: Update) {
-  process.try_call(registry_item, BotInstanceMessageNew(_, update), 1000)
-}
+const bot_actor_init_timeout = 100
 
-fn handle_registry_message(
-  message: RegistryMessage,
-  registry: Registry(session),
+pub fn start(
+  registry_subject registry_subject,
+  config config,
+  bot_info bot_info,
+  handlers handlers,
+  session_settings session_settings,
 ) {
+  actor.start_spec(actor.Spec(
+    init: fn() {
+      let self = process.new_subject()
+      let selector =
+        process.new_selector() |> process.selecting(self, function.identity)
+      let bot =
+        Bot(
+          self:,
+          registry_subject:,
+          config:,
+          bot_info:,
+          handlers:,
+          session_settings:,
+        )
+
+      actor.Ready(bot, selector)
+    },
+    loop: bot_loop,
+    init_timeout: bot_actor_init_timeout,
+  ))
+}
+
+fn bot_loop(message: BotMessage, bot: Bot(message)) {
   case message {
-    HandleBotRegistryMessage(message) ->
-      case get_session_key(message) {
-        Ok(session_key) ->
-          case dict.get(registry.bots, session_key) {
-            Ok(registry_item) -> {
-              case try_send_update(registry_item, message) {
-                Ok(_) -> actor.continue(registry)
-                Error(_) -> add_bot_instance(registry, session_key, message)
-              }
-            }
-            Error(Nil) -> add_bot_instance(registry, session_key, message)
-          }
-        Error(_e) -> actor.continue(registry)
-      }
-  }
-}
-
-fn add_bot_instance(
-  registry: Registry(session),
-  session_key: String,
-  update: Update,
-) {
-  let registry_actor =
-    supervisor.supervisor(fn(_) {
-      start_bot_instance(
-        registry: registry,
-        update: update,
-        session_key: session_key,
-        parent_subject: registry.bot_instances_subject,
-      )
-    })
-
-  let assert Ok(_supervisor_subject) =
-    supervisor.start(supervisor.add(_, registry_actor))
-
-  let bot_subject_result =
-    process.receive(registry.bot_instances_subject, 100)
-    |> result.map_error(fn(e) {
-      "Failed to start bot instance: " <> string.inspect(e)
-    })
-
-  case bot_subject_result {
-    Ok(bot_subject) -> {
-      case try_send_update(bot_subject, update) {
-        Ok(_) ->
-          actor.continue(
-            Registry(
-              ..registry,
-              bots: dict.insert(registry.bots, session_key, bot_subject),
-            ),
-          )
-        Error(_e) -> actor.continue(registry)
+    HandleUpdateBotMessage(update:, reply_with:) -> {
+      case handle_update_bot_message(bot:, update:, reply_with:) {
+        _ -> actor.continue(bot)
       }
     }
-    Error(_e) -> actor.continue(registry)
   }
 }
 
-/// Set webhook for the bot.
-pub fn set_webhook(config config: Config) -> Result(Bool, String) {
-  api.set_webhook(
-    config.api,
-    model.SetWebhookParameters(
-      url: config.server_url <> "/" <> config.webhook_path,
-      max_connections: None,
-      ip_address: None,
-      allowed_updates: None,
-      drop_pending_updates: None,
-      secret_token: Some(config.secret_token),
-      certificate: None,
-    ),
-  )
-}
-
-pub fn start_registry(
-  config config: Config,
-  handlers handlers: List(Handler(session)),
-  session_settings session_settings: SessionSettings(session),
-  root_subject root_subject: Subject(RegistrySubject),
-  bot_info bot_info: User,
-) -> Result(RegistrySubject, actor.StartError) {
-  actor.start_spec(actor.Spec(
-    init: fn() {
-      let registry_subject = process.new_subject()
-      let bot_instances_subject = process.new_subject()
-      process.send(root_subject, registry_subject)
-
-      let selector =
-        process.new_selector()
-        |> process.selecting(registry_subject, function.identity)
-
-      Registry(
-        config:,
-        handlers:,
-        bot_info:,
-        session_settings:,
-        registry_subject:,
-        bot_instances_subject:,
-        bots: dict.new(),
-      )
-      |> actor.Ready(selector)
-    },
-    loop: handle_registry_message,
-    init_timeout: 10_000,
-  ))
-}
-
-pub fn wait_handler(
-  ctx: Context(session),
-  handler: Handler(session),
-) -> Result(Context(session), String) {
-  process.send(ctx.bot_subject, BotInstanceMessageWaitHandler(handler))
-  Ok(ctx)
-}
-
-fn new_context(bot: BotInstance(session), update: Update) -> Context(session) {
-  Context(
-    update:,
-    key: bot.key,
-    config: bot.config,
-    session: bot.session,
-    bot_subject: bot.own_subject,
-    bot_info: bot.bot_info,
-  )
-}
-
-// Session ---------------------------------------------------------------------
-
-pub type SessionSettings(session) {
-  SessionSettings(
-    // Calls after all handlers to persist the session.
-    persist_session: fn(String, session) -> Result(session, String),
-    // Calls on initialization of the bot instance to get the session.
-    get_session: fn(String) -> Result(session, String),
-  )
-}
-
-pub fn next_session(
-  ctx ctx: Context(session),
-  session session: session,
-) -> Result(Context(session), String) {
-  Ok(Context(..ctx, session:))
-}
-
-fn get_session_key(update: Update) -> Result(String, String) {
-  case update {
-    CommandUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
-    TextUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
-    CallbackQueryUpdate(from_id: from_id, ..) -> Ok(int.to_string(from_id))
-    UnknownUpdate(..) ->
-      Error("Unknown update type don't allow to get session key")
-  }
-}
-
-fn get_session(
-  session_settings: SessionSettings(session),
-  update: Update,
-) -> Result(session, String) {
+fn handle_update_bot_message(
+  bot bot: Bot(session),
+  update update,
+  reply_with reply_with,
+) {
   use key <- result.try(get_session_key(update))
+  case registry.get(key:, in: bot.registry_subject) {
+    Some(chat_subject) -> {
+      let handlers = extract_update_handlers(bot.handlers, update)
+      handle_update_chat_instance(
+        chat_subject:,
+        update:,
+        handlers:,
+        reply_with:,
+      )
+      |> Ok
+    }
+    None -> {
+      use chat_subject <- result.try(
+        start_chat_instance(
+          key:,
+          config: bot.config,
+          session_settings: bot.session_settings,
+        )
+        |> result.map_error(fn(error) {
+          "Failed to start chat instance: " <> string.inspect(error)
+        }),
+      )
+      registry.register(key:, in: bot.registry_subject, subject: chat_subject)
 
-  session_settings.get_session(key)
-  |> result.map_error(fn(e) { "Failed to get session:\n " <> string.inspect(e) })
+      let handlers = extract_update_handlers(bot.handlers, update)
+      handle_update_chat_instance(
+        chat_subject:,
+        update:,
+        handlers:,
+        reply_with:,
+      )
+      |> Ok
+    }
+  }
 }
 
-fn start_bot_instance(
-  registry registry: Registry(session),
-  update update: Update,
-  session_key session_key: String,
-  parent_subject parent_subject: RootBotInstanceSubject(session),
-) -> Result(BotInstanceSubject(session), actor.StartError) {
+// Chat Instance --------------------------------------------------------------------
+
+pub type ChatInstanceSubject(session) =
+  Subject(ChatInstanceMessage(session))
+
+pub opaque type ChatInstanceMessage(session) {
+  HandleNewChatInstanceMessage(
+    update: Update,
+    handlers: List(Handler(session)),
+    reply_with: Subject(Option(Nil)),
+  )
+  WaitHandlerChatInstanceMessage(handler: Handler(session))
+}
+
+type ChatInstance(session) {
+  ChatInstance(
+    key: String,
+    session: session,
+    config: Config,
+    session_settings: SessionSettings(session),
+    self: ChatInstanceSubject(session),
+    continuation: Option(Handler(session)),
+  )
+}
+
+const chat_instance_actor_init_timeout = 250
+
+fn start_chat_instance(
+  key key: String,
+  config config: Config,
+  session_settings session_settings: SessionSettings(session),
+) {
   actor.start_spec(actor.Spec(
     init: fn() {
-      let actor_subj = process.new_subject()
-      process.send(parent_subject, actor_subj)
-
+      let self = process.new_subject()
       let selector =
-        process.new_selector()
-        |> process.selecting(actor_subj, function.identity)
+        process.new_selector() |> process.selecting(self, function.identity)
+      // TODO: default should be passed only on NOT FOUND error
+      let session =
+        result.lazy_unwrap(session_settings.get_session(key), fn() {
+          session_settings.default_session()
+        })
+      let chat_instance =
+        ChatInstance(
+          key:,
+          config:,
+          session:,
+          self:,
+          session_settings:,
+          continuation: None,
+        )
 
-      case get_session(registry.session_settings, update) {
-        Ok(session) ->
-          BotInstance(
-            session:,
-            key: session_key,
-            bot_info: registry.bot_info,
-            config: registry.config,
-            handlers: registry.handlers,
-            session_settings: registry.session_settings,
-            active_handler: None,
-            own_subject: actor_subj,
-          )
-          |> actor.Ready(selector)
-        Error(e) -> actor.Failed("Failed to init bot instance:\n" <> e)
-      }
+      actor.Ready(chat_instance, selector)
     },
-    loop: handle_bot_instance_message,
-    init_timeout: 1000,
+    loop: loop_chat_instance,
+    init_timeout: chat_instance_actor_init_timeout,
   ))
 }
 
-// Bot Instance --------------------------------------------------------------------
+fn handle_update_chat_instance(
+  chat_subject chat_subject,
+  update update,
+  handlers handlers: List(Handler(session)),
+  reply_with reply_with,
+) {
+  actor.send(
+    chat_subject,
+    HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
+  )
+}
+
+fn loop_chat_instance(
+  message: ChatInstanceMessage(session),
+  chat: ChatInstance(session),
+) {
+  case message {
+    HandleNewChatInstanceMessage(
+      update: update,
+      handlers: handlers,
+      reply_with: reply_with,
+    ) -> {
+      case chat.continuation {
+        None ->
+          case loop_handlers(chat:, update:, handlers:, config: chat.config) {
+            Ok(new_session) -> {
+              actor.send(reply_with, Some(Nil))
+              actor.continue(ChatInstance(..chat, session: new_session))
+            }
+            Error(_e) -> {
+              actor.send(reply_with, None)
+              actor.Stop(process.Normal)
+            }
+          }
+        Some(handler) -> {
+          case do_handle(chat:, update:, handler:) {
+            Some(Ok(Context(session: new_session, ..))) -> {
+              actor.send(reply_with, Some(Nil))
+              actor.continue(
+                ChatInstance(..chat, session: new_session, continuation: None),
+              )
+            }
+            Some(Error(_e)) -> {
+              actor.send(reply_with, None)
+              actor.Stop(process.Normal)
+            }
+            None -> {
+              actor.send(reply_with, Some(Nil))
+              actor.continue(chat)
+            }
+          }
+        }
+      }
+    }
+    WaitHandlerChatInstanceMessage(handler: handler) ->
+      actor.continue(ChatInstance(..chat, continuation: Some(handler)))
+  }
+}
+
+// Context ----------------------------------------------------------------------------
 
 /// Context holds information needed for the bot instance and the current update.
 pub type Context(session) {
   Context(
     key: String,
     update: Update,
-    bot_info: User,
     config: Config,
     session: session,
-    bot_subject: BotInstanceSubject(session),
+    chat_subject: ChatInstanceSubject(session),
   )
 }
 
-pub type BotInstanceMessage(session) {
-  BotInstanceMessageOk
-  BotInstanceMessageNew(client: BotInstanceSubject(session), update: Update)
-  BotInstanceMessageWaitHandler(handler: Handler(session))
-}
-
-type BotInstance(session) {
-  BotInstance(
-    key: String,
-    session: session,
-    config: Config,
-    handlers: List(Handler(session)),
-    bot_info: User,
-    session_settings: SessionSettings(session),
-    active_handler: Option(Handler(session)),
-    own_subject: BotInstanceSubject(session),
+fn new_context(
+  chat chat: ChatInstance(session),
+  update update,
+) -> Context(session) {
+  Context(
+    update:,
+    config: chat.config,
+    key: chat.key,
+    session: chat.session,
+    chat_subject: chat.self,
   )
 }
 
-fn handle_bot_instance_message(
-  message: BotInstanceMessage(session),
-  bot: BotInstance(session),
-) {
-  case message {
-    BotInstanceMessageNew(client, message) -> {
-      case bot.active_handler {
-        Some(handler) ->
-          case do_handle(bot, message, handler) {
-            Some(Ok(Context(session: new_session, ..))) -> {
-              actor.send(client, BotInstanceMessageOk)
-              actor.continue(
-                BotInstance(..bot, session: new_session, active_handler: None),
-              )
-            }
-            Some(Error(_e)) -> actor.Stop(process.Normal)
-            None -> {
-              actor.send(client, BotInstanceMessageOk)
-              actor.continue(bot)
-            }
-          }
-        None ->
-          case loop_handlers(bot, message, bot.handlers) {
-            Ok(new_session) -> {
-              actor.send(client, BotInstanceMessageOk)
-              actor.continue(BotInstance(..bot, session: new_session))
-            }
-            Error(_e) -> actor.Stop(process.Normal)
-          }
-      }
-    }
-    BotInstanceMessageWaitHandler(handler) ->
-      actor.continue(BotInstance(..bot, active_handler: Some(handler)))
-    BotInstanceMessageOk -> actor.continue(bot)
-  }
-}
-
-// Hears -----------------------------------------------------------------------
-
-pub type Hears {
-  HearText(text: String)
-  HearTexts(texts: List(String))
-  HearRegex(regex: Regexp)
-  HearRegexes(regexes: List(Regexp))
-}
-
-fn hears_check(text: String, hear: Hears) -> Bool {
-  case hear {
-    HearText(str) -> text == str
-    HearTexts(strings) -> list.contains(strings, text)
-    HearRegex(re) -> regexp.check(re, text)
-    HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
-  }
-}
+// Handler ------------------------------------------------------------------------
 
 pub type Handler(session) {
   /// Handle all messages.
@@ -377,65 +297,159 @@ pub type Handler(session) {
   )
 }
 
-pub type CallbackQueryFilter {
-  CallbackQueryFilter(re: Regexp)
+fn extract_update_handlers(handlers, update) {
+  list.filter(handlers, fn(handler) {
+    case handler, update {
+      HandleAll(_), _ -> True
+      HandleText(_), TextUpdate(..) -> True
+      HandleHears(hears: hears, ..), TextUpdate(text: text, ..) ->
+        check_hears(text, hears)
+      HandleCommand(
+        command: command,
+        ..,
+      ),
+        CommandUpdate(
+          command: update_command,
+          ..,
+        )
+      -> update_command.command == command
+      HandleCallbackQuery(filter: filter, ..), CallbackQueryUpdate(raw: raw, ..)
+      ->
+        case raw.data {
+          Some(data) -> regexp.check(filter.re, data)
+          None -> False
+        }
+      _, _ -> False
+    }
+  })
 }
 
-fn do_handle(
-  bot: BotInstance(session),
-  update: Update,
-  handler: Handler(session),
-) -> Option(Result(Context(session), String)) {
+pub fn wait_handler(ctx: Context(session), handler) {
+  process.send(ctx.chat_subject, WaitHandlerChatInstanceMessage(handler))
+  Ok(ctx)
+}
+
+fn do_handle(chat chat, update update, handler handler) {
+  // We already filtered update and receives only valid handler
   case handler, update {
-    HandleAll(handle), _ -> Some(handle(new_context(bot, update)))
-    HandleText(handle), TextUpdate(text: text, ..) ->
-      Some(handle(new_context(bot, update), text))
-    HandleHears(hear, handle), TextUpdate(text: text, ..) -> {
-      use <- bool.guard(!hears_check(text, hear), None)
-      Some(handle(new_context(bot, update), text))
-    }
-    HandleCommand(command, handle), CommandUpdate(command: update_command, ..) -> {
-      use <- bool.guard(update_command.command != command, None)
-      Some(handle(new_context(bot, update), update_command))
-    }
-    HandleCommands(commands, handle), CommandUpdate(command: update_command, ..)
-    -> {
-      use <- bool.guard(!list.contains(commands, update_command.command), None)
-      Some(handle(new_context(bot, update), update_command))
-    }
-    HandleCallbackQuery(filter, handle), CallbackQueryUpdate(raw: raw, ..) ->
+    HandleAll(handler:), _ -> chat |> new_context(update) |> handler |> Some
+    HandleText(handler:), TextUpdate(text: text, ..) ->
+      chat |> new_context(update) |> handler(text) |> Some
+    HandleHears(handler:, ..), TextUpdate(text: text, ..) ->
+      chat |> new_context(update) |> handler(text) |> Some
+    HandleCommand(handler:, ..), CommandUpdate(command: update_command, ..) ->
+      chat |> new_context(update) |> handler(update_command) |> Some
+    HandleCommands(handler:, ..), CommandUpdate(command: update_command, ..) ->
+      chat |> new_context(update) |> handler(update_command) |> Some
+    HandleCallbackQuery(handler:, ..), CallbackQueryUpdate(raw: raw, ..) ->
       case raw.data {
-        Some(data) -> {
-          use <- bool.guard(!regexp.check(filter.re, data), None)
-          Some(handle(new_context(bot, update), data, raw.id))
-        }
+        Some(data) ->
+          chat |> new_context(update) |> handler(data, raw.id) |> Some
         None -> None
       }
     _, _ -> None
   }
 }
 
-fn loop_handlers(
-  bot: BotInstance(session),
-  update: Update,
-  handlers: List(Handler(session)),
-) {
+fn loop_handlers(chat chat, config config, update update, handlers handlers) {
   case handlers {
     [handler, ..rest] ->
-      case do_handle(bot, update, handler) {
+      case do_handle(chat:, update:, handler:) {
         Some(Ok(Context(session: new_session, ..))) ->
-          loop_handlers(BotInstance(..bot, session: new_session), update, rest)
+          loop_handlers(
+            chat: ChatInstance(..chat, session: new_session),
+            handlers: rest,
+            update:,
+            config:,
+          )
         Some(Error(e)) ->
           Error(
             "Failed to handle message " <> string.inspect(update) <> ": " <> e,
           )
-        None -> loop_handlers(bot, update, rest)
+        None -> loop_handlers(chat:, config:, update:, handlers: rest)
       }
-    [] -> bot.session_settings.persist_session(bot.key, bot.session)
+    [] -> chat.session_settings.persist_session(chat.key, chat.session)
   }
 }
 
-pub fn fmt_update(ctx: Context(session)) -> String {
+// Hears --------------------------------------------------------------------------
+
+pub type CallbackQueryFilter {
+  CallbackQueryFilter(re: Regexp)
+}
+
+pub type Hears {
+  HearText(text: String)
+  HearTexts(texts: List(String))
+  HearRegex(regex: Regexp)
+  HearRegexes(regexes: List(Regexp))
+}
+
+fn check_hears(text, hear) -> Bool {
+  case hear {
+    HearText(str) -> text == str
+    HearTexts(strings) -> list.contains(strings, text)
+    HearRegex(re) -> regexp.check(re, text)
+    HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
+  }
+}
+
+// Session --------------------------------------------------------------------------
+
+pub type SessionSettings(session) {
+  SessionSettings(
+    // Calls after all handlers to persist the session.
+    persist_session: fn(String, session) -> Result(session, String),
+    // Calls on initialization of the chat instance to get the session.
+    get_session: fn(String) -> Result(session, String),
+    // Calls on initialization of the chat instance if no session is found.
+    default_session: fn() -> session,
+  )
+}
+
+pub fn next_session(ctx ctx, session session) {
+  Ok(Context(..ctx, session:))
+}
+
+fn get_session_key(update) {
+  case update {
+    CommandUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
+    TextUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
+    CallbackQueryUpdate(from_id: from_id, ..) -> Ok(int.to_string(from_id))
+    UnknownUpdate(..) ->
+      Error("Unknown update type don't allow to get session key")
+  }
+}
+
+pub fn get_session(
+  session_settings: SessionSettings(session),
+  update: Update,
+) -> Result(session, String) {
+  use key <- result.try(get_session_key(update))
+
+  session_settings.get_session(key)
+  |> result.map_error(fn(e) { "Failed to get session:\n " <> string.inspect(e) })
+}
+
+// Utilities -------------------------------------------------------------------------------
+
+/// Set webhook for the bot.
+pub fn set_webhook(config config: Config) {
+  api.set_webhook(
+    config.api,
+    model.SetWebhookParameters(
+      url: config.server_url <> "/" <> config.webhook_path,
+      max_connections: None,
+      ip_address: None,
+      allowed_updates: None,
+      drop_pending_updates: None,
+      secret_token: Some(config.secret_token),
+      certificate: None,
+    ),
+  )
+}
+
+pub fn fmt_update(ctx: Context(session)) {
   case ctx.update {
     CommandUpdate(command: command, chat_id: chat_id, ..) ->
       "command \"" <> command.command <> "\" from " <> int.to_string(chat_id)
@@ -448,4 +462,16 @@ pub fn fmt_update(ctx: Context(session)) -> String {
       <> int.to_string(from_id)
     UnknownUpdate(update) -> "unknown: " <> string.inspect(update)
   }
+}
+
+const handle_update_timeout = 1000
+
+// User should use methods from `telega` module.
+@internal
+pub fn handle_update(bot_subject bot_subject, update update) {
+  actor.call(
+    bot_subject,
+    HandleUpdateBotMessage(update, _),
+    handle_update_timeout,
+  )
 }

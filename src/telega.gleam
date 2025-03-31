@@ -1,34 +1,27 @@
 import gleam/bool
-import gleam/erlang/process.{type Subject}
 import gleam/float
 import gleam/option.{type Option, None, Some}
-import gleam/otp/actor
-import gleam/otp/supervisor
 import gleam/result
 import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
 
-import telega/api
-import telega/bot.{
-  type CallbackQueryFilter, type Context, type Handler, type Hears,
-  type RegistryMessage, type SessionSettings, CallbackQueryFilter, HandleAll,
-  HandleBotRegistryMessage, HandleCallbackQuery, HandleCommand, HandleCommands,
-  HandleHears, HandleText, SessionSettings,
-}
 import telega/internal/config.{type Config}
 import telega/internal/log
+import telega/internal/registry
+
+import telega/api
+import telega/bot.{
+  type BotSubject, type CallbackQueryFilter, type Context, type Handler,
+  type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
+  HandleCallbackQuery, HandleCommand, HandleCommands, HandleHears, HandleText,
+  SessionSettings,
+}
 import telega/model.{type User}
 import telega/update.{type Command, type Update}
 
 pub opaque type Telega(session) {
-  Telega(
-    config: Config,
-    bot_info: User,
-    handlers: List(Handler(session)),
-    session_settings: SessionSettings(session),
-    registry_subject: Subject(RegistryMessage),
-  )
+  Telega(config: Config, bot_info: User, bot_subject: BotSubject)
 }
 
 pub opaque type TelegaBuilder(session) {
@@ -36,26 +29,26 @@ pub opaque type TelegaBuilder(session) {
     config: Config,
     handlers: List(Handler(session)),
     session_settings: Option(SessionSettings(session)),
-    registry_subject: Option(Subject(RegistryMessage)),
+    bot_subject: Option(BotSubject),
   )
 }
 
 /// Check if a path is the webhook path for the bot.
 ///
 /// Useful if you plan to implement own adapter.
-pub fn is_webhook_path(telega: Telega(session), path: String) -> Bool {
+pub fn is_webhook_path(telega: Telega(session), path: String) {
   telega.config.webhook_path == path
 }
 
 /// Check if a secret token is valid.
 ///
 /// Useful if you plan to implement own adapter.
-pub fn is_secret_token_valid(telega: Telega(session), token: String) -> Bool {
+pub fn is_secret_token_valid(telega: Telega(session), token: String) {
   telega.config.secret_token == token
 }
 
 /// Helper to get the config for API requests.
-pub fn get_api_config(telega: Telega(session)) -> api.TelegramApiConfig {
+pub fn get_api_config(telega: Telega(session)) {
   telega.config.api
 }
 
@@ -65,12 +58,12 @@ pub fn new(
   url server_url: String,
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
-) -> TelegaBuilder(session) {
+) {
   TelegaBuilder(
     handlers: [],
     config: config.new(token:, webhook_path:, secret_token:, url: server_url),
-    registry_subject: None,
     session_settings: None,
+    bot_subject: None,
   )
 }
 
@@ -78,15 +71,17 @@ pub fn new(
 pub fn handle_all(
   bot builder: TelegaBuilder(session),
   handler handler: fn(Context(session)) -> Result(Context(session), String),
-) -> TelegaBuilder(session) {
+) {
   TelegaBuilder(..builder, handlers: [HandleAll(handler), ..builder.handlers])
 }
 
-/// Stops bot message handling and waits for any message.
+/// Stops bot message handling from current chat and waits for any message.
+///
+/// See [conversation]
 pub fn wait_any(
   ctx ctx: Context(session),
   continue continue: fn(Context(session)) -> Result(Context(session), String),
-) -> Result(Context(session), String) {
+) {
   bot.wait_handler(ctx, HandleAll(continue))
 }
 
@@ -96,19 +91,22 @@ pub fn handle_command(
   command command: String,
   handler handler: fn(Context(session), Command) ->
     Result(Context(session), String),
-) -> TelegaBuilder(session) {
+) {
   TelegaBuilder(..builder, handlers: [
     HandleCommand(command, handler),
     ..builder.handlers
   ])
 }
 
+/// Stops bot message handling from current chat and waits for a specific command.
+///
+/// See [conversation]
 pub fn wait_command(
   ctx ctx: Context(session),
   command command: String,
   continue continue: fn(Context(session), Command) ->
     Result(Context(session), String),
-) -> Result(Context(session), String) {
+) {
   bot.wait_handler(ctx, HandleCommand(command, continue))
 }
 
@@ -118,13 +116,16 @@ pub fn handle_commands(
   commands commands: List(String),
   handler handler: fn(Context(session), Command) ->
     Result(Context(session), String),
-) -> TelegaBuilder(session) {
+) {
   TelegaBuilder(..builder, handlers: [
     HandleCommands(commands, handler),
     ..builder.handlers
   ])
 }
 
+/// Stops bot message handling from current chat and waits for a specific command.
+///
+/// See [conversation]
 pub fn wait_commands(
   ctx ctx: Context(session),
   commands commands: List(String),
@@ -139,15 +140,18 @@ pub fn handle_text(
   bot builder: TelegaBuilder(session),
   handler handler: fn(Context(session), String) ->
     Result(Context(session), String),
-) -> TelegaBuilder(session) {
+) {
   TelegaBuilder(..builder, handlers: [HandleText(handler), ..builder.handlers])
 }
 
+/// Stops bot message handling from current chat and waits for a text message.
+///
+/// See [conversation]
 pub fn wait_text(
   ctx ctx: Context(session),
   continue continue: fn(Context(session), String) ->
     Result(Context(session), String),
-) -> Result(Context(session), String) {
+) {
   bot.wait_handler(ctx, HandleText(continue))
 }
 
@@ -164,6 +168,9 @@ pub fn handle_hears(
   ])
 }
 
+/// Stops bot message handling from current chat and waits for a message that matches the given `Hears`.
+///
+/// See [conversation]
 pub fn wait_hears(
   ctx ctx: Context(session),
   hears hears: Hears,
@@ -192,7 +199,7 @@ pub fn wait_callback_query(
   filter filter: CallbackQueryFilter,
   continue continue: fn(Context(session), String, String) ->
     Result(Context(session), String),
-) -> Result(Context(session), String) {
+) {
   bot.wait_handler(ctx, HandleCallbackQuery(filter, continue))
 }
 
@@ -227,45 +234,43 @@ pub fn log_context(
 
 /// Construct a session settings.
 pub fn with_session_settings(
-  builder: TelegaBuilder(session),
-  persist_session persist_session: fn(String, session) ->
-    Result(session, String),
-  get_session get_session: fn(String) -> Result(session, String),
-) -> TelegaBuilder(session) {
+  builder,
+  persist_session persist_session,
+  get_session get_session,
+  default_session default_session,
+) {
   TelegaBuilder(
     ..builder,
     session_settings: Some(SessionSettings(
-      persist_session: persist_session,
-      get_session: get_session,
+      persist_session:,
+      get_session:,
+      default_session:,
     )),
-  )
-}
-
-fn nil_session_settings(builder: TelegaBuilder(Nil)) -> TelegaBuilder(Nil) {
-  TelegaBuilder(
-    ..builder,
-    session_settings: Some(
-      SessionSettings(persist_session: fn(_, _) { Ok(Nil) }, get_session: fn(_) {
-        Ok(Nil)
-      }),
-    ),
   )
 }
 
 /// Initialize a Telega instance with a `Nil` session.
 /// Useful when you don't need to persist the session.
-pub fn init_nil_session(
-  builder: TelegaBuilder(Nil),
-) -> Result(Telega(Nil), String) {
-  builder
-  |> nil_session_settings
+pub fn init_nil_session(builder: TelegaBuilder(Nil)) {
+  let persist_session = fn(_, _) { Ok(Nil) }
+  let get_session = fn(_) { Ok(Nil) }
+  let default_session = fn() { Nil }
+
+  TelegaBuilder(
+    ..builder,
+    session_settings: Some(SessionSettings(
+      persist_session:,
+      get_session:,
+      default_session:,
+    )),
+  )
   |> init
 }
 
 /// Initialize a Telega instance.
-/// This function should be called after all handlers are added.
-/// It will set the webhook and start the `Registry`.
-pub fn init(builder: TelegaBuilder(session)) -> Result(Telega(session), String) {
+/// This function should be called **only** after all handlers are added to the builder.
+/// It will set the webhook and start handling messages.
+pub fn init(builder: TelegaBuilder(session)) {
   use is_ok <- result.try(bot.set_webhook(builder.config))
   use <- bool.guard(!is_ok, Error("Failed to set webhook"))
 
@@ -279,44 +284,30 @@ pub fn init(builder: TelegaBuilder(session)) -> Result(Telega(session), String) 
 
   use session_settings <- result.try(session_settings)
 
-  let telega_subject = process.new_subject()
-  let registry_actor =
-    supervisor.supervisor(fn(_) {
-      bot.start_registry(
-        bot_info:,
-        session_settings:,
-        config: builder.config,
-        handlers: builder.handlers,
-        root_subject: telega_subject,
-      )
-    })
-
-  use _supervisor_subject <- result.try(
-    supervisor.start(supervisor.add(_, registry_actor))
-    |> result.map_error(fn(e) {
-      "Failed to start telega:\n" <> string.inspect(e)
-    }),
-  )
   use registry_subject <- result.try(
-    process.receive(telega_subject, 1000)
-    |> result.map_error(fn(e) {
-      "Failed to start registry:\n" <> string.inspect(e)
+    registry.start()
+    |> result.map_error(fn(error) {
+      "Failed to start registry: " <> string.inspect(error)
     }),
   )
 
-  Ok(Telega(
-    bot_info:,
-    registry_subject:,
-    session_settings:,
-    config: builder.config,
-    handlers: builder.handlers,
-  ))
+  use bot_subject <- result.try(
+    bot.start(
+      bot_info:,
+      registry_subject:,
+      session_settings:,
+      config: builder.config,
+      handlers: builder.handlers,
+    )
+    |> result.map_error(fn(error) {
+      "Failed to start bot: " <> string.inspect(error)
+    }),
+  )
+
+  Ok(Telega(bot_info:, bot_subject:, config: builder.config))
 }
 
 /// Handle an update from the Telegram API.
-pub fn handle_update(
-  telega: Telega(session),
-  update: Update,
-) -> Result(Nil, String) {
-  Ok(actor.send(telega.registry_subject, HandleBotRegistryMessage(update:)))
+pub fn handle_update(telega: Telega(session), update: Update) {
+  bot.handle_update(telega.bot_subject, update)
 }
