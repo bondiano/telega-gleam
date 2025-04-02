@@ -10,10 +10,7 @@ import telega/model.{type Message, type SendDiceParameters}
 /// Use this method to send text messages.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
-pub fn with_text(
-  ctx ctx: Context(session),
-  text text: String,
-) -> Result(Message, String) {
+pub fn with_text(ctx ctx: Context(session), text text: String) {
   api.send_message(
     ctx.config.api,
     parameters: model.SendMessageParameters(
@@ -68,7 +65,7 @@ pub fn with_markup(
 pub fn with_dice(
   ctx ctx: Context(session),
   parameters parameters: Option(SendDiceParameters),
-) -> Result(Message, String) {
+) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
@@ -92,7 +89,7 @@ pub fn with_dice(
 pub fn edit_text(
   ctx ctx: Context(session),
   parameters parameters: model.EditMessageTextParameters,
-) -> Result(Message, String) {
+) {
   api.edit_message_text(ctx.config.api, parameters)
 }
 
@@ -103,7 +100,7 @@ pub fn edit_text(
 pub fn forward(
   ctx ctx: Context(session),
   parameters parameters: model.ForwardMessageParameters,
-) -> Result(Message, String) {
+) {
   api.forward_message(ctx.config.api, parameters)
 }
 
@@ -115,15 +112,12 @@ pub fn forward(
 pub fn answer_callback_query(
   ctx ctx: Context(session),
   parameters parameters: model.AnswerCallbackQueryParameters,
-) -> Result(Bool, String) {
+) {
   api.answer_callback_query(ctx.config.api, parameters)
 }
 
 /// Get download link for the file.
-pub fn with_file_link(
-  ctx ctx: Context(session),
-  file_id file_id: String,
-) -> Result(String, String) {
+pub fn with_file_link(ctx ctx: Context(session), file_id file_id: String) {
   use file <- result.try(api.get_file(ctx.config.api, file_id))
   use file_path <- result.try(option.to_result(
     file.file_path,
@@ -177,7 +171,7 @@ pub fn with_poll(
   )
 }
 
-/// Use this method to send invoices.
+/// Use this method to send a invoice.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
 pub fn with_invoice(

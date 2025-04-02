@@ -964,6 +964,12 @@ pub fn delete_messages(
   |> map_response(decode.bool)
 }
 
+pub fn get_chat(config config: TelegramApiConfig, chat_id chat_id: String) {
+  new_get_request(config, path: "getChat", query: Some([#("chat_id", chat_id)]))
+  |> fetch(config)
+  |> map_response(model.chat_full_info_decoder())
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
 
 fn build_url(config: TelegramApiConfig, path: String) -> String {
