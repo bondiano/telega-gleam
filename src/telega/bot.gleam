@@ -34,7 +34,7 @@ pub type BotSubject =
   Subject(BotMessage)
 
 pub opaque type BotMessage {
-  // CancelConversationBotMessage(chat_id: Int)
+  CancelConversationBotMessage(key: String)
   HandleUpdateBotMessage(update: Update, reply_with: Subject(Option(Nil)))
 }
 
@@ -69,12 +69,22 @@ pub fn start(
   ))
 }
 
+/// Stops waiting for any handler for specific key (chat_id)
+pub fn cancel_conversation(bot bot: Bot(message), key key) {
+  actor.send(bot.self, CancelConversationBotMessage(key: key))
+}
+
 fn bot_loop(message: BotMessage, bot: Bot(message)) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) -> {
       case handle_update_bot_message(bot:, update:, reply_with:) {
+        // TODO: Implement error handling
         _ -> actor.continue(bot)
       }
+    }
+    CancelConversationBotMessage(key:) -> {
+      registry.unregister(bot.registry_subject, key)
+      actor.continue(bot)
     }
   }
 }

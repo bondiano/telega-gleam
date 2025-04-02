@@ -24,6 +24,7 @@ pub opaque type RegistryMessage(message) {
   Register(key: String, pid: Pid, self: Subject(message))
   Get(reply_with: Subject(Option(Subject(message))), key: String)
   ActorExit(key: String, process_down: process.ProcessDown)
+  Unregister(key: String)
   Shutdown
 }
 
@@ -62,6 +63,10 @@ pub fn register(
   subject
 }
 
+pub fn unregister(in actor: RegistrySubject(message), key key: String) {
+  actor.send(actor, Unregister(key))
+}
+
 const try_get_timeout = 10
 
 pub fn get(
@@ -91,6 +96,14 @@ fn loop(message: RegistryMessage(message), self: Registry(message)) {
 
     ActorExit(key, process_down) -> {
       let next_registry = remove(self, key, option.Some(process_down.pid))
+
+      next_registry
+      |> actor.continue()
+      |> actor.with_selector(next_registry.selector)
+    }
+
+    Unregister(key) -> {
+      let next_registry = remove(self, key, option.None)
 
       next_registry
       |> actor.continue()
