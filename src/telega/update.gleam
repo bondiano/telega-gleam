@@ -64,9 +64,9 @@ fn try_decode_to_callback_query(
 
 fn try_to_decode_message_or_command(raw_update: ModelUpdate, on_none) {
   case raw_update.message {
-    Some(message) -> {
+    Some(message) ->
       case message.text {
-        Some(text) -> {
+        Some(text) ->
           case is_command_update(text, raw_update) {
             True ->
               Ok(CommandUpdate(
@@ -77,12 +77,16 @@ fn try_to_decode_message_or_command(raw_update: ModelUpdate, on_none) {
             False ->
               Ok(TextUpdate(text:, chat_id: message.chat.id, raw: message))
           }
-        }
         None -> on_none()
       }
-    }
     None -> on_none()
   }
+}
+
+fn is_command_entity(text, entity: MessageEntity) {
+  entity.type_ == "bot_command"
+  && entity.offset == 0
+  && entity.length == string.length(text)
 }
 
 fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
@@ -91,15 +95,7 @@ fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
   case raw_update.message {
     Some(message) ->
       case message.entities {
-        Some(entities) -> {
-          let is_command_entity = fn(entity: MessageEntity) -> Bool {
-            entity.type_ == "bot_command"
-            && entity.offset == 0
-            && entity.length == string.length(text)
-          }
-
-          list.any(entities, is_command_entity)
-        }
+        Some(entities) -> list.any(entities, is_command_entity(text, _))
         None -> False
       }
     None -> False

@@ -2,20 +2,17 @@
 //// It will be useful if you want to interact with the Telegram Bot API directly, without running a bot.
 //// But it will be more convenient to use the `reply` module in bot handlers.
 
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic
 import gleam/dynamic/decode
-import gleam/erlang/process
-import gleam/http.{Get, Post}
-import gleam/http/request.{type Request}
 import gleam/http/response.{type Response, Response}
-import gleam/httpc
 import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
-import telega/internal/log
+
+import telega/internal/fetch.{fetch, new_get_request, new_post_request}
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
@@ -35,38 +32,7 @@ import telega/model.{
   type SendVenueParameters, type SendVideoNoteParameters,
   type SendVideoParameters, type SendVoiceParameters,
   type SetChatMenuButtonParameters, type SetMessageReactionParameters,
-  type SetWebhookParameters, type StopMessageLiveLocationParameters,
-  type StopPollParameters,
-}
-
-const default_retry_delay = 1000
-
-pub type TelegramApiConfig {
-  TelegramApiConfig(
-    token: String,
-    /// The maximum number of times to retry sending a API message. Default is 3.
-    max_retry_attempts: Int,
-    /// The Telegram Bot API URL. Default is "https://api.telegram.org".
-    /// This is useful for running [a local server](https://core.telegram.org/bots/api#using-a-local-bot-api-server).
-    tg_api_url: String,
-  )
-}
-
-pub fn new_api_config(token token: String) -> TelegramApiConfig {
-  TelegramApiConfig(
-    token:,
-    max_retry_attempts: 3,
-    tg_api_url: "https://api.telegram.org",
-  )
-}
-
-type TelegramApiRequest {
-  TelegramApiPostRequest(
-    url: String,
-    body: String,
-    query: Option(List(#(String, String))),
-  )
-  TelegramApiGetRequest(url: String, query: Option(List(#(String, String))))
+  type StopMessageLiveLocationParameters, type StopPollParameters,
 }
 
 type ApiResponse(result) {
@@ -77,10 +43,7 @@ type ApiResponse(result) {
 /// Set the webhook URL using [setWebhook](https://core.telegram.org/bots/api#setwebhook) API.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setwebhook
-pub fn set_webhook(
-  config config: TelegramApiConfig,
-  parameters parameters: SetWebhookParameters,
-) -> Result(Bool, String) {
+pub fn set_webhook(config config, parameters parameters) -> Result(Bool, String) {
   let body = model.encode_set_webhook_parameters(parameters)
 
   new_post_request(
@@ -105,7 +68,7 @@ pub fn get_webhook_info(config config) {
 /// Use this method to remove webhook integration if you decide to switch back to [getUpdates](https://core.telegram.org/bots/api#getupdates).
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletewebhook
-pub fn delete_webhook(config config: TelegramApiConfig) {
+pub fn delete_webhook(config config) {
   new_get_request(config:, path: "deleteWebhook", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
@@ -127,7 +90,7 @@ pub fn delete_webhook_and_drop_updates(config config) {
 /// After a successful call, you can immediately log in on a local server, but will not be able to log in back to the cloud Bot API server for 10 minutes.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#logout
-pub fn log_out(config config: TelegramApiConfig) {
+pub fn log_out(config config) {
   new_get_request(config:, path: "logOut", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
@@ -138,7 +101,7 @@ pub fn log_out(config config: TelegramApiConfig) {
 /// The method will return error 429 in the first 10 minutes after the bot is launched.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#close
-pub fn close(config config: TelegramApiConfig) {
+pub fn close(config config) {
   new_get_request(config:, path: "close", query: None)
   |> fetch(config)
   |> map_response(decode.bool)
@@ -147,10 +110,7 @@ pub fn close(config config: TelegramApiConfig) {
 /// Use this method to send text messages with additional parameters.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
-pub fn send_message(
-  config config: TelegramApiConfig,
-  parameters parameters: SendMessageParameters,
-) {
+pub fn send_message(config config, parameters parameters: SendMessageParameters) {
   let body_json = model.encode_send_message_parameters(parameters)
 
   new_post_request(
@@ -167,7 +127,7 @@ pub fn send_message(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setmycommands
 pub fn set_my_commands(
-  config config: TelegramApiConfig,
+  config config,
   commands commands: List(BotCommand),
   parameters parameters: Option(BotCommandParameters),
 ) {
@@ -204,7 +164,7 @@ pub fn set_my_commands(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemycommands
 pub fn delete_my_commands(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: Option(BotCommandParameters),
 ) {
   let parameters =
@@ -227,7 +187,7 @@ pub fn delete_my_commands(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getmycommands
 pub fn get_my_commands(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: Option(BotCommandParameters),
 ) {
   let parameters =
@@ -249,10 +209,7 @@ pub fn get_my_commands(
 /// Use this method to send an animated emoji that will display a random value.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
-pub fn send_dice(
-  config config: TelegramApiConfig,
-  parameters parameters: SendDiceParameters,
-) {
+pub fn send_dice(config config, parameters parameters: SendDiceParameters) {
   let body_json = model.encode_send_dice_parameters(parameters)
 
   new_post_request(
@@ -268,7 +225,7 @@ pub fn send_dice(
 /// A simple method for testing your bot's authentication token.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getme
-pub fn get_me(config config: TelegramApiConfig) {
+pub fn get_me(config config) {
   new_get_request(config:, path: "getMe", query: None)
   |> fetch(config)
   |> map_response(model.user_decoder())
@@ -280,7 +237,7 @@ pub fn get_me(config config: TelegramApiConfig) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: AnswerCallbackQueryParameters,
 ) -> Result(Bool, String) {
   let body_json = model.encode_answer_callback_query_parameters(parameters)
@@ -300,7 +257,7 @@ pub fn answer_callback_query(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward_message(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: ForwardMessageParameters,
 ) -> Result(ModelMessage, String) {
   let body_json = model.encode_forward_message_parameters(parameters)
@@ -319,7 +276,7 @@ pub fn forward_message(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setchatmenubutton
 pub fn set_chat_menu_button(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SetChatMenuButtonParameters,
 ) -> Result(Bool, String) {
   new_post_request(
@@ -341,7 +298,7 @@ pub fn set_chat_menu_button(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getupdates
 pub fn get_updates(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: Option(GetUpdatesParameters),
 ) {
   let query =
@@ -365,7 +322,7 @@ pub fn get_updates(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessages
 pub fn forward_messages(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: ForwardMessagesParameters,
 ) {
   let body_json = model.encode_forward_messages_parameters(parameters)
@@ -383,10 +340,7 @@ pub fn forward_messages(
 /// Use this method to copy messages of any kind. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#copymessage
-pub fn copy_message(
-  config config: TelegramApiConfig,
-  parameters parameters: CopyMessageParameters,
-) {
+pub fn copy_message(config config, parameters parameters: CopyMessageParameters) {
   let body_json = model.encode_copy_message_parameters(parameters)
 
   new_post_request(
@@ -403,7 +357,7 @@ pub fn copy_message(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#copymessages
 pub fn copy_messages(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: CopyMessagesParameters,
 ) {
   let body_json = model.encode_copy_messages_parameters(parameters)
@@ -421,10 +375,7 @@ pub fn copy_messages(
 /// Use this method to send photos. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendphoto
-pub fn send_photo(
-  config config: TelegramApiConfig,
-  parameters parameters: SendPhotoParameters,
-) {
+pub fn send_photo(config config, parameters parameters: SendPhotoParameters) {
   let body_json = model.encode_send_photo_parameters(parameters)
 
   new_post_request(
@@ -442,10 +393,7 @@ pub fn send_photo(
 /// For sending voice messages, use the [sendVoice](https://core.telegram.org/bots/api#sendvoice) method instead.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendaudio
-pub fn send_audio(
-  config config: TelegramApiConfig,
-  parameters parameters: SendAudioParameters,
-) {
+pub fn send_audio(config config, parameters parameters: SendAudioParameters) {
   let body_json = model.encode_send_audio_parameters(parameters)
 
   new_post_request(
@@ -461,7 +409,7 @@ pub fn send_audio(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddocument
 pub fn send_document(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendDocumentParameters,
 ) {
   let body_json = model.encode_send_document_parameters(parameters)
@@ -479,10 +427,7 @@ pub fn send_document(
 /// Use this method to send video files, Telegram clients support MPEG4 videos (other formats may be sent as Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvideo
-pub fn send_video(
-  config config: TelegramApiConfig,
-  parameters parameters: SendVideoParameters,
-) {
+pub fn send_video(config config, parameters parameters: SendVideoParameters) {
   let body_json = model.encode_send_video_parameters(parameters)
 
   new_post_request(
@@ -499,7 +444,7 @@ pub fn send_video(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendanimation
 pub fn send_animation(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendAnimationParameters,
 ) {
   let body_json = model.encode_send_animation_parameters(parameters)
@@ -517,10 +462,7 @@ pub fn send_animation(
 /// Use this method to send audio files, if you want Telegram clients to display the file as a playable voice message. For this to work, your audio must be in an .ogg file encoded with OPUS (other formats may be sent as Audio or Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send voice messages of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvoice
-pub fn send_voice(
-  config config: TelegramApiConfig,
-  parameters parameters: SendVoiceParameters,
-) {
+pub fn send_voice(config config, parameters parameters: SendVoiceParameters) {
   let body_json = model.encode_send_voice_parameters(parameters)
 
   new_post_request(
@@ -537,7 +479,7 @@ pub fn send_voice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvideonote
 pub fn send_video_note(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendVideoNoteParameters,
 ) {
   let body_json = model.encode_send_video_note_parameters(parameters)
@@ -556,7 +498,7 @@ pub fn send_video_note(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
 pub fn send_media_group(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendMediaGroupParameters,
 ) {
   let body_json = model.encode_send_media_group_parameters(parameters)
@@ -575,7 +517,7 @@ pub fn send_media_group(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendlocation
 pub fn send_location(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendLocationParameters,
 ) {
   let body_json = model.encode_send_location_parameters(parameters)
@@ -593,10 +535,7 @@ pub fn send_location(
 /// Use this method to send information about a venue. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvenue
-pub fn send_venue(
-  config config: TelegramApiConfig,
-  parameters parameters: SendVenueParameters,
-) {
+pub fn send_venue(config config, parameters parameters: SendVenueParameters) {
   let body_json = model.encode_send_venue_parameters(parameters)
 
   new_post_request(
@@ -612,10 +551,7 @@ pub fn send_venue(
 /// Use this method to send phone contacts. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendcontact
-pub fn send_contact(
-  config config: TelegramApiConfig,
-  parameters parameters: SendContactParameters,
-) {
+pub fn send_contact(config config, parameters parameters: SendContactParameters) {
   let body_json = model.encode_send_contact_parameters(parameters)
 
   new_post_request(
@@ -631,10 +567,7 @@ pub fn send_contact(
 /// Use this method to send a native poll. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendpoll
-pub fn send_poll(
-  config config: TelegramApiConfig,
-  parameters parameters: SendPollParameters,
-) {
+pub fn send_poll(config config, parameters parameters: SendPollParameters) {
   let body_json = model.encode_send_poll_parameters(parameters)
 
   new_post_request(
@@ -655,7 +588,7 @@ pub fn send_poll(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendchataction
 pub fn send_chat_action(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SendChatActionParameters,
 ) {
   let body_json = model.encode_send_chat_action_parameters(parameters)
@@ -673,10 +606,7 @@ pub fn send_chat_action(
 /// Use this method to send invoices. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
-pub fn send_invoice(
-  config config: TelegramApiConfig,
-  parameters parameters: SendInvoiceParameters,
-) {
+pub fn send_invoice(config config, parameters parameters: SendInvoiceParameters) {
   let body_json = model.encode_send_invoice_parameters(parameters)
 
   new_post_request(
@@ -693,7 +623,7 @@ pub fn send_invoice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#createinvoicelink
 pub fn create_invoice_link(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: CreateInvoiceLinkParameters,
 ) -> Result(String, String) {
   let body_json = model.encode_create_invoice_link_parameters(parameters)
@@ -712,7 +642,7 @@ pub fn create_invoice_link(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setmessagereaction
 pub fn set_message_reaction(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: SetMessageReactionParameters,
 ) {
   let body_json = model.encode_set_message_reaction_parameters(parameters)
@@ -731,7 +661,7 @@ pub fn set_message_reaction(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getuserprofilephotos
 pub fn get_user_profile_photos(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: GetUserProfilePhotosParameters,
 ) {
   let body_json = model.encode_get_user_profile_photos_parameters(parameters)
@@ -749,10 +679,7 @@ pub fn get_user_profile_photos(
 /// Use this method to send static .WEBP, [animated](https://telegram.org/blog/animated-stickers) .TGS, or [video](https://telegram.org/blog/video-stickers-better-reactions/ru?ln=a) .WEBM stickers. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendsticker
-pub fn send_sticker(
-  config config: TelegramApiConfig,
-  parameters parameters: SendStickerParameters,
-) {
+pub fn send_sticker(config config, parameters parameters: SendStickerParameters) {
   let body_json = model.encode_send_sticker_parameters(parameters)
 
   new_post_request(
@@ -769,7 +696,7 @@ pub fn send_sticker(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getstickerset
 pub fn get_sticker_set(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: GetStickerSetParameters,
 ) {
   let body_json = model.encode_get_sticker_set_parameters(parameters)
@@ -788,7 +715,7 @@ pub fn get_sticker_set(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_message_text(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: EditMessageTextParameters,
 ) -> Result(ModelMessage, String) {
   let body_json = model.encode_edit_message_text_parameters(parameters)
@@ -807,7 +734,7 @@ pub fn edit_message_text(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagecaption
 pub fn edit_message_caption(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: EditMessageCaptionParameters,
 ) {
   let body_json = model.encode_edit_message_caption_parameters(parameters)
@@ -826,7 +753,7 @@ pub fn edit_message_caption(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagemedia
 pub fn edit_message_media(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: EditMessageMediaParameters,
 ) {
   let body_json = model.encode_edit_message_media_parameters(parameters)
@@ -845,7 +772,7 @@ pub fn edit_message_media(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagelivelocation
 pub fn edit_message_live_location(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: EditMessageLiveLocationParameters,
 ) {
   let body_json = model.encode_edit_message_live_location_parameters(parameters)
@@ -864,7 +791,7 @@ pub fn edit_message_live_location(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#stopmessagelivelocation
 pub fn stop_message_live_location(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: StopMessageLiveLocationParameters,
 ) {
   let body_json = model.encode_stop_message_live_location_parameters(parameters)
@@ -883,7 +810,7 @@ pub fn stop_message_live_location(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagereplymarkup
 pub fn edit_message_reply_markup(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: EditMessageReplyMarkupParameters,
 ) {
   let body_json = model.encode_edit_message_reply_markup_parameters(parameters)
@@ -901,10 +828,7 @@ pub fn edit_message_reply_markup(
 /// Use this method to stop a poll which was sent by the bot. On success, the stopped Poll is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#stoppoll
-pub fn stop_poll(
-  config config: TelegramApiConfig,
-  parameters parameters: StopPollParameters,
-) {
+pub fn stop_poll(config config, parameters parameters: StopPollParameters) {
   let body_json = model.encode_stop_poll_parameters(parameters)
 
   new_post_request(
@@ -930,7 +854,7 @@ pub fn stop_poll(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemessage
 pub fn delete_message(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: DeleteMessageParameters,
 ) {
   let body_json = model.encode_delete_message_parameters(parameters)
@@ -949,7 +873,7 @@ pub fn delete_message(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemessagessimultaneously
 pub fn delete_messages(
-  config config: TelegramApiConfig,
+  config config,
   parameters parameters: DeleteMessagesParameters,
 ) {
   let body_json = model.encode_delete_messages_parameters(parameters)
@@ -964,7 +888,7 @@ pub fn delete_messages(
   |> map_response(decode.bool)
 }
 
-pub fn get_chat(config config: TelegramApiConfig, chat_id chat_id: String) {
+pub fn get_chat(config config, chat_id chat_id: String) {
   new_get_request(config, path: "getChat", query: Some([#("chat_id", chat_id)]))
   |> fetch(config)
   |> map_response(model.chat_full_info_decoder())
@@ -972,68 +896,10 @@ pub fn get_chat(config config: TelegramApiConfig, chat_id chat_id: String) {
 
 // Common Helpers --------------------------------------------------------------------------------------
 
-fn build_url(config: TelegramApiConfig, path: String) -> String {
-  config.tg_api_url <> config.token <> "/" <> path
-}
-
-pub fn get_file(
-  config config: TelegramApiConfig,
-  file_id file_id: String,
-) -> Result(File, String) {
+pub fn get_file(config config, file_id file_id: String) -> Result(File, String) {
   new_get_request(config, path: "getFile", query: Some([#("file_id", file_id)]))
   |> fetch(config)
   |> map_response(model.file_decoder())
-}
-
-fn new_post_request(
-  config config: TelegramApiConfig,
-  path path: String,
-  body body: String,
-  query query: Option(List(#(String, String))),
-) {
-  TelegramApiPostRequest(url: build_url(config, path), body:, query:)
-}
-
-fn new_get_request(
-  config config: TelegramApiConfig,
-  path path: String,
-  query query: Option(List(#(String, String))),
-) {
-  TelegramApiGetRequest(url: build_url(config, path), query:)
-}
-
-fn set_query(
-  api_request: Request(String),
-  query: Option(List(#(String, String))),
-) -> Request(String) {
-  case query {
-    None -> api_request
-    Some(query) -> {
-      request.set_query(api_request, query)
-    }
-  }
-}
-
-fn api_to_request(
-  api_request: TelegramApiRequest,
-) -> Result(Request(String), String) {
-  case api_request {
-    TelegramApiGetRequest(url: url, query: query) -> {
-      request.to(url)
-      |> result.map(request.set_method(_, Get))
-      |> result.map(set_query(_, query))
-    }
-    TelegramApiPostRequest(url: url, query: query, body: body) -> {
-      request.to(url)
-      |> result.map(request.set_body(_, body))
-      |> result.map(request.set_method(_, Post))
-      |> result.map(request.set_header(_, "Content-Type", "application/json"))
-      |> result.map(set_query(_, query))
-    }
-  }
-  |> result.map_error(fn(error) {
-    "Failed to convert API request to HTTP request: " <> string.inspect(error)
-  })
 }
 
 fn map_response(
@@ -1096,51 +962,6 @@ fn response_decoder(result_decoder) {
       use error_code <- decode.field("error_code", decode.int)
       use description <- decode.field("description", decode.string)
       decode.success(ApiErrorResponse(ok:, error_code:, description:))
-    }
-  }
-}
-
-// TODO: add rate limit handling
-fn fetch(
-  api_request: TelegramApiRequest,
-  config: TelegramApiConfig,
-) -> Result(Response(String), String) {
-  use api_request <- result.try(api_to_request(api_request))
-
-  send_with_retry(api_request, config.max_retry_attempts)
-  |> result.map_error(fn(error) {
-    decode.run(error, decode.string)
-    |> result.unwrap("Failed to send request")
-  })
-}
-
-fn send_with_retry(
-  api_request: Request(String),
-  retries: Int,
-) -> Result(Response(String), Dynamic) {
-  let response = httpc.send(api_request)
-
-  case retries {
-    0 -> result.map_error(response, dynamic.from)
-    _ -> {
-      case response {
-        Ok(response) -> {
-          case response.status {
-            429 -> {
-              log.warn("Telegram API throttling, HTTP 429 'Too Many Requests'")
-              // TODO: remake it with smart request balancer
-              // https://github.com/energizer91/smart-request-balancer/tree/master - for reference
-              process.sleep(default_retry_delay)
-              send_with_retry(api_request, retries - 1)
-            }
-            _ -> Ok(response)
-          }
-        }
-        Error(_) -> {
-          process.sleep(default_retry_delay)
-          send_with_retry(api_request, retries - 1)
-        }
-      }
     }
   }
 }

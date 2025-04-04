@@ -171,7 +171,7 @@ pub fn with_poll(
   )
 }
 
-/// Use this method to send a invoice.
+/// Use this method to send an invoice.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
 pub fn with_invoice(
