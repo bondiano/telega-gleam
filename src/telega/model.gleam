@@ -17782,7 +17782,7 @@ pub fn encode_delete_message_parameters(params: DeleteMessageParameters) -> Json
   ])
 }
 
-// DeleteMessagesParameters
+// DeleteMessagesParameters -----------------------------------------------------------------------------------------
 
 pub type DeleteMessagesParameters {
   DeleteMessagesParameters(
@@ -17799,6 +17799,32 @@ pub fn encode_delete_messages_parameters(
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("message_ids", json.array(params.message_ids, json.int)),
+  ])
+}
+
+// BanChatMemberParameters ------------------------------------------------------------------------------------------
+
+pub type BanChatMemberParameters {
+  BanChatMemberParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Date when the user will be unbanned; Unix time. If user is banned for more than 366 days or less than 30 seconds from the current time they are considered to be banned forever. Applied for supergroups and channels only.
+    until_date: Option(Int),
+    /// Pass `True` to delete all messages from the chat for the user that is being removed. If `False`, the user will be able to see messages in the group that were sent before the user was removed. Always `True` for supergroups and channels.
+    revoke_messages: Option(Bool),
+  )
+}
+
+pub fn encode_ban_chat_member_parameters(
+  params: BanChatMemberParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+    #("until_date", json.nullable(params.until_date, json.int)),
+    #("revoke_messages", json.nullable(params.revoke_messages, json.bool)),
   ])
 }
 

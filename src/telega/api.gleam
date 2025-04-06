@@ -888,19 +888,41 @@ pub fn delete_messages(
   |> map_response(decode.bool)
 }
 
+/// Use this method to get up-to-date information about the chat. Returns a [ChatFullInfo](https://core.telegram.org/bots/api#chatfullinfo) object on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchat
 pub fn get_chat(config config, chat_id chat_id: String) {
   new_get_request(config, path: "getChat", query: Some([#("chat_id", chat_id)]))
   |> fetch(config)
   |> map_response(model.chat_full_info_decoder())
 }
 
-// Common Helpers --------------------------------------------------------------------------------------
-
+/// Use this method to get basic information about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link `https://api.telegram.org/file/bot<token>/<file_path>`, where `<file_path>` is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getfile
 pub fn get_file(config config, file_id file_id: String) -> Result(File, String) {
   new_get_request(config, path: "getFile", query: Some([#("file_id", file_id)]))
   |> fetch(config)
   |> map_response(model.file_decoder())
 }
+
+/// Use this method to ban a user in a group, a supergroup or a channel. In the case of supergroups and channels, the user will not be able to return to the chat on their own using invite links, etc., unless unbanned first. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#banchatmember
+pub fn ban_chat_member(config config, parameters parameters) {
+  let body_json = model.encode_ban_chat_member_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "banChatMember",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
+}
+
+// Common Helpers --------------------------------------------------------------------------------------
 
 fn map_response(
   response: Result(Response(String), String),
