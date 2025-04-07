@@ -17828,6 +17828,29 @@ pub fn encode_ban_chat_member_parameters(
   ])
 }
 
+// UnbanChatMemeberParameters ----------------------------------------------------------------------------------------
+
+pub type UnbanChatMemberParameters {
+  UnbanChatMemberParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Do nothing if the user is not banned
+    only_if_banned: Option(Bool),
+  )
+}
+
+pub fn encode_unban_chat_member_parameters(
+  params: UnbanChatMemberParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+    #("only_if_banned", json.nullable(params.only_if_banned, json.bool)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
