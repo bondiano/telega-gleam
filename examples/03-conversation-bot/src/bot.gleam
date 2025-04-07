@@ -9,13 +9,18 @@ import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
+import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
 import wisp
 import wisp/wisp_mist
 
+type BotError {
+  TelegaBotError(telega_error.TelegaError)
+}
+
 type BotContext =
-  Context(NameBotSession)
+  Context(NameBotSession, BotError)
 
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
@@ -37,17 +42,26 @@ fn handle_request(bot, req) {
 
 fn set_name_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "set_name command")
-  use _ <- result.try(reply.with_text(ctx, "What's your name?"))
+  use _ <- result.try(
+    reply.with_text(ctx, "What's your name?")
+    |> result.map_error(TelegaBotError),
+  )
 
   use ctx, name <- telega.wait_text(ctx)
-  use _ <- result.try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
+  use _ <- result.try(
+    reply.with_text(ctx, "Your name is: " <> name <> " set!")
+    |> result.map_error(TelegaBotError),
+  )
 
   bot.next_session(ctx, NameBotSession(name: name))
 }
 
 fn get_name_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "get_name command")
-  use _ <- result.try(reply.with_text(ctx, "Your name is: " <> ctx.session.name))
+  use _ <- result.try(
+    reply.with_text(ctx, "Your name is: " <> ctx.session.name)
+    |> result.map_error(TelegaBotError),
+  )
 
   Ok(ctx)
 }
@@ -55,18 +69,24 @@ fn get_name_command_handler(ctx: BotContext, _) {
 fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
-  use _ <- result.try(telega_api.set_my_commands(
-    config: ctx.config.api,
-    commands: telega_model.bot_commands_from([
-      #("/set_name", "Set name"),
-      #("/get_name", "Get name"),
-    ]),
-    parameters: None,
-  ))
-  use _ <- result.try(reply.with_text(
-    ctx,
-    "Hello! I'm a Name bot. You can set your name with /set_name command.",
-  ))
+  use _ <- result.try(
+    telega_api.set_my_commands(
+      config: ctx.config.api,
+      commands: telega_model.bot_commands_from([
+        #("/set_name", "Set name"),
+        #("/get_name", "Get name"),
+      ]),
+      parameters: None,
+    )
+    |> result.map_error(TelegaBotError),
+  )
+  use _ <- result.try(
+    reply.with_text(
+      ctx,
+      "Hello! I'm a Name bot. You can set your name with /set_name command.",
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
   Ok(ctx)
 }

@@ -10,29 +10,27 @@ import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 
+import telega/error
 import telega/internal/fetch.{fetch, new_get_request, new_post_request}
 import telega/model.{
   type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
-  type CreateInvoiceLinkParameters, type DeleteMessageParameters,
-  type DeleteMessagesParameters, type EditMessageCaptionParameters,
-  type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
-  type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
-  type File, type ForwardMessageParameters, type ForwardMessagesParameters,
+  type CreateInvoiceLinkParameters, type DeleteMessagesParameters,
+  type EditMessageCaptionParameters, type EditMessageLiveLocationParameters,
+  type EditMessageMediaParameters, type EditMessageTextParameters,
+  type ForwardMessageParameters, type ForwardMessagesParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
-  type GetUserProfilePhotosParameters, type Message as ModelMessage,
-  type SendAnimationParameters, type SendAudioParameters,
-  type SendChatActionParameters, type SendContactParameters,
-  type SendDiceParameters, type SendDocumentParameters,
-  type SendInvoiceParameters, type SendLocationParameters,
-  type SendMediaGroupParameters, type SendMessageParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
-  type SendVenueParameters, type SendVideoNoteParameters,
-  type SendVideoParameters, type SendVoiceParameters,
-  type SetChatMenuButtonParameters, type SetMessageReactionParameters,
-  type StopMessageLiveLocationParameters, type StopPollParameters,
+  type GetUserProfilePhotosParameters, type SendAnimationParameters,
+  type SendAudioParameters, type SendChatActionParameters,
+  type SendContactParameters, type SendDiceParameters,
+  type SendDocumentParameters, type SendInvoiceParameters,
+  type SendLocationParameters, type SendMediaGroupParameters,
+  type SendMessageParameters, type SendPhotoParameters, type SendPollParameters,
+  type SendStickerParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SetChatMenuButtonParameters,
+  type SetMessageReactionParameters,
 }
 
 type ApiResponse(result) {
@@ -43,7 +41,7 @@ type ApiResponse(result) {
 /// Set the webhook URL using [setWebhook](https://core.telegram.org/bots/api#setwebhook) API.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setwebhook
-pub fn set_webhook(config config, parameters parameters) -> Result(Bool, String) {
+pub fn set_webhook(config config, parameters parameters) {
   let body = model.encode_set_webhook_parameters(parameters)
 
   new_post_request(
@@ -239,7 +237,7 @@ pub fn get_me(config config) {
 pub fn answer_callback_query(
   config config,
   parameters parameters: AnswerCallbackQueryParameters,
-) -> Result(Bool, String) {
+) {
   let body_json = model.encode_answer_callback_query_parameters(parameters)
 
   new_post_request(
@@ -259,7 +257,7 @@ pub fn answer_callback_query(
 pub fn forward_message(
   config config,
   parameters parameters: ForwardMessageParameters,
-) -> Result(ModelMessage, String) {
+) {
   let body_json = model.encode_forward_message_parameters(parameters)
 
   new_post_request(
@@ -278,7 +276,7 @@ pub fn forward_message(
 pub fn set_chat_menu_button(
   config config,
   parameters parameters: SetChatMenuButtonParameters,
-) -> Result(Bool, String) {
+) {
   new_post_request(
     config:,
     path: "setChatMenuButton",
@@ -625,7 +623,7 @@ pub fn send_invoice(config config, parameters parameters: SendInvoiceParameters)
 pub fn create_invoice_link(
   config config,
   parameters parameters: CreateInvoiceLinkParameters,
-) -> Result(String, String) {
+) {
   let body_json = model.encode_create_invoice_link_parameters(parameters)
 
   new_post_request(
@@ -717,7 +715,7 @@ pub fn get_sticker_set(
 pub fn edit_message_text(
   config config,
   parameters parameters: EditMessageTextParameters,
-) -> Result(ModelMessage, String) {
+) {
   let body_json = model.encode_edit_message_text_parameters(parameters)
 
   new_post_request(
@@ -790,10 +788,7 @@ pub fn edit_message_live_location(
 /// Use this method to stop updating a live location message before live_period expires. On success, if the message is not an inline message, the edited Message is returned, otherwise True is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#stopmessagelivelocation
-pub fn stop_message_live_location(
-  config config,
-  parameters parameters: StopMessageLiveLocationParameters,
-) {
+pub fn stop_message_live_location(config config, parameters parameters) {
   let body_json = model.encode_stop_message_live_location_parameters(parameters)
 
   new_post_request(
@@ -809,10 +804,7 @@ pub fn stop_message_live_location(
 /// Use this method to edit only the reply markup of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagereplymarkup
-pub fn edit_message_reply_markup(
-  config config,
-  parameters parameters: EditMessageReplyMarkupParameters,
-) {
+pub fn edit_message_reply_markup(config config, parameters parameters) {
   let body_json = model.encode_edit_message_reply_markup_parameters(parameters)
 
   new_post_request(
@@ -828,7 +820,7 @@ pub fn edit_message_reply_markup(
 /// Use this method to stop a poll which was sent by the bot. On success, the stopped Poll is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#stoppoll
-pub fn stop_poll(config config, parameters parameters: StopPollParameters) {
+pub fn stop_poll(config config, parameters parameters) {
   let body_json = model.encode_stop_poll_parameters(parameters)
 
   new_post_request(
@@ -853,10 +845,7 @@ pub fn stop_poll(config config, parameters parameters: StopPollParameters) {
 /// Returns True on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemessage
-pub fn delete_message(
-  config config,
-  parameters parameters: DeleteMessageParameters,
-) {
+pub fn delete_message(config config, parameters parameters) {
   let body_json = model.encode_delete_message_parameters(parameters)
 
   new_post_request(
@@ -900,7 +889,7 @@ pub fn get_chat(config config, chat_id chat_id: String) {
 /// Use this method to get basic information about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link `https://api.telegram.org/file/bot<token>/<file_path>`, where `<file_path>` is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getfile
-pub fn get_file(config config, file_id file_id: String) -> Result(File, String) {
+pub fn get_file(config config, file_id file_id) {
   new_get_request(config, path: "getFile", query: Some([#("file_id", file_id)]))
   |> fetch(config)
   |> map_response(model.file_decoder())
@@ -941,38 +930,23 @@ pub fn unban_chat_member(config config, parameters parameters) {
 // Common Helpers --------------------------------------------------------------------------------------
 
 fn map_response(
-  response: Result(Response(String), String),
+  response: Result(Response(String), error.TelegaError),
   result_decoder,
-) -> Result(a, String) {
-  response
-  |> result.map(fn(response) {
-    json.decode(from: response.body, using: parse_api_response(
-      _,
-      result_decoder,
-    ))
-    |> result.map_error(fn(error) {
-      "Failed to decode response: "
-      <> response.body
-      <> " With error: "
-      <> string.inspect(error)
-    })
-    |> result.then(fn(response) {
-      case response {
-        ApiSuccessResponse(result: result, ..) -> {
-          Ok(result)
-        }
-        ApiErrorResponse(error_code: error_code, description: description, ..) -> {
-          Error(
-            "Request failed with code "
-            <> int.to_string(error_code)
-            <> " :\n"
-            <> description,
-          )
-        }
+) {
+  use response <- result.try(response)
+
+  json.decode(from: response.body, using: parse_api_response(_, result_decoder))
+  |> result.map_error(error.JsonDecodeError)
+  |> result.then(fn(response) {
+    case response {
+      ApiSuccessResponse(result: result, ..) -> {
+        Ok(result)
       }
-    })
+      ApiErrorResponse(error_code: error_code, description: description, ..) -> {
+        Error(error.TelegramApiError(error_code, description))
+      }
+    }
   })
-  |> result.flatten
 }
 
 fn parse_api_response(json, result_decoder) {

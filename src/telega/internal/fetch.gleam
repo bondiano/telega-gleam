@@ -1,5 +1,4 @@
 import gleam/dynamic
-import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
@@ -7,14 +6,14 @@ import gleam/http/response.{type Response, Response}
 import gleam/httpc
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 
+import telega/error.{type TelegaError}
 import telega/internal/log
 
 const default_retry_delay = 1000
 
 type FetchClient =
-  fn(Request(String)) -> Result(Response(String), String)
+  fn(Request(String)) -> Result(Response(String), TelegaError)
 
 pub type TelegramFetchConfig {
   TelegramFetchConfig(
@@ -33,7 +32,7 @@ pub fn new_config(
   token token,
   max_retry_attempts max_retry_attempts,
   tg_api_url tg_api_url,
-) -> TelegramFetchConfig {
+) {
   TelegramFetchConfig(
     token:,
     fetch_client: fetch_httpc_adapter,
@@ -42,11 +41,9 @@ pub fn new_config(
   )
 }
 
-fn fetch_httpc_adapter(req: Request(String)) -> Result(Response(String), String) {
+fn fetch_httpc_adapter(req: Request(String)) {
   httpc.send(req)
-  |> result.map_error(fn(error) {
-    "Failed to send request: " <> string.inspect(error)
-  })
+  |> result.map_error(fn(error) { error.FetchError(dynamic.from(error)) })
 }
 
 pub type TelegramApiRequest {
@@ -80,10 +77,6 @@ pub fn fetch(api_request: TelegramApiRequest, config: TelegramFetchConfig) {
   use api_request <- result.try(api_to_request(api_request))
 
   send_with_retry(config.fetch_client, api_request, config.max_retry_attempts)
-  |> result.map_error(fn(error) {
-    decode.run(error, decode.string)
-    |> result.unwrap("Failed to send request")
-  })
 }
 
 fn send_with_retry(
@@ -94,7 +87,7 @@ fn send_with_retry(
   let response = fetch_client(api_request)
 
   case retries {
-    0 -> result.map_error(response, dynamic.from)
+    0 -> response
     _ -> {
       case response {
         Ok(response) -> {
@@ -118,40 +111,37 @@ fn send_with_retry(
   }
 }
 
-fn api_to_request(
-  api_request: TelegramApiRequest,
-) -> Result(Request(String), String) {
+fn api_to_request(api_request) {
   case api_request {
     TelegramApiGetRequest(url: url, query: query) -> {
       request.to(url)
-      |> result.map(request.set_method(_, Get))
-      |> result.map(set_query(_, query))
+      |> result.map(fn(req) {
+        req
+        |> request.set_method(Get)
+        |> set_query(query)
+      })
     }
     TelegramApiPostRequest(url: url, query: query, body: body) -> {
       request.to(url)
-      |> result.map(request.set_body(_, body))
-      |> result.map(request.set_method(_, Post))
-      |> result.map(request.set_header(_, "Content-Type", "application/json"))
-      |> result.map(set_query(_, query))
+      |> result.map(fn(req) {
+        req
+        |> request.set_body(body)
+        |> request.set_method(Post)
+        |> request.set_header("Content-Type", "application/json")
+        |> set_query(query)
+      })
     }
   }
-  |> result.map_error(fn(error) {
-    "Failed to convert API request to HTTP request: " <> string.inspect(error)
-  })
+  |> result.map_error(fn(error) { error.ApiToRequestConvertError })
 }
 
-fn set_query(
-  api_request: Request(String),
-  query: Option(List(#(String, String))),
-) -> Request(String) {
+fn set_query(api_request, query) {
   case query {
     None -> api_request
-    Some(query) -> {
-      request.set_query(api_request, query)
-    }
+    Some(query) -> request.set_query(api_request, query)
   }
 }
 
-fn build_url(config: TelegramFetchConfig, path: String) -> String {
+fn build_url(config: TelegramFetchConfig, path) {
   config.tg_api_url <> config.token <> "/" <> path
 }

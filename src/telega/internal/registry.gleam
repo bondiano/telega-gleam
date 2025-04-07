@@ -6,6 +6,9 @@ import gleam/function
 import gleam/option.{type Option}
 import gleam/otp/actor
 import gleam/result
+import gleam/string
+
+import telega/error
 
 pub opaque type Actor(message) {
   Actor(pid: Pid, monitor: ProcessMonitor, self: Subject(message))
@@ -47,6 +50,9 @@ pub fn start() {
     loop:,
     init_timeout: bot_actor_init_timeout,
   ))
+  |> result.map_error(fn(error) {
+    error.RegistryStartError(string.inspect(error))
+  })
 }
 
 pub fn stop(in actor: RegistrySubject(message)) {

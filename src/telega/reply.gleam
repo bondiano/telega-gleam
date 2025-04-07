@@ -3,14 +3,16 @@
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+
 import telega/api
 import telega/bot.{type Context}
-import telega/model.{type Message, type SendDiceParameters}
+import telega/error
+import telega/model.{type SendDiceParameters}
 
 /// Use this method to send text messages.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
-pub fn with_text(ctx ctx: Context(session), text text: String) {
+pub fn with_text(ctx ctx: Context(session, error), text text: String) {
   api.send_message(
     ctx.config.api,
     parameters: model.SendMessageParameters(
@@ -35,7 +37,7 @@ pub fn with_text(ctx ctx: Context(session), text text: String) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_markup(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   text text: String,
   markup reply_markup: model.SendMessageReplyMarkupParameters,
 ) {
@@ -63,7 +65,7 @@ pub fn with_markup(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
 pub fn with_dice(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   parameters parameters: Option(SendDiceParameters),
 ) {
   let parameters =
@@ -87,7 +89,7 @@ pub fn with_dice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   parameters parameters: model.EditMessageTextParameters,
 ) {
   api.edit_message_text(ctx.config.api, parameters)
@@ -98,7 +100,7 @@ pub fn edit_text(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   parameters parameters: model.ForwardMessageParameters,
 ) {
   api.forward_message(ctx.config.api, parameters)
@@ -110,18 +112,18 @@ pub fn forward(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   parameters parameters: model.AnswerCallbackQueryParameters,
 ) {
   api.answer_callback_query(ctx.config.api, parameters)
 }
 
 /// Get download link for the file.
-pub fn with_file_link(ctx ctx: Context(session), file_id file_id: String) {
+pub fn with_file_link(ctx ctx: Context(session, error), file_id file_id: String) {
   use file <- result.try(api.get_file(ctx.config.api, file_id))
   use file_path <- result.try(option.to_result(
     file.file_path,
-    "File path is missing",
+    error.FileNotFoundError,
   ))
 
   Ok(
@@ -137,7 +139,7 @@ pub fn with_file_link(ctx ctx: Context(session), file_id file_id: String) {
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendpoll
 pub fn with_poll(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   question question: String,
   options options: List(String),
 ) {
@@ -175,7 +177,7 @@ pub fn with_poll(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
 pub fn with_invoice(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   title title: String,
   description description: String,
   payload payload: String,
@@ -225,9 +227,9 @@ pub fn with_invoice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendsticker
 pub fn with_sticker(
-  ctx ctx: Context(session),
+  ctx ctx: Context(session, error),
   sticker sticker: model.FileOrString,
-) -> Result(Message, String) {
+) {
   api.send_sticker(
     ctx.config.api,
     parameters: model.SendStickerParameters(

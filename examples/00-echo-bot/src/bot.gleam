@@ -4,6 +4,7 @@ import gleam/result
 import mist
 import telega
 import telega/adapters/wisp as telega_wisp
+import telega/error
 import telega/reply
 import telega/update.{CommandUpdate, TextUpdate}
 import wisp
@@ -17,8 +18,10 @@ fn handle_request(bot, req) {
 fn echo_handler(ctx) {
   use <- telega.log_context(ctx, "echo")
   use _ <- result.try(case ctx.update {
-    TextUpdate(text:, ..) -> reply.with_text(ctx, text)
-    CommandUpdate(command:, ..) -> reply.with_text(ctx, command.text)
+    TextUpdate(text:, ..) ->
+      reply.with_text(ctx, text) |> result.map_error(error.to_string)
+    CommandUpdate(command:, ..) ->
+      reply.with_text(ctx, command.text) |> result.map_error(error.to_string)
     _ -> Error("No text message")
   })
   Ok(ctx)

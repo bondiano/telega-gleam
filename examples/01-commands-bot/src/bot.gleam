@@ -7,10 +7,15 @@ import mist
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
+import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
 import wisp
 import wisp/wisp_mist
+
+type BotError {
+  TelegaBotError(telega_error.TelegaError(BotError))
+}
 
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
@@ -32,7 +37,9 @@ fn handle_request(bot, req) {
 
 fn dice_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "dice")
-  use _ <- result.try(reply.with_dice(ctx, None))
+  use _ <- result.try(
+    reply.with_dice(ctx, None) |> result.map_error(TelegaBotError),
+  )
 
   Ok(ctx)
 }
@@ -40,15 +47,21 @@ fn dice_command_handler(ctx, _) {
 fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
-  use _ <- result.try(telega_api.set_my_commands(
-    ctx.config.api,
-    telega_model.bot_commands_from([#("/dice", "Roll a dice")]),
-    None,
-  ))
-  use _ <- result.try(reply.with_text(
-    ctx,
-    "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
-  ))
+  use _ <- result.try(
+    telega_api.set_my_commands(
+      ctx.config.api,
+      telega_model.bot_commands_from([#("/dice", "Roll a dice")]),
+      None,
+    )
+    |> result.map_error(TelegaBotError),
+  )
+  use _ <- result.try(
+    reply.with_text(
+      ctx,
+      "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
   Ok(ctx)
 }

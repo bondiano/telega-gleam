@@ -10,14 +10,19 @@ import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
+import telega/error as telega_error
 import telega/keyboard as telega_keyboard
 import telega/model.{EditMessageTextParameters} as telega_model
 import telega/reply
 import wisp.{type Response}
 import wisp/wisp_mist
 
+type BotError {
+  TelegaBotError(telega_error.TelegaError)
+}
+
 type BotContext =
-  Context(LanguageBotSession)
+  Context(LanguageBotSession, BotError)
 
 fn middleware(req, bot, handle_request) -> Response {
   let req = wisp.method_override(req)
@@ -65,15 +70,21 @@ fn change_languages_keyboard(ctx: BotContext, _) {
 
   let language = ctx.session.lang
   let keyboard = language_keyboard.new_keyboard(language)
-  use _ <- result.try(reply.with_markup(
-    ctx,
-    t_change_language_message(language),
-    telega_keyboard.to_markup(keyboard),
-  ))
+  use _ <- result.try(
+    reply.with_markup(
+      ctx,
+      t_change_language_message(language),
+      telega_keyboard.to_markup(keyboard),
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
   use _, text <- telega.wait_hears(ctx, telega_keyboard.hear(keyboard))
   let language = language_keyboard.option_to_language(text)
-  use _ <- result.try(reply.with_text(ctx, t_language_changed_message(language)))
+  use _ <- result.try(
+    reply.with_text(ctx, t_language_changed_message(language))
+    |> result.map_error(TelegaBotError),
+  )
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
@@ -83,11 +94,14 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   let language = ctx.session.lang
   let callback_data = language_keyboard.build_keyboard_callback_data()
   let keyboard = language_keyboard.new_inline_keyboard(language, callback_data)
-  use message <- result.try(reply.with_markup(
-    ctx,
-    t_change_language_message(language),
-    telega_keyboard.to_inline_markup(keyboard),
-  ))
+  use message <- result.try(
+    reply.with_markup(
+      ctx,
+      t_change_language_message(language),
+      telega_keyboard.to_inline_markup(keyboard),
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx,
@@ -98,39 +112,51 @@ fn handle_inline_change_language(ctx: BotContext, _) {
     telega_keyboard.unpack_callback(payload, callback_data)
   let language = language_callback.data
 
-  use _ <- result.try(reply.answer_callback_query(
-    ctx,
-    telega_model.new_answer_callback_query_parameters(callback_query_id),
-  ))
+  use _ <- result.try(
+    reply.answer_callback_query(
+      ctx,
+      telega_model.new_answer_callback_query_parameters(callback_query_id),
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
-  use _ <- result.try(reply.edit_text(
-    ctx,
-    EditMessageTextParameters(
-      text: t_language_changed_message(language),
-      message_id: Some(message.message_id),
-      chat_id: Some(telega_model.Str(ctx.key)),
-      entities: None,
-      inline_message_id: None,
-      link_preview_options: None,
-      parse_mode: None,
-      reply_markup: None,
-    ),
-  ))
+  use _ <- result.try(
+    reply.edit_text(
+      ctx,
+      EditMessageTextParameters(
+        text: t_language_changed_message(language),
+        message_id: Some(message.message_id),
+        chat_id: Some(telega_model.Str(ctx.key)),
+        entities: None,
+        inline_message_id: None,
+        link_preview_options: None,
+        parse_mode: None,
+        reply_markup: None,
+      ),
+    )
+    |> result.map_error(TelegaBotError),
+  )
 
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
 fn start_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "start")
-  use _ <- result.try(telega_api.set_my_commands(
-    ctx.config.api,
-    telega_model.bot_commands_from([
-      #("/lang", "Shows custom keyboard with languages"),
-      #("/lang_inline", "Change language inline"),
-    ]),
-    None,
-  ))
-  use _ <- result.try(reply.with_text(ctx, t_welcome_message(ctx.session.lang)))
+  use _ <- result.try(
+    telega_api.set_my_commands(
+      ctx.config.api,
+      telega_model.bot_commands_from([
+        #("/lang", "Shows custom keyboard with languages"),
+        #("/lang_inline", "Change language inline"),
+      ]),
+      None,
+    )
+    |> result.map_error(TelegaBotError),
+  )
+  use _ <- result.try(
+    reply.with_text(ctx, t_welcome_message(ctx.session.lang))
+    |> result.map_error(TelegaBotError),
+  )
 
   Ok(ctx)
 }

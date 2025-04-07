@@ -28,7 +28,7 @@ const secret_header = "x-telegram-bot-api-secret-token"
 /// ```
 pub fn handle_bot(
   request req: WispRequest,
-  telega telega: Telega(session),
+  telega telega: Telega(session, error),
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
   use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
@@ -47,7 +47,7 @@ pub fn handle_bot(
   }
 }
 
-fn is_secret_token_valid(telega: Telega(session), req: WispRequest) -> Bool {
+fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
   let secret_header_value =
     request.get_header(req, secret_header)
     |> result.unwrap("")
@@ -55,7 +55,7 @@ fn is_secret_token_valid(telega: Telega(session), req: WispRequest) -> Bool {
   telega.is_secret_token_valid(telega, secret_header_value)
 }
 
-fn is_bot_request(telega: Telega(session), req: WispRequest) -> Bool {
+fn is_bot_request(telega: Telega(session, error), req) -> Bool {
   case wisp.path_segments(req) {
     [segment] -> telega.is_webhook_path(telega, segment)
     _ -> False

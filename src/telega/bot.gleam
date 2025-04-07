@@ -12,21 +12,22 @@ import telega/internal/config.{type Config}
 import telega/internal/registry.{type RegistrySubject}
 
 import telega/api
+import telega/error
 import telega/model.{type User}
 import telega/update.{
   type Command, type Update, CallbackQueryUpdate, CommandUpdate, TextUpdate,
   UnknownUpdate,
 }
 
-/// Stores information about runned bot instance
-pub opaque type Bot(session) {
+/// Stores information about running bot instance
+pub opaque type Bot(session, error) {
   Bot(
     self: BotSubject,
     config: Config,
     bot_info: User,
-    session_settings: SessionSettings(session),
-    handlers: List(Handler(session)),
-    registry_subject: RegistrySubject(ChatInstanceMessage(session)),
+    session_settings: SessionSettings(session, error),
+    handlers: List(Handler(session, error)),
+    registry_subject: RegistrySubject(ChatInstanceMessage(session, error)),
   )
 }
 
@@ -67,14 +68,15 @@ pub fn start(
     loop: bot_loop,
     init_timeout: bot_actor_init_timeout,
   ))
+  |> result.map_error(fn(err) { error.BotStartError(string.inspect(err)) })
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
-pub fn cancel_conversation(bot bot: Bot(message), key key) {
+pub fn cancel_conversation(bot bot: Bot(session, error), key key) {
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
-fn bot_loop(message: BotMessage, bot: Bot(message)) {
+fn bot_loop(message, bot) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) -> {
       case handle_update_bot_message(bot:, update:, reply_with:) {
@@ -90,7 +92,7 @@ fn bot_loop(message: BotMessage, bot: Bot(message)) {
 }
 
 fn handle_update_bot_message(
-  bot bot: Bot(session),
+  bot bot: Bot(session, error),
   update update,
   reply_with reply_with,
 ) {
@@ -133,26 +135,26 @@ fn handle_update_bot_message(
 
 // Chat Instance --------------------------------------------------------------------
 
-pub type ChatInstanceSubject(session) =
-  Subject(ChatInstanceMessage(session))
+pub type ChatInstanceSubject(session, error) =
+  Subject(ChatInstanceMessage(session, error))
 
-pub opaque type ChatInstanceMessage(session) {
+pub opaque type ChatInstanceMessage(session, error) {
   HandleNewChatInstanceMessage(
     update: Update,
-    handlers: List(Handler(session)),
+    handlers: List(Handler(session, error)),
     reply_with: Subject(Option(Nil)),
   )
-  WaitHandlerChatInstanceMessage(handler: Handler(session))
+  WaitHandlerChatInstanceMessage(handler: Handler(session, error))
 }
 
-type ChatInstance(session) {
+type ChatInstance(session, error) {
   ChatInstance(
     key: String,
     session: session,
     config: Config,
-    session_settings: SessionSettings(session),
-    self: ChatInstanceSubject(session),
-    continuation: Option(Handler(session)),
+    session_settings: SessionSettings(session, error),
+    self: ChatInstanceSubject(session, error),
+    continuation: Option(Handler(session, error)),
   )
 }
 
@@ -161,7 +163,7 @@ const chat_instance_actor_init_timeout = 250
 fn start_chat_instance(
   key key: String,
   config config: Config,
-  session_settings session_settings: SessionSettings(session),
+  session_settings session_settings: SessionSettings(session, error),
 ) {
   actor.start_spec(actor.Spec(
     init: fn() {
@@ -193,7 +195,7 @@ fn start_chat_instance(
 fn handle_update_chat_instance(
   chat_subject chat_subject,
   update update,
-  handlers handlers: List(Handler(session)),
+  handlers handlers: List(Handler(session, error)),
   reply_with reply_with,
 ) {
   actor.send(
@@ -202,10 +204,7 @@ fn handle_update_chat_instance(
   )
 }
 
-fn loop_chat_instance(
-  message: ChatInstanceMessage(session),
-  chat: ChatInstance(session),
-) {
+fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
   case message {
     HandleNewChatInstanceMessage(
       update: update,
@@ -252,20 +251,20 @@ fn loop_chat_instance(
 // Context ----------------------------------------------------------------------------
 
 /// Context holds information needed for the bot instance and the current update.
-pub type Context(session) {
+pub type Context(session, error) {
   Context(
     key: String,
     update: Update,
     config: Config,
     session: session,
-    chat_subject: ChatInstanceSubject(session),
+    chat_subject: ChatInstanceSubject(session, error),
   )
 }
 
 fn new_context(
-  chat chat: ChatInstance(session),
+  chat chat: ChatInstance(session, error),
   update update,
-) -> Context(session) {
+) -> Context(session, error) {
   Context(
     update:,
     config: chat.config,
@@ -277,33 +276,40 @@ fn new_context(
 
 // Handler ------------------------------------------------------------------------
 
-pub type Handler(session) {
+pub type Handler(session, error) {
   /// Handle all messages.
-  HandleAll(handler: fn(Context(session)) -> Result(Context(session), String))
+  HandleAll(
+    handler: fn(Context(session, error)) ->
+      Result(Context(session, error), error),
+  )
   /// Handle a specific command.
   HandleCommand(
     command: String,
-    handler: fn(Context(session), Command) -> Result(Context(session), String),
+    handler: fn(Context(session, error), Command) ->
+      Result(Context(session, error), error),
   )
   /// Handle multiple commands.
   HandleCommands(
     commands: List(String),
-    handler: fn(Context(session), Command) -> Result(Context(session), String),
+    handler: fn(Context(session, error), Command) ->
+      Result(Context(session, error), error),
   )
   /// Handle text messages.
   HandleText(
-    handler: fn(Context(session), String) -> Result(Context(session), String),
+    handler: fn(Context(session, error), String) ->
+      Result(Context(session, error), error),
   )
   /// Handle text message with a specific substring.
   HandleHears(
     hears: Hears,
-    handler: fn(Context(session), String) -> Result(Context(session), String),
+    handler: fn(Context(session, error), String) ->
+      Result(Context(session, error), error),
   )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
-    handler: fn(Context(session), String, String) ->
-      Result(Context(session), String),
+    handler: fn(Context(session, error), String, String) ->
+      Result(Context(session, error), error),
   )
 }
 
@@ -334,7 +340,7 @@ fn extract_update_handlers(handlers, update) {
   })
 }
 
-pub fn wait_handler(ctx: Context(session), handler) {
+pub fn wait_handler(ctx: Context(session, error), handler) {
   process.send(ctx.chat_subject, WaitHandlerChatInstanceMessage(handler))
   Ok(ctx)
 }
@@ -372,10 +378,7 @@ fn loop_handlers(chat chat, config config, update update, handlers handlers) {
             update:,
             config:,
           )
-        Some(Error(e)) ->
-          Error(
-            "Failed to handle message " <> string.inspect(update) <> ": " <> e,
-          )
+        Some(Error(e)) -> Error(e)
         None -> loop_handlers(chat:, config:, update:, handlers: rest)
       }
     [] -> chat.session_settings.persist_session(chat.key, chat.session)
@@ -406,12 +409,12 @@ fn check_hears(text, hear) -> Bool {
 
 // Session --------------------------------------------------------------------------
 
-pub type SessionSettings(session) {
+pub type SessionSettings(session, error) {
   SessionSettings(
     // Calls after all handlers to persist the session.
-    persist_session: fn(String, session) -> Result(session, String),
+    persist_session: fn(String, session) -> Result(session, error),
     // Calls on initialization of the chat instance to get the session.
-    get_session: fn(String) -> Result(session, String),
+    get_session: fn(String) -> Result(session, error),
     // Calls on initialization of the chat instance if no session is found.
     default_session: fn() -> session,
   )
@@ -426,19 +429,21 @@ fn get_session_key(update) {
     CommandUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
     TextUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
     CallbackQueryUpdate(from_id: from_id, ..) -> Ok(int.to_string(from_id))
-    UnknownUpdate(..) ->
-      Error("Unknown update type don't allow to get session key")
+    UnknownUpdate(update) ->
+      panic as {
+        "Unknown update type don't allow to get session key: "
+        <> string.inspect(update)
+      }
   }
 }
 
 pub fn get_session(
-  session_settings: SessionSettings(session),
+  session_settings: SessionSettings(session, error),
   update: Update,
-) -> Result(session, String) {
+) -> Result(session, error) {
   use key <- result.try(get_session_key(update))
 
   session_settings.get_session(key)
-  |> result.map_error(fn(e) { "Failed to get session:\n " <> string.inspect(e) })
 }
 
 // Utilities -------------------------------------------------------------------------------
@@ -459,8 +464,8 @@ pub fn set_webhook(config config: Config) {
   )
 }
 
-pub fn fmt_update(ctx: Context(session)) {
-  case ctx.update {
+pub fn update_to_string(update: Update) {
+  case update {
     CommandUpdate(command: command, chat_id: chat_id, ..) ->
       "command \"" <> command.command <> "\" from " <> int.to_string(chat_id)
     TextUpdate(text: text, chat_id: chat_id, ..) ->
