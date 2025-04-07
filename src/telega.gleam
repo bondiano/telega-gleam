@@ -257,7 +257,7 @@ pub fn with_session_settings(
 /// Useful when you don't need to persist the session.
 pub fn init_nil_session(builder: TelegaBuilder(Nil, error)) {
   let persist_session = fn(_, _) { Ok(Nil) }
-  let get_session = fn(_) { Ok(Nil) }
+  let get_session = fn(_) { Ok(Some(Nil)) }
   let default_session = fn() { Nil }
 
   TelegaBuilder(

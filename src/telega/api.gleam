@@ -13,25 +13,7 @@ import gleam/result
 
 import telega/error
 import telega/internal/fetch.{fetch, new_get_request, new_post_request}
-import telega/model.{
-  type AnswerCallbackQueryParameters, type BotCommand, type BotCommandParameters,
-  type CopyMessageParameters, type CopyMessagesParameters,
-  type CreateInvoiceLinkParameters, type DeleteMessagesParameters,
-  type EditMessageCaptionParameters, type EditMessageLiveLocationParameters,
-  type EditMessageMediaParameters, type EditMessageTextParameters,
-  type ForwardMessageParameters, type ForwardMessagesParameters,
-  type GetStickerSetParameters, type GetUpdatesParameters,
-  type GetUserProfilePhotosParameters, type SendAnimationParameters,
-  type SendAudioParameters, type SendChatActionParameters,
-  type SendContactParameters, type SendDiceParameters,
-  type SendDocumentParameters, type SendInvoiceParameters,
-  type SendLocationParameters, type SendMediaGroupParameters,
-  type SendMessageParameters, type SendPhotoParameters, type SendPollParameters,
-  type SendStickerParameters, type SendVenueParameters,
-  type SendVideoNoteParameters, type SendVideoParameters,
-  type SendVoiceParameters, type SetChatMenuButtonParameters,
-  type SetMessageReactionParameters,
-}
+import telega/model.{type BotCommand, type GetUpdatesParameters}
 
 type ApiResponse(result) {
   ApiSuccessResponse(ok: Bool, result: result)
@@ -108,7 +90,7 @@ pub fn close(config config) {
 /// Use this method to send text messages with additional parameters.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
-pub fn send_message(config config, parameters parameters: SendMessageParameters) {
+pub fn send_message(config config, parameters parameters) {
   let body_json = model.encode_send_message_parameters(parameters)
 
   new_post_request(
@@ -127,7 +109,7 @@ pub fn send_message(config config, parameters parameters: SendMessageParameters)
 pub fn set_my_commands(
   config config,
   commands commands: List(BotCommand),
-  parameters parameters: Option(BotCommandParameters),
+  parameters parameters,
 ) {
   let parameters =
     option.unwrap(parameters, model.default_bot_command_parameters())
@@ -137,7 +119,7 @@ pub fn set_my_commands(
     json.object([
       #(
         "commands",
-        json.array(commands, fn(command: BotCommand) {
+        json.array(commands, fn(command) {
           json.object([
             #("command", json.string(command.command)),
             #("description", json.string(command.description)),
@@ -161,10 +143,7 @@ pub fn set_my_commands(
 /// After deletion, [higher level commands](https://core.telegram.org/bots/api#determining-list-of-commands) will be shown to affected users.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemycommands
-pub fn delete_my_commands(
-  config config,
-  parameters parameters: Option(BotCommandParameters),
-) {
+pub fn delete_my_commands(config config, parameters parameters) {
   let parameters =
     option.unwrap(parameters, model.default_bot_command_parameters())
     |> model.encode_bot_command_parameters()
@@ -184,10 +163,7 @@ pub fn delete_my_commands(
 /// Use this method to get the current list of the bot's commands for the given scope and user language.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getmycommands
-pub fn get_my_commands(
-  config config,
-  parameters parameters: Option(BotCommandParameters),
-) {
+pub fn get_my_commands(config config, parameters parameters) {
   let parameters =
     option.unwrap(parameters, model.default_bot_command_parameters())
     |> model.encode_bot_command_parameters
@@ -207,7 +183,7 @@ pub fn get_my_commands(
 /// Use this method to send an animated emoji that will display a random value.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
-pub fn send_dice(config config, parameters parameters: SendDiceParameters) {
+pub fn send_dice(config config, parameters parameters) {
   let body_json = model.encode_send_dice_parameters(parameters)
 
   new_post_request(
@@ -234,10 +210,7 @@ pub fn get_me(config config) {
 /// On success, _True_ is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
-pub fn answer_callback_query(
-  config config,
-  parameters parameters: AnswerCallbackQueryParameters,
-) {
+pub fn answer_callback_query(config config, parameters parameters) {
   let body_json = model.encode_answer_callback_query_parameters(parameters)
 
   new_post_request(
@@ -254,10 +227,7 @@ pub fn answer_callback_query(
 /// On success, the sent Message is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
-pub fn forward_message(
-  config config,
-  parameters parameters: ForwardMessageParameters,
-) {
+pub fn forward_message(config config, parameters parameters) {
   let body_json = model.encode_forward_message_parameters(parameters)
 
   new_post_request(
@@ -273,10 +243,7 @@ pub fn forward_message(
 /// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns True on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setchatmenubutton
-pub fn set_chat_menu_button(
-  config config,
-  parameters parameters: SetChatMenuButtonParameters,
-) {
+pub fn set_chat_menu_button(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "setChatMenuButton",
@@ -319,10 +286,7 @@ pub fn get_updates(
 /// Use this method to forward multiple messages of any kind. If some of the specified messages can't be found or forwarded, they are skipped. Service messages and messages with protected content can't be forwarded. Album grouping is kept for forwarded messages. On success, an array of [MessageId](https://core.telegram.org/bots/api#messageid) of the sent messages is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessages
-pub fn forward_messages(
-  config config,
-  parameters parameters: ForwardMessagesParameters,
-) {
+pub fn forward_messages(config config, parameters parameters) {
   let body_json = model.encode_forward_messages_parameters(parameters)
 
   new_post_request(
@@ -338,7 +302,7 @@ pub fn forward_messages(
 /// Use this method to copy messages of any kind. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#copymessage
-pub fn copy_message(config config, parameters parameters: CopyMessageParameters) {
+pub fn copy_message(config config, parameters parameters) {
   let body_json = model.encode_copy_message_parameters(parameters)
 
   new_post_request(
@@ -354,10 +318,7 @@ pub fn copy_message(config config, parameters parameters: CopyMessageParameters)
 /// Use this method to copy messages of any kind. If some of the specified messages can't be found or copied, they are skipped. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#copymessages
-pub fn copy_messages(
-  config config,
-  parameters parameters: CopyMessagesParameters,
-) {
+pub fn copy_messages(config config, parameters parameters) {
   let body_json = model.encode_copy_messages_parameters(parameters)
 
   new_post_request(
@@ -373,7 +334,7 @@ pub fn copy_messages(
 /// Use this method to send photos. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendphoto
-pub fn send_photo(config config, parameters parameters: SendPhotoParameters) {
+pub fn send_photo(config config, parameters parameters) {
   let body_json = model.encode_send_photo_parameters(parameters)
 
   new_post_request(
@@ -391,7 +352,7 @@ pub fn send_photo(config config, parameters parameters: SendPhotoParameters) {
 /// For sending voice messages, use the [sendVoice](https://core.telegram.org/bots/api#sendvoice) method instead.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendaudio
-pub fn send_audio(config config, parameters parameters: SendAudioParameters) {
+pub fn send_audio(config config, parameters parameters) {
   let body_json = model.encode_send_audio_parameters(parameters)
 
   new_post_request(
@@ -406,10 +367,7 @@ pub fn send_audio(config config, parameters parameters: SendAudioParameters) {
 /// Use this method to send general files. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send files of any type of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddocument
-pub fn send_document(
-  config config,
-  parameters parameters: SendDocumentParameters,
-) {
+pub fn send_document(config config, parameters parameters) {
   let body_json = model.encode_send_document_parameters(parameters)
 
   new_post_request(
@@ -425,7 +383,7 @@ pub fn send_document(
 /// Use this method to send video files, Telegram clients support MPEG4 videos (other formats may be sent as Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvideo
-pub fn send_video(config config, parameters parameters: SendVideoParameters) {
+pub fn send_video(config config, parameters parameters) {
   let body_json = model.encode_send_video_parameters(parameters)
 
   new_post_request(
@@ -441,10 +399,7 @@ pub fn send_video(config config, parameters parameters: SendVideoParameters) {
 /// Use this method to send animation files (GIF or H.264/MPEG-4 AVC video without sound). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send animation files of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendanimation
-pub fn send_animation(
-  config config,
-  parameters parameters: SendAnimationParameters,
-) {
+pub fn send_animation(config config, parameters parameters) {
   let body_json = model.encode_send_animation_parameters(parameters)
 
   new_post_request(
@@ -460,7 +415,7 @@ pub fn send_animation(
 /// Use this method to send audio files, if you want Telegram clients to display the file as a playable voice message. For this to work, your audio must be in an .ogg file encoded with OPUS (other formats may be sent as Audio or Document). On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send voice messages of up to 50 MB in size, this limit may be changed in the future.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvoice
-pub fn send_voice(config config, parameters parameters: SendVoiceParameters) {
+pub fn send_voice(config config, parameters parameters) {
   let body_json = model.encode_send_voice_parameters(parameters)
 
   new_post_request(
@@ -476,10 +431,7 @@ pub fn send_voice(config config, parameters parameters: SendVoiceParameters) {
 /// Use this method to send video messages. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvideonote
-pub fn send_video_note(
-  config config,
-  parameters parameters: SendVideoNoteParameters,
-) {
+pub fn send_video_note(config config, parameters parameters) {
   let body_json = model.encode_send_video_note_parameters(parameters)
 
   new_post_request(
@@ -495,10 +447,7 @@ pub fn send_video_note(
 /// Use this method to send a group of photos, videos, documents or audio files as an album. Documents and audio files can be only grouped in an album with the first item having a filename. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
-pub fn send_media_group(
-  config config,
-  parameters parameters: SendMediaGroupParameters,
-) {
+pub fn send_media_group(config config, parameters parameters) {
   let body_json = model.encode_send_media_group_parameters(parameters)
 
   new_post_request(
@@ -514,10 +463,7 @@ pub fn send_media_group(
 /// Use this method to send point on the map. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendlocation
-pub fn send_location(
-  config config,
-  parameters parameters: SendLocationParameters,
-) {
+pub fn send_location(config config, parameters parameters) {
   let body_json = model.encode_send_location_parameters(parameters)
 
   new_post_request(
@@ -533,7 +479,7 @@ pub fn send_location(
 /// Use this method to send information about a venue. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendvenue
-pub fn send_venue(config config, parameters parameters: SendVenueParameters) {
+pub fn send_venue(config config, parameters parameters) {
   let body_json = model.encode_send_venue_parameters(parameters)
 
   new_post_request(
@@ -549,7 +495,7 @@ pub fn send_venue(config config, parameters parameters: SendVenueParameters) {
 /// Use this method to send phone contacts. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendcontact
-pub fn send_contact(config config, parameters parameters: SendContactParameters) {
+pub fn send_contact(config config, parameters parameters) {
   let body_json = model.encode_send_contact_parameters(parameters)
 
   new_post_request(
@@ -565,7 +511,7 @@ pub fn send_contact(config config, parameters parameters: SendContactParameters)
 /// Use this method to send a native poll. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendpoll
-pub fn send_poll(config config, parameters parameters: SendPollParameters) {
+pub fn send_poll(config config, parameters parameters) {
   let body_json = model.encode_send_poll_parameters(parameters)
 
   new_post_request(
@@ -585,10 +531,7 @@ pub fn send_poll(config config, parameters parameters: SendPollParameters) {
 /// We only recommend using this method when a response from the bot will take a noticeable amount of time to arrive.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendchataction
-pub fn send_chat_action(
-  config config,
-  parameters parameters: SendChatActionParameters,
-) {
+pub fn send_chat_action(config config, parameters parameters) {
   let body_json = model.encode_send_chat_action_parameters(parameters)
 
   new_post_request(
@@ -604,7 +547,7 @@ pub fn send_chat_action(
 /// Use this method to send invoices. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
-pub fn send_invoice(config config, parameters parameters: SendInvoiceParameters) {
+pub fn send_invoice(config config, parameters parameters) {
   let body_json = model.encode_send_invoice_parameters(parameters)
 
   new_post_request(
@@ -620,10 +563,7 @@ pub fn send_invoice(config config, parameters parameters: SendInvoiceParameters)
 /// Use this method to create a link for an invoice.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#createinvoicelink
-pub fn create_invoice_link(
-  config config,
-  parameters parameters: CreateInvoiceLinkParameters,
-) {
+pub fn create_invoice_link(config config, parameters parameters) {
   let body_json = model.encode_create_invoice_link_parameters(parameters)
 
   new_post_request(
@@ -639,10 +579,7 @@ pub fn create_invoice_link(
 /// Use this method to change the chosen reactions on a message. Service messages of some types can't be reacted to. Automatically forwarded messages from a channel to its discussion group have the same available reactions as messages in the channel. Bots can't use paid reactions. Returns _True_ on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setmessagereaction
-pub fn set_message_reaction(
-  config config,
-  parameters parameters: SetMessageReactionParameters,
-) {
+pub fn set_message_reaction(config config, parameters parameters) {
   let body_json = model.encode_set_message_reaction_parameters(parameters)
 
   new_post_request(
@@ -658,10 +595,7 @@ pub fn set_message_reaction(
 /// Use this method to get a list of profile pictures for a user. Returns a [UserProfilePhotos](https://core.telegram.org/bots/api#userprofilephotos) object.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getuserprofilephotos
-pub fn get_user_profile_photos(
-  config config,
-  parameters parameters: GetUserProfilePhotosParameters,
-) {
+pub fn get_user_profile_photos(config config, parameters parameters) {
   let body_json = model.encode_get_user_profile_photos_parameters(parameters)
 
   new_post_request(
@@ -677,7 +611,7 @@ pub fn get_user_profile_photos(
 /// Use this method to send static .WEBP, [animated](https://telegram.org/blog/animated-stickers) .TGS, or [video](https://telegram.org/blog/video-stickers-better-reactions/ru?ln=a) .WEBM stickers. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendsticker
-pub fn send_sticker(config config, parameters parameters: SendStickerParameters) {
+pub fn send_sticker(config config, parameters parameters) {
   let body_json = model.encode_send_sticker_parameters(parameters)
 
   new_post_request(
@@ -693,10 +627,7 @@ pub fn send_sticker(config config, parameters parameters: SendStickerParameters)
 /// Use this method to get a sticker set. On success, a [StickerSet](https://core.telegram.org/bots/api#stickerset) object is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getstickerset
-pub fn get_sticker_set(
-  config config,
-  parameters parameters: GetStickerSetParameters,
-) {
+pub fn get_sticker_set(config config, parameters parameters) {
   let body_json = model.encode_get_sticker_set_parameters(parameters)
 
   new_post_request(
@@ -712,10 +643,7 @@ pub fn get_sticker_set(
 /// Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
-pub fn edit_message_text(
-  config config,
-  parameters parameters: EditMessageTextParameters,
-) {
+pub fn edit_message_text(config config, parameters parameters) {
   let body_json = model.encode_edit_message_text_parameters(parameters)
 
   new_post_request(
@@ -731,10 +659,7 @@ pub fn edit_message_text(
 /// Use this method to edit captions of messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagecaption
-pub fn edit_message_caption(
-  config config,
-  parameters parameters: EditMessageCaptionParameters,
-) {
+pub fn edit_message_caption(config config, parameters parameters) {
   let body_json = model.encode_edit_message_caption_parameters(parameters)
 
   new_post_request(
@@ -750,10 +675,7 @@ pub fn edit_message_caption(
 /// Use this method to edit animation, audio, document, photo, or video messages, or to add media to text messages. If a message is part of a message album, then it can be edited only to an audio for audio albums, only to a document for document albums and to a photo or a video otherwise. When an inline message is edited, a new file can't be uploaded; use a previously uploaded file via its file_id or specify a URL. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagemedia
-pub fn edit_message_media(
-  config config,
-  parameters parameters: EditMessageMediaParameters,
-) {
+pub fn edit_message_media(config config, parameters parameters) {
   let body_json = model.encode_edit_message_media_parameters(parameters)
 
   new_post_request(
@@ -769,10 +691,7 @@ pub fn edit_message_media(
 /// Use this method to edit live location messages. A location can be edited until its live_period expires or editing is explicitly disabled by a call to stopMessageLiveLocation. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagelivelocation
-pub fn edit_message_live_location(
-  config config,
-  parameters parameters: EditMessageLiveLocationParameters,
-) {
+pub fn edit_message_live_location(config config, parameters parameters) {
   let body_json = model.encode_edit_message_live_location_parameters(parameters)
 
   new_post_request(
@@ -861,10 +780,7 @@ pub fn delete_message(config config, parameters parameters) {
 /// Use this method to delete multiple messages simultaneously. If some of the specified messages can't be found, they are skipped. Returns True on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemessagessimultaneously
-pub fn delete_messages(
-  config config,
-  parameters parameters: DeleteMessagesParameters,
-) {
+pub fn delete_messages(config config, parameters parameters) {
   let body_json = model.encode_delete_messages_parameters(parameters)
 
   new_post_request(
@@ -880,7 +796,7 @@ pub fn delete_messages(
 /// Use this method to get up-to-date information about the chat. Returns a [ChatFullInfo](https://core.telegram.org/bots/api#chatfullinfo) object on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getchat
-pub fn get_chat(config config, chat_id chat_id: String) {
+pub fn get_chat(config config, chat_id chat_id) {
   new_get_request(config, path: "getChat", query: Some([#("chat_id", chat_id)]))
   |> fetch(config)
   |> map_response(model.chat_full_info_decoder())

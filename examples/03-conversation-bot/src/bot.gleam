@@ -14,17 +14,6 @@ import telega/reply
 import wisp
 import wisp/wisp_mist
 
-type BotError {
-  TelegaBotError(telega_error.TelegaError)
-}
-
-fn try(result, fun) {
-  telega_error.try(result, TelegaBotError, fun)
-}
-
-type BotContext =
-  Context(NameBotSession, BotError)
-
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
@@ -106,4 +95,15 @@ pub fn main() {
     |> mist.start_http
 
   process.sleep_forever()
+}
+
+type BotContext =
+  Context(NameBotSession, BotError)
+
+type BotError {
+  TelegaBotError(telega_error.TelegaError)
+}
+
+fn try(result, fun) {
+  telega_error.try(result, TelegaBotError, fun)
 }

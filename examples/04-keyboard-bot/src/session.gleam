@@ -1,4 +1,5 @@
 import carpenter/table
+import gleam/option.{None, Some}
 import telega
 
 pub type Language {
@@ -8,6 +9,10 @@ pub type Language {
 
 pub type LanguageBotSession {
   LanguageBotSession(lang: Language)
+}
+
+fn default_session() {
+  LanguageBotSession(lang: English)
 }
 
 pub fn attach(bot) {
@@ -20,14 +25,14 @@ pub fn attach(bot) {
     bot,
     get_session: fn(key) {
       case table.lookup(session_table, key) {
-        [#(_, session), ..] -> Ok(session)
-        _ -> Ok(LanguageBotSession(lang: English))
+        [#(_, session), ..] -> session |> Some |> Ok
+        _ -> Ok(None)
       }
     },
     persist_session: fn(key, session) {
       table.insert(session_table, [#(key, session)])
       Ok(session)
     },
-    default_session: fn() { LanguageBotSession(lang: English) },
+    default_session:,
   )
 }

@@ -1,8 +1,13 @@
 import carpenter/table
+import gleam/option.{None, Some}
 import telega
 
 pub type NameBotSession {
   NameBotSession(name: String)
+}
+
+fn default_session() {
+  NameBotSession(name: "Unknown")
 }
 
 pub fn attach(bot) {
@@ -15,16 +20,14 @@ pub fn attach(bot) {
     bot,
     get_session: fn(key) {
       case table.lookup(session_table, key) {
-        [#(_, session), ..] -> Ok(session)
-        _ -> Ok(NameBotSession(name: "Unknown"))
+        [#(_, session), ..] -> session |> Some |> Ok
+        _ -> Ok(None)
       }
     },
     persist_session: fn(key, session) {
       table.insert(session_table, [#(key, session)])
       Ok(session)
     },
-    default_session: fn() {
-      NameBotSession(name: "Unknown")
-    }
+    default_session:,
   )
 }

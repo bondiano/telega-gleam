@@ -170,11 +170,14 @@ fn start_chat_instance(
       let self = process.new_subject()
       let selector =
         process.new_selector() |> process.selecting(self, function.identity)
-      // TODO: default should be passed only on NOT FOUND error
-      let session =
-        result.lazy_unwrap(session_settings.get_session(key), fn() {
-          session_settings.default_session()
-        })
+
+      let session = case session_settings.get_session(key) {
+        Ok(Some(session)) -> session
+        Ok(None) -> session_settings.default_session()
+        Error(error) ->
+          panic as { "Failed to get session: " <> string.inspect(error) }
+      }
+
       let chat_instance =
         ChatInstance(
           key:,
@@ -414,7 +417,9 @@ pub type SessionSettings(session, error) {
     // Calls after all handlers to persist the session.
     persist_session: fn(String, session) -> Result(session, error),
     // Calls on initialization of the chat instance to get the session.
-    get_session: fn(String) -> Result(session, error),
+    // Returns `None` if no session is found.
+    // **It will crash starting session process if error is returned.**
+    get_session: fn(String) -> Result(Option(session), error),
     // Calls on initialization of the chat instance if no session is found.
     default_session: fn() -> session,
   )
@@ -440,7 +445,7 @@ fn get_session_key(update) {
 pub fn get_session(
   session_settings: SessionSettings(session, error),
   update: Update,
-) -> Result(session, error) {
+) -> Result(Option(session), error) {
   use key <- result.try(get_session_key(update))
 
   session_settings.get_session(key)
