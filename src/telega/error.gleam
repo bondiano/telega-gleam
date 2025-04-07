@@ -1,4 +1,4 @@
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic
 import gleam/int
 import gleam/json
 import gleam/string
@@ -7,7 +7,7 @@ pub type TelegaError {
   TelegramApiError(error_code: Int, description: String)
 
   JsonDecodeError(error: json.DecodeError)
-  FetchError(error: Dynamic)
+  FetchError(error: dynamic.Dynamic)
   ApiToRequestConvertError
 
   SetWebhookError
@@ -30,5 +30,17 @@ pub fn to_string(error) {
     RegistryStartError(reason) -> "Failed to start registry: " <> reason
     BotStartError(reason) -> "Failed to start bot: " <> reason
     FileNotFoundError -> "File not found"
+  }
+}
+
+/// Helper to replace `result.try` for api call and error mapping.
+pub fn try(
+  result: Result(a, TelegaError),
+  to to_error: fn(TelegaError) -> e,
+  fun fun: fn(a) -> Result(b, e),
+) -> Result(b, e) {
+  case result {
+    Ok(x) -> fun(x)
+    Error(e) -> Error(to_error(e))
   }
 }

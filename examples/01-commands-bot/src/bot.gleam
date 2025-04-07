@@ -2,7 +2,6 @@ import dotenv_gleam
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
-import gleam/result
 import mist
 import telega
 import telega/adapters/wisp as telega_wisp
@@ -14,7 +13,11 @@ import wisp
 import wisp/wisp_mist
 
 type BotError {
-  TelegaBotError(telega_error.TelegaError(BotError))
+  TelegaBotError(telega_error.TelegaError)
+}
+
+fn try(result, fun) {
+  telega_error.try(result, TelegaBotError, fun)
 }
 
 fn middleware(req, bot, handle_request) {
@@ -37,9 +40,7 @@ fn handle_request(bot, req) {
 
 fn dice_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "dice")
-  use _ <- result.try(
-    reply.with_dice(ctx, None) |> result.map_error(TelegaBotError),
-  )
+  use _ <- try(reply.with_dice(ctx, None))
 
   Ok(ctx)
 }
@@ -47,21 +48,15 @@ fn dice_command_handler(ctx, _) {
 fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
-  use _ <- result.try(
-    telega_api.set_my_commands(
-      ctx.config.api,
-      telega_model.bot_commands_from([#("/dice", "Roll a dice")]),
-      None,
-    )
-    |> result.map_error(TelegaBotError),
-  )
-  use _ <- result.try(
-    reply.with_text(
-      ctx,
-      "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
-    )
-    |> result.map_error(TelegaBotError),
-  )
+  use _ <- try(telega_api.set_my_commands(
+    ctx.config.api,
+    telega_model.bot_commands_from([#("/dice", "Roll a dice")]),
+    None,
+  ))
+  use _ <- try(reply.with_text(
+    ctx,
+    "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
+  ))
 
   Ok(ctx)
 }
