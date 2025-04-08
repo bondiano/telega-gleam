@@ -17851,6 +17851,32 @@ pub fn encode_unban_chat_member_parameters(
   ])
 }
 
+// RestrictChatMemberParameters -------------------------------------------------------------------------------------
+
+pub type RestrictChatMemberParameters {
+  RestrictChatMemberParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Pass `True` to restrict the user from sending messages, `False` to remove the restriction.
+    permissions: ChatPermissions,
+    /// Date when the user will be unbanned; Unix time. If user is banned for more than 366 days or less than 30 seconds from the current time they are considered to be banned forever.
+    until_date: Option(Int),
+  )
+}
+
+pub fn encode_restrict_chat_member_parameters(
+  params: RestrictChatMemberParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+    #("permissions", encode_chat_permissions(params.permissions)),
+    #("until_date", json.nullable(params.until_date, json.int)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {

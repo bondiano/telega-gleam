@@ -843,6 +843,22 @@ pub fn unban_chat_member(config config, parameters parameters) {
   |> map_response(decode.bool)
 }
 
+/// Use this method to restrict a user in a supergroup. The bot must be an administrator in the supergroup for this to work and must have the appropriate administrator rights. Pass `True` for all permissions to lift restrictions from a user. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#restrictchatmember
+pub fn restrict_chat_member(config config, parameters parameters) {
+  let body_json = model.encode_restrict_chat_member_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "restrictChatMember",
+    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
 
 fn map_response(

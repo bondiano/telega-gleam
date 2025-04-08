@@ -132,7 +132,7 @@ fn api_to_request(api_request) {
       })
     }
   }
-  |> result.map_error(fn(_) { error.ApiToRequestConvertError })
+  |> result.map_error(fn(_: Nil) { error.ApiToRequestConvertError })
 }
 
 fn set_query(api_request, query) {
