@@ -26,12 +26,7 @@ type ApiResponse(result) {
 pub fn set_webhook(config config, parameters parameters) {
   let body = model.encode_set_webhook_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "setWebhook",
-    body: json.to_string(body),
-    query: None,
-  )
+  new_post_request(config:, path: "setWebhook", body: json.to_string(body))
   |> fetch(config)
   |> map_response(decode.bool)
 }
@@ -97,7 +92,6 @@ pub fn send_message(config config, parameters parameters) {
     config:,
     path: "sendMessage",
     body: json.to_string(body_json),
-    query: None,
   )
   |> fetch(config)
   |> map_response(model.message_decoder())
@@ -133,7 +127,6 @@ pub fn set_my_commands(
     config:,
     path: "setMyCommands",
     body: json.to_string(body_json),
-    query: None,
   )
   |> fetch(config)
   |> map_response(decode.bool)
@@ -154,7 +147,6 @@ pub fn delete_my_commands(config config, parameters parameters) {
     config:,
     path: "deleteMyCommands",
     body: json.to_string(body_json),
-    query: None,
   )
   |> fetch(config)
   |> map_response(decode.bool)
@@ -173,7 +165,6 @@ pub fn get_my_commands(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "getMyCommands",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -186,12 +177,7 @@ pub fn get_my_commands(config config, parameters parameters) {
 pub fn send_dice(config config, parameters parameters) {
   let body_json = model.encode_send_dice_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendDice",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendDice", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -216,7 +202,6 @@ pub fn answer_callback_query(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "answerCallbackQuery",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -233,7 +218,6 @@ pub fn forward_message(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "forwardMessage",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -247,7 +231,6 @@ pub fn set_chat_menu_button(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "setChatMenuButton",
-    query: None,
     body: model.encode_set_chat_menu_button_parameters(parameters)
       |> json.to_string(),
   )
@@ -292,7 +275,6 @@ pub fn forward_messages(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "forwardMessage",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -308,7 +290,6 @@ pub fn copy_message(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "copyMessage",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -324,7 +305,6 @@ pub fn copy_messages(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "copyMessages",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -337,12 +317,7 @@ pub fn copy_messages(config config, parameters parameters) {
 pub fn send_photo(config config, parameters parameters) {
   let body_json = model.encode_send_photo_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendPhoto",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendPhoto", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -355,12 +330,7 @@ pub fn send_photo(config config, parameters parameters) {
 pub fn send_audio(config config, parameters parameters) {
   let body_json = model.encode_send_audio_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendAudio",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendAudio", body: json.to_string(body_json))
   |> fetch(config)
 }
 
@@ -373,7 +343,6 @@ pub fn send_document(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendDocument",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -386,12 +355,7 @@ pub fn send_document(config config, parameters parameters) {
 pub fn send_video(config config, parameters parameters) {
   let body_json = model.encode_send_video_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendVideo",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendVideo", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -405,7 +369,6 @@ pub fn send_animation(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendAnimation",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -418,12 +381,7 @@ pub fn send_animation(config config, parameters parameters) {
 pub fn send_voice(config config, parameters parameters) {
   let body_json = model.encode_send_voice_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendVoice",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendVoice", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -437,7 +395,6 @@ pub fn send_video_note(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendVideoNote",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -453,7 +410,6 @@ pub fn send_media_group(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendMediaGroup",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -469,7 +425,6 @@ pub fn send_location(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendLocation",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -482,12 +437,7 @@ pub fn send_location(config config, parameters parameters) {
 pub fn send_venue(config config, parameters parameters) {
   let body_json = model.encode_send_venue_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendVenue",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendVenue", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -501,7 +451,6 @@ pub fn send_contact(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendContact",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -514,12 +463,7 @@ pub fn send_contact(config config, parameters parameters) {
 pub fn send_poll(config config, parameters parameters) {
   let body_json = model.encode_send_poll_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "sendPoll",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "sendPoll", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.message_decoder())
 }
@@ -537,7 +481,6 @@ pub fn send_chat_action(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendChatAction",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -553,7 +496,6 @@ pub fn send_invoice(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendInvoice",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -570,7 +512,6 @@ pub fn create_invoice_link(config config, parameters parameters) {
     config,
     path: "createInvoiceLink",
     body: json.to_string(body_json),
-    query: None,
   )
   |> fetch(config)
   |> map_response(decode.string)
@@ -585,7 +526,6 @@ pub fn set_message_reaction(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "setMessageReaction",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -601,7 +541,6 @@ pub fn get_user_profile_photos(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "getUserProfilePhotos",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -617,7 +556,6 @@ pub fn send_sticker(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "sendSticker",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -633,7 +571,6 @@ pub fn get_sticker_set(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "getStickerSet",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -649,7 +586,6 @@ pub fn edit_message_text(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "editMessageText",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -665,7 +601,6 @@ pub fn edit_message_caption(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "editMessageCaption",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -681,7 +616,6 @@ pub fn edit_message_media(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "editMessageMedia",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -697,7 +631,6 @@ pub fn edit_message_live_location(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "editMessageLiveLocation",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -713,7 +646,6 @@ pub fn stop_message_live_location(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "stopMessageLiveLocation",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -729,7 +661,6 @@ pub fn edit_message_reply_markup(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "editMessageReplyMarkup",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -742,12 +673,7 @@ pub fn edit_message_reply_markup(config config, parameters parameters) {
 pub fn stop_poll(config config, parameters parameters) {
   let body_json = model.encode_stop_poll_parameters(parameters)
 
-  new_post_request(
-    config:,
-    path: "stopPoll",
-    query: None,
-    body: json.to_string(body_json),
-  )
+  new_post_request(config:, path: "stopPoll", body: json.to_string(body_json))
   |> fetch(config)
   |> map_response(model.poll_decoder())
 }
@@ -770,7 +696,6 @@ pub fn delete_message(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "deleteMessage",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -786,7 +711,6 @@ pub fn delete_messages(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "deleteMessages",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -820,7 +744,6 @@ pub fn ban_chat_member(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "banChatMember",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -836,7 +759,6 @@ pub fn unban_chat_member(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "unbanChatMember",
-    query: None,
     body: json.to_string(body_json),
   )
   |> fetch(config)
@@ -852,7 +774,21 @@ pub fn restrict_chat_member(config config, parameters parameters) {
   new_post_request(
     config:,
     path: "restrictChatMember",
-    query: None,
+    body: json.to_string(body_json),
+  )
+  |> fetch(config)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to promote or demote a user in a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Pass `False` for all boolean parameters to demote a user. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#promotechatmember
+pub fn promote_chat_member(config config, parameters parameters) {
+  let body_json = model.encode_promote_chat_member_parameters(parameters)
+
+  new_post_request(
+    config:,
+    path: "promoteChatMember",
     body: json.to_string(body_json),
   )
   |> fetch(config)

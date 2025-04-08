@@ -47,21 +47,12 @@ fn fetch_httpc_adapter(req: Request(String)) {
 }
 
 pub type TelegramApiRequest {
-  TelegramApiPostRequest(
-    url: String,
-    body: String,
-    query: Option(List(#(String, String))),
-  )
+  TelegramApiPostRequest(url: String, body: String)
   TelegramApiGetRequest(url: String, query: Option(List(#(String, String))))
 }
 
-pub fn new_post_request(
-  config config,
-  path path: String,
-  body body: String,
-  query query: Option(List(#(String, String))),
-) {
-  TelegramApiPostRequest(url: build_url(config, path), body:, query:)
+pub fn new_post_request(config config, path path: String, body body: String) {
+  TelegramApiPostRequest(url: build_url(config, path), body:)
 }
 
 pub fn new_get_request(
@@ -121,14 +112,13 @@ fn api_to_request(api_request) {
         |> set_query(query)
       })
     }
-    TelegramApiPostRequest(url: url, query: query, body: body) -> {
+    TelegramApiPostRequest(url: url, body: body) -> {
       request.to(url)
       |> result.map(fn(req) {
         req
         |> request.set_body(body)
         |> request.set_method(Post)
         |> request.set_header("Content-Type", "application/json")
-        |> set_query(query)
       })
     }
   }
