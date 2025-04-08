@@ -7,6 +7,7 @@ import gleam/otp/actor
 import gleam/regexp.{type Regexp}
 import gleam/result
 import gleam/string
+import telega/internal/log
 
 import telega/internal/config.{type Config}
 import telega/internal/registry.{type RegistrySubject}
@@ -25,6 +26,7 @@ pub opaque type Bot(session, error) {
     self: BotSubject,
     config: Config,
     bot_info: User,
+    catch_handler: CatchHandler(error),
     session_settings: SessionSettings(session, error),
     handlers: List(Handler(session, error)),
     registry_subject: RegistrySubject(ChatInstanceMessage(session, error)),
@@ -36,8 +38,16 @@ pub type BotSubject =
 
 pub opaque type BotMessage {
   CancelConversationBotMessage(key: String)
-  HandleUpdateBotMessage(update: Update, reply_with: Subject(Option(Nil)))
+  // `reply_with` is a subject with `is_ok` field
+  // It is used to notify the adapter that the update was handled successfully or not
+  HandleUpdateBotMessage(update: Update, reply_with: Subject(Bool))
 }
+
+/// Handler called when an error occurs in handler
+/// If handler returns `Error`, the bot will be stopped and the error will be logged
+/// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
+pub type CatchHandler(error) =
+  fn(error) -> Result(Nil, error)
 
 const bot_actor_init_timeout = 100
 
@@ -47,6 +57,7 @@ pub fn start(
   bot_info bot_info,
   handlers handlers,
   session_settings session_settings,
+  catch_handler catch_handler,
 ) {
   actor.start_spec(actor.Spec(
     init: fn() {
@@ -61,6 +72,7 @@ pub fn start(
           bot_info:,
           handlers:,
           session_settings:,
+          catch_handler:,
         )
 
       actor.Ready(bot, selector)
@@ -80,8 +92,11 @@ fn bot_loop(message, bot) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) -> {
       case handle_update_bot_message(bot:, update:, reply_with:) {
-        // TODO: Implement error handling
-        _ -> actor.continue(bot)
+        Ok(_) -> actor.continue(bot)
+        Error(error) -> {
+          log.error("Error in handler: " <> string.inspect(error))
+          actor.Stop(process.Normal)
+        }
       }
     }
     CancelConversationBotMessage(key:) -> {
@@ -97,6 +112,7 @@ fn handle_update_bot_message(
   reply_with reply_with,
 ) {
   use key <- result.try(get_session_key(update))
+
   case registry.get(key:, in: bot.registry_subject) {
     Some(chat_subject) -> {
       let handlers = extract_update_handlers(bot.handlers, update)
@@ -106,19 +122,14 @@ fn handle_update_bot_message(
         handlers:,
         reply_with:,
       )
-      |> Ok
     }
     None -> {
-      use chat_subject <- result.try(
-        start_chat_instance(
-          key:,
-          config: bot.config,
-          session_settings: bot.session_settings,
-        )
-        |> result.map_error(fn(error) {
-          "Failed to start chat instance: " <> string.inspect(error)
-        }),
-      )
+      use chat_subject <- result.try(start_chat_instance(
+        key:,
+        config: bot.config,
+        session_settings: bot.session_settings,
+        catch_handler: bot.catch_handler,
+      ))
       registry.register(key:, in: bot.registry_subject, subject: chat_subject)
 
       let handlers = extract_update_handlers(bot.handlers, update)
@@ -128,7 +139,6 @@ fn handle_update_bot_message(
         handlers:,
         reply_with:,
       )
-      |> Ok
     }
   }
 }
@@ -142,7 +152,7 @@ pub opaque type ChatInstanceMessage(session, error) {
   HandleNewChatInstanceMessage(
     update: Update,
     handlers: List(Handler(session, error)),
-    reply_with: Subject(Option(Nil)),
+    reply_with: Subject(Bool),
   )
   WaitHandlerChatInstanceMessage(handler: Handler(session, error))
 }
@@ -152,6 +162,7 @@ type ChatInstance(session, error) {
     key: String,
     session: session,
     config: Config,
+    catch_handler: CatchHandler(error),
     session_settings: SessionSettings(session, error),
     self: ChatInstanceSubject(session, error),
     continuation: Option(Handler(session, error)),
@@ -164,6 +175,7 @@ fn start_chat_instance(
   key key: String,
   config config: Config,
   session_settings session_settings: SessionSettings(session, error),
+  catch_handler catch_handler: CatchHandler(error),
 ) {
   actor.start_spec(actor.Spec(
     init: fn() {
@@ -185,6 +197,7 @@ fn start_chat_instance(
           session:,
           self:,
           session_settings:,
+          catch_handler:,
           continuation: None,
         )
 
@@ -193,6 +206,9 @@ fn start_chat_instance(
     loop: loop_chat_instance,
     init_timeout: chat_instance_actor_init_timeout,
   ))
+  |> result.map_error(fn(error) {
+    error.ChatInstanceStartError(string.inspect(error))
+  })
 }
 
 fn handle_update_chat_instance(
@@ -205,41 +221,56 @@ fn handle_update_chat_instance(
     chat_subject,
     HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
   )
+  |> Ok
 }
 
 fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
   case message {
-    HandleNewChatInstanceMessage(
-      update: update,
-      handlers: handlers,
-      reply_with: reply_with,
-    ) -> {
+    HandleNewChatInstanceMessage(update:, handlers:, reply_with:) -> {
       case chat.continuation {
+        // No continuation, just handle the update
         None ->
           case loop_handlers(chat:, update:, handlers:, config: chat.config) {
             Ok(new_session) -> {
-              actor.send(reply_with, Some(Nil))
+              actor.send(reply_with, True)
               actor.continue(ChatInstance(..chat, session: new_session))
             }
-            Error(_e) -> {
-              actor.send(reply_with, None)
-              actor.Stop(process.Normal)
+            Error(e) -> {
+              case chat.catch_handler(e) {
+                Ok(_) -> {
+                  actor.send(reply_with, False)
+                  actor.continue(chat)
+                }
+                Error(e) -> {
+                  log.error("Error in catch handler: " <> string.inspect(e))
+                  actor.Stop(process.Normal)
+                }
+              }
             }
           }
+        // There is a continuation, handle the update with it
         Some(handler) -> {
           case do_handle(chat:, update:, handler:) {
             Some(Ok(Context(session: new_session, ..))) -> {
-              actor.send(reply_with, Some(Nil))
+              actor.send(reply_with, True)
               actor.continue(
                 ChatInstance(..chat, session: new_session, continuation: None),
               )
             }
-            Some(Error(_e)) -> {
-              actor.send(reply_with, None)
-              actor.Stop(process.Normal)
+            Some(Error(e)) -> {
+              case chat.catch_handler(e) {
+                Ok(_) -> {
+                  actor.send(reply_with, False)
+                  actor.continue(chat)
+                }
+                Error(e) -> {
+                  log.error("Error in catch handler: " <> string.inspect(e))
+                  actor.Stop(process.Normal)
+                }
+              }
             }
             None -> {
-              actor.send(reply_with, Some(Nil))
+              actor.send(reply_with, True)
               actor.continue(chat)
             }
           }
@@ -349,7 +380,7 @@ pub fn wait_handler(ctx: Context(session, error), handler) {
 }
 
 fn do_handle(chat chat, update update, handler handler) {
-  // We already filtered update and receives only valid handler
+  // We already filtered updates and receives only valid handlers
   case handler, update {
     HandleAll(handler:), _ -> chat |> new_context(update) |> handler |> Some
     HandleText(handler:), TextUpdate(text: text, ..) ->

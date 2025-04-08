@@ -12,8 +12,8 @@ import telega/internal/registry
 
 import telega/api
 import telega/bot.{
-  type BotSubject, type CallbackQueryFilter, type Context, type Handler,
-  type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
+  type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
+  type Handler, type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
   HandleCallbackQuery, HandleCommand, HandleCommands, HandleHears, HandleText,
   SessionSettings,
 }
@@ -31,6 +31,7 @@ pub opaque type TelegaBuilder(session, error) {
     handlers: List(Handler(session, error)),
     session_settings: Option(SessionSettings(session, error)),
     bot_subject: Option(BotSubject),
+    catch_handler: Option(CatchHandler(error)),
   )
 }
 
@@ -65,6 +66,7 @@ pub fn new(
     config: config.new(token:, webhook_path:, secret_token:, url: server_url),
     session_settings: None,
     bot_subject: None,
+    catch_handler: None,
   )
 }
 
@@ -207,6 +209,17 @@ pub fn wait_callback_query(
   bot.wait_handler(ctx, HandleCallbackQuery(filter, continue))
 }
 
+/// Set a catch handler for all handlers.
+///
+/// If handler returns `Error`, the bot will be stopped and the error will be logged
+/// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
+pub fn with_catch_handler(
+  builder builder: TelegaBuilder(session, error),
+  catch_handler catch_handler: CatchHandler(error),
+) {
+  TelegaBuilder(..builder, catch_handler: Some(catch_handler))
+}
+
 /// Log the message and error message if the handler fails.
 pub fn log_context(
   ctx ctx: Context(session, error),
@@ -284,11 +297,14 @@ pub fn init(builder: TelegaBuilder(session, error)) {
     option.to_result(builder.session_settings, error.NoSessionSettingsError)
 
   use session_settings <- result.try(session_settings)
-
   use registry_subject <- result.try(registry.start())
+
+  let catch_handler =
+    option.lazy_unwrap(builder.catch_handler, fn() { fn(_) { Ok(Nil) } })
 
   use bot_subject <- result.try(bot.start(
     bot_info:,
+    catch_handler:,
     registry_subject:,
     session_settings:,
     config: builder.config,

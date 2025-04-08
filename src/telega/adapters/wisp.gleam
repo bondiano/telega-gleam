@@ -40,8 +40,10 @@ pub fn handle_bot(
         HttpResponse(401, [], WispEmptyBody)
       })
 
-      telega.handle_update(telega, message)
-      wisp.ok()
+      case telega.handle_update(telega, message) {
+        True -> wisp.ok()
+        False -> wisp.internal_server_error()
+      }
     }
     Error(_error) -> wisp.internal_server_error()
   }
