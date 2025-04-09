@@ -32,6 +32,7 @@ pub opaque type TelegaBuilder(session, error) {
     session_settings: Option(SessionSettings(session, error)),
     bot_subject: Option(BotSubject),
     catch_handler: Option(CatchHandler(session, error)),
+    drop_pending_updates: Option(Bool),
   )
 }
 
@@ -67,6 +68,7 @@ pub fn new(
     session_settings: None,
     bot_subject: None,
     catch_handler: None,
+    drop_pending_updates: None,
   )
 }
 
@@ -284,11 +286,30 @@ pub fn init_nil_session(builder: TelegaBuilder(Nil, error)) {
   |> init
 }
 
+/// Set the drop pending updates flag as set webhook parameter.
+pub fn set_drop_pending_updates(
+  builder: TelegaBuilder(session, error),
+  drop_pending_updates: Bool,
+) {
+  TelegaBuilder(..builder, drop_pending_updates: Some(drop_pending_updates))
+}
+
 /// Initialize a Telega instance.
 /// This function should be called **only** after all handlers are added to the builder.
 /// It will set the webhook and start handling messages.
 pub fn init(builder: TelegaBuilder(session, error)) {
-  use is_ok <- result.try(bot.set_webhook(builder.config))
+  use is_ok <- result.try(api.set_webhook(
+    builder.config.api,
+    model.SetWebhookParameters(
+      url: builder.config.server_url <> "/" <> builder.config.webhook_path,
+      max_connections: None,
+      ip_address: None,
+      allowed_updates: None,
+      drop_pending_updates: builder.drop_pending_updates,
+      secret_token: Some(builder.config.secret_token),
+      certificate: None,
+    ),
+  ))
   use <- bool.guard(!is_ok, Error(error.SetWebhookError))
 
   use bot_info <- result.try(api.get_me(builder.config.api))

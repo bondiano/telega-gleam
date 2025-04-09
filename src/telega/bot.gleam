@@ -12,12 +12,10 @@ import telega/internal/log
 import telega/internal/config.{type Config}
 import telega/internal/registry.{type RegistrySubject}
 
-import telega/api
 import telega/error
 import telega/model.{type User}
 import telega/update.{
   type Command, type Update, CallbackQueryUpdate, CommandUpdate, TextUpdate,
-  UnknownUpdate,
 }
 
 /// Stores information about running bot instance
@@ -49,7 +47,7 @@ pub opaque type BotMessage {
 pub type CatchHandler(session, error) =
   fn(Context(session, error), error) -> Result(Nil, error)
 
-const bot_actor_init_timeout = 100
+const bot_actor_init_timeout = 500
 
 pub fn start(
   registry_subject registry_subject,
@@ -111,7 +109,7 @@ fn handle_update_bot_message(
   update update,
   reply_with reply_with,
 ) {
-  use key <- result.try(get_session_key(update))
+  let key = build_session_key(update)
 
   case registry.get(key:, in: bot.registry_subject) {
     Some(chat_subject) -> {
@@ -372,9 +370,8 @@ fn extract_update_handlers(handlers, update) {
           ..,
         )
       -> update_command.command == command
-      HandleCallbackQuery(filter: filter, ..), CallbackQueryUpdate(raw: raw, ..)
-      ->
-        case raw.data {
+      HandleCallbackQuery(filter: filter, ..), CallbackQueryUpdate(query:, ..) ->
+        case query.data {
           Some(data) -> regexp.check(filter.re, data)
           None -> False
         }
@@ -400,11 +397,10 @@ fn do_handle(context context, update update, handler handler) {
       context |> handler(update_command) |> Some
     HandleCommands(handler:, ..), CommandUpdate(command: update_command, ..) ->
       context |> handler(update_command) |> Some
-    HandleCallbackQuery(handler:, ..), CallbackQueryUpdate(raw: raw, ..) ->
-      case raw.data {
-        Some(data) -> context |> handler(data, raw.id) |> Some
-        None -> None
-      }
+    HandleCallbackQuery(handler:, ..), CallbackQueryUpdate(query:, ..) -> {
+      use data <- option.map(query.data)
+      handler(context, data, query.id)
+    }
     _, _ -> None
   }
 }
@@ -475,62 +471,36 @@ pub fn next_session(ctx ctx, session session) {
   Ok(Context(..ctx, session:))
 }
 
-fn get_session_key(update) {
-  case update {
-    CommandUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
-    TextUpdate(chat_id: chat_id, ..) -> Ok(int.to_string(chat_id))
-    CallbackQueryUpdate(from_id: from_id, ..) -> Ok(int.to_string(from_id))
-    UnknownUpdate(update) ->
-      panic as {
-        "Unknown update type don't allow to get session key: "
-        <> string.inspect(update)
-      }
-  }
+fn build_session_key(update: Update) {
+  int.to_string(update.chat_id) <> ":" <> int.to_string(update.from_id)
 }
 
 pub fn get_session(
   session_settings: SessionSettings(session, error),
   update: Update,
 ) -> Result(Option(session), error) {
-  use key <- result.try(get_session_key(update))
-
-  session_settings.get_session(key)
+  update
+  |> build_session_key
+  |> session_settings.get_session
 }
 
 // Utilities -------------------------------------------------------------------------------
 
-/// Set webhook for the bot.
-pub fn set_webhook(config config: Config) {
-  api.set_webhook(
-    config.api,
-    model.SetWebhookParameters(
-      url: config.server_url <> "/" <> config.webhook_path,
-      max_connections: None,
-      ip_address: None,
-      allowed_updates: None,
-      drop_pending_updates: None,
-      secret_token: Some(config.secret_token),
-      certificate: None,
-    ),
-  )
-}
-
 pub fn update_to_string(update: Update) {
   case update {
-    CommandUpdate(command: command, chat_id: chat_id, ..) ->
+    CommandUpdate(command:, chat_id:, ..) ->
       "command \"" <> command.command <> "\" from " <> int.to_string(chat_id)
-    TextUpdate(text: text, chat_id: chat_id, ..) ->
+    TextUpdate(text:, chat_id:, ..) ->
       "text \"" <> text <> "\" from " <> int.to_string(chat_id)
-    CallbackQueryUpdate(raw: raw, from_id: from_id) ->
+    CallbackQueryUpdate(query:, from_id:, ..) ->
       "callback query "
-      <> option.unwrap(raw.data, "no data")
+      <> option.unwrap(query.data, "no data")
       <> " from "
       <> int.to_string(from_id)
-    UnknownUpdate(update) -> "unknown: " <> string.inspect(update)
   }
 }
 
-const handle_update_timeout = 1000
+const handle_update_timeout = 1500
 
 // User should use methods from `telega` module.
 @internal

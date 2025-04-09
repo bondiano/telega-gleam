@@ -3,6 +3,8 @@ import gleam/int
 import gleam/json
 import gleam/string
 
+import telega/model
+
 pub type TelegaError {
   /// Returned by Bot API if server returns `ok: false`, indicating that your API request was invalid and failed
   TelegramApiError(error_code: Int, description: String)
@@ -20,6 +22,9 @@ pub type TelegaError {
   ChatInstanceStartError(reason: String)
 
   FileNotFoundError
+
+  DecodeUpdateError(reason: String)
+  UnknownUpdateError(update: model.Update)
 }
 
 pub fn to_string(error) {
@@ -36,6 +41,8 @@ pub fn to_string(error) {
     ChatInstanceStartError(reason) ->
       "Failed to start chat instance: " <> reason
     FileNotFoundError -> "File not found"
+    DecodeUpdateError(reason) -> "Failed to decode update: " <> reason
+    UnknownUpdateError(update) -> "Unknown update: " <> string.inspect(update)
   }
 }
 

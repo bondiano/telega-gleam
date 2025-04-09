@@ -142,6 +142,7 @@ fn build_bot() {
   |> telega.handle_command("start", start_command_handler)
   |> telega.handle_command("lang", change_languages_keyboard)
   |> telega.handle_command("lang_inline", handle_inline_change_language)
+  |> telega.set_drop_pending_updates(True)
   |> session.attach()
   |> telega.init()
 }
