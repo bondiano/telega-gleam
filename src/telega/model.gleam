@@ -1,3 +1,7 @@
+/// This module contains all types from [Telegram Bot API](https://core.telegram.org/bots/api).
+///
+/// Most of types named in the same way as in the official documentation.
+/// But some types are renamed to more verbose names for using from Gleam code (ex. `type` -> `type_`).
 import gleam/dynamic/decode
 import gleam/json.{type Json}
 import gleam/list

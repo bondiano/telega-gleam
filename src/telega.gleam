@@ -31,7 +31,7 @@ pub opaque type TelegaBuilder(session, error) {
     handlers: List(Handler(session, error)),
     session_settings: Option(SessionSettings(session, error)),
     bot_subject: Option(BotSubject),
-    catch_handler: Option(CatchHandler(error)),
+    catch_handler: Option(CatchHandler(session, error)),
   )
 }
 
@@ -215,7 +215,7 @@ pub fn wait_callback_query(
 /// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
 pub fn with_catch_handler(
   builder builder: TelegaBuilder(session, error),
-  catch_handler catch_handler: CatchHandler(error),
+  catch_handler catch_handler: CatchHandler(session, error),
 ) {
   TelegaBuilder(..builder, catch_handler: Some(catch_handler))
 }
@@ -300,7 +300,7 @@ pub fn init(builder: TelegaBuilder(session, error)) {
   use registry_subject <- result.try(registry.start())
 
   let catch_handler =
-    option.lazy_unwrap(builder.catch_handler, fn() { fn(_) { Ok(Nil) } })
+    option.lazy_unwrap(builder.catch_handler, fn() { fn(_, _) { Ok(Nil) } })
 
   use bot_subject <- result.try(bot.start(
     bot_info:,
