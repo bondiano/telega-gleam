@@ -33,7 +33,12 @@ pub opaque type TelegaBuilder(session, error) {
     session_settings: Option(SessionSettings(session, error)),
     bot_subject: Option(BotSubject),
     catch_handler: Option(CatchHandler(session, error)),
+    // SetWebhook parameters
     drop_pending_updates: Option(Bool),
+    max_connections: Option(Int),
+    ip_address: Option(String),
+    allowed_updates: Option(List(String)),
+    certificate: Option(model.File),
   )
 }
 
@@ -73,6 +78,10 @@ pub fn new(
     bot_subject: None,
     catch_handler: None,
     drop_pending_updates: None,
+    max_connections: None,
+    ip_address: None,
+    allowed_updates: None,
+    certificate: None,
   )
 }
 
@@ -298,6 +307,38 @@ pub fn set_drop_pending_updates(
   TelegaBuilder(..builder, drop_pending_updates: Some(drop_pending_updates))
 }
 
+/// Set the max connections as set webhook parameter.
+pub fn set_max_connections(
+  builder: TelegaBuilder(session, error),
+  max_connections: Int,
+) {
+  TelegaBuilder(..builder, max_connections: Some(max_connections))
+}
+
+/// Set the ip address as set webhook parameter.
+pub fn set_ip_address(
+  builder: TelegaBuilder(session, error),
+  ip_address: String,
+) {
+  TelegaBuilder(..builder, ip_address: Some(ip_address))
+}
+
+/// Set the allowed updates as set webhook parameter.
+pub fn set_allowed_updates(
+  builder: TelegaBuilder(session, error),
+  allowed_updates: List(String),
+) {
+  TelegaBuilder(..builder, allowed_updates: Some(allowed_updates))
+}
+
+/// Set the certificate as set webhook parameter.
+pub fn set_certificate(
+  builder: TelegaBuilder(session, error),
+  certificate: model.File,
+) {
+  TelegaBuilder(..builder, certificate: Some(certificate))
+}
+
 /// Initialize a Telega instance.
 /// This function should be called **only** after all handlers are added to the builder.
 /// It will set the webhook and start handling messages.
@@ -306,12 +347,12 @@ pub fn init(builder: TelegaBuilder(session, error)) {
     builder.config.api,
     model.SetWebhookParameters(
       url: builder.config.server_url <> "/" <> builder.config.webhook_path,
-      max_connections: None,
-      ip_address: None,
-      allowed_updates: None,
-      drop_pending_updates: builder.drop_pending_updates,
       secret_token: Some(builder.config.secret_token),
-      certificate: None,
+      drop_pending_updates: builder.drop_pending_updates,
+      max_connections: builder.max_connections,
+      ip_address: builder.ip_address,
+      allowed_updates: builder.allowed_updates,
+      certificate: builder.certificate,
     ),
   ))
   use <- bool.guard(!is_ok, Error(error.SetWebhookError))
