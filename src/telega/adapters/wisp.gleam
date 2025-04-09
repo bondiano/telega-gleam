@@ -2,13 +2,17 @@ import gleam/bool
 import gleam/http/request
 import gleam/http/response.{Response as HttpResponse}
 import gleam/result
-import telega.{type Telega}
+import gleam/string
 
-import telega/update
 import wisp.{
   type Request as WispRequest, type Response as WispResponse,
   Empty as WispEmptyBody,
 }
+
+import telega.{type Telega}
+import telega/error
+import telega/internal/log
+import telega/update
 
 const secret_header = "x-telegram-bot-api-secret-token"
 
@@ -45,7 +49,15 @@ pub fn handle_bot(
         False -> wisp.internal_server_error()
       }
     }
-    Error(_error) -> wisp.internal_server_error()
+    Error(error) -> {
+      case error {
+        error.UnknownUpdateError(update) -> {
+          log.warn("Unknown update received: " <> string.inspect(update))
+          wisp.ok()
+        }
+        _ -> wisp.internal_server_error()
+      }
+    }
   }
 }
 
