@@ -17962,6 +17962,320 @@ pub fn encode_promote_chat_member_parameters(
   ])
 }
 
+// SetChatAdministratorCustomTitleParameters --------------------------------------------------------------------------
+
+pub type SetChatAdministratorCustomTitleParameters {
+  SetChatAdministratorCustomTitleParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// New custom title for the administrator; 0-16 characters, emoji are not allowed
+    custom_title: String,
+  )
+}
+
+pub fn encode_set_chat_administrator_custom_title_parameters(
+  params: SetChatAdministratorCustomTitleParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+    #("custom_title", json.string(params.custom_title)),
+  ])
+}
+
+// BanChatSenderChatParameters -------------------------------------------------------------------------------------
+
+pub type BanChatSenderChatParameters {
+  BanChatSenderChatParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target sender chat
+    sender_chat_id: Int,
+  )
+}
+
+pub fn encode_ban_chat_sender_chat_parameters(
+  params: BanChatSenderChatParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("sender_chat_id", json.int(params.sender_chat_id)),
+  ])
+}
+
+// UnbanChatSenderChatParameters -----------------------------------------------------------------------------------
+
+pub type UnbanChatSenderChatParameters {
+  UnbanChatSenderChatParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target sender chat
+    sender_chat_id: Int,
+  )
+}
+
+pub fn encode_unban_chat_sender_chat_parameters(
+  params: UnbanChatSenderChatParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("sender_chat_id", json.int(params.sender_chat_id)),
+  ])
+}
+
+// SetChatPermissionsParameters -------------------------------------------------------------------------------------
+
+pub type SetChatPermissionsParameters {
+  SetChatPermissionsParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// A JSON-serialized object for new default chat permissions
+    permissions: ChatPermissions,
+    /// Pass `True` if chat permissions are set independently.
+    /// Otherwise, the `can_send_other_messages` and `can_add_web_page_previews` permissions will imply the `can_send_messages`, `can_send_audios`, `can_send_documents`, `can_send_photos`, `can_send_videos`, `can_send_video_notes`, and `can_send_voice_notes` permissions; the `can_send_polls` permission will imply the `can_send_messages` permission.
+    use_independent_chat_permissions: Option(Bool),
+  )
+}
+
+pub fn encode_set_chat_permissions_parameters(
+  params: SetChatPermissionsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("permissions", encode_chat_permissions(params.permissions)),
+    #(
+      "use_independent_chat_permissions",
+      json.nullable(params.use_independent_chat_permissions, json.bool),
+    ),
+  ])
+}
+
+// ExportChatInviteLinkParameters -----------------------------------------------------------------------------------
+
+pub type ExportChatInviteLinkParameters {
+  ExportChatInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_export_chat_invite_link_parameters(
+  params: ExportChatInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// CreateChatInviteLinkParameters ----------------------------------------------------------------------------------
+
+pub type CreateChatInviteLinkParameters {
+  CreateChatInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Invite link name; 0-32 characters
+    name: Option(String),
+    /// The maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
+    member_limit: Option(Int),
+    /// Point in time (Unix timestamp) when the link will expire.
+    expire_date: Option(Int),
+    /// `True`, if users joining the chat via the link need to be approved by chat administrators. If `True`, `member_limit` can't be specified
+    creates_join_request: Option(Bool),
+  )
+}
+
+pub fn encode_create_chat_invite_link_parameters(
+  params: CreateChatInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("name", json.nullable(params.name, json.string)),
+    #("member_limit", json.nullable(params.member_limit, json.int)),
+    #("expire_date", json.nullable(params.expire_date, json.int)),
+    #(
+      "creates_join_request",
+      json.nullable(params.creates_join_request, json.bool),
+    ),
+  ])
+}
+
+// EditChatInviteLinkParameters -------------------------------------------------------------------------------------
+
+pub type EditChatInviteLinkParameters {
+  EditChatInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the invite link
+    invite_link: String,
+    /// Invite link name; 0-32 characters
+    name: Option(String),
+    /// The maximum number of users that can be members of the chat simultaneously after joining the chat via the link; 1-99999
+    member_limit: Option(Int),
+    /// Point in time (Unix timestamp) when the link will expire.
+    expire_date: Option(Int),
+    /// `True`, if users joining the chat via the link need to be approved by chat administrators. If `True`, `member_limit` can't be specified
+    creates_join_request: Option(Bool),
+  )
+}
+
+pub fn encode_edit_chat_invite_link_parameters(
+  params: EditChatInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("invite_link", json.string(params.invite_link)),
+    #("name", json.nullable(params.name, json.string)),
+    #("member_limit", json.nullable(params.member_limit, json.int)),
+    #("expire_date", json.nullable(params.expire_date, json.int)),
+    #(
+      "creates_join_request",
+      json.nullable(params.creates_join_request, json.bool),
+    ),
+  ])
+}
+
+// CreateChatSubscriptionInviteLinkParameters ------------------------------------------------------------
+
+pub type CreateChatSubscriptionInviteLinkParameters {
+  CreateChatSubscriptionInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Invite link name; 0-32 characters
+    name: Option(String),
+    /// The number of seconds the subscription will be active for before the next payment. Currently, it must always be 2592000 (30 days).
+    period: Int,
+    /// The amount of Telegram Stars a user must pay initially and after each subsequent subscription period to be a member of the chat; 1-2500
+    amount: Int,
+  )
+}
+
+pub fn encode_create_chat_subscription_invite_link_parameters(
+  params: CreateChatSubscriptionInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("name", json.nullable(params.name, json.string)),
+    #("period", json.int(params.period)),
+    #("amount", json.int(params.amount)),
+  ])
+}
+
+// EditChatSubscriptionInviteLinkParameters ------------------------------------------------------------
+
+pub type EditChatSubscriptionInviteLinkParameters {
+  EditChatSubscriptionInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// The invite link to edit
+    invite_link: String,
+    /// Invite link name; 0-32 characters
+    name: Option(String),
+  )
+}
+
+pub fn encode_edit_chat_subscription_invite_link_parameters(
+  params: EditChatSubscriptionInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("invite_link", json.string(params.invite_link)),
+    #("name", json.nullable(params.name, json.string)),
+  ])
+}
+
+// RevokeChatInviteLinkParameters ------------------------------------------------------------
+
+pub type RevokeChatInviteLinkParameters {
+  RevokeChatInviteLinkParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// The invite link to revoke
+    invite_link: String,
+  )
+}
+
+pub fn encode_revoke_chat_invite_link_parameters(
+  params: RevokeChatInviteLinkParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("invite_link", json.string(params.invite_link)),
+  ])
+}
+
+// ApproveChatJoinRequestParameters ------------------------------------------------------------
+
+pub type ApproveChatJoinRequestParameters {
+  ApproveChatJoinRequestParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
+pub fn encode_approve_chat_join_request_parameters(
+  params: ApproveChatJoinRequestParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+  ])
+}
+
+// DeclineChatJoinRequestParameters ------------------------------------------------------------
+
+pub type DeclineChatJoinRequestParameters {
+  DeclineChatJoinRequestParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
+pub fn encode_decline_chat_join_request_parameters(
+  params: DeclineChatJoinRequestParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+  ])
+}
+
+// SetChatPhotoParameters ------------------------------------------------------------
+
+pub type SetChatPhotoParameters {
+  SetChatPhotoParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// New chat photo, uploaded using multipart/form-data
+    photo: File,
+  )
+}
+
+pub fn encode_set_chat_photo_parameters(params: SetChatPhotoParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("photo", encode_file(params.photo)),
+  ])
+}
+
+// DeleteChatPhotoParameters ------------------------------------------------------------
+
+pub type DeleteChatPhotoParameters {
+  DeleteChatPhotoParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_delete_chat_photo_parameters(
+  params: DeleteChatPhotoParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
