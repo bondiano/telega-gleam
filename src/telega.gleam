@@ -9,6 +9,7 @@ import gleam/time/timestamp
 import telega/internal/config.{type Config}
 import telega/internal/log
 import telega/internal/registry
+import telega/internal/utils
 
 import telega/api
 import telega/bot.{
@@ -62,9 +63,12 @@ pub fn new(
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
 ) {
+  let url = utils.normalize_url(server_url)
+  let webhook_path = utils.normalize_webhook_path(webhook_path)
+
   TelegaBuilder(
     handlers: [],
-    config: config.new(token:, webhook_path:, secret_token:, url: server_url),
+    config: config.new(token:, webhook_path:, secret_token:, url:),
     session_settings: None,
     bot_subject: None,
     catch_handler: None,
