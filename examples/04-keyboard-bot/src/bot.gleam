@@ -2,9 +2,10 @@ import dotenv_gleam
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
-import language_keyboard
 import mist
-import session.{type LanguageBotSession, English, LanguageBotSession, Russian}
+import wisp.{type Response}
+import wisp/wisp_mist
+
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
@@ -13,8 +14,9 @@ import telega/error as telega_error
 import telega/keyboard as telega_keyboard
 import telega/model.{EditMessageTextParameters} as telega_model
 import telega/reply
-import wisp.{type Response}
-import wisp/wisp_mist
+
+import language_keyboard
+import session.{type LanguageBotSession, English, LanguageBotSession, Russian}
 
 fn middleware(req, bot, handle_request) -> Response {
   let req = wisp.method_override(req)

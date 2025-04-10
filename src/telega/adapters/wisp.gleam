@@ -1,6 +1,7 @@
 import gleam/bool
 import gleam/http/request
 import gleam/http/response.{Response as HttpResponse}
+import gleam/otp/task
 import gleam/result
 import gleam/string
 
@@ -44,14 +45,11 @@ pub fn handle_bot(
         HttpResponse(401, [], WispEmptyBody)
       })
 
-      case telega.handle_update(telega, message) {
-        Ok(True) -> wisp.ok()
-        Ok(False) -> wisp.internal_server_error()
-        Error(error) -> {
-          log.error_d("Error handling update", error)
-          wisp.internal_server_error()
-        }
-      }
+      // Telegram will wait response from the server, before sending the next update
+      // So we need to handle it in a separate process and return response immediately.
+      task.async(fn() { telega.handle_update(telega, message) })
+
+      wisp.ok()
     }
     Error(error) -> {
       case error {

@@ -92,7 +92,7 @@ fn bot_loop(message, bot) {
       case handle_update_bot_message(bot:, update:, reply_with:) {
         Ok(_) -> actor.continue(bot)
         Error(error) -> {
-          log.error("Error in handler: " <> string.inspect(error))
+          log.error_d("Error in handler: ", error)
           actor.Stop(process.Normal)
         }
       }
@@ -500,14 +500,8 @@ pub fn update_to_string(update: Update) {
   }
 }
 
-const handle_update_timeout = 1500
-
 // User should use methods from `telega` module.
 @internal
 pub fn handle_update(bot_subject bot_subject, update update) {
-  process.try_call(
-    bot_subject,
-    HandleUpdateBotMessage(update, _),
-    handle_update_timeout,
-  )
+  process.try_call_forever(bot_subject, HandleUpdateBotMessage(update, _))
 }
