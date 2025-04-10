@@ -1,3 +1,4 @@
+/// If you want to use telega only as a Telegram client, you can use this module.
 import gleam/dynamic
 import gleam/erlang/process
 import gleam/http.{Get, Post}
@@ -15,8 +16,9 @@ const default_retry_delay = 1000
 type FetchClient =
   fn(Request(String)) -> Result(Response(String), TelegaError)
 
-pub type TelegramFetchConfig {
-  TelegramFetchConfig(
+pub opaque type TelegramClient {
+  TelegramClient(
+    /// The Telegram Bot API token.
     token: String,
     /// The maximum number of times to retry sending a API message. Default is 3.
     max_retry_attempts: Int,
@@ -28,17 +30,23 @@ pub type TelegramFetchConfig {
   )
 }
 
-pub fn new_config(
+/// Create a new Telegram client. It uses `httpc` as a default HTTP client.
+pub fn new(
   token token,
   max_retry_attempts max_retry_attempts,
   tg_api_url tg_api_url,
 ) {
-  TelegramFetchConfig(
+  TelegramClient(
     token:,
-    fetch_client: fetch_httpc_adapter,
     max_retry_attempts:,
     tg_api_url:,
+    fetch_client: fetch_httpc_adapter,
   )
+}
+
+/// Set the HTTP client to use.
+pub fn with_fetch_client(client client, fetch_client fetch_client) {
+  TelegramClient(..client, fetch_client:)
 }
 
 fn fetch_httpc_adapter(req: Request(String)) {
@@ -46,28 +54,14 @@ fn fetch_httpc_adapter(req: Request(String)) {
   |> result.map_error(fn(error) { error.FetchError(dynamic.from(error)) })
 }
 
-pub type TelegramApiRequest {
-  TelegramApiPostRequest(url: String, body: String)
-  TelegramApiGetRequest(url: String, query: Option(List(#(String, String))))
-}
-
-pub fn new_post_request(config config, path path: String, body body: String) {
-  TelegramApiPostRequest(url: build_url(config, path), body:)
-}
-
-pub fn new_get_request(
-  config config,
-  path path: String,
-  query query: Option(List(#(String, String))),
-) {
-  TelegramApiGetRequest(url: build_url(config, path), query:)
-}
-
 // TODO: add rate limit handling
-pub fn fetch(api_request: TelegramApiRequest, config: TelegramFetchConfig) {
+pub fn fetch(
+  request api_request: TelegramApiRequest,
+  client client: TelegramClient,
+) {
   use api_request <- result.try(api_to_request(api_request))
 
-  send_with_retry(config.fetch_client, api_request, config.max_retry_attempts)
+  send_with_retry(client.fetch_client, api_request, client.max_retry_attempts)
 }
 
 fn send_with_retry(
@@ -132,6 +126,27 @@ fn set_query(api_request, query) {
   }
 }
 
-fn build_url(config: TelegramFetchConfig, path) {
-  config.tg_api_url <> config.token <> "/" <> path
+pub fn get_api_url(client client: TelegramClient) {
+  client.tg_api_url
+}
+
+pub opaque type TelegramApiRequest {
+  TelegramApiPostRequest(url: String, body: String)
+  TelegramApiGetRequest(url: String, query: Option(List(#(String, String))))
+}
+
+pub fn new_post_request(client client, path path: String, body body: String) {
+  TelegramApiPostRequest(url: build_url(client, path), body:)
+}
+
+pub fn new_get_request(
+  client client,
+  path path: String,
+  query query: Option(List(#(String, String))),
+) {
+  TelegramApiGetRequest(url: build_url(client, path), query:)
+}
+
+fn build_url(client client: TelegramClient, path path: String) {
+  client.tg_api_url <> client.token <> "/" <> path
 }

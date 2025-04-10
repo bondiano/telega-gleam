@@ -1,6 +1,6 @@
 import gleam/int
 import gleam/option.{type Option}
-import telega/internal/fetch.{type TelegramFetchConfig, TelegramFetchConfig}
+import telega/client.{type TelegramClient}
 
 const telegram_url = "https://api.telegram.org/bot"
 
@@ -12,7 +12,7 @@ pub type Config {
     webhook_path: String,
     /// String to compare with X-Telegram-Bot-Api-Secret-Token
     secret_token: String,
-    api: TelegramFetchConfig,
+    api_client: TelegramClient,
   )
 }
 
@@ -35,7 +35,7 @@ pub fn new(
     server_url:,
     webhook_path:,
     secret_token:,
-    api: fetch.new_config(
+    api_client: client.new(
       token:,
       max_retry_attempts: default_retry_count,
       tg_api_url: telegram_url,

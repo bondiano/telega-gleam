@@ -6,6 +6,7 @@ import gleam/result
 
 import telega/api
 import telega/bot.{type Context}
+import telega/client
 import telega/error
 import telega/model.{type SendDiceParameters}
 
@@ -14,7 +15,7 @@ import telega/model.{type SendDiceParameters}
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_text(ctx ctx: Context(session, error), text text: String) {
   api.send_message(
-    ctx.config.api,
+    ctx.config.api_client,
     parameters: model.SendMessageParameters(
       text: text,
       chat_id: model.Str(ctx.key),
@@ -42,7 +43,7 @@ pub fn with_markup(
   markup reply_markup: model.SendMessageReplyMarkupParameters,
 ) {
   api.send_message(
-    ctx.config.api,
+    ctx.config.api_client,
     parameters: model.SendMessageParameters(
       text:,
       chat_id: model.Str(ctx.key),
@@ -81,7 +82,7 @@ pub fn with_dice(
       )
     })
 
-  api.send_dice(ctx.config.api, parameters)
+  api.send_dice(ctx.config.api_client, parameters)
 }
 
 /// Use this method to edit text and game messages.
@@ -92,7 +93,7 @@ pub fn edit_text(
   ctx ctx: Context(session, error),
   parameters parameters: model.EditMessageTextParameters,
 ) {
-  api.edit_message_text(ctx.config.api, parameters)
+  api.edit_message_text(ctx.config.api_client, parameters)
 }
 
 /// Use this method to forward messages of any kind. Service messages and messages with protected content can't be forwarded.
@@ -103,7 +104,7 @@ pub fn forward(
   ctx ctx: Context(session, error),
   parameters parameters: model.ForwardMessageParameters,
 ) {
-  api.forward_message(ctx.config.api, parameters)
+  api.forward_message(ctx.config.api_client, parameters)
 }
 
 /// Use this method to send answers to callback queries sent from inline keyboards.
@@ -115,19 +116,19 @@ pub fn answer_callback_query(
   ctx ctx: Context(session, error),
   parameters parameters: model.AnswerCallbackQueryParameters,
 ) {
-  api.answer_callback_query(ctx.config.api, parameters)
+  api.answer_callback_query(ctx.config.api_client, parameters)
 }
 
 /// Get download link for the file.
 pub fn with_file_link(ctx ctx: Context(session, error), file_id file_id: String) {
-  use file <- result.try(api.get_file(ctx.config.api, file_id))
+  use file <- result.try(api.get_file(ctx.config.api_client, file_id))
   use file_path <- result.try(option.to_result(
     file.file_path,
     error.FileNotFoundError,
   ))
 
   Ok(
-    ctx.config.api.tg_api_url
+    client.get_api_url(ctx.config.api_client)
     <> "/file/bot"
     <> ctx.config.secret_token
     <> "/"
@@ -144,7 +145,7 @@ pub fn with_poll(
   options options: List(String),
 ) {
   api.send_poll(
-    ctx.config.api,
+    ctx.config.api_client,
     parameters: model.SendPollParameters(
       question:,
       options:,
@@ -185,7 +186,7 @@ pub fn with_invoice(
   prices prices: List(#(String, Int)),
 ) {
   api.send_invoice(
-    ctx.config.api,
+    ctx.config.api_client,
     parameters: model.SendInvoiceParameters(
       title:,
       description:,
@@ -231,7 +232,7 @@ pub fn with_sticker(
   sticker sticker: model.FileOrString,
 ) {
   api.send_sticker(
-    ctx.config.api,
+    ctx.config.api_client,
     parameters: model.SendStickerParameters(
       sticker:,
       chat_id: model.Str(ctx.key),

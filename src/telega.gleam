@@ -58,7 +58,7 @@ pub fn is_secret_token_valid(telega: Telega(session, error), token: String) {
 
 /// Helper to get the config for API requests.
 pub fn get_api_config(telega: Telega(session, error)) {
-  telega.config.api
+  telega.config.api_client
 }
 
 /// Create a new Telega instance.
@@ -344,7 +344,7 @@ pub fn set_certificate(
 /// It will set the webhook and start handling messages.
 pub fn init(builder: TelegaBuilder(session, error)) {
   use is_ok <- result.try(api.set_webhook(
-    builder.config.api,
+    builder.config.api_client,
     model.SetWebhookParameters(
       url: builder.config.server_url <> "/" <> builder.config.webhook_path,
       secret_token: Some(builder.config.secret_token),
@@ -357,7 +357,7 @@ pub fn init(builder: TelegaBuilder(session, error)) {
   ))
   use <- bool.guard(!is_ok, Error(error.SetWebhookError))
 
-  use bot_info <- result.try(api.get_me(builder.config.api))
+  use bot_info <- result.try(api.get_me(builder.config.api_client))
 
   let session_settings =
     option.to_result(builder.session_settings, error.NoSessionSettingsError)

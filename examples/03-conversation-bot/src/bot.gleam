@@ -53,7 +53,7 @@ fn start_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "start")
 
   use _ <- try(telega_api.set_my_commands(
-    config: ctx.config.api,
+    client: ctx.config.api_client,
     commands: telega_model.bot_commands_from([
       #("/set_name", "Set name"),
       #("/get_name", "Get name"),
