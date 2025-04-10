@@ -25,7 +25,10 @@ pub fn normalize_webhook_path_test() {
   should.equal(path, "webhook")
 }
 
-pub fn random_prefix_test() {
-  let prefix = utils.random_prefix(10)
+pub fn random_string_test() {
+  let prefix = utils.random_string(10)
   should.equal(string.length(prefix), 10)
+
+  let prefix = utils.random_string(5)
+  should.equal(string.length(prefix), 5)
 }

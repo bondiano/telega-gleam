@@ -25,17 +25,17 @@ pub fn normalize_webhook_path(webhook_path: String) {
 const prefix_alphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict"
 
 /// Generates random string of given length using the prefix alphabet.
-pub fn random_prefix(length length) {
-  do_random_prefix(length, "", string.length(prefix_alphabet))
+pub fn random_string(length length) {
+  do_random_string(length, "", string.length(prefix_alphabet))
 }
 
-fn do_random_prefix(n, acc, alphabet_length) {
+fn do_random_string(n, acc, alphabet_length) {
   case n {
     0 -> acc
     _ -> {
       let index = int.random(alphabet_length)
       let char = string.slice(prefix_alphabet, index, 1)
-      do_random_prefix(n - 1, acc <> char, alphabet_length)
+      do_random_string(n - 1, acc <> char, alphabet_length)
     }
   }
 }

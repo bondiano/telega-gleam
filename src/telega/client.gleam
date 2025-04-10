@@ -1,4 +1,14 @@
 /// If you want to use telega only as a Telegram client, you can use this module.
+/// ```gleam
+/// import telega/client
+/// import telega/api
+///
+/// fn main() {
+///   ...
+///   let response = client.new(token) |> api.send_message(client, send_message_parameters)
+///   ...
+/// }
+/// ```
 import gleam/dynamic
 import gleam/erlang/process
 import gleam/http.{Get, Post}
@@ -12,6 +22,10 @@ import telega/error.{type TelegaError}
 import telega/internal/log
 
 const default_retry_delay = 1000
+
+const telegram_url = "https://api.telegram.org/bot"
+
+const default_retry_count = 3
 
 type FetchClient =
   fn(Request(String)) -> Result(Response(String), TelegaError)
@@ -31,22 +45,29 @@ pub opaque type TelegramClient {
 }
 
 /// Create a new Telegram client. It uses `httpc` as a default HTTP client.
-pub fn new(
-  token token,
-  max_retry_attempts max_retry_attempts,
-  tg_api_url tg_api_url,
-) {
+pub fn new(token token) {
   TelegramClient(
     token:,
-    max_retry_attempts:,
-    tg_api_url:,
+    max_retry_attempts: default_retry_count,
+    tg_api_url: telegram_url,
     fetch_client: fetch_httpc_adapter,
   )
 }
 
 /// Set the HTTP client to use.
-pub fn with_fetch_client(client client, fetch_client fetch_client) {
+pub fn set_fetch_client(client client, fetch_client fetch_client) {
   TelegramClient(..client, fetch_client:)
+}
+
+pub fn set_max_retry_attempts(
+  client client,
+  max_retry_attempts max_retry_attempts,
+) {
+  TelegramClient(..client, max_retry_attempts:)
+}
+
+pub fn set_tg_api_url(client client, tg_api_url tg_api_url) {
+  TelegramClient(..client, tg_api_url:)
 }
 
 fn fetch_httpc_adapter(req: Request(String)) {

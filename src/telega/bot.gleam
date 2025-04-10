@@ -227,7 +227,6 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
     HandleNewChatInstanceMessage(update:, handlers:, reply_with:) -> {
       let context = new_context(chat:, update:)
       case chat.continuation {
-        // No continuation, just handle the update
         None ->
           case
             loop_handlers(
@@ -249,7 +248,7 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
                   actor.continue(chat)
                 }
                 Error(e) -> {
-                  log.error("Error in catch handler: " <> string.inspect(e))
+                  log.error_d("Error in catch handler: ", e)
                   actor.Stop(process.Normal)
                 }
               }
@@ -271,7 +270,7 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
                   actor.continue(chat)
                 }
                 Error(e) -> {
-                  log.error("Error in catch handler: " <> string.inspect(e))
+                  log.error_d("Error in catch handler: ", e)
                   actor.Stop(process.Normal)
                 }
               }

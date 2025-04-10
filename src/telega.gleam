@@ -226,7 +226,7 @@ pub fn wait_callback_query(
 
 /// Set a catch handler for all handlers.
 ///
-/// If handler returns `Error`, the bot will be stopped and the error will be logged
+/// If handler returns `Error`, the chat instance will be stopped and the error will be logged
 /// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
 pub fn with_catch_handler(
   builder builder: TelegaBuilder(session, error),
@@ -241,7 +241,7 @@ pub fn log_context(
   prefix prefix: String,
   handler handler: fn() -> Result(Context(session, error), error),
 ) {
-  let id = utils.random_prefix(5)
+  let id = utils.random_string(5)
   let prefix = "[" <> prefix <> ":" <> id <> "] "
 
   log.info(prefix <> "received update: " <> bot.update_to_string(ctx.update))

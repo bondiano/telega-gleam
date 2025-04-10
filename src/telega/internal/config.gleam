@@ -1,10 +1,7 @@
-import gleam/int
 import gleam/option.{type Option}
+
 import telega/client.{type TelegramClient}
-
-const telegram_url = "https://api.telegram.org/bot"
-
-const default_retry_count = 3
+import telega/internal/utils
 
 pub type Config {
   Config(
@@ -26,19 +23,12 @@ pub fn new(
   secret_token secret_token: Option(String),
 ) {
   let secret_token =
-    option.lazy_unwrap(secret_token, fn() {
-      int.random(10_000_000)
-      |> int.to_string
-    })
+    option.lazy_unwrap(secret_token, fn() { utils.random_string(64) })
 
   Config(
     server_url:,
     webhook_path:,
     secret_token:,
-    api_client: client.new(
-      token:,
-      max_retry_attempts: default_retry_count,
-      tg_api_url: telegram_url,
-    ),
+    api_client: client.new(token),
   )
 }
