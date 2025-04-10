@@ -117,14 +117,16 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
+const commands = [
+  #("/lang", "Shows custom keyboard with languages"),
+  #("/lang_inline", "Change language inline"),
+]
+
 fn start_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "start")
   use _ <- try(telega_api.set_my_commands(
     ctx.config.api_client,
-    telega_model.bot_commands_from([
-      #("/lang", "Shows custom keyboard with languages"),
-      #("/lang_inline", "Change language inline"),
-    ]),
+    telega_model.bot_commands_from(commands),
     None,
   ))
   use _ <- try(reply.with_text(ctx, t_welcome_message(ctx.session.lang)))

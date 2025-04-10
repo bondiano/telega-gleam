@@ -241,7 +241,8 @@ pub fn log_context(
   prefix prefix: String,
   handler handler: fn() -> Result(Context(session, error), error),
 ) {
-  let prefix = "[" <> prefix <> "] "
+  let id = utils.random_prefix(5)
+  let prefix = "[" <> prefix <> ":" <> id <> "] "
 
   log.info(prefix <> "received update: " <> bot.update_to_string(ctx.update))
 

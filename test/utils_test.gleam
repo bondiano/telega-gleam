@@ -1,3 +1,4 @@
+import gleam/string
 import gleeunit/should
 
 import telega/internal/utils
@@ -22,4 +23,9 @@ pub fn normalize_webhook_path_test() {
 
   let path = utils.normalize_webhook_path("webhook/")
   should.equal(path, "webhook")
+}
+
+pub fn random_prefix_test() {
+  let prefix = utils.random_prefix(10)
+  should.equal(string.length(prefix), 10)
 }

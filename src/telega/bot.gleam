@@ -505,7 +505,7 @@ const handle_update_timeout = 1500
 // User should use methods from `telega` module.
 @internal
 pub fn handle_update(bot_subject bot_subject, update update) {
-  actor.call(
+  process.try_call(
     bot_subject,
     HandleUpdateBotMessage(update, _),
     handle_update_timeout,
