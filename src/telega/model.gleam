@@ -207,9 +207,9 @@ pub type Update {
     message_reaction: Option(MessageReactionUpdated),
     /// Optional. Reactions to a message with anonymous reactions were changed. The bot must be an administrator in the chat and must explicitly specify "message_reaction_count" in the list of allowed_updates to receive these updates. The updates are grouped and can be sent with delay up to a few minutes.
     message_reaction_count: Option(MessageReactionCountUpdated),
-    /// Optional. New incoming inline query
+    /// Optional. New incoming [inline](https://core.telegram.org/bots/api#inline-mode) query
     inline_query: Option(InlineQuery),
-    /// Optional. The result of an inline query that was chosen by a user and sent to their chat partner. Please see our documentation on the feedback collecting for details on how to enable these updates for your bot.
+    /// Optional. The result of an [inline](https://core.telegram.org/bots/api#inline-mode) query that was chosen by a user and sent to their chat partner. Please see our documentation on the [feedback collecting](https://core.telegram.org/bots/inline#collecting-feedback) for details on how to enable these updates for your bot.
     chosen_inline_result: Option(ChosenInlineResult),
     /// Optional. New incoming callback query
     callback_query: Option(CallbackQuery),

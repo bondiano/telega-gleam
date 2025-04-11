@@ -13,6 +13,9 @@ pub type TelegaError {
   /// Returned if the JSON response from the Bot API could not be decoded
   JsonDecodeError(error: json.DecodeError)
 
+  /// Returned if the bot failed to call `handle_update`
+  BotHandleUpdateError(reason: String)
+
   ApiToRequestConvertError
   SetWebhookError
   NoSessionSettingsError
@@ -42,6 +45,7 @@ pub fn to_string(error) {
       "Failed to start chat instance: " <> reason
     FileNotFoundError -> "File not found"
     DecodeUpdateError(reason) -> "Failed to decode update: " <> reason
+    BotHandleUpdateError(reason) -> "Failed to handle update: " <> reason
     UnknownUpdateError(update) -> "Unknown update: " <> string.inspect(update)
   }
 }

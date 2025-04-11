@@ -19,8 +19,8 @@ import telega/bot.{
   SessionSettings,
 }
 import telega/error
-import telega/model.{type User}
-import telega/update.{type Command, type Update}
+import telega/model.{type Update, type User}
+import telega/update.{type Command}
 
 pub opaque type Telega(session, error) {
   Telega(config: Config, bot_info: User, bot_subject: BotSubject)
@@ -244,7 +244,7 @@ pub fn log_context(
   let id = utils.random_string(5)
   let prefix = "[" <> prefix <> ":" <> id <> "] "
 
-  log.info(prefix <> "received update: " <> bot.update_to_string(ctx.update))
+  log.info(prefix <> "received update: " <> update.to_string(ctx.update))
 
   let start_time = timestamp.system_time()
   let result =
@@ -382,6 +382,7 @@ pub fn init(builder: TelegaBuilder(session, error)) {
 }
 
 /// Handle an update from the Telegram API.
-pub fn handle_update(telega: Telega(session, error), update: Update) {
-  bot.handle_update(telega.bot_subject, update)
+pub fn handle_update(telega: Telega(session, error), raw_update: Update) {
+  update.raw_to_update(raw_update)
+  |> bot.handle_update(telega.bot_subject, _)
 }

@@ -3,7 +3,6 @@ import gleam/http/request
 import gleam/http/response.{Response as HttpResponse}
 import gleam/otp/task
 import gleam/result
-import gleam/string
 
 import wisp.{
   type Request as WispRequest, type Response as WispResponse,
@@ -11,8 +10,6 @@ import wisp.{
 }
 
 import telega.{type Telega}
-import telega/error
-import telega/internal/log
 import telega/update
 
 const secret_header = "x-telegram-bot-api-secret-token"
@@ -38,28 +35,19 @@ pub fn handle_bot(
 ) -> WispResponse {
   use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
   use json <- wisp.require_json(req)
+  use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
+    HttpResponse(401, [], WispEmptyBody)
+  })
 
-  case update.decode(json) {
+  case update.decode_raw(json) {
     Ok(message) -> {
-      use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
-        HttpResponse(401, [], WispEmptyBody)
-      })
-
       // Telegram will wait response from the server, before sending the next update
       // So we need to handle it in a separate process and return response immediately.
       task.async(fn() { telega.handle_update(telega, message) })
 
       wisp.ok()
     }
-    Error(error) -> {
-      case error {
-        error.UnknownUpdateError(update) -> {
-          log.warn("Unknown update received: " <> string.inspect(update))
-          wisp.ok()
-        }
-        _ -> wisp.internal_server_error()
-      }
-    }
+    Error(_) -> wisp.internal_server_error()
   }
 }
 

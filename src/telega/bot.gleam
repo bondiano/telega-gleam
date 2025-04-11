@@ -379,6 +379,7 @@ fn extract_update_handlers(handlers, update) {
   })
 }
 
+/// Pass any handler to start waiting
 pub fn wait_handler(ctx: Context(session, error), handler) {
   process.send(ctx.chat_subject, WaitHandlerChatInstanceMessage(handler))
   Ok(ctx)
@@ -483,24 +484,9 @@ pub fn get_session(
   |> session_settings.get_session
 }
 
-// Utilities -------------------------------------------------------------------------------
-
-pub fn update_to_string(update: Update) {
-  case update {
-    CommandUpdate(command:, chat_id:, ..) ->
-      "command \"" <> command.command <> "\" from " <> int.to_string(chat_id)
-    TextUpdate(text:, chat_id:, ..) ->
-      "text \"" <> text <> "\" from " <> int.to_string(chat_id)
-    CallbackQueryUpdate(query:, from_id:, ..) ->
-      "callback query "
-      <> option.unwrap(query.data, "no data")
-      <> " from "
-      <> int.to_string(from_id)
-  }
-}
-
 // User should use methods from `telega` module.
 @internal
 pub fn handle_update(bot_subject bot_subject, update update) {
   process.try_call_forever(bot_subject, HandleUpdateBotMessage(update, _))
+  |> result.map_error(fn(e) { error.BotHandleUpdateError(string.inspect(e)) })
 }
