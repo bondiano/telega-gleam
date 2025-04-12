@@ -1012,6 +1012,92 @@ pub fn delete_chat_photo(client client, parameters parameters) {
   |> map_response(decode.bool)
 }
 
+/// Use this method to change the title of a chat. Titles can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setchattitle
+pub fn set_chat_title(client client, parameters parameters) {
+  let body_json = model.encode_set_chat_title_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setChatTitle",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to change the description of a group, a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setchatdescription
+pub fn set_chat_description(client client, parameters parameters) {
+  let body_json = model.encode_set_chat_description_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setChatDescription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to add a message to the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#pinchatmessage
+pub fn pin_chat_message(client client, parameters parameters) {
+  let body_json = model.encode_pin_chat_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "pinChatMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to remove a message from the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#unpinchatmessage
+pub fn unpin_chat_message(client client, parameters parameters) {
+  let body_json = model.encode_unpin_chat_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "unpinChatMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to clear the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#clearchatpinnedmessages
+pub fn unpin_all_chat_messages(client client, parameters parameters) {
+  let body_json = model.encode_unpin_all_chat_messages_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "unpinAllChatMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method for your bot to leave a group, supergroup or channel. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#leavechat
+pub fn leave_chat(client client, parameters parameters) {
+  let body_json = model.encode_leave_chat_parameters(parameters)
+
+  new_post_request(client:, path: "leaveChat", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
 fn map_response(
   response: Result(Response(String), error.TelegaError),

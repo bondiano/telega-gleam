@@ -96,6 +96,11 @@ pub type InputPaidMedia {
   InputPaidMediaVideoInputPaidMedia(InputPaidMediaVideo)
 }
 
+pub type InputProfilePhoto {
+  InputProfilePhotoStaticInputProfilePhoto(InputProfilePhotoStatic)
+  InputProfilePhotoAnimatedInputProfilePhoto(InputProfilePhotoAnimated)
+}
+
 pub type InlineQueryResult {
   InlineQueryResultCachedAudioInlineQueryResult(InlineQueryResultCachedAudio)
   InlineQueryResultCachedDocumentInlineQueryResult(
@@ -2138,6 +2143,232 @@ pub type ForumTopic {
   )
 }
 
+/// **Official reference:** This object describes the model of a unique gift.
+pub type UniqueGiftModel {
+  UniqueGiftModel(
+    /// Name of the model
+    name: String,
+    /// The sticker that represents the unique gift
+    sticker: Sticker,
+    /// The number of unique gifts that receive this model for every 1000 gifts upgraded
+    rarity_per_mille: Int,
+  )
+}
+
+/// **Official reference:** This object describes the symbol shown on the pattern of a unique gift.
+pub type UniqueGiftSymbol {
+  UniqueGiftSymbol(
+    /// Name of the symbol
+    name: String,
+    /// The sticker that represents the unique gift
+    sticker: Sticker,
+    /// The number of unique gifts that receive this model for every 1000 gifts upgraded
+    rarity_per_mille: Int,
+  )
+}
+
+/// **Official reference:** This object describes the colors of the backdrop of a unique gift.
+pub type UniqueGiftBackdropColors {
+  UniqueGiftBackdropColors(
+    /// The color in the center of the backdrop in RGB format
+    center_color: Int,
+    /// The color on the edges of the backdrop in RGB format
+    edge_color: Int,
+    /// The color to be applied to the symbol in RGB format
+    symbol_color: Int,
+    /// The color for the text on the backdrop in RGB format
+    text_color: Int,
+  )
+}
+
+/// **Official reference:** This object describes the backdrop of a unique gift.
+pub type UniqueGiftBackdrop {
+  UniqueGiftBackdrop(
+    /// Name of the backdrop
+    name: String,
+    /// Colors of the backdrop
+    colors: UniqueGiftBackdropColors,
+    /// The number of unique gifts that receive this backdrop for every 1000 gifts upgraded
+    rarity_per_mille: Int,
+  )
+}
+
+/// **Official reference:** This object describes a unique gift that was upgraded from a regular gift.
+pub type UniqueGift {
+  UniqueGift(
+    /// Human-readable name of the regular gift from which this unique gift was upgraded
+    base_name: String,
+    /// Unique name of the gift. This name can be used in https://t.me/nft/... links and story areas
+    name: String,
+    /// Unique number of the upgraded gift among gifts upgraded from the same regular gift
+    number: Int,
+    /// Model of the gift
+    model: UniqueGiftModel,
+    /// Symbol of the gift
+    symbol: UniqueGiftSymbol,
+    /// Backdrop of the gift
+    backdrop: UniqueGiftBackdrop,
+  )
+}
+
+/// **Official reference:** Describes a service message about a regular gift that was sent or received.
+pub type GiftInfo {
+  GiftInfo(
+    /// Information about the gift
+    gift: Gift,
+    /// Optional. Unique identifier of the received gift for the bot; only present for gifts received on behalf of business accounts
+    owned_gift_id: Option(String),
+    /// Optional. Number of Telegram Stars that can be claimed by the receiver by converting the gift; omitted if conversion to Telegram Stars is impossible
+    convert_star_count: Option(Int),
+    /// Optional. Number of Telegram Stars that were prepaid by the sender for the ability to upgrade the gift
+    prepaid_upgrade_star_count: Option(Int),
+    /// Optional. True, if the gift can be upgraded to a unique gift
+    can_be_upgraded: Option(Bool),
+    /// Optional. Text of the message that was added to the gift
+    text: Option(String),
+    /// Optional. Special entities that appear in the text
+    entities: Option(List(MessageEntity)),
+    /// Optional. True, if the sender and gift text are shown only to the gift receiver; otherwise, everyone will be able to see them
+    is_private: Option(Bool),
+  )
+}
+
+/// **Official reference:** Describes a service message about a unique gift that was sent or received.
+pub type UniqueGiftInfo {
+  UniqueGiftInfo(
+    /// Information about the gift
+    gift: UniqueGift,
+    /// Origin of the gift. Currently, either “upgrade” or “transfer”
+    origin: String,
+    /// Optional. Unique identifier of the received gift for the bot; only present for gifts received on behalf of business accounts
+    owned_gift_id: Option(String),
+    /// Optional. Number of Telegram Stars that must be paid to transfer the gift; omitted if the bot cannot transfer the gift
+    transfer_star_count: Option(Int),
+  )
+}
+
+/// **Official reference:** This object describes a gift received and owned by a user or a chat. Currently, it can be one of
+pub type OwnedGift {
+  OwnedGift(
+    /// Type of the gift, always “regular”
+    type_: String,
+    /// Information about the regular gift
+    gift: Gift,
+    /// Optional. Unique identifier of the gift for the bot; for gifts received on behalf of business accounts only
+    owned_gift_id: Option(String),
+    /// Optional. Sender of the gift if it is a known user
+    sender_user: Option(User),
+    /// Date the gift was sent in Unix time
+    send_date: Int,
+    /// Optional. Text of the message that was added to the gift
+    text: Option(String),
+    /// Optional. Special entities that appear in the text
+    entities: Option(List(MessageEntity)),
+    /// Optional. True, if the sender and gift text are shown only to the gift receiver; otherwise, everyone will be able to see them
+    is_private: Option(Bool),
+    /// Optional. True, if the gift is displayed on the account's profile page; for gifts received on behalf of business accounts only
+    is_saved: Option(Bool),
+    /// Optional. True, if the gift can be upgraded to a unique gift; for gifts received on behalf of business accounts only
+    can_be_upgraded: Option(Bool),
+    /// Optional. True, if the gift was refunded and isn't available anymore
+    was_refunded: Option(Bool),
+    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars
+    convert_star_count: Option(Int),
+    /// Optional. Number of Telegram Stars that were paid by the sender for the ability to upgrade the gift
+    prepaid_upgrade_star_count: Option(Int),
+  )
+}
+
+/// **Official reference:** Describes a regular gift owned by a user or a chat.
+pub type OwnedGiftRegular {
+  OwnedGiftRegular(
+    /// Type of the gift, always “regular”
+    type_: String,
+    /// Information about the regular gift
+    gift: Gift,
+    /// Optional. Unique identifier of the gift for the bot; for gifts received on behalf of business accounts only
+    owned_gift_id: Option(String),
+    /// Optional. Sender of the gift if it is a known user
+    sender_user: Option(User),
+    /// Date the gift was sent in Unix time
+    send_date: Int,
+    /// Optional. Text of the message that was added to the gift
+    text: Option(String),
+    /// Optional. Special entities that appear in the text
+    entities: Option(List(MessageEntity)),
+    /// Optional. True, if the sender and gift text are shown only to the gift receiver; otherwise, everyone will be able to see them
+    is_private: Option(Bool),
+    /// Optional. True, if the gift is displayed on the account's profile page; for gifts received on behalf of business accounts only
+    is_saved: Option(Bool),
+    /// Optional. True, if the gift can be upgraded to a unique gift; for gifts received on behalf of business accounts only
+    can_be_upgraded: Option(Bool),
+    /// Optional. True, if the gift was refunded and isn't available anymore
+    was_refunded: Option(Bool),
+    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars
+    convert_star_count: Option(Int),
+    /// Optional. Number of Telegram Stars that were paid by the sender for the ability to upgrade the gift
+    prepaid_upgrade_star_count: Option(Int),
+  )
+}
+
+/// **Official reference:** Describes a unique gift received and owned by a user or a chat.
+pub type OwnedGiftUnique {
+  OwnedGiftUnique(
+    /// Type of the gift, always “unique”
+    type_: String,
+    /// Information about the unique gift
+    gift: UniqueGift,
+    /// Optional. Unique identifier of the received gift for the bot; for gifts received on behalf of business accounts only
+    owned_gift_id: Option(String),
+    /// Optional. Sender of the gift if it is a known user
+    sender_user: Option(User),
+    /// Date the gift was sent in Unix time
+    send_date: Int,
+    /// Optional. True, if the gift is displayed on the account's profile page; for gifts received on behalf of business accounts only
+    is_saved: Option(Bool),
+    /// Optional. True, if the gift can be transferred to another owner; for gifts received on behalf of business accounts only
+    can_be_transferred: Option(Bool),
+    /// Optional. Number of Telegram Stars that must be paid to transfer the gift; omitted if the bot cannot transfer the gift
+    transfer_star_count: Option(Int),
+  )
+}
+
+/// **Official reference:** Contains the list of gifts received and owned by a user or a chat.
+pub type OwnedGifts {
+  OwnedGifts(
+    /// The total number of gifts owned by the user or the chat
+    total_count: Int,
+    /// The list of gifts
+    gifts: List(OwnedGift),
+    /// Optional. Offset for the next request. If empty, then there are no more results
+    next_offset: Option(String),
+  )
+}
+
+/// **Official reference:** This object describes the types of gifts that can be gifted to a user or a chat.
+pub type AcceptedGiftTypes {
+  AcceptedGiftTypes(
+    /// True, if unlimited regular gifts are accepted
+    unlimited_gifts: Bool,
+    /// True, if limited regular gifts are accepted
+    limited_gifts: Bool,
+    /// True, if unique gifts or gifts that can be upgraded to unique for free are accepted
+    unique_gifts: Bool,
+    /// True, if a Telegram Premium subscription is accepted
+    premium_subscription: Bool,
+  )
+}
+
+/// **Official reference:** Describes an amount of Telegram Stars.
+pub type StarAmount {
+  StarAmount(
+    /// Integer amount of Telegram Stars, rounded to 0; can be negative
+    amount: Int,
+    /// Optional. The number of 1/1000000000 shares of Telegram Stars; from -999999999 to 999999999; can be negative if and only if amount is non-positive
+    nanostar_amount: Option(Int),
+  )
+}
+
 /// **Official reference:** This object represents a bot command.
 pub type BotCommand {
   BotCommand(
@@ -2577,6 +2808,28 @@ pub type InputPaidMediaVideo {
     duration: Option(Int),
     /// Optional. Pass True if the uploaded video is suitable for streaming
     supports_streaming: Option(Bool),
+  )
+}
+
+/// **Official reference:** A static profile photo in the .JPG format.
+pub type InputProfilePhotoStatic {
+  InputProfilePhotoStatic(
+    /// Type of the profile photo, must be static
+    type_: String,
+    /// The static profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    photo: String,
+  )
+}
+
+/// **Official reference:** An animated profile photo in the MPEG4 format.
+pub type InputProfilePhotoAnimated {
+  InputProfilePhotoAnimated(
+    /// Type of the profile photo, must be animated
+    type_: String,
+    /// The animated profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    animation: String,
+    /// Optional. Timestamp in seconds of the frame that will be used as the static profile photo. Defaults to 0.0.
+    main_frame_timestamp: Option(Float),
   )
 }
 
@@ -7375,6 +7628,318 @@ pub fn forum_topic_decoder() -> decode.Decoder(ForumTopic) {
   ))
 }
 
+pub fn gift_decoder() -> decode.Decoder(Gift) {
+  use id <- decode.field("id", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use star_count <- decode.field("star_count", decode.int)
+  use upgrade_star_count <- decode.field(
+    "upgrade_star_count",
+    decode.optional(decode.int),
+  )
+  use total_count <- decode.field("total_count", decode.optional(decode.int))
+  use remaining_count <- decode.field(
+    "remaining_count",
+    decode.optional(decode.int),
+  )
+  decode.success(Gift(
+    id: id,
+    sticker: sticker,
+    star_count: star_count,
+    upgrade_star_count: upgrade_star_count,
+    total_count: total_count,
+    remaining_count: remaining_count,
+  ))
+}
+
+pub fn gifts_decoder() -> decode.Decoder(Gifts) {
+  use gifts <- decode.field("gifts", decode.list(gift_decoder()))
+  decode.success(Gifts(gifts: gifts))
+}
+
+pub fn unique_gift_model_decoder() -> decode.Decoder(UniqueGiftModel) {
+  use name <- decode.field("name", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  decode.success(UniqueGiftModel(
+    name: name,
+    sticker: sticker,
+    rarity_per_mille: rarity_per_mille,
+  ))
+}
+
+pub fn unique_gift_symbol_decoder() -> decode.Decoder(UniqueGiftSymbol) {
+  use name <- decode.field("name", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  decode.success(UniqueGiftSymbol(
+    name: name,
+    sticker: sticker,
+    rarity_per_mille: rarity_per_mille,
+  ))
+}
+
+pub fn unique_gift_backdrop_colors_decoder() -> decode.Decoder(
+  UniqueGiftBackdropColors,
+) {
+  use center_color <- decode.field("center_color", decode.int)
+  use edge_color <- decode.field("edge_color", decode.int)
+  use symbol_color <- decode.field("symbol_color", decode.int)
+  use text_color <- decode.field("text_color", decode.int)
+  decode.success(UniqueGiftBackdropColors(
+    center_color: center_color,
+    edge_color: edge_color,
+    symbol_color: symbol_color,
+    text_color: text_color,
+  ))
+}
+
+pub fn unique_gift_backdrop_decoder() -> decode.Decoder(UniqueGiftBackdrop) {
+  use name <- decode.field("name", decode.string)
+  use colors <- decode.field("colors", unique_gift_backdrop_colors_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  decode.success(UniqueGiftBackdrop(
+    name: name,
+    colors: colors,
+    rarity_per_mille: rarity_per_mille,
+  ))
+}
+
+pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
+  use base_name <- decode.field("base_name", decode.string)
+  use name <- decode.field("name", decode.string)
+  use number <- decode.field("number", decode.int)
+  use model <- decode.field("model", unique_gift_model_decoder())
+  use symbol <- decode.field("symbol", unique_gift_symbol_decoder())
+  use backdrop <- decode.field("backdrop", unique_gift_backdrop_decoder())
+  decode.success(UniqueGift(
+    base_name: base_name,
+    name: name,
+    number: number,
+    model: model,
+    symbol: symbol,
+    backdrop: backdrop,
+  ))
+}
+
+pub fn gift_info_decoder() -> decode.Decoder(GiftInfo) {
+  use gift <- decode.field("gift", gift_decoder())
+  use owned_gift_id <- decode.field(
+    "owned_gift_id",
+    decode.optional(decode.string),
+  )
+  use convert_star_count <- decode.field(
+    "convert_star_count",
+    decode.optional(decode.int),
+  )
+  use prepaid_upgrade_star_count <- decode.field(
+    "prepaid_upgrade_star_count",
+    decode.optional(decode.int),
+  )
+  use can_be_upgraded <- decode.field(
+    "can_be_upgraded",
+    decode.optional(decode.bool),
+  )
+  use text <- decode.field("text", decode.optional(decode.string))
+  use entities <- decode.field(
+    "entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use is_private <- decode.field("is_private", decode.optional(decode.bool))
+  decode.success(GiftInfo(
+    gift: gift,
+    owned_gift_id: owned_gift_id,
+    convert_star_count: convert_star_count,
+    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+    can_be_upgraded: can_be_upgraded,
+    text: text,
+    entities: entities,
+    is_private: is_private,
+  ))
+}
+
+pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
+  use gift <- decode.field("gift", unique_gift_decoder())
+  use origin <- decode.field("origin", decode.string)
+  use owned_gift_id <- decode.field(
+    "owned_gift_id",
+    decode.optional(decode.string),
+  )
+  use transfer_star_count <- decode.field(
+    "transfer_star_count",
+    decode.optional(decode.int),
+  )
+  decode.success(UniqueGiftInfo(
+    gift: gift,
+    origin: origin,
+    owned_gift_id: owned_gift_id,
+    transfer_star_count: transfer_star_count,
+  ))
+}
+
+pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
+  use type_ <- decode.field("type_", decode.string)
+  use gift <- decode.field("gift", gift_decoder())
+  use owned_gift_id <- decode.field(
+    "owned_gift_id",
+    decode.optional(decode.string),
+  )
+  use sender_user <- decode.field(
+    "sender_user",
+    decode.optional(user_decoder()),
+  )
+  use send_date <- decode.field("send_date", decode.int)
+  use text <- decode.field("text", decode.optional(decode.string))
+  use entities <- decode.field(
+    "entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use is_private <- decode.field("is_private", decode.optional(decode.bool))
+  use is_saved <- decode.field("is_saved", decode.optional(decode.bool))
+  use can_be_upgraded <- decode.field(
+    "can_be_upgraded",
+    decode.optional(decode.bool),
+  )
+  use was_refunded <- decode.field("was_refunded", decode.optional(decode.bool))
+  use convert_star_count <- decode.field(
+    "convert_star_count",
+    decode.optional(decode.int),
+  )
+  use prepaid_upgrade_star_count <- decode.field(
+    "prepaid_upgrade_star_count",
+    decode.optional(decode.int),
+  )
+  decode.success(OwnedGift(
+    type_: type_,
+    gift: gift,
+    owned_gift_id: owned_gift_id,
+    sender_user: sender_user,
+    send_date: send_date,
+    text: text,
+    entities: entities,
+    is_private: is_private,
+    is_saved: is_saved,
+    can_be_upgraded: can_be_upgraded,
+    was_refunded: was_refunded,
+    convert_star_count: convert_star_count,
+    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+  ))
+}
+
+pub fn owned_gift_regular_decoder() -> decode.Decoder(OwnedGiftRegular) {
+  use type_ <- decode.field("type_", decode.string)
+  use gift <- decode.field("gift", gift_decoder())
+  use owned_gift_id <- decode.field(
+    "owned_gift_id",
+    decode.optional(decode.string),
+  )
+  use sender_user <- decode.field(
+    "sender_user",
+    decode.optional(user_decoder()),
+  )
+  use send_date <- decode.field("send_date", decode.int)
+  use text <- decode.field("text", decode.optional(decode.string))
+  use entities <- decode.field(
+    "entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use is_private <- decode.field("is_private", decode.optional(decode.bool))
+  use is_saved <- decode.field("is_saved", decode.optional(decode.bool))
+  use can_be_upgraded <- decode.field(
+    "can_be_upgraded",
+    decode.optional(decode.bool),
+  )
+  use was_refunded <- decode.field("was_refunded", decode.optional(decode.bool))
+  use convert_star_count <- decode.field(
+    "convert_star_count",
+    decode.optional(decode.int),
+  )
+  use prepaid_upgrade_star_count <- decode.field(
+    "prepaid_upgrade_star_count",
+    decode.optional(decode.int),
+  )
+  decode.success(OwnedGiftRegular(
+    type_: type_,
+    gift: gift,
+    owned_gift_id: owned_gift_id,
+    sender_user: sender_user,
+    send_date: send_date,
+    text: text,
+    entities: entities,
+    is_private: is_private,
+    is_saved: is_saved,
+    can_be_upgraded: can_be_upgraded,
+    was_refunded: was_refunded,
+    convert_star_count: convert_star_count,
+    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+  ))
+}
+
+pub fn owned_gift_unique_decoder() -> decode.Decoder(OwnedGiftUnique) {
+  use type_ <- decode.field("type_", decode.string)
+  use gift <- decode.field("gift", unique_gift_decoder())
+  use owned_gift_id <- decode.field(
+    "owned_gift_id",
+    decode.optional(decode.string),
+  )
+  use sender_user <- decode.field(
+    "sender_user",
+    decode.optional(user_decoder()),
+  )
+  use send_date <- decode.field("send_date", decode.int)
+  use is_saved <- decode.field("is_saved", decode.optional(decode.bool))
+  use can_be_transferred <- decode.field(
+    "can_be_transferred",
+    decode.optional(decode.bool),
+  )
+  use transfer_star_count <- decode.field(
+    "transfer_star_count",
+    decode.optional(decode.int),
+  )
+  decode.success(OwnedGiftUnique(
+    type_: type_,
+    gift: gift,
+    owned_gift_id: owned_gift_id,
+    sender_user: sender_user,
+    send_date: send_date,
+    is_saved: is_saved,
+    can_be_transferred: can_be_transferred,
+    transfer_star_count: transfer_star_count,
+  ))
+}
+
+pub fn owned_gifts_decoder() -> decode.Decoder(OwnedGifts) {
+  use total_count <- decode.field("total_count", decode.int)
+  use gifts <- decode.field("gifts", decode.list(owned_gift_decoder()))
+  use next_offset <- decode.field("next_offset", decode.optional(decode.string))
+  decode.success(OwnedGifts(
+    total_count: total_count,
+    gifts: gifts,
+    next_offset: next_offset,
+  ))
+}
+
+pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
+  use unlimited_gifts <- decode.field("unlimited_gifts", decode.bool)
+  use limited_gifts <- decode.field("limited_gifts", decode.bool)
+  use unique_gifts <- decode.field("unique_gifts", decode.bool)
+  use premium_subscription <- decode.field("premium_subscription", decode.bool)
+  decode.success(AcceptedGiftTypes(
+    unlimited_gifts: unlimited_gifts,
+    limited_gifts: limited_gifts,
+    unique_gifts: unique_gifts,
+    premium_subscription: premium_subscription,
+  ))
+}
+
+pub fn star_amount_decoder() -> decode.Decoder(StarAmount) {
+  use amount <- decode.field("amount", decode.int)
+  use nanostar_amount <- decode.field(
+    "nanostar_amount",
+    decode.optional(decode.int),
+  )
+  decode.success(StarAmount(amount: amount, nanostar_amount: nanostar_amount))
+}
+
 pub fn bot_command_decoder() -> decode.Decoder(BotCommand) {
   use command <- decode.field("command", decode.string)
   use description <- decode.field("description", decode.string)
@@ -8113,40 +8678,6 @@ pub fn input_sticker_decoder() -> decode.Decoder(InputSticker) {
     mask_position: mask_position,
     keywords: keywords,
   ))
-}
-
-pub fn gift_decoder() -> decode.Decoder(Gift) {
-  use id <- decode.field("id", decode.string)
-  use sticker <- decode.field("sticker", sticker_decoder())
-  use star_count <- decode.field("star_count", decode.int)
-  use upgrade_star_count <- decode.optional_field(
-    "upgrade_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use total_count <- decode.optional_field(
-    "total_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use remaining_count <- decode.optional_field(
-    "remaining_count",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Gift(
-    id: id,
-    sticker: sticker,
-    star_count: star_count,
-    upgrade_star_count: upgrade_star_count,
-    total_count: total_count,
-    remaining_count: remaining_count,
-  ))
-}
-
-pub fn gifts_decoder() -> decode.Decoder(Gifts) {
-  use gifts <- decode.field("gifts", decode.list(gift_decoder()))
-  decode.success(Gifts(gifts: gifts))
 }
 
 pub fn inline_query_decoder() -> decode.Decoder(InlineQuery) {
@@ -18445,6 +18976,130 @@ pub type DeleteChatPhotoParameters {
 pub fn encode_delete_chat_photo_parameters(
   params: DeleteChatPhotoParameters,
 ) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// SetChatTitleParameters ------------------------------------------------------------
+
+pub type SetChatTitleParameters {
+  SetChatTitleParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// New chat title, 1-128 characters
+    title: String,
+  )
+}
+
+pub fn encode_set_chat_title_parameters(params: SetChatTitleParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("title", json.string(params.title)),
+  ])
+}
+
+// SetChatDescriptionParameters ------------------------------------------------------------
+
+pub type SetChatDescriptionParameters {
+  SetChatDescriptionParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// New chat description, 0-255 characters
+    description: Option(String),
+  )
+}
+
+pub fn encode_set_chat_description_parameters(
+  params: SetChatDescriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("description", json.nullable(params.description, json.string)),
+  ])
+}
+
+// PinChatMessageParameters ------------------------------------------------------------
+
+pub type PinChatMessageParameters {
+  PinChatMessageParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Identifier of a message to pin
+    message_id: Int,
+    /// Unique identifier of the business connection on behalf of which the message will be pinned
+    business_connection_id: Option(String),
+    /// Pass True if it is not necessary to send a notification to all chat members about the new pinned message
+    disable_notification: Option(Bool),
+  )
+}
+
+pub fn encode_pin_chat_message_parameters(
+  params: PinChatMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+  ])
+}
+
+// UnpinChatMessageParameters ------------------------------------------------------------
+
+pub type UnpinChatMessageParameters {
+  UnpinChatMessageParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Identifier of the message to unpin. If not specified, the most recent pinned message (by sending date) will be unpinned.
+    message_id: Option(Int),
+    /// Unique identifier of the business connection on behalf of which the message will be unpinned
+    business_connection_id: Option(String),
+  )
+}
+
+pub fn encode_unpin_chat_message_parameters(
+  params: UnpinChatMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+  ])
+}
+
+// UnpinAllChatMessagesParameters ------------------------------------------------------------
+
+pub type UnpinAllChatMessagesParameters {
+  UnpinAllChatMessagesParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_unpin_all_chat_messages_parameters(
+  params: UnpinAllChatMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// LeaveChatParameters ------------------------------------------------------------
+
+pub type LeaveChatParameters {
+  LeaveChatParameters(
+    /// Unique identifier for the target chat or username of the target supergroup or channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_leave_chat_parameters(params: LeaveChatParameters) -> Json {
   json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
 }
 
