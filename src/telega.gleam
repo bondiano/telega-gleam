@@ -15,8 +15,8 @@ import telega/api
 import telega/bot.{
   type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
   type Handler, type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
-  HandleCallbackQuery, HandleCommand, HandleCommands, HandleHears, HandleText,
-  SessionSettings,
+  HandleCallbackQuery, HandleChatMember, HandleCommand, HandleCommands,
+  HandleHears, HandleMessage, HandleText, SessionSettings,
 }
 import telega/error
 import telega/model.{type Update, type User}
@@ -88,7 +88,7 @@ pub fn new(
 /// Handles all messages.
 pub fn handle_all(
   bot builder: TelegaBuilder(session, error),
-  handler handler: fn(Context(session, error)) ->
+  handler handler: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
 ) {
   TelegaBuilder(..builder, handlers: [HandleAll(handler), ..builder.handlers])
@@ -99,7 +99,7 @@ pub fn handle_all(
 /// See [conversation]
 pub fn wait_any(
   ctx ctx: Context(session, error),
-  continue continue: fn(Context(session, error)) ->
+  continue continue: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
 ) {
   bot.wait_handler(ctx, HandleAll(continue))
@@ -199,6 +199,25 @@ pub fn wait_hears(
   bot.wait_handler(ctx, HandleHears(hears, continue))
 }
 
+/// Handles any message.
+pub fn handle_message(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.Message) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [
+    HandleMessage(handler:),
+    ..builder.handlers
+  ])
+}
+
+/// Stops bot message handling from current chat and waits for any message.
+///
+/// See [conversation]
+pub fn wait_message(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandleMessage(continue))
+}
+
 /// Handles messages from inline keyboard callback.
 ///
 /// See [conversation]
@@ -233,6 +252,18 @@ pub fn with_catch_handler(
   catch_handler catch_handler: CatchHandler(session, error),
 ) {
   TelegaBuilder(..builder, catch_handler: Some(catch_handler))
+}
+
+/// Handles chat member update (when user joins/leaves a group). The bot must be an administrator in the chat and must explicitly specify "chat_member" in the list of `allowed_updates` to receive these updates.
+pub fn handle_chat_member(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.ChatMemberUpdated) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [
+    HandleChatMember(handler),
+    ..builder.handlers
+  ])
 }
 
 /// Log the message and error message if the handler fails.

@@ -2346,6 +2346,40 @@ pub type UserChatBoosts {
   )
 }
 
+/// **Official reference:** Represents the rights of a business bot.
+pub type BusinessBotRights {
+  BusinessBotRights(
+    /// Optional. True, if the bot can send and edit messages in the private chats that had incoming messages in the last 24 hours
+    can_reply: Option(Bool),
+    /// Optional. True, if the bot can mark incoming private messages as read
+    can_read_messages: Option(Bool),
+    /// Optional. True, if the bot can delete messages sent by the bot
+    can_delete_outgoing_messages: Option(Bool),
+    /// Optional. True, if the bot can delete all private messages in managed chats
+    can_delete_all_messages: Option(Bool),
+    /// Optional. True, if the bot can edit the first and last name of the business account
+    can_edit_name: Option(Bool),
+    /// Optional. True, if the bot can edit the bio of the business account
+    can_edit_bio: Option(Bool),
+    /// Optional. True, if the bot can edit the profile photo of the business account
+    can_edit_profile_photo: Option(Bool),
+    /// Optional. True, if the bot can edit the username of the business account
+    can_edit_username: Option(Bool),
+    /// Optional. True, if the bot can change the privacy settings pertaining to gifts for the business account
+    can_change_gift_settings: Option(Bool),
+    /// Optional. True, if the bot can view gifts and the amount of Telegram Stars owned by the business account
+    can_view_gifts_and_stars: Option(Bool),
+    /// Optional. True, if the bot can convert regular gifts owned by the business account to Telegram Stars
+    can_convert_gifts_to_stars: Option(Bool),
+    /// Optional. True, if the bot can transfer and upgrade gifts owned by the business account
+    can_transfer_and_upgrade_gifts: Option(Bool),
+    /// Optional. True, if the bot can transfer Telegram Stars received by the business account to its own account, or use them to upgrade and transfer gifts
+    can_transfer_stars: Option(Bool),
+    /// Optional. True, if the bot can post, edit and delete stories on behalf of the business account
+    can_manage_stories: Option(Bool),
+  )
+}
+
 /// **Official reference:** Describes the connection of the bot with a business account.
 pub type BusinessConnection {
   BusinessConnection(
@@ -2357,8 +2391,8 @@ pub type BusinessConnection {
     user_chat_id: Int,
     /// Date the connection was established in Unix time
     date: Int,
-    /// True, if the bot can act on behalf of the business account in chats that were active in the last 24 hours
-    can_reply: Bool,
+    /// Optional. Rights of the business bot
+    rights: Option(BusinessBotRights),
     /// True, if the connection is active
     is_enabled: Bool,
   )
@@ -7519,19 +7553,91 @@ pub fn user_chat_boosts_decoder() -> decode.Decoder(UserChatBoosts) {
   decode.success(UserChatBoosts(boosts: boosts))
 }
 
+pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
+  use can_reply <- decode.field("can_reply", decode.optional(decode.bool))
+  use can_read_messages <- decode.field(
+    "can_read_messages",
+    decode.optional(decode.bool),
+  )
+  use can_delete_outgoing_messages <- decode.field(
+    "can_delete_outgoing_messages",
+    decode.optional(decode.bool),
+  )
+  use can_delete_all_messages <- decode.field(
+    "can_delete_all_messages",
+    decode.optional(decode.bool),
+  )
+  use can_edit_name <- decode.field(
+    "can_edit_name",
+    decode.optional(decode.bool),
+  )
+  use can_edit_bio <- decode.field("can_edit_bio", decode.optional(decode.bool))
+  use can_edit_profile_photo <- decode.field(
+    "can_edit_profile_photo",
+    decode.optional(decode.bool),
+  )
+  use can_edit_username <- decode.field(
+    "can_edit_username",
+    decode.optional(decode.bool),
+  )
+  use can_change_gift_settings <- decode.field(
+    "can_change_gift_settings",
+    decode.optional(decode.bool),
+  )
+  use can_view_gifts_and_stars <- decode.field(
+    "can_view_gifts_and_stars",
+    decode.optional(decode.bool),
+  )
+  use can_convert_gifts_to_stars <- decode.field(
+    "can_convert_gifts_to_stars",
+    decode.optional(decode.bool),
+  )
+  use can_transfer_and_upgrade_gifts <- decode.field(
+    "can_transfer_and_upgrade_gifts",
+    decode.optional(decode.bool),
+  )
+  use can_transfer_stars <- decode.field(
+    "can_transfer_stars",
+    decode.optional(decode.bool),
+  )
+  use can_manage_stories <- decode.field(
+    "can_manage_stories",
+    decode.optional(decode.bool),
+  )
+  decode.success(BusinessBotRights(
+    can_reply: can_reply,
+    can_read_messages: can_read_messages,
+    can_delete_outgoing_messages: can_delete_outgoing_messages,
+    can_delete_all_messages: can_delete_all_messages,
+    can_edit_name: can_edit_name,
+    can_edit_bio: can_edit_bio,
+    can_edit_profile_photo: can_edit_profile_photo,
+    can_edit_username: can_edit_username,
+    can_change_gift_settings: can_change_gift_settings,
+    can_view_gifts_and_stars: can_view_gifts_and_stars,
+    can_convert_gifts_to_stars: can_convert_gifts_to_stars,
+    can_transfer_and_upgrade_gifts: can_transfer_and_upgrade_gifts,
+    can_transfer_stars: can_transfer_stars,
+    can_manage_stories: can_manage_stories,
+  ))
+}
+
 pub fn business_connection_decoder() -> decode.Decoder(BusinessConnection) {
   use id <- decode.field("id", decode.string)
   use user <- decode.field("user", user_decoder())
   use user_chat_id <- decode.field("user_chat_id", decode.int)
   use date <- decode.field("date", decode.int)
-  use can_reply <- decode.field("can_reply", decode.bool)
+  use rights <- decode.field(
+    "rights",
+    decode.optional(business_bot_rights_decoder()),
+  )
   use is_enabled <- decode.field("is_enabled", decode.bool)
   decode.success(BusinessConnection(
     id: id,
     user: user,
     user_chat_id: user_chat_id,
     date: date,
-    can_reply: can_reply,
+    rights: rights,
     is_enabled: is_enabled,
   ))
 }
@@ -12512,6 +12618,69 @@ pub fn encode_user_chat_boosts(user_chat_boosts: UserChatBoosts) -> Json {
   ])
 }
 
+pub fn encode_business_bot_rights(
+  business_bot_rights: BusinessBotRights,
+) -> Json {
+  json_object_filter_nulls([
+    #("can_reply", json.nullable(business_bot_rights.can_reply, json.bool)),
+    #(
+      "can_read_messages",
+      json.nullable(business_bot_rights.can_read_messages, json.bool),
+    ),
+    #(
+      "can_delete_outgoing_messages",
+      json.nullable(business_bot_rights.can_delete_outgoing_messages, json.bool),
+    ),
+    #(
+      "can_delete_all_messages",
+      json.nullable(business_bot_rights.can_delete_all_messages, json.bool),
+    ),
+    #(
+      "can_edit_name",
+      json.nullable(business_bot_rights.can_edit_name, json.bool),
+    ),
+    #(
+      "can_edit_bio",
+      json.nullable(business_bot_rights.can_edit_bio, json.bool),
+    ),
+    #(
+      "can_edit_profile_photo",
+      json.nullable(business_bot_rights.can_edit_profile_photo, json.bool),
+    ),
+    #(
+      "can_edit_username",
+      json.nullable(business_bot_rights.can_edit_username, json.bool),
+    ),
+    #(
+      "can_change_gift_settings",
+      json.nullable(business_bot_rights.can_change_gift_settings, json.bool),
+    ),
+    #(
+      "can_view_gifts_and_stars",
+      json.nullable(business_bot_rights.can_view_gifts_and_stars, json.bool),
+    ),
+    #(
+      "can_convert_gifts_to_stars",
+      json.nullable(business_bot_rights.can_convert_gifts_to_stars, json.bool),
+    ),
+    #(
+      "can_transfer_and_upgrade_gifts",
+      json.nullable(
+        business_bot_rights.can_transfer_and_upgrade_gifts,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_transfer_stars",
+      json.nullable(business_bot_rights.can_transfer_stars, json.bool),
+    ),
+    #(
+      "can_manage_stories",
+      json.nullable(business_bot_rights.can_manage_stories, json.bool),
+    ),
+  ])
+}
+
 pub fn encode_business_connection(
   business_connection: BusinessConnection,
 ) -> Json {
@@ -12520,7 +12689,10 @@ pub fn encode_business_connection(
     #("user", encode_user(business_connection.user)),
     #("user_chat_id", json.int(business_connection.user_chat_id)),
     #("date", json.int(business_connection.date)),
-    #("can_reply", json.bool(business_connection.can_reply)),
+    #(
+      "rights",
+      json.nullable(business_connection.rights, encode_business_bot_rights),
+    ),
     #("is_enabled", json.bool(business_connection.is_enabled)),
   ])
 }

@@ -15,7 +15,8 @@ import telega/internal/registry.{type RegistrySubject}
 import telega/error
 import telega/model.{type User}
 import telega/update.{
-  type Command, type Update, CallbackQueryUpdate, CommandUpdate, TextUpdate,
+  type Command, type Update, CallbackQueryUpdate, ChatMemberUpdate,
+  CommandUpdate, MessageUpdate, TextUpdate,
 }
 
 /// Stores information about running bot instance
@@ -314,12 +315,73 @@ fn new_context(
   )
 }
 
+// Session --------------------------------------------------------------------------
+
+pub type SessionSettings(session, error) {
+  SessionSettings(
+    // Calls after all handlers to persist the session.
+    persist_session: fn(String, session) -> Result(session, error),
+    // Calls on initialization of the chat instance to get the session.
+    // Returns `None` if no session is found.
+    // **It will crash starting session process if error is returned.**
+    get_session: fn(String) -> Result(Option(session), error),
+    // Calls on initialization of the chat instance if no session is found.
+    default_session: fn() -> session,
+  )
+}
+
+pub fn next_session(ctx ctx, session session) {
+  Ok(Context(..ctx, session:))
+}
+
+fn build_session_key(update: Update) {
+  int.to_string(update.chat_id) <> ":" <> int.to_string(update.from_id)
+}
+
+pub fn get_session(
+  session_settings: SessionSettings(session, error),
+  update: Update,
+) -> Result(Option(session), error) {
+  update
+  |> build_session_key
+  |> session_settings.get_session
+}
+
+// User should use methods from `telega` module.
+@internal
+pub fn handle_update(bot_subject bot_subject, update update) {
+  process.try_call_forever(bot_subject, HandleUpdateBotMessage(update, _))
+  |> result.map_error(fn(e) { error.BotHandleUpdateError(string.inspect(e)) })
+}
+
+// Hears --------------------------------------------------------------------------
+
+pub type CallbackQueryFilter {
+  CallbackQueryFilter(re: Regexp)
+}
+
+pub type Hears {
+  HearText(text: String)
+  HearTexts(texts: List(String))
+  HearRegex(regex: Regexp)
+  HearRegexes(regexes: List(Regexp))
+}
+
+fn check_hears(text, hear) -> Bool {
+  case hear {
+    HearText(str) -> text == str
+    HearTexts(strings) -> list.contains(strings, text)
+    HearRegex(re) -> regexp.check(re, text)
+    HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
+  }
+}
+
 // Handler ------------------------------------------------------------------------
 
 pub type Handler(session, error) {
   /// Handle all messages.
   HandleAll(
-    handler: fn(Context(session, error)) ->
+    handler: fn(Context(session, error), Update) ->
       Result(Context(session, error), error),
   )
   /// Handle a specific command.
@@ -345,10 +407,20 @@ pub type Handler(session, error) {
     handler: fn(Context(session, error), String) ->
       Result(Context(session, error), error),
   )
+  /// Handle any message.
+  HandleMessage(
+    handler: fn(Context(session, error), model.Message) ->
+      Result(Context(session, error), error),
+  )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
     handler: fn(Context(session, error), String, String) ->
+      Result(Context(session, error), error),
+  )
+  /// Handle chat member update (when user joins/leaves a group). The bot must be an administrator in the chat and must explicitly specify "chat_member" in the list of `allowed_updates` to receive these updates.
+  HandleChatMember(
+    handler: fn(Context(session, error), model.ChatMemberUpdated) ->
       Result(Context(session, error), error),
   )
 }
@@ -388,7 +460,7 @@ pub fn wait_handler(ctx: Context(session, error), handler) {
 fn do_handle(context context, update update, handler handler) {
   // We already filtered updates and receives only valid handlers
   case handler, update {
-    HandleAll(handler:), _ -> context |> handler |> Some
+    HandleAll(handler:), _ -> context |> handler(update) |> Some
     HandleText(handler:), TextUpdate(text: text, ..) ->
       context |> handler(text) |> Some
     HandleHears(handler:, ..), TextUpdate(text: text, ..) ->
@@ -401,6 +473,10 @@ fn do_handle(context context, update update, handler handler) {
       use data <- option.map(query.data)
       handler(context, data, query.id)
     }
+    HandleMessage(handler:), MessageUpdate(message:, ..) ->
+      context |> handler(message) |> Some
+    HandleChatMember(handler:), ChatMemberUpdate(chat_member_updated:, ..) ->
+      context |> handler(chat_member_updated) |> Some
     _, _ -> None
   }
 }
@@ -428,65 +504,4 @@ fn loop_handlers(
       }
     [] -> chat.session_settings.persist_session(chat.key, chat.session)
   }
-}
-
-// Hears --------------------------------------------------------------------------
-
-pub type CallbackQueryFilter {
-  CallbackQueryFilter(re: Regexp)
-}
-
-pub type Hears {
-  HearText(text: String)
-  HearTexts(texts: List(String))
-  HearRegex(regex: Regexp)
-  HearRegexes(regexes: List(Regexp))
-}
-
-fn check_hears(text, hear) -> Bool {
-  case hear {
-    HearText(str) -> text == str
-    HearTexts(strings) -> list.contains(strings, text)
-    HearRegex(re) -> regexp.check(re, text)
-    HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
-  }
-}
-
-// Session --------------------------------------------------------------------------
-
-pub type SessionSettings(session, error) {
-  SessionSettings(
-    // Calls after all handlers to persist the session.
-    persist_session: fn(String, session) -> Result(session, error),
-    // Calls on initialization of the chat instance to get the session.
-    // Returns `None` if no session is found.
-    // **It will crash starting session process if error is returned.**
-    get_session: fn(String) -> Result(Option(session), error),
-    // Calls on initialization of the chat instance if no session is found.
-    default_session: fn() -> session,
-  )
-}
-
-pub fn next_session(ctx ctx, session session) {
-  Ok(Context(..ctx, session:))
-}
-
-fn build_session_key(update: Update) {
-  int.to_string(update.chat_id) <> ":" <> int.to_string(update.from_id)
-}
-
-pub fn get_session(
-  session_settings: SessionSettings(session, error),
-  update: Update,
-) -> Result(Option(session), error) {
-  update
-  |> build_session_key
-  |> session_settings.get_session
-}
-
-// User should use methods from `telega` module.
-@internal
-pub fn handle_update(bot_subject bot_subject, update update) {
-  process.try_call_forever(bot_subject, HandleUpdateBotMessage(update, _))
-  |> result.map_error(fn(e) { error.BotHandleUpdateError(string.inspect(e)) })
 }

@@ -1,6 +1,5 @@
 import gleam/erlang/process
 import gleam/option.{None}
-import gleam/result
 import mist
 import telega
 import telega/adapters/wisp as telega_wisp
@@ -14,13 +13,13 @@ fn handle_request(bot, req) {
   wisp.not_found()
 }
 
-fn echo_handler(ctx) {
+fn echo_handler(ctx, update) {
   use <- telega.log_context(ctx, "echo")
-  use _ <- result.try(case ctx.update {
+  let assert Ok(_) = case update {
     TextUpdate(text:, ..) -> reply.with_text(ctx, text)
     CommandUpdate(command:, ..) -> reply.with_text(ctx, command.text)
     _ -> panic as "No text message"
-  })
+  }
   Ok(ctx)
 }
 
