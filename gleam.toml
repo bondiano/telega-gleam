@@ -8,6 +8,12 @@ links = [
     { title = "Examples", href = "https://github.com/bondiano/telega-gleam/tree/master/examples" },
 ]
 
+[documentation]
+pages = [
+    { title = " ", path = "#", source = "" },
+    { title = "Conversation", path="docs/conversation.html", source="docs/conversation.md" },
+]
+
 gleam = ">= 1.9.1"
 target = "erlang"
 

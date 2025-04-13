@@ -17,7 +17,7 @@ import telega/bot.{
   type Handler, type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
   HandleAudio, HandleCallbackQuery, HandleChatMember, HandleCommand,
   HandleCommands, HandleHears, HandleMessage, HandlePhotos, HandleText,
-  HandleVideo, HandleVoice, SessionSettings,
+  HandleVideo, HandleVoice, HandleWebAppData, SessionSettings,
 }
 import telega/error
 import telega/model.{type Update, type User}
@@ -97,7 +97,7 @@ pub fn handle_all(
 
 /// Stops bot message handling from current chat and waits for any message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_any(
   ctx ctx: Context(session, error),
   continue continue: fn(Context(session, error), update.Update) ->
@@ -121,7 +121,7 @@ pub fn handle_command(
 
 /// Stops bot message handling from current chat and waits for a specific command.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_command(
   ctx ctx: Context(session, error),
   command command: String,
@@ -146,7 +146,7 @@ pub fn handle_commands(
 
 /// Stops bot message handling from current chat and waits for a specific command.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_commands(
   ctx ctx: Context(session, error),
   commands commands: List(String),
@@ -167,7 +167,7 @@ pub fn handle_text(
 
 /// Stops bot message handling from current chat and waits for a text message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_text(
   ctx ctx: Context(session, error),
   continue continue: fn(Context(session, error), String) ->
@@ -191,7 +191,7 @@ pub fn handle_hears(
 
 /// Stops bot message handling from current chat and waits for a message that matches the given `Hears`.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_hears(
   ctx ctx: Context(session, error),
   hears hears: Hears,
@@ -214,14 +214,14 @@ pub fn handle_message(
 
 /// Stops bot message handling from current chat and waits for any message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_message(ctx ctx: Context(session, error), continue continue) {
   bot.wait_handler(ctx, HandleMessage(continue))
 }
 
 /// Handles messages from inline keyboard callback.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn handle_callback_query(
   bot builder: TelegaBuilder(session, error),
   filter filter: CallbackQueryFilter,
@@ -235,7 +235,7 @@ pub fn handle_callback_query(
 
 /// Wait for a callback query and continue with the given function.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_callback_query(
   ctx ctx: Context(session, error),
   filter filter: CallbackQueryFilter,
@@ -255,7 +255,7 @@ pub fn handle_voice(
 
 /// Stops bot message handling from current chat and waits for a voice message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_voice(ctx ctx: Context(session, error), continue continue) {
   bot.wait_handler(ctx, HandleVoice(continue))
 }
@@ -271,7 +271,7 @@ pub fn handle_audio(
 
 /// Stops bot message handling from current chat and waits for an audio message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_audio(ctx ctx: Context(session, error), continue continue) {
   bot.wait_handler(ctx, HandleAudio(continue))
 }
@@ -287,7 +287,7 @@ pub fn handle_video(
 
 /// Stops bot message handling from current chat and waits for a video message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_video(ctx ctx: Context(session, error), continue continue) {
   bot.wait_handler(ctx, HandleVideo(continue))
 }
@@ -303,9 +303,28 @@ pub fn handle_photos(
 
 /// Stops bot message handling from current chat and waits for a photo message.
 ///
-/// See [conversation]
+/// See [conversation](/docs/conversation)
 pub fn wait_photos(ctx ctx: Context(session, error), continue continue) {
   bot.wait_handler(ctx, HandlePhotos(continue))
+}
+
+/// Handles web app data messages.
+pub fn handle_web_app_data(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.WebAppData) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [
+    HandleWebAppData(handler),
+    ..builder.handlers
+  ])
+}
+
+/// Stops bot message handling from current chat and waits for a web app data message.
+///
+/// See [conversation](/docs/conversation)
+pub fn wait_web_app_data(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandleWebAppData(continue))
 }
 
 /// Set a catch handler for all handlers.
@@ -463,7 +482,7 @@ pub fn init(builder: TelegaBuilder(session, error)) {
   use registry_subject <- result.try(registry.start())
 
   let catch_handler =
-    option.lazy_unwrap(builder.catch_handler, fn() { fn(_, _) { Ok(Nil) } })
+    option.lazy_unwrap(builder.catch_handler, fn() { nil_catch_handler })
 
   use bot_subject <- result.try(bot.start(
     bot_info:,
@@ -475,6 +494,10 @@ pub fn init(builder: TelegaBuilder(session, error)) {
   ))
 
   Ok(Telega(bot_info:, bot_subject:, config: builder.config))
+}
+
+fn nil_catch_handler(_, _) {
+  Ok(Nil)
 }
 
 /// Handle an update from the Telegram API.

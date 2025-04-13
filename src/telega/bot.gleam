@@ -17,6 +17,7 @@ import telega/model.{type User}
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
   CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
+  WebAppUpdate,
 }
 
 /// Stores information about running bot instance
@@ -432,6 +433,11 @@ pub type Handler(session, error) {
     handler: fn(Context(session, error), List(model.PhotoSize)) ->
       Result(Context(session, error), error),
   )
+  /// Handle web app data messages.
+  HandleWebAppData(
+    handler: fn(Context(session, error), model.WebAppData) ->
+      Result(Context(session, error), error),
+  )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
@@ -503,6 +509,8 @@ fn do_handle(context context, update update, handler handler) {
       context |> handler(audio) |> Some
     HandleVideo(handler:), VideoUpdate(video:, ..) ->
       context |> handler(video) |> Some
+    HandleWebAppData(handler:), WebAppUpdate(web_app_data:, ..) ->
+      context |> handler(web_app_data) |> Some
     _, _ -> None
   }
 }

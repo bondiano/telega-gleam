@@ -15,7 +15,7 @@ import telega/model.{
   type Message, type MessageEntity, type MessageReactionCountUpdated,
   type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
   type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
-  type Update as ModelUpdate, type Video, type Voice,
+  type Update as ModelUpdate, type Video, type Voice, type WebAppData,
 }
 
 /// Messages represent the data that the bot receives from the Telegram API.
@@ -59,6 +59,13 @@ pub type Update {
     from_id: Int,
     chat_id: Int,
     voice: Voice,
+    message: Message,
+    raw: ModelUpdate,
+  )
+  WebAppUpdate(
+    from_id: Int,
+    chat_id: Int,
+    web_app_data: WebAppData,
     message: Message,
     raw: ModelUpdate,
   )
@@ -232,6 +239,7 @@ pub fn raw_to_update(raw_update: ModelUpdate) {
   use <- try_decode_video_message(raw_update)
   use <- try_decode_audio_message(raw_update)
   use <- try_decode_voice_message(raw_update)
+  use <- try_decode_web_app_data(raw_update)
 
   // Message is the most common update type, so we decode it last
   use <- try_decode_message(raw_update)
@@ -257,6 +265,8 @@ pub fn to_string(update: Update) {
       "audio " <> audio.file_id <> " from " <> int.to_string(from_id)
     VoiceUpdate(voice:, from_id:, ..) ->
       "voice " <> voice.file_id <> " from " <> int.to_string(from_id)
+    WebAppUpdate(web_app_data:, from_id:, ..) ->
+      "web app " <> web_app_data.data <> " from " <> int.to_string(from_id)
     CallbackQueryUpdate(query:, from_id:, ..) ->
       "callback query "
       <> option.unwrap(query.data, "no data")
@@ -433,6 +443,18 @@ fn try_decode_voice_message(raw: ModelUpdate, on_none) {
   }
 }
 
+fn try_decode_web_app_data(raw: ModelUpdate, on_none) {
+  case raw.message {
+    Some(message) ->
+      case message.web_app_data {
+        Some(web_app_data) ->
+          new_web_app_data_update(raw, message, web_app_data)
+        None -> on_none()
+      }
+    None -> on_none()
+  }
+}
+
 fn try_decode_edited_message(raw: ModelUpdate, on_none) {
   case raw.edited_message {
     Some(edited_message) -> new_edited_message_update(raw, edited_message)
@@ -542,6 +564,23 @@ fn new_voice_update(raw: ModelUpdate, message: Message, voice: Voice) {
   VoiceUpdate(
     raw:,
     voice:,
+    message:,
+    from_id: case message.from {
+      Some(user) -> user.id
+      None -> message.chat.id
+    },
+    chat_id: message.chat.id,
+  )
+}
+
+fn new_web_app_data_update(
+  raw: ModelUpdate,
+  message: Message,
+  web_app_data: WebAppData,
+) {
+  WebAppUpdate(
+    raw:,
+    web_app_data:,
     message:,
     from_id: case message.from {
       Some(user) -> user.id
