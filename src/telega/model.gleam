@@ -19212,8 +19212,8 @@ pub fn int_or_string_decoder() -> decode.Decoder(IntOrString) {
 
 pub fn encode_int_or_string(value: IntOrString) -> Json {
   case value {
-    Int(value) -> json.int(value)
-    Str(value) -> json.string(value)
+    Int(value:) -> json.int(value)
+    Str(value:) -> json.string(value)
   }
 }
 

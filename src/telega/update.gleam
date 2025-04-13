@@ -9,12 +9,13 @@ import gleam/string
 
 import telega/error
 import telega/model.{
-  type BusinessConnection, type BusinessMessagesDeleted, type CallbackQuery,
-  type ChatBoostRemoved, type ChatJoinRequest, type ChatMemberUpdated,
-  type ChosenInlineResult, type InlineQuery, type Message, type MessageEntity,
-  type MessageReactionCountUpdated, type MessageReactionUpdated,
-  type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
-  type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
+  type Audio, type BusinessConnection, type BusinessMessagesDeleted,
+  type CallbackQuery, type ChatBoostRemoved, type ChatJoinRequest,
+  type ChatMemberUpdated, type ChosenInlineResult, type InlineQuery,
+  type Message, type MessageEntity, type MessageReactionCountUpdated,
+  type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
+  type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
+  type Update as ModelUpdate, type Video, type Voice,
 }
 
 /// Messages represent the data that the bot receives from the Telegram API.
@@ -37,6 +38,28 @@ pub type Update {
     from_id: Int,
     chat_id: Int,
     photos: List(PhotoSize),
+    message: Message,
+    raw: ModelUpdate,
+  )
+  VideoUpdate(
+    from_id: Int,
+    chat_id: Int,
+    video: Video,
+    message: Message,
+    raw: ModelUpdate,
+  )
+  AudioUpdate(
+    from_id: Int,
+    chat_id: Int,
+    audio: Audio,
+    message: Message,
+    raw: ModelUpdate,
+  )
+  VoiceUpdate(
+    from_id: Int,
+    chat_id: Int,
+    voice: Voice,
+    message: Message,
     raw: ModelUpdate,
   )
   MessageUpdate(from_id: Int, chat_id: Int, message: Message, raw: ModelUpdate)
@@ -206,6 +229,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) {
   use <- try_decode_removed_chat_boost(raw_update)
 
   use <- try_decode_photo_message(raw_update)
+  use <- try_decode_video_message(raw_update)
+  use <- try_decode_audio_message(raw_update)
+  use <- try_decode_voice_message(raw_update)
+
   // Message is the most common update type, so we decode it last
   use <- try_decode_message(raw_update)
 
@@ -224,6 +251,12 @@ pub fn to_string(update: Update) {
       <> " from "
       <> int.to_string(from_id)
     PhotoUpdate(from_id:, ..) -> "photo from " <> int.to_string(from_id)
+    VideoUpdate(video:, from_id:, ..) ->
+      "video " <> video.file_id <> " from " <> int.to_string(from_id)
+    AudioUpdate(audio:, from_id:, ..) ->
+      "audio " <> audio.file_id <> " from " <> int.to_string(from_id)
+    VoiceUpdate(voice:, from_id:, ..) ->
+      "voice " <> voice.file_id <> " from " <> int.to_string(from_id)
     CallbackQueryUpdate(query:, from_id:, ..) ->
       "callback query "
       <> option.unwrap(query.data, "no data")
@@ -367,6 +400,39 @@ fn try_decode_photo_message(raw: ModelUpdate, on_none) {
   }
 }
 
+fn try_decode_video_message(raw: ModelUpdate, on_none) {
+  case raw.message {
+    Some(message) ->
+      case message.video {
+        Some(video) -> new_video_update(raw, message, video)
+        None -> on_none()
+      }
+    None -> on_none()
+  }
+}
+
+fn try_decode_audio_message(raw: ModelUpdate, on_none) {
+  case raw.message {
+    Some(message) ->
+      case message.audio {
+        Some(audio) -> new_audio_update(raw, message, audio)
+        None -> on_none()
+      }
+    None -> on_none()
+  }
+}
+
+fn try_decode_voice_message(raw: ModelUpdate, on_none) {
+  case raw.message {
+    Some(message) ->
+      case message.voice {
+        Some(voice) -> new_voice_update(raw, message, voice)
+        None -> on_none()
+      }
+    None -> on_none()
+  }
+}
+
 fn try_decode_edited_message(raw: ModelUpdate, on_none) {
   case raw.edited_message {
     Some(edited_message) -> new_edited_message_update(raw, edited_message)
@@ -437,6 +503,46 @@ fn new_photo_update(raw: ModelUpdate, message: Message, photos: List(PhotoSize))
   PhotoUpdate(
     raw:,
     photos:,
+    message:,
+    from_id: case message.from {
+      Some(user) -> user.id
+      None -> message.chat.id
+    },
+    chat_id: message.chat.id,
+  )
+}
+
+fn new_video_update(raw: ModelUpdate, message: Message, video: Video) {
+  VideoUpdate(
+    raw:,
+    video:,
+    message:,
+    from_id: case message.from {
+      Some(user) -> user.id
+      None -> message.chat.id
+    },
+    chat_id: message.chat.id,
+  )
+}
+
+fn new_audio_update(raw: ModelUpdate, message: Message, audio: Audio) {
+  AudioUpdate(
+    raw:,
+    audio:,
+    message:,
+    from_id: case message.from {
+      Some(user) -> user.id
+      None -> message.chat.id
+    },
+    chat_id: message.chat.id,
+  )
+}
+
+fn new_voice_update(raw: ModelUpdate, message: Message, voice: Voice) {
+  VoiceUpdate(
+    raw:,
+    voice:,
+    message:,
     from_id: case message.from {
       Some(user) -> user.id
       None -> message.chat.id

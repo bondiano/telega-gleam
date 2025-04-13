@@ -15,8 +15,8 @@ import telega/internal/registry.{type RegistrySubject}
 import telega/error
 import telega/model.{type User}
 import telega/update.{
-  type Command, type Update, CallbackQueryUpdate, ChatMemberUpdate,
-  CommandUpdate, MessageUpdate, TextUpdate,
+  type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
+  CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
 }
 
 /// Stores information about running bot instance
@@ -412,6 +412,26 @@ pub type Handler(session, error) {
     handler: fn(Context(session, error), model.Message) ->
       Result(Context(session, error), error),
   )
+  /// Handle voice messages.
+  HandleVoice(
+    handler: fn(Context(session, error), model.Voice) ->
+      Result(Context(session, error), error),
+  )
+  /// Handle audio messages.
+  HandleAudio(
+    handler: fn(Context(session, error), model.Audio) ->
+      Result(Context(session, error), error),
+  )
+  /// Handle video messages.
+  HandleVideo(
+    handler: fn(Context(session, error), model.Video) ->
+      Result(Context(session, error), error),
+  )
+  /// Handle photo messages.
+  HandlePhotos(
+    handler: fn(Context(session, error), List(model.PhotoSize)) ->
+      Result(Context(session, error), error),
+  )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
@@ -477,6 +497,12 @@ fn do_handle(context context, update update, handler handler) {
       context |> handler(message) |> Some
     HandleChatMember(handler:), ChatMemberUpdate(chat_member_updated:, ..) ->
       context |> handler(chat_member_updated) |> Some
+    HandleVoice(handler:), VoiceUpdate(voice:, ..) ->
+      context |> handler(voice) |> Some
+    HandleAudio(handler:), AudioUpdate(audio:, ..) ->
+      context |> handler(audio) |> Some
+    HandleVideo(handler:), VideoUpdate(video:, ..) ->
+      context |> handler(video) |> Some
     _, _ -> None
   }
 }

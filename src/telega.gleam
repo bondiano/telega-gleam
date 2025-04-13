@@ -15,8 +15,9 @@ import telega/api
 import telega/bot.{
   type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
   type Handler, type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
-  HandleCallbackQuery, HandleChatMember, HandleCommand, HandleCommands,
-  HandleHears, HandleMessage, HandleText, SessionSettings,
+  HandleAudio, HandleCallbackQuery, HandleChatMember, HandleCommand,
+  HandleCommands, HandleHears, HandleMessage, HandlePhotos, HandleText,
+  HandleVideo, HandleVoice, SessionSettings,
 }
 import telega/error
 import telega/model.{type Update, type User}
@@ -241,6 +242,70 @@ pub fn wait_callback_query(
   continue continue,
 ) {
   bot.wait_handler(ctx, HandleCallbackQuery(filter, continue))
+}
+
+/// Handles voice messages.
+pub fn handle_voice(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.Voice) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [HandleVoice(handler), ..builder.handlers])
+}
+
+/// Stops bot message handling from current chat and waits for a voice message.
+///
+/// See [conversation]
+pub fn wait_voice(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandleVoice(continue))
+}
+
+/// Handles audio messages.
+pub fn handle_audio(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.Audio) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [HandleAudio(handler), ..builder.handlers])
+}
+
+/// Stops bot message handling from current chat and waits for an audio message.
+///
+/// See [conversation]
+pub fn wait_audio(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandleAudio(continue))
+}
+
+/// Handles video messages.
+pub fn handle_video(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), model.Video) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [HandleVideo(handler), ..builder.handlers])
+}
+
+/// Stops bot message handling from current chat and waits for a video message.
+///
+/// See [conversation]
+pub fn wait_video(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandleVideo(continue))
+}
+
+/// Handles photo messages.
+pub fn handle_photos(
+  bot builder: TelegaBuilder(session, error),
+  handler handler: fn(Context(session, error), List(model.PhotoSize)) ->
+    Result(Context(session, error), error),
+) {
+  TelegaBuilder(..builder, handlers: [HandlePhotos(handler), ..builder.handlers])
+}
+
+/// Stops bot message handling from current chat and waits for a photo message.
+///
+/// See [conversation]
+pub fn wait_photos(ctx ctx: Context(session, error), continue continue) {
+  bot.wait_handler(ctx, HandlePhotos(continue))
 }
 
 /// Set a catch handler for all handlers.
