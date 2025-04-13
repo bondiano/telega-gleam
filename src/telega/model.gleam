@@ -18314,7 +18314,7 @@ pub fn encode_edit_message_media_parameters(
   ])
 }
 
-// EditMessageLiveLocationParameters
+// EditMessageLiveLocationParameters ----------------------------------------------
 
 pub type EditMessageLiveLocationParameters {
   EditMessageLiveLocationParameters(
@@ -18373,7 +18373,7 @@ pub fn encode_edit_message_live_location_parameters(
   ])
 }
 
-// StopMessageLiveLocationParameters
+// StopMessageLiveLocationParameters ----------------------------------------------
 pub type StopMessageLiveLocationParameters {
   StopMessageLiveLocationParameters(
     /// Unique identifier of the business connection
@@ -19100,6 +19100,91 @@ pub type LeaveChatParameters {
 }
 
 pub fn encode_leave_chat_parameters(params: LeaveChatParameters) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// GetChatAdministratorsParameters ------------------------------------------------------------
+
+pub type GetChatAdministratorsParameters {
+  GetChatAdministratorsParameters(
+    /// Unique identifier for the target chat or username of the target supergroup or channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_get_chat_administrators_parameters(
+  params: GetChatAdministratorsParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// GetChatMemberCountParameters ------------------------------------------------------------
+
+pub type GetChatMemberCountParameters {
+  GetChatMemberCountParameters(
+    /// Unique identifier for the target chat or username of the target supergroup or channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_get_chat_member_count_parameters(
+  params: GetChatMemberCountParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// GetChatMemberParameters ------------------------------------------------------------
+
+pub type GetChatMemberParameters {
+  GetChatMemberParameters(
+    /// Unique identifier for the target chat or username of the target supergroup or channel (in the format `@channelusername`)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
+pub fn encode_get_chat_member_parameters(
+  params: GetChatMemberParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+  ])
+}
+
+// SetChatStickerSetParameters ------------------------------------------------------------
+
+pub type SetChatStickerSetParameters {
+  SetChatStickerSetParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Name of the sticker set to be set as the group sticker set
+    sticker_set_name: String,
+  )
+}
+
+pub fn encode_set_chat_sticker_set_parameters(
+  params: SetChatStickerSetParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("sticker_set_name", json.string(params.sticker_set_name)),
+  ])
+}
+
+// DeleteChatStickerSetParameters ------------------------------------------------------------
+
+pub type DeleteChatStickerSetParameters {
+  DeleteChatStickerSetParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_delete_chat_sticker_set_parameters(
+  params: DeleteChatStickerSetParameters,
+) -> Json {
   json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
 }
 

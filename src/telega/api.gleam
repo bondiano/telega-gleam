@@ -191,7 +191,7 @@ pub fn get_me(client client) {
   |> map_response(model.user_decoder())
 }
 
-/// Use this method to send answers to callback queries sent from inline keyboards.
+/// Use this method to send answers to callback queries sent from [inline keyboards](https://core.telegram.org/bots/features#inline-keyboards).
 /// The answer will be displayed to the user as a notification at the top of the chat screen or as an alert.
 /// On success, _True_ is returned.
 ///
@@ -224,7 +224,7 @@ pub fn forward_message(client client, parameters parameters) {
   |> map_response(model.message_decoder())
 }
 
-/// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns True on success.
+/// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns `True` on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setchatmenubutton
 pub fn set_chat_menu_button(client client, parameters parameters) {
@@ -1096,6 +1096,90 @@ pub fn leave_chat(client client, parameters parameters) {
   new_post_request(client:, path: "leaveChat", body: json.to_string(body_json))
   |> fetch(client)
   |> map_response(decode.bool)
+}
+
+/// Use this method to get a list of administrators in a chat, which aren't bots. Returns an Array of [ChatMember](https://core.telegram.org/bots/api#chatmember) objects.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatadministrators
+pub fn get_chat_administrators(client client, parameters parameters) {
+  let body_json = model.encode_get_chat_administrators_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatAdministrators",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.list(model.chat_member_decoder()))
+}
+
+/// Use this method to get the number of members in a chat. Returns `Int` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatmembercount
+pub fn get_chat_member_count(client client, parameters parameters) {
+  let body_json = model.encode_get_chat_member_count_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatMemberCount",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.int)
+}
+
+/// Use this method to get information about a member of a chat. The method is only guaranteed to work for other users if the bot is an administrator in the chat. Returns a [ChatMember](https://core.telegram.org/bots/api#chatmember) object on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatmember
+pub fn get_chat_member(client client, parameters parameters) {
+  let body_json = model.encode_get_chat_member_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatMember",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.chat_member_decoder())
+}
+
+/// Use this method to set a new group sticker set for a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field `can_set_sticker_set` optionally returned in `getChat` requests to check if the bot can use this method. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setchatstickerset
+pub fn set_chat_sticker_set(client client, parameters parameters) {
+  let body_json = model.encode_set_chat_sticker_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setChatStickerSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete a group sticker set from a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field `can_set_sticker_set` optionally returned in `getChat` requests to check if the bot can use this method. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletechatstickerset
+pub fn delete_chat_sticker_set(client client, parameters parameters) {
+  let body_json = model.encode_delete_chat_sticker_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteChatStickerSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get custom emoji stickers, which can be used as a forum topic icon by any user. Requires no parameters. Returns an Array of [Sticker](https://core.telegram.org/bots/api#sticker) objects.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getforumtopiciconstickers
+pub fn get_forum_topic_icon_stickers(client client) {
+  new_get_request(client:, path: "getForumTopicIconStickers", query: None)
+  |> fetch(client)
+  |> map_response(decode.list(model.sticker_decoder()))
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
