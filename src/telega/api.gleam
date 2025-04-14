@@ -1182,6 +1182,194 @@ pub fn get_forum_topic_icon_stickers(client client) {
   |> map_response(decode.list(model.sticker_decoder()))
 }
 
+/// Use this method to create a topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. Returns information about the created topic as a [ForumTopic](https://core.telegram.org/bots/api#forumtopic) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#createforumtopic
+pub fn create_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_create_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "createForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.forum_topic_decoder())
+}
+
+/// Use this method to edit name and icon of a topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights, unless it is the creator of the topic. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editforumtopic
+pub fn edit_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_edit_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to close an open topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights, unless it is the creator of the topic. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#closeforumtopic
+pub fn close_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_close_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "closeForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to reopen a closed topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights, unless it is the creator of the topic. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#reopenforumtopic
+pub fn reopen_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_reopen_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "reopenForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete a forum topic along with all its messages in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_delete_messages` administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deleteforumtopic
+pub fn delete_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_delete_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to clear the list of pinned messages in a forum topic. The bot must be an administrator in the chat for this to work and must have the `can_pin_messages` administrator right in the supergroup. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#unpinallforumtopicpinnedmessages
+pub fn unpin_all_forum_topic_pinned_messages(
+  client client,
+  parameters parameters,
+) {
+  let body_json =
+    model.encode_unpin_all_forum_topic_messages_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "unpinAllForumTopicMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to edit the name of the 'General' topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editgeneralforumtopic
+pub fn edit_general_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_edit_general_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editGeneralForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to close an open 'General' topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#closegeneralforumtopic
+pub fn close_general_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_close_general_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "closeGeneralForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to reopen a closed 'General' topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. The topic will be automatically unhidden if it was hidden. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#reopengeneralforumtopic
+pub fn reopen_general_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_reopen_general_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "reopenGeneralForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to hide the 'General' topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. The topic will be automatically closed if it was open. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#hidegeneralforumtopic
+pub fn hide_general_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_hide_general_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "hideGeneralForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to unhide the 'General' topic in a forum supergroup chat. The bot must be an administrator in the chat for this to work and must have the `can_manage_topics` administrator rights. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#unhidegeneralforumtopic
+pub fn unhide_general_forum_topic(client client, parameters parameters) {
+  let body_json = model.encode_unhide_general_forum_topic_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "unhideGeneralForumTopic",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to clear the list of pinned messages in a General forum topic. The bot must be an administrator in the chat for this to work and must have the `can_pin_messages` administrator right in the supergroup. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#unpinallgeneralforumtopicpinnedmessages
+pub fn unpin_all_general_forum_topic_pinned_messages(
+  client client,
+  parameters parameters,
+) {
+  let body_json =
+    model.encode_unpin_all_forum_topic_messages_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "unpinAllGeneralForumTopicPinnedMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
 fn map_response(
   response: Result(Response(String), error.TelegaError),

@@ -19188,6 +19188,239 @@ pub fn encode_delete_chat_sticker_set_parameters(
   json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
 }
 
+// CreateForumTopicParameters ------------------------------------------------------------
+
+pub type CreateForumTopicParameters {
+  CreateForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Topic name, 1-128 characters
+    name: String,
+    /// Color of the topic icon in RGB format
+    icon_color: Option(Int),
+    /// Unique identifier of the custom emoji shown as the topic icon
+    icon_custom_emoji_id: Option(String),
+  )
+}
+
+pub fn encode_create_forum_topic_parameters(
+  params: CreateForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("name", json.string(params.name)),
+    #("icon_color", json.nullable(params.icon_color, json.int)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(params.icon_custom_emoji_id, json.string),
+    ),
+  ])
+}
+
+// EditForumTopicParameters ------------------------------------------------------------
+
+pub type EditForumTopicParameters {
+  EditForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum topic
+    message_thread_id: Int,
+    /// New topic name, 0-128 characters
+    name: Option(String),
+    /// New unique identifier of the custom emoji shown as the topic icon
+    icon_custom_emoji_id: Option(String),
+  )
+}
+
+pub fn encode_edit_forum_topic_parameters(
+  params: EditForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.int(params.message_thread_id)),
+    #("name", json.nullable(params.name, json.string)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(params.icon_custom_emoji_id, json.string),
+    ),
+  ])
+}
+
+// CloseForumTopicParameters ------------------------------------------------------------
+
+pub type CloseForumTopicParameters {
+  CloseForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum topic
+    message_thread_id: Int,
+  )
+}
+
+pub fn encode_close_forum_topic_parameters(
+  params: CloseForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.int(params.message_thread_id)),
+  ])
+}
+
+// ReopenForumTopicParameters ------------------------------------------------------------
+
+pub type ReopenForumTopicParameters {
+  ReopenForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum topic
+    message_thread_id: Int,
+  )
+}
+
+pub fn encode_reopen_forum_topic_parameters(
+  params: ReopenForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.int(params.message_thread_id)),
+  ])
+}
+
+// DeleteForumTopicParameters ------------------------------------------------------------
+
+pub type DeleteForumTopicParameters {
+  DeleteForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum topic
+    message_thread_id: Int,
+  )
+}
+
+pub fn encode_delete_forum_topic_parameters(
+  params: DeleteForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.int(params.message_thread_id)),
+  ])
+}
+
+// UnpinAllForumTopicMessagesParameters ------------------------------------------------------------
+
+pub type UnpinAllForumTopicMessagesParameters {
+  UnpinAllForumTopicMessagesParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum topic
+    message_thread_id: Int,
+  )
+}
+
+pub fn encode_unpin_all_forum_topic_messages_parameters(
+  params: UnpinAllForumTopicMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.int(params.message_thread_id)),
+  ])
+}
+
+// EditGeneralForumTopicParameters ------------------------------------------------------------
+
+pub type EditGeneralForumTopicParameters {
+  EditGeneralForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+    /// New topic name, 1-128 characters
+    name: String,
+  )
+}
+
+pub fn encode_edit_general_forum_topic_parameters(
+  params: EditGeneralForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("name", json.string(params.name)),
+  ])
+}
+
+// CloseGeneralForumTopicParameters ------------------------------------------------------------
+
+pub type CloseGeneralForumTopicParameters {
+  CloseGeneralForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_close_general_forum_topic_parameters(
+  params: CloseGeneralForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// ReopenGeneralForumTopicParameters ------------------------------------------------------------
+
+pub type ReopenGeneralForumTopicParameters {
+  ReopenGeneralForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_reopen_general_forum_topic_parameters(
+  params: ReopenGeneralForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// HideGeneralForumTopicParameters ------------------------------------------------------------
+
+pub type HideGeneralForumTopicParameters {
+  HideGeneralForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_hide_general_forum_topic_parameters(
+  params: HideGeneralForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// UnhideGeneralForumTopicParameters ------------------------------------------------------------
+
+pub type UnhideGeneralForumTopicParameters {
+  UnhideGeneralForumTopicParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_unhide_general_forum_topic_parameters(
+  params: UnhideGeneralForumTopicParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// UnpinAllGeneralForumTopicMessagesParameters ------------------------------------------------------------
+
+pub type UnpinAllGeneralForumTopicMessagesParameters {
+  UnpinAllGeneralForumTopicMessagesParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_unpin_all_general_forum_topic_messages_parameters(
+  params: UnpinAllGeneralForumTopicMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
