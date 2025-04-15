@@ -4,7 +4,7 @@
 
 import gleam/dynamic
 import gleam/dynamic/decode
-import gleam/http/response.{type Response, Response}
+import gleam/http/response.{type Response}
 import gleam/int
 import gleam/json
 import gleam/list

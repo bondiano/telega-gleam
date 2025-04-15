@@ -13,7 +13,7 @@ import gleam/dynamic
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
-import gleam/http/response.{type Response, Response}
+import gleam/http/response.{type Response}
 import gleam/httpc
 import gleam/option.{type Option, None, Some}
 import gleam/result

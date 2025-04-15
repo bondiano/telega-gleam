@@ -8,7 +8,7 @@ import session.{type NameBotSession, NameBotSession, SetName, WaitName}
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply

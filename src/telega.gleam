@@ -14,10 +14,10 @@ import telega/internal/utils
 import telega/api
 import telega/bot.{
   type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
-  type Handler, type Hears, type SessionSettings, CallbackQueryFilter, HandleAll,
-  HandleAudio, HandleCallbackQuery, HandleChatMember, HandleCommand,
-  HandleCommands, HandleHears, HandleMessage, HandlePhotos, HandleText,
-  HandleVideo, HandleVoice, HandleWebAppData, SessionSettings,
+  type Handler, type Hears, type SessionSettings, HandleAll, HandleAudio,
+  HandleCallbackQuery, HandleChatMember, HandleCommand, HandleCommands,
+  HandleHears, HandleMessage, HandlePhotos, HandleText, HandleVideo, HandleVoice,
+  HandleWebAppData, SessionSettings,
 }
 import telega/error
 import telega/model.{type Update, type User}
