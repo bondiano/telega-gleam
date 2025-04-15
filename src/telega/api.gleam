@@ -97,80 +97,6 @@ pub fn send_message(client client, parameters parameters) {
   |> map_response(model.message_decoder())
 }
 
-/// Use this method to change the list of the bot's commands. See [commands documentation](https://core.telegram.org/bots/features#commands) for more details about bot commands.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#setmycommands
-pub fn set_my_commands(
-  client client,
-  commands commands: List(BotCommand),
-  parameters parameters,
-) {
-  let parameters =
-    option.unwrap(parameters, model.default_bot_command_parameters())
-    |> model.encode_bot_command_parameters()
-
-  let body_json =
-    json.object([
-      #(
-        "commands",
-        json.array(commands, fn(command) {
-          json.object([
-            #("command", json.string(command.command)),
-            #("description", json.string(command.description)),
-            ..parameters
-          ])
-        }),
-      ),
-    ])
-
-  new_post_request(
-    client:,
-    path: "setMyCommands",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(decode.bool)
-}
-
-/// Use this method to delete the list of the bot's commands for the given scope and user language.
-/// After deletion, [higher level commands](https://core.telegram.org/bots/api#determining-list-of-commands) will be shown to affected users.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#deletemycommands
-pub fn delete_my_commands(client client, parameters parameters) {
-  let parameters =
-    option.unwrap(parameters, model.default_bot_command_parameters())
-    |> model.encode_bot_command_parameters()
-
-  let body_json = json.object(parameters)
-
-  new_post_request(
-    client:,
-    path: "deleteMyCommands",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(decode.bool)
-}
-
-/// Use this method to get the current list of the bot's commands for the given scope and user language.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#getmycommands
-pub fn get_my_commands(client client, parameters parameters) {
-  let parameters =
-    option.unwrap(parameters, model.default_bot_command_parameters())
-    |> model.encode_bot_command_parameters
-
-  let body_json = json.object(parameters)
-
-  new_post_request(
-    client:,
-    path: "getMyCommands",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(model.bot_command_decoder())
-}
-
 /// Use this method to send an animated emoji that will display a random value.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
@@ -1368,6 +1294,110 @@ pub fn unpin_all_general_forum_topic_pinned_messages(
   )
   |> fetch(client)
   |> map_response(decode.bool)
+}
+
+/// Use this method to get the list of boosts added to a chat by a user. Requires administrator rights in the chat. Returns a [UserChatBoosts](https://core.telegram.org/bots/api#userchatboosts) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatboosts
+pub fn get_chat_boosts(client client, parameters parameters) {
+  let body_json = model.encode_get_user_chat_boosts_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatBoosts",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.user_chat_boosts_decoder())
+}
+
+/// Use this method to get information about the connection of the bot with a business account. Returns a [BusinessConnection](https://core.telegram.org/bots/api#businessconnection) object on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getbusinessconnection
+pub fn get_business_connection(client client, parameters parameters) {
+  let body_json = model.encode_get_business_connection_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getBusinessConnection",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.business_connection_decoder())
+}
+
+/// Use this method to change the list of the bot's commands. See [commands documentation](https://core.telegram.org/bots/features#commands) for more details about bot commands.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmycommands
+pub fn set_my_commands(
+  client client,
+  commands commands: List(BotCommand),
+  parameters parameters,
+) {
+  let parameters =
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters()
+
+  let body_json =
+    json.object([
+      #(
+        "commands",
+        json.array(commands, fn(command) {
+          json.object([
+            #("command", json.string(command.command)),
+            #("description", json.string(command.description)),
+            ..parameters
+          ])
+        }),
+      ),
+    ])
+
+  new_post_request(
+    client:,
+    path: "setMyCommands",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete the list of the bot's commands for the given scope and user language.
+/// After deletion, [higher level commands](https://core.telegram.org/bots/api#determining-list-of-commands) will be shown to affected users.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletemycommands
+pub fn delete_my_commands(client client, parameters parameters) {
+  let parameters =
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters()
+
+  let body_json = json.object(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteMyCommands",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current list of the bot's commands for the given scope and user language.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmycommands
+pub fn get_my_commands(client client, parameters parameters) {
+  let parameters =
+    option.unwrap(parameters, model.default_bot_command_parameters())
+    |> model.encode_bot_command_parameters
+
+  let body_json = json.object(parameters)
+
+  new_post_request(
+    client:,
+    path: "getMyCommands",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.bot_command_decoder())
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

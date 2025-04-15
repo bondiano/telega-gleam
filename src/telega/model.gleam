@@ -19421,6 +19421,43 @@ pub fn encode_unpin_all_general_forum_topic_messages_parameters(
   json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
 }
 
+// GetUserChatBoostsParameters ------------------------------------------------------------
+
+pub type GetUserChatBoostsParameters {
+  GetUserChatBoostsParameters(
+    /// Unique identifier for the chat or username of the channel (in the format @channelusername)
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
+pub fn encode_get_user_chat_boosts_parameters(
+  params: GetUserChatBoostsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+  ])
+}
+
+// GetBusinessConnectionParameters ------------------------------------------------------------
+
+pub type GetBusinessConnectionParameters {
+  GetBusinessConnectionParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+  )
+}
+
+pub fn encode_get_business_connection_parameters(
+  params: GetBusinessConnectionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {
