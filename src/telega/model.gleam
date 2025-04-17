@@ -19458,6 +19458,167 @@ pub fn encode_get_business_connection_parameters(
   ])
 }
 
+// SetMyNameParameters ------------------------------------------------------------
+
+pub type SetMyNameParameters {
+  SetMyNameParameters(
+    /// New bot name; 0-64 characters. Pass an empty string to remove the dedicated name for the given language.
+    name: Option(String),
+    /// A two-letter ISO 639-1 language code. If empty, the name will be shown to all users for whose language there is no dedicated name.
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_set_my_name_parameters(params: SetMyNameParameters) -> Json {
+  json_object_filter_nulls([
+    #("name", json.nullable(params.name, json.string)),
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// GetMyNameParameters ------------------------------------------------------------
+
+pub type GetMyNameParameters {
+  GetMyNameParameters(
+    /// A two-letter ISO 639-1 language code or an empty string
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_get_my_name_parameters(params: GetMyNameParameters) -> Json {
+  json_object_filter_nulls([
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// SetMyDescriptionParameters ------------------------------------------------------------
+
+pub type SetMyDescriptionParameters {
+  SetMyDescriptionParameters(
+    /// New bot description; 0-512 characters. Pass an empty string to remove the dedicated description for the given language.
+    description: Option(String),
+    /// A two-letter ISO 639-1 language code. If empty, the description will be applied to all users for whose language there is no dedicated description.
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_set_my_description_parameters(
+  params: SetMyDescriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("description", json.nullable(params.description, json.string)),
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// GetMyDescriptionParameters ------------------------------------------------------------
+
+pub type GetMyDescriptionParameters {
+  GetMyDescriptionParameters(
+    /// A two-letter ISO 639-1 language code or an empty string
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_get_my_description_parameters(
+  params: GetMyDescriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// SetMyShortDescriptionParameters ------------------------------------------------------------
+
+pub type SetMyShortDescriptionParameters {
+  SetMyShortDescriptionParameters(
+    /// New short description for the bot; 0-120 characters. Pass an empty string to remove the dedicated short description for the given language.
+    short_description: Option(String),
+    /// A two-letter ISO 639-1 language code. If empty, the short description will be applied to all users for whose language there is no dedicated short description.
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_set_my_short_description_parameters(
+  params: SetMyShortDescriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("short_description", json.nullable(params.short_description, json.string)),
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// GetMyShortDescriptionParameters ------------------------------------------------------------
+
+pub type GetMyShortDescriptionParameters {
+  GetMyShortDescriptionParameters(
+    /// A two-letter ISO 639-1 language code or an empty string
+    language_code: Option(String),
+  )
+}
+
+pub fn encode_get_my_short_description_parameters(
+  params: GetMyShortDescriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("language_code", json.nullable(params.language_code, json.string)),
+  ])
+}
+
+// GetChatMenuButtonParameters ------------------------------------------------------------
+
+pub type GetChatMenuButtonParameters {
+  GetChatMenuButtonParameters(
+    /// Unique identifier for the target private chat. If not specified, default bot's menu button will be returned
+    chat_id: Option(Int),
+  )
+}
+
+pub fn encode_get_chat_menu_button_parameters(
+  params: GetChatMenuButtonParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", json.nullable(params.chat_id, json.int)),
+  ])
+}
+
+// SetMyDefaultAdministratorRightsParameters ------------------------------------------------------------
+
+pub type SetMyDefaultAdministratorRightsParameters {
+  SetMyDefaultAdministratorRightsParameters(
+    /// A JSON-serialized object describing new default administrator rights. If not specified, the default administrator rights will be cleared.
+    rights: Option(ChatAdministratorRights),
+    /// Pass True to change the default administrator rights of the bot in channels. Otherwise, the default administrator rights of the bot for groups and supergroups will be changed.
+    for_channels: Option(Bool),
+  )
+}
+
+pub fn encode_set_my_default_administrator_rights_parameters(
+  params: SetMyDefaultAdministratorRightsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("rights", json.nullable(params.rights, encode_chat_administrator_rights)),
+    #("for_channels", json.nullable(params.for_channels, json.bool)),
+  ])
+}
+
+// GetMyDefaultAdministratorRightsParameters ------------------------------------------------------------
+
+pub type GetMyDefaultAdministratorRightsParameters {
+  GetMyDefaultAdministratorRightsParameters(
+    /// Pass True to get default administrator rights of the bot in channels. Otherwise, default administrator rights of the bot for groups and supergroups will be returned.
+    for_channels: Option(Bool),
+  )
+}
+
+pub fn encode_get_my_default_administrator_rights_parameters(
+  params: GetMyDefaultAdministratorRightsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("for_channels", json.nullable(params.for_channels, json.bool)),
+  ])
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type IntOrString {

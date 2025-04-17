@@ -150,20 +150,6 @@ pub fn forward_message(client client, parameters parameters) {
   |> map_response(model.message_decoder())
 }
 
-/// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns `True` on success.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#setchatmenubutton
-pub fn set_chat_menu_button(client client, parameters parameters) {
-  new_post_request(
-    client:,
-    path: "setChatMenuButton",
-    body: model.encode_set_chat_menu_button_parameters(parameters)
-      |> json.to_string(),
-  )
-  |> fetch(client)
-  |> map_response(decode.bool)
-}
-
 /// Use this method to receive incoming updates using long polling ([wiki](https://en.wikipedia.org/wiki/Push_technology#Long_polling)).
 ///
 /// > Notes
@@ -1398,6 +1384,149 @@ pub fn get_my_commands(client client, parameters parameters) {
   )
   |> fetch(client)
   |> map_response(model.bot_command_decoder())
+}
+
+/// Use this method to change the bot's name. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmyname
+pub fn set_my_name(client client, parameters parameters) {
+  let body_json = model.encode_set_my_name_parameters(parameters)
+
+  new_post_request(client:, path: "setMyName", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current bot name for the given user language. Returns [BotName](https://core.telegram.org/bots/api#botname) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmyname
+pub fn get_my_name(client client, parameters parameters) {
+  let body_json = model.encode_get_my_name_parameters(parameters)
+
+  new_post_request(client:, path: "getMyName", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(model.bot_name_decoder())
+}
+
+/// Use this method to change the bot's description, which is shown in the chat with the bot if the chat is empty. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmydescription
+pub fn set_my_description(client client, parameters parameters) {
+  let body_json = model.encode_set_my_description_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setMyDescription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current bot description for the given user language. Returns [BotDescription](https://core.telegram.org/bots/api#botdescription) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmydescription
+pub fn get_my_description(client client, parameters parameters) {
+  let body_json = model.encode_get_my_description_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getMyDescription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.bot_description_decoder())
+}
+
+/// Use this method to change the bot's short description, which is shown on the bot's profile page and is sent together with the link when users share the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmyshortdescription
+pub fn set_my_short_description(client client, parameters parameters) {
+  let body_json = model.encode_set_my_short_description_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setMyShortDescription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current bot short description for the given user language. Returns [BotShortDescription](https://core.telegram.org/bots/api#botshortdescription) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmyshortdescription
+pub fn get_my_short_description(client client, parameters parameters) {
+  let body_json = model.encode_get_my_short_description_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getMyShortDescription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.bot_short_description_decoder())
+}
+
+/// Use this method to change the bot's menu button in a private chat, or the default menu button. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setchatmenubutton
+pub fn set_chat_menu_button(client client, parameters parameters) {
+  new_post_request(
+    client:,
+    path: "setChatMenuButton",
+    body: model.encode_set_chat_menu_button_parameters(parameters)
+      |> json.to_string(),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current value of the bot's menu button in a private chat, or the default menu button. Returns [MenuButton](https://core.telegram.org/bots/api#menubutton) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatmenubutton
+pub fn get_chat_menu_button(client client, parameters parameters) {
+  let body_json = model.encode_get_chat_menu_button_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatMenuButton",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.menu_button_decoder())
+}
+
+/// Use this method to change the default administrator rights requested by the bot when it's added as an administrator to groups or channels. These rights will be suggested to users, but they are free to modify the list before adding the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmydefaultadministratorrights
+pub fn set_my_default_administrator_rights(client client, parameters parameters) {
+  let body_json =
+    model.encode_set_my_default_administrator_rights_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setMyDefaultAdministratorRights",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the current default administrator rights of the bot. Returns [ChatAdministratorRights](https://core.telegram.org/bots/api#chatadministratorrights) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmydefaultadministratorrights
+pub fn get_my_default_administrator_rights(client client, parameters parameters) {
+  let body_json =
+    model.encode_get_my_default_administrator_rights_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getMyDefaultAdministratorRights",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.chat_administrator_rights_decoder())
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
