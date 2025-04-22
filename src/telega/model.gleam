@@ -19326,6 +19326,21 @@ pub fn encode_unpin_all_forum_topic_messages_parameters(
   ])
 }
 
+// UnpinAllGeneralForumTopicPinnedMessagesParameters ------------------------------------------------------------
+
+pub type UnpinAllGeneralForumTopicPinnedMessagesParameters {
+  UnpinAllGeneralForumTopicPinnedMessagesParameters(
+    /// Unique identifier for the target chat or username of the target supergroup (in the format `@supergroupusername`)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_unpin_all_general_forum_topic_pinned_messages_parameters(
+  params: UnpinAllGeneralForumTopicPinnedMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
 // EditGeneralForumTopicParameters ------------------------------------------------------------
 
 pub type EditGeneralForumTopicParameters {
@@ -19616,6 +19631,731 @@ pub fn encode_get_my_default_administrator_rights_parameters(
 ) -> Json {
   json_object_filter_nulls([
     #("for_channels", json.nullable(params.for_channels, json.bool)),
+  ])
+}
+
+// SendGiftParameters ------------------------------------------------------------
+
+pub type SendGiftParameters {
+  SendGiftParameters(
+    /// Required if chat_id is not specified. Unique identifier of the target user who will receive the gift.
+    user_id: Option(Int),
+    /// Required if user_id is not specified. Unique identifier for the chat or username of the channel (in the format @channelusername) that will receive the gift.
+    chat_id: Option(IntOrString),
+    /// Identifier of the gift
+    gift_id: String,
+    /// Pass True to pay for the gift upgrade from the bot's balance, thereby making the upgrade free for the receiver
+    pay_for_upgrade: Option(Bool),
+    /// Text that will be shown along with the gift; 0-128 characters
+    text: Option(String),
+    /// Mode for parsing entities in the text. See formatting options for more details.
+    text_parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the gift text. It can be specified instead of text_parse_mode.
+    text_entities: Option(List(MessageEntity)),
+  )
+}
+
+pub fn encode_send_gift_parameters(params: SendGiftParameters) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.nullable(params.user_id, json.int)),
+    #("chat_id", json.nullable(params.chat_id, encode_int_or_string)),
+    #("gift_id", json.string(params.gift_id)),
+    #("pay_for_upgrade", json.nullable(params.pay_for_upgrade, json.bool)),
+    #("text", json.nullable(params.text, json.string)),
+    #("text_parse_mode", json.nullable(params.text_parse_mode, json.string)),
+    #(
+      "text_entities",
+      json.nullable(params.text_entities, json.array(_, encode_message_entity)),
+    ),
+  ])
+}
+
+// GiftPremiumSubscriptionParameters ------------------------------------------------------------
+
+pub type GiftPremiumSubscriptionParameters {
+  GiftPremiumSubscriptionParameters(
+    /// Unique identifier of the target user who will receive a Telegram Premium subscription
+    user_id: Int,
+    /// Number of months the Telegram Premium subscription will be active for the user; must be one of 3, 6, or 12
+    month_count: Int,
+    /// Number of Telegram Stars to pay for the Telegram Premium subscription; must be 1000 for 3 months, 1500 for 6 months, and 2500 for 12 months
+    star_count: Int,
+    /// Text that will be shown along with the service message about the subscription; 0-128 characters
+    text: Option(String),
+    /// Mode for parsing entities in the text. See formatting options for more details.
+    text_parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the gift text. It can be specified instead of text_parse_mode.
+    text_entities: Option(List(MessageEntity)),
+  )
+}
+
+pub fn encode_gift_premium_subscription_parameters(
+  params: GiftPremiumSubscriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("month_count", json.int(params.month_count)),
+    #("star_count", json.int(params.star_count)),
+    #("text", json.nullable(params.text, json.string)),
+    #("text_parse_mode", json.nullable(params.text_parse_mode, json.string)),
+    #(
+      "text_entities",
+      json.nullable(params.text_entities, json.array(_, encode_message_entity)),
+    ),
+  ])
+}
+
+// VerifyUserParameters ------------------------------------------------------------
+
+pub type VerifyUserParameters {
+  VerifyUserParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Custom description for the verification; 0-70 characters. Must be empty if the organization isn't allowed to provide a custom verification description.
+    custom_description: Option(String),
+  )
+}
+
+pub fn encode_verify_user_parameters(params: VerifyUserParameters) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #(
+      "custom_description",
+      json.nullable(params.custom_description, json.string),
+    ),
+  ])
+}
+
+// VerifyChatParameters ------------------------------------------------------------
+
+pub type VerifyChatParameters {
+  VerifyChatParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    chat_id: IntOrString,
+    /// Custom description for the verification; 0-70 characters. Must be empty if the organization isn't allowed to provide a custom verification description.
+    custom_description: Option(String),
+  )
+}
+
+pub fn encode_verify_chat_parameters(params: VerifyChatParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #(
+      "custom_description",
+      json.nullable(params.custom_description, json.string),
+    ),
+  ])
+}
+
+// RemoveUserVerificationParameters ------------------------------------------------------------
+
+pub type RemoveUserVerificationParameters {
+  RemoveUserVerificationParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
+pub fn encode_remove_user_verification_parameters(
+  params: RemoveUserVerificationParameters,
+) -> Json {
+  json_object_filter_nulls([#("user_id", json.int(params.user_id))])
+}
+
+// RemoveChatVerificationParameters ------------------------------------------------------------
+
+pub type RemoveChatVerificationParameters {
+  RemoveChatVerificationParameters(
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    chat_id: IntOrString,
+  )
+}
+
+pub fn encode_remove_chat_verification_parameters(
+  params: RemoveChatVerificationParameters,
+) -> Json {
+  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+}
+
+// GetCustomEmojiStickersParameters ------------------------------------------------------------
+
+pub type GetCustomEmojiStickersParameters {
+  GetCustomEmojiStickersParameters(
+    /// A JSON-serialized list of custom emoji identifiers. At most 200 custom emoji identifiers can be specified.
+    custom_emoji_ids: List(String),
+  )
+}
+
+pub fn encode_get_custom_emoji_stickers_parameters(
+  params: GetCustomEmojiStickersParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("custom_emoji_ids", json.array(params.custom_emoji_ids, json.string)),
+  ])
+}
+
+// UploadStickerFileParameters ------------------------------------------------------------
+
+pub type UploadStickerFileParameters {
+  UploadStickerFileParameters(
+    /// User identifier of sticker file owner
+    user_id: Int,
+    /// A file with the sticker in .WEBP, .PNG, .TGS, or .WEBM format.
+    sticker: File,
+    /// Format of the sticker, must be one of "static", "animated", "video"
+    sticker_format: String,
+  )
+}
+
+pub fn encode_upload_sticker_file_parameters(
+  params: UploadStickerFileParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("sticker", encode_file(params.sticker)),
+    #("sticker_format", json.string(params.sticker_format)),
+  ])
+}
+
+// CreateNewStickerSetParameters ------------------------------------------------------------
+
+pub type CreateNewStickerSetParameters {
+  CreateNewStickerSetParameters(
+    /// User identifier of created sticker set owner
+    user_id: Int,
+    /// Short name of sticker set, to be used in t.me/addstickers/ URLs
+    name: String,
+    /// Sticker set title, 1-64 characters
+    title: String,
+    /// A JSON-serialized list of 1-50 initial stickers to be added to the sticker set
+    stickers: List(InputSticker),
+    /// Type of stickers in the set, pass "regular", "mask", or "custom_emoji". By default, a regular sticker set is created.
+    sticker_type: Option(String),
+    /// Pass True if stickers in the sticker set must be repainted to the color of text when used in messages
+    needs_repainting: Option(Bool),
+  )
+}
+
+pub fn encode_create_new_sticker_set_parameters(
+  params: CreateNewStickerSetParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("name", json.string(params.name)),
+    #("title", json.string(params.title)),
+    #("stickers", json.array(params.stickers, encode_input_sticker)),
+    #("sticker_type", json.nullable(params.sticker_type, json.string)),
+    #("needs_repainting", json.nullable(params.needs_repainting, json.bool)),
+  ])
+}
+
+// AddStickerToSetParameters ------------------------------------------------------------
+
+pub type AddStickerToSetParameters {
+  AddStickerToSetParameters(
+    /// User identifier of sticker set owner
+    user_id: Int,
+    /// Sticker set name
+    name: String,
+    /// A JSON-serialized object with information about the added sticker
+    sticker: InputSticker,
+  )
+}
+
+pub fn encode_add_sticker_to_set_parameters(
+  params: AddStickerToSetParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("name", json.string(params.name)),
+    #("sticker", encode_input_sticker(params.sticker)),
+  ])
+}
+
+// SetStickerPositionInSetParameters ------------------------------------------------------------
+
+pub type SetStickerPositionInSetParameters {
+  SetStickerPositionInSetParameters(
+    /// File identifier of the sticker
+    sticker: String,
+    /// New sticker position in the set, zero-based
+    position: Int,
+  )
+}
+
+pub fn encode_set_sticker_position_in_set_parameters(
+  params: SetStickerPositionInSetParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("sticker", json.string(params.sticker)),
+    #("position", json.int(params.position)),
+  ])
+}
+
+// DeleteStickerFromSetParameters ------------------------------------------------------------
+
+pub type DeleteStickerFromSetParameters {
+  DeleteStickerFromSetParameters(
+    /// File identifier of the sticker
+    sticker: String,
+  )
+}
+
+pub fn encode_delete_sticker_from_set_parameters(
+  params: DeleteStickerFromSetParameters,
+) -> Json {
+  json_object_filter_nulls([#("sticker", json.string(params.sticker))])
+}
+
+// ReplaceStickerInSetParameters ------------------------------------------------------------
+
+pub type ReplaceStickerInSetParameters {
+  ReplaceStickerInSetParameters(
+    /// User identifier of the sticker set owner
+    user_id: Int,
+    /// Sticker set name
+    name: String,
+    /// File identifier of the replaced sticker
+    old_sticker: String,
+    /// A JSON-serialized object with information about the added sticker
+    sticker: InputSticker,
+  )
+}
+
+pub fn encode_replace_sticker_in_set_parameters(
+  params: ReplaceStickerInSetParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("name", json.string(params.name)),
+    #("old_sticker", json.string(params.old_sticker)),
+    #("sticker", encode_input_sticker(params.sticker)),
+  ])
+}
+
+// SetStickerEmojiListParameters ------------------------------------------------------------
+
+pub type SetStickerEmojiListParameters {
+  SetStickerEmojiListParameters(
+    /// File identifier of the sticker
+    sticker: String,
+    /// A JSON-serialized list of 1-20 emoji associated with the sticker
+    emoji_list: List(String),
+  )
+}
+
+pub fn encode_set_sticker_emoji_list_parameters(
+  params: SetStickerEmojiListParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("sticker", json.string(params.sticker)),
+    #("emoji_list", json.array(params.emoji_list, json.string)),
+  ])
+}
+
+// SetStickerKeywordsParameters ------------------------------------------------------------
+
+pub type SetStickerKeywordsParameters {
+  SetStickerKeywordsParameters(
+    /// File identifier of the sticker
+    sticker: String,
+    /// A JSON-serialized list of 0-20 search keywords for the sticker with total length of up to 64 characters
+    keywords: Option(List(String)),
+  )
+}
+
+pub fn encode_set_sticker_keywords_parameters(
+  params: SetStickerKeywordsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("sticker", json.string(params.sticker)),
+    #(
+      "keywords",
+      json.nullable(params.keywords, fn(keywords) {
+        json.array(keywords, json.string)
+      }),
+    ),
+  ])
+}
+
+// SetStickerMaskPositionParameters ------------------------------------------------------------
+
+pub type SetStickerMaskPositionParameters {
+  SetStickerMaskPositionParameters(
+    /// File identifier of the sticker
+    sticker: String,
+    /// A JSON-serialized object with the position where the mask should be placed on faces
+    mask_position: Option(MaskPosition),
+  )
+}
+
+pub fn encode_set_sticker_mask_position_parameters(
+  params: SetStickerMaskPositionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("sticker", json.string(params.sticker)),
+    #(
+      "mask_position",
+      json.nullable(params.mask_position, encode_mask_position),
+    ),
+  ])
+}
+
+// SetStickerSetTitleParameters ------------------------------------------------------------
+
+pub type SetStickerSetTitleParameters {
+  SetStickerSetTitleParameters(
+    /// Sticker set name
+    name: String,
+    /// Sticker set title, 1-64 characters
+    title: String,
+  )
+}
+
+pub fn encode_set_sticker_set_title_parameters(
+  params: SetStickerSetTitleParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(params.name)),
+    #("title", json.string(params.title)),
+  ])
+}
+
+// SetStickerSetThumbnailParameters ------------------------------------------------------------
+
+pub type SetStickerSetThumbnailParameters {
+  SetStickerSetThumbnailParameters(
+    /// Sticker set name
+    name: String,
+    /// User identifier of the sticker set owner
+    user_id: Int,
+    /// A .WEBP or .PNG image with the thumbnail, or .TGS animation or .WEBM video
+    thumbnail: Option(FileOrString),
+    /// Format of the thumbnail, must be one of "static" for a .WEBP or .PNG image, "animated" for a .TGS animation, or "video" for a .WEBM video
+    format: String,
+  )
+}
+
+pub fn encode_set_sticker_set_thumbnail_parameters(
+  params: SetStickerSetThumbnailParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(params.name)),
+    #("user_id", json.int(params.user_id)),
+    #("thumbnail", json.nullable(params.thumbnail, encode_file_or_string)),
+    #("format", json.string(params.format)),
+  ])
+}
+
+// SetCustomEmojiStickerSetThumbnailParameters ------------------------------------------------------------
+
+pub type SetCustomEmojiStickerSetThumbnailParameters {
+  SetCustomEmojiStickerSetThumbnailParameters(
+    /// Sticker set name
+    name: String,
+    /// Custom emoji identifier of a sticker from the sticker set; pass an empty string to drop the thumbnail
+    custom_emoji_id: Option(String),
+  )
+}
+
+pub fn encode_set_custom_emoji_sticker_set_thumbnail_parameters(
+  params: SetCustomEmojiStickerSetThumbnailParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(params.name)),
+    #("custom_emoji_id", json.nullable(params.custom_emoji_id, json.string)),
+  ])
+}
+
+// DeleteStickerSetParameters ------------------------------------------------------------
+
+pub type DeleteStickerSetParameters {
+  DeleteStickerSetParameters(
+    /// Sticker set name
+    name: String,
+  )
+}
+
+pub fn encode_delete_sticker_set_parameters(
+  params: DeleteStickerSetParameters,
+) -> Json {
+  json_object_filter_nulls([#("name", json.string(params.name))])
+}
+
+// AnswerInlineQueryParameters ------------------------------------------------------------
+
+pub type AnswerInlineQueryParameters {
+  AnswerInlineQueryParameters(
+    /// Unique identifier for the answered query
+    inline_query_id: String,
+    /// A JSON-serialized array of results for the inline query
+    results: List(InlineQueryResult),
+    /// The maximum amount of time in seconds that the result of the inline query may be cached on the server. Defaults to 300.
+    cache_time: Option(Int),
+    /// Pass `True` if results may be cached on the server side only for the user that sent the query. By default, results may be returned to any user who sends the same query.
+    is_personal: Option(Bool),
+    /// Pass the offset that a client should send in the next query with the same text to receive more results. Pass an empty string if there are no more results or if you don't support pagination. Offset length can't exceed 64 bytes.
+    next_offset: Option(String),
+    /// A JSON-serialized object describing a button to be shown above inline query results
+    button: Option(InlineQueryResultsButton),
+  )
+}
+
+pub fn encode_answer_inline_query_parameters(
+  params: AnswerInlineQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("inline_query_id", json.string(params.inline_query_id)),
+    #("results", json.array(params.results, encode_inline_query_result)),
+    #("cache_time", json.nullable(params.cache_time, json.int)),
+    #("is_personal", json.nullable(params.is_personal, json.bool)),
+    #("next_offset", json.nullable(params.next_offset, json.string)),
+    #(
+      "button",
+      json.nullable(params.button, encode_inline_query_results_button),
+    ),
+  ])
+}
+
+// AnswerShippingQueryParameters ------------------------------------------------------------
+
+pub type AnswerShippingQueryParameters {
+  AnswerShippingQueryParameters(
+    /// Unique identifier for the query to be answered
+    shipping_query_id: String,
+    /// Pass True if delivery to the specified address is possible and False if there are any problems
+    ok: Bool,
+    /// Required if ok is True. A JSON-serialized array of available shipping options.
+    shipping_options: Option(List(ShippingOption)),
+    /// Required if ok is False. Error message in human readable form that explains why it is impossible to complete the order
+    error_message: Option(String),
+  )
+}
+
+pub fn encode_answer_shipping_query_parameters(
+  params: AnswerShippingQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("shipping_query_id", json.string(params.shipping_query_id)),
+    #("ok", json.bool(params.ok)),
+    #(
+      "shipping_options",
+      json.nullable(params.shipping_options, fn(options) {
+        json.array(options, encode_shipping_option)
+      }),
+    ),
+    #("error_message", json.nullable(params.error_message, json.string)),
+  ])
+}
+
+// AnswerPreCheckoutQueryParameters ------------------------------------------------------------
+
+pub type AnswerPreCheckoutQueryParameters {
+  AnswerPreCheckoutQueryParameters(
+    /// Unique identifier for the query to be answered
+    pre_checkout_query_id: String,
+    /// Specify True if everything is alright and the bot is ready to proceed with the order. Use False if there are any problems.
+    ok: Bool,
+    /// Required if ok is False. Error message in human readable form that explains the reason for failure to proceed with the checkout
+    error_message: Option(String),
+  )
+}
+
+pub fn encode_answer_pre_checkout_query_parameters(
+  params: AnswerPreCheckoutQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("pre_checkout_query_id", json.string(params.pre_checkout_query_id)),
+    #("ok", json.bool(params.ok)),
+    #("error_message", json.nullable(params.error_message, json.string)),
+  ])
+}
+
+// GetStarTransactionsParameters ------------------------------------------------------------
+
+pub type GetStarTransactionsParameters {
+  GetStarTransactionsParameters(
+    /// Number of transactions to skip in the response
+    offset: Option(Int),
+    /// The maximum number of transactions to be retrieved. Values between 1-100 are accepted. Defaults to 100.
+    limit: Option(Int),
+  )
+}
+
+pub fn encode_get_star_transactions_parameters(
+  params: GetStarTransactionsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("offset", json.nullable(params.offset, json.int)),
+    #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// RefundStarPaymentParameters ------------------------------------------------------------
+
+pub type RefundStarPaymentParameters {
+  RefundStarPaymentParameters(
+    /// Identifier of the user whose payment will be refunded
+    user_id: Int,
+    /// Telegram payment identifier
+    telegram_payment_charge_id: String,
+  )
+}
+
+pub fn encode_refund_star_payment_parameters(
+  params: RefundStarPaymentParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #(
+      "telegram_payment_charge_id",
+      json.string(params.telegram_payment_charge_id),
+    ),
+  ])
+}
+
+// EditUserStarSubscriptionParameters ------------------------------------------------------------
+
+pub type EditUserStarSubscriptionParameters {
+  EditUserStarSubscriptionParameters(
+    /// Identifier of the user whose subscription will be edited
+    user_id: Int,
+    /// Telegram payment identifier for the subscription
+    telegram_payment_charge_id: String,
+    /// Pass True to cancel extension of the user subscription; the subscription must be active up to the end of the current subscription period. Pass False to allow the user to re-enable a subscription that was previously canceled by the bot.
+    is_canceled: Bool,
+  )
+}
+
+pub fn encode_edit_user_star_subscription_parameters(
+  params: EditUserStarSubscriptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #(
+      "telegram_payment_charge_id",
+      json.string(params.telegram_payment_charge_id),
+    ),
+    #("is_canceled", json.bool(params.is_canceled)),
+  ])
+}
+
+// SendGameParameters ------------------------------------------------------------
+
+pub type SendGameParameters {
+  SendGameParameters(
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat
+    chat_id: Int,
+    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
+    message_thread_id: Option(Int),
+    /// Short name of the game, serves as the unique identifier for the game. Set up your games via @BotFather.
+    game_short_name: String,
+    /// Sends the message silently. Users will receive a notification with no sound.
+    disable_notification: Option(Bool),
+    /// Protects the contents of the sent message from forwarding and saving
+    protect_content: Option(Bool),
+    /// Pass True to allow up to 1000 messages per second, ignoring broadcasting limits for a fee of 0.1 Telegram Stars per message
+    allow_paid_broadcast: Option(Bool),
+    /// Unique identifier of the message effect to be added to the message; for private chats only
+    message_effect_id: Option(String),
+    /// Description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// A JSON-serialized object for an inline keyboard. If empty, one 'Play game_title' button will be shown.
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn encode_send_game_parameters(params: SendGameParameters) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", json.int(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("game_short_name", json.string(params.game_short_name)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// SetGameScoreParameters ------------------------------------------------------------
+
+pub type SetGameScoreParameters {
+  SetGameScoreParameters(
+    /// User identifier
+    user_id: Int,
+    /// New score, must be non-negative
+    score: Int,
+    /// Pass True if the high score is allowed to decrease. This can be useful when fixing mistakes or banning cheaters
+    force: Option(Bool),
+    /// Pass True if the game message should not be automatically edited to include the current scoreboard
+    disable_edit_message: Option(Bool),
+    /// Required if inline_message_id is not specified. Unique identifier for the target chat
+    chat_id: Option(Int),
+    /// Required if inline_message_id is not specified. Identifier of the sent message
+    message_id: Option(Int),
+    /// Required if chat_id and message_id are not specified. Identifier of the inline message
+    inline_message_id: Option(String),
+  )
+}
+
+pub fn encode_set_game_score_parameters(params: SetGameScoreParameters) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("score", json.int(params.score)),
+    #("force", json.nullable(params.force, json.bool)),
+    #(
+      "disable_edit_message",
+      json.nullable(params.disable_edit_message, json.bool),
+    ),
+    #("chat_id", json.nullable(params.chat_id, json.int)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+  ])
+}
+
+// GetGameHighScoresParameters ------------------------------------------------------------
+
+pub type GetGameHighScoresParameters {
+  GetGameHighScoresParameters(
+    /// Target user id
+    user_id: Int,
+    /// Required if inline_message_id is not specified. Unique identifier for the target chat
+    chat_id: Option(Int),
+    /// Required if inline_message_id is not specified. Identifier of the sent message
+    message_id: Option(Int),
+    /// Required if chat_id and message_id are not specified. Identifier of the inline message
+    inline_message_id: Option(String),
+  )
+}
+
+pub fn encode_get_game_high_scores_parameters(
+  params: GetGameHighScoresParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("chat_id", json.nullable(params.chat_id, json.int)),
+    #("message_id", json.nullable(params.message_id, json.int)),
+    #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
   ])
 }
 

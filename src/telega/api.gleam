@@ -186,7 +186,7 @@ pub fn forward_messages(client client, parameters parameters) {
 
   new_post_request(
     client:,
-    path: "forwardMessage",
+    path: "forwardMessages",
     body: json.to_string(body_json),
   )
   |> fetch(client)
@@ -399,36 +399,6 @@ pub fn send_chat_action(client client, parameters parameters) {
   |> map_response(model.message_decoder())
 }
 
-/// Use this method to send invoices. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
-pub fn send_invoice(client client, parameters parameters) {
-  let body_json = model.encode_send_invoice_parameters(parameters)
-
-  new_post_request(
-    client:,
-    path: "sendInvoice",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(model.message_decoder())
-}
-
-/// Use this method to create a link for an invoice.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#createinvoicelink
-pub fn create_invoice_link(client client, parameters parameters) {
-  let body_json = model.encode_create_invoice_link_parameters(parameters)
-
-  new_post_request(
-    client,
-    path: "createInvoiceLink",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(decode.string)
-}
-
 /// Use this method to change the chosen reactions on a message. Service messages of some types can't be reacted to. Automatically forwarded messages from a channel to its discussion group have the same available reactions as messages in the channel. Bots can't use paid reactions. Returns _True_ on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#setmessagereaction
@@ -457,36 +427,6 @@ pub fn get_user_profile_photos(client client, parameters parameters) {
   )
   |> fetch(client)
   |> map_response(model.user_profile_photos_decoder())
-}
-
-/// Use this method to send static .WEBP, [animated](https://telegram.org/blog/animated-stickers) .TGS, or [video](https://telegram.org/blog/video-stickers-better-reactions/ru?ln=a) .WEBM stickers. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#sendsticker
-pub fn send_sticker(client client, parameters parameters) {
-  let body_json = model.encode_send_sticker_parameters(parameters)
-
-  new_post_request(
-    client:,
-    path: "sendSticker",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(model.message_decoder())
-}
-
-/// Use this method to get a sticker set. On success, a [StickerSet](https://core.telegram.org/bots/api#stickerset) object is returned.
-///
-/// **Official reference:** https://core.telegram.org/bots/api#getstickerset
-pub fn get_sticker_set(client client, parameters parameters) {
-  let body_json = model.encode_get_sticker_set_parameters(parameters)
-
-  new_post_request(
-    client:,
-    path: "getStickerSet",
-    body: json.to_string(body_json),
-  )
-  |> fetch(client)
-  |> map_response(model.sticker_set_decoder())
 }
 
 /// Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
@@ -623,6 +563,93 @@ pub fn delete_messages(client client, parameters parameters) {
   new_post_request(
     client:,
     path: "deleteMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Returns the list of gifts that can be sent by the bot to users and channel chats. Requires no parameters. Returns a Gifts object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getavailablegifts
+pub fn get_available_gifts(client client) {
+  new_get_request(client, path: "getAvailableGifts", query: None)
+  |> fetch(client)
+  |> map_response(model.gifts_decoder())
+}
+
+/// Sends a gift to the given user or channel chat. The gift can't be converted to Telegram Stars by the receiver. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendgift
+pub fn send_gift(client client, parameters parameters) {
+  let body_json = model.encode_send_gift_parameters(parameters)
+
+  new_post_request(client:, path: "sendGift", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Gifts a Telegram Premium subscription to the given user. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#giftpremium
+pub fn gift_premium(client client, parameters parameters) {
+  let body_json = model.encode_gift_premium_subscription_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "giftPremium",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Verifies a user [on behalf of the organization](https://core.telegram.org/bots/api#verifyuser) which is represented by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#verifyuser
+pub fn verify_user(client client, parameters parameters) {
+  let body_json = model.encode_verify_user_parameters(parameters)
+
+  new_post_request(client:, path: "verifyUser", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Verifies a chat [on behalf of the organization](https://core.telegram.org/bots/api#verifychat) which is represented by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#verifychat
+pub fn verify_chat(client client, parameters parameters) {
+  let body_json = model.encode_verify_chat_parameters(parameters)
+
+  new_post_request(client:, path: "verifyChat", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Removes verification from a user who is currently verified [on behalf of the organization](https://core.telegram.org/bots/api#removeuserverification) represented by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#removeuserverification
+pub fn remove_user_verification(client client, parameters parameters) {
+  let body_json = model.encode_remove_user_verification_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "removeUserVerification",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Removes verification from a chat that is currently verified [on behalf of the organization](https://core.telegram.org/bots/api#removechatverification) represented by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#removechatverification
+pub fn remove_chat_verification(client client, parameters parameters) {
+  let body_json = model.encode_remove_chat_verification_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "removeChatVerification",
     body: json.to_string(body_json),
   )
   |> fetch(client)
@@ -1265,17 +1292,19 @@ pub fn unhide_general_forum_topic(client client, parameters parameters) {
 
 /// Use this method to clear the list of pinned messages in a General forum topic. The bot must be an administrator in the chat for this to work and must have the `can_pin_messages` administrator right in the supergroup. Returns `True` on success.
 ///
-/// **Official reference:** https://core.telegram.org/bots/api#unpinallgeneralforumtopicpinnedmessages
-pub fn unpin_all_general_forum_topic_pinned_messages(
+/// **Official reference:** https://core.telegram.org/bots/api#unpinallgeneralforumtopicmessages
+pub fn unpin_all_general_forum_topic_messages(
   client client,
   parameters parameters,
 ) {
   let body_json =
-    model.encode_unpin_all_forum_topic_messages_parameters(parameters)
+    model.encode_unpin_all_general_forum_topic_pinned_messages_parameters(
+      parameters,
+    )
 
   new_post_request(
     client:,
-    path: "unpinAllGeneralForumTopicPinnedMessages",
+    path: "unpinAllGeneralForumTopicMessages",
     body: json.to_string(body_json),
   )
   |> fetch(client)
@@ -1284,13 +1313,13 @@ pub fn unpin_all_general_forum_topic_pinned_messages(
 
 /// Use this method to get the list of boosts added to a chat by a user. Requires administrator rights in the chat. Returns a [UserChatBoosts](https://core.telegram.org/bots/api#userchatboosts) object.
 ///
-/// **Official reference:** https://core.telegram.org/bots/api#getchatboosts
-pub fn get_chat_boosts(client client, parameters parameters) {
+/// **Official reference:** https://core.telegram.org/bots/api#getuserchatboosts
+pub fn get_user_chat_boosts(client client, parameters parameters) {
   let body_json = model.encode_get_user_chat_boosts_parameters(parameters)
 
   new_post_request(
     client:,
-    path: "getChatBoosts",
+    path: "getUserChatBoosts",
     body: json.to_string(body_json),
   )
   |> fetch(client)
@@ -1529,7 +1558,419 @@ pub fn get_my_default_administrator_rights(client client, parameters parameters)
   |> map_response(model.chat_administrator_rights_decoder())
 }
 
+/// Use this method to send static .WEBP, [animated](https://telegram.org/blog/animated-stickers) .TGS, or [video](https://telegram.org/blog/video-stickers-better-reactions/ru?ln=a) .WEBM stickers. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendsticker
+pub fn send_sticker(client client, parameters parameters) {
+  let body_json = model.encode_send_sticker_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendSticker",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to get a sticker set. On success, a [StickerSet](https://core.telegram.org/bots/api#stickerset) object is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getstickerset
+pub fn get_sticker_set(client client, parameters parameters) {
+  let body_json = model.encode_get_sticker_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getStickerSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.sticker_set_decoder())
+}
+
+/// Use this method to get information about custom emoji stickers by their identifiers. Returns an Array of [Sticker](https://core.telegram.org/bots/api#sticker) objects.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getcustomemojistickers
+pub fn get_custom_emoji_stickers(client client, parameters parameters) {
+  let body_json = model.encode_get_custom_emoji_stickers_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getCustomEmojiStickers",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.sticker_decoder())
+}
+
+/// Use this method to upload a file with a sticker for later use in the [createNewStickerSet](https://core.telegram.org/bots/api#createnewstickerset), [addStickerToSet](https://core.telegram.org/bots/api#addstickertoset), or [replaceStickerInSet](https://core.telegram.org/bots/api#replacestickerinset) methods (the file can be used multiple times). Returns the uploaded [File](https://core.telegram.org/bots/api#file) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#uploadstickerfile
+pub fn upload_sticker_file(client client, parameters parameters) {
+  let body_json = model.encode_upload_sticker_file_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "uploadStickerFile",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.file_decoder())
+}
+
+/// Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#createnewstickerset
+pub fn create_new_sticker_set(client client, parameters parameters) {
+  let body_json = model.encode_create_new_sticker_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "createNewStickerSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to add a new sticker to a set created by the bot. Emoji sticker sets can have up to 200 stickers. Other sticker sets can have up to 120 stickers. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#addstickertoset
+pub fn add_sticker_to_set(client client, parameters parameters) {
+  let body_json = model.encode_add_sticker_to_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "addStickerToSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to move a sticker in a set to a specific position. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickerpositioninset
+pub fn set_sticker_position_in_set(client client, parameters parameters) {
+  let body_json =
+    model.encode_set_sticker_position_in_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerPositionInSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete a sticker from a set created by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletestickerfromset
+pub fn delete_sticker_from_set(client client, parameters parameters) {
+  let body_json = model.encode_delete_sticker_from_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteStickerFromSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to replace an existing sticker in a sticker set with a new one. The method is equivalent to calling deleteStickerFromSet, then addStickerToSet, then setStickerPositionInSet. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#replacestickerinset
+pub fn replace_sticker_in_set(client client, parameters parameters) {
+  let body_json = model.encode_replace_sticker_in_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "replaceStickerInSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to change the list of emoji assigned to a regular or custom emoji sticker. The sticker must belong to a sticker set created by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickeremojilist
+pub fn set_sticker_emoji_list(client client, parameters parameters) {
+  let body_json = model.encode_set_sticker_emoji_list_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerEmojiList",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to change search keywords assigned to a regular or custom emoji sticker. The sticker must belong to a sticker set created by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickerkeywords
+pub fn set_sticker_keywords(client client, parameters parameters) {
+  let body_json = model.encode_set_sticker_keywords_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerKeywords",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to change the mask position of a mask sticker. The sticker must belong to a sticker set that was created by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickermaskposition
+pub fn set_sticker_mask_position(client client, parameters parameters) {
+  let body_json = model.encode_set_sticker_mask_position_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerMaskPosition",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to set the title of a created sticker set. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickersettitle
+pub fn set_sticker_set_title(client client, parameters parameters) {
+  let body_json = model.encode_set_sticker_set_title_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerSetTitle",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to set the thumbnail of a regular or mask sticker set. The format of the thumbnail file must match the format of the stickers in the set. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setstickersetthumbnail
+pub fn set_sticker_set_thumbnail(client client, parameters parameters) {
+  let body_json = model.encode_set_sticker_set_thumbnail_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setStickerSetThumbnail",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to set the thumbnail of a custom emoji sticker set. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setcustomemojistickersetthumbnail
+pub fn set_custom_emoji_sticker_set_thumbnail(
+  client client,
+  parameters parameters,
+) {
+  let body_json =
+    model.encode_set_custom_emoji_sticker_set_thumbnail_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setCustomEmojiStickerSetThumbnail",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete a sticker set that was created by the bot. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletestickerset
+pub fn delete_sticker_set(client client, parameters parameters) {
+  let body_json = model.encode_delete_sticker_set_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteStickerSet",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to send answers to an inline query. On success, True is returned.
+/// No more than 50 results per query are allowed.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answerinlinequery
+pub fn answer_inline_query(client client, parameters parameters) {
+  let body_json = model.encode_answer_inline_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerInlineQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to send invoices. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
+pub fn send_invoice(client client, parameters parameters) {
+  let body_json = model.encode_send_invoice_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendInvoice",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to create a link for an invoice.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#createinvoicelink
+pub fn create_invoice_link(client client, parameters parameters) {
+  let body_json = model.encode_create_invoice_link_parameters(parameters)
+
+  new_post_request(
+    client,
+    path: "createInvoiceLink",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.string)
+}
+
+/// If you sent an invoice requesting a shipping address and the parameter `is_flexible` was specified, the Bot API will send an [Update](https://core.telegram.org/bots/api#update) with a `shipping_query` field to the bot. Use this method to reply to shipping queries. On success, `True` is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answershippingquery
+pub fn answer_shipping_query(client client, parameters parameters) {
+  let body_json = model.encode_answer_shipping_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerShippingQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Once the user has confirmed their payment and shipping details, the Bot API sends the final confirmation in the form of an [Update](https://core.telegram.org/bots/api#update) with the field `pre_checkout_query`. Use this method to respond to such pre-checkout queries. On success, `True` is returned.
+/// > **Note:** The Bot API must receive an answer within 10 seconds after the pre-checkout query was sent.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answerprecheckoutquery
+pub fn answer_pre_checkout_query(client client, parameters parameters) {
+  let body_json = model.encode_answer_pre_checkout_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerPreCheckoutQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Returns the bot's Telegram Star transactions in chronological order. On success, returns a [StarTransactions](https://core.telegram.org/bots/api#startransactions) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmystartransactions
+pub fn get_star_transactions(client client, parameters parameters) {
+  let body_json = model.encode_get_star_transactions_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getStarTransactions",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.star_transactions_decoder())
+}
+
+/// Refunds a successful payment in Telegram Stars. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#refundstars
+pub fn refund_star_payment(client client, parameters parameters) {
+  let body_json = model.encode_refund_star_payment_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "refundStarPayment",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Allows the bot to cancel or re-enable extension of a subscription paid in Telegram Stars. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#edituserstarsubscription
+pub fn edit_user_star_subscription(client client, parameters parameters) {
+  let body_json =
+    model.encode_edit_user_star_subscription_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editUserStarSubscription",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to send a game. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendgame
+pub fn send_game(client client, parameters parameters) {
+  let body_json = model.encode_send_game_parameters(parameters)
+
+  new_post_request(client:, path: "sendGame", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to set the score of the specified user in a game message. On success, if the message is not an inline message, the [Message](https://core.telegram.org/bots/api#message) is returned, otherwise `True` is returned. Returns an error, if the new score is not greater than the user's current score in the chat and `force` is `False`.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setgamescore
+pub fn set_game_score(client client, parameters parameters) {
+  let body_json = model.encode_set_game_score_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setGameScore",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.message_decoder())
+}
+
+/// Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. Returns an Array of [GameHighScore](https://core.telegram.org/bots/api#gamehighscore) objects.
+///
+/// > This method will currently return scores for the target user, plus two of their closest neighbors on each side. Will also return the top three users if the user and their neighbors are not among them. Please note that this behavior is subject to change.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getgamehighscores
+pub fn get_game_high_scores(client client, parameters parameters) {
+  let body_json = model.encode_get_game_high_scores_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getGameHighScores",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.game_high_score_decoder())
+}
+
 // Common Helpers --------------------------------------------------------------------------------------
+
 fn map_response(
   response: Result(Response(String), error.TelegaError),
   result_decoder,
