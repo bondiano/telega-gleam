@@ -100,10 +100,12 @@ pub fn handle_all(
 /// See [conversation](/docs/conversation)
 pub fn wait_any(
   ctx ctx: Context(session, error),
-  continue continue: fn(Context(session, error), update.Update) ->
+  continue handler: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleAll(continue))
+  bot.wait_handler(ctx:, handler: HandleAll(handler:), handle_else:, timeout:)
 }
 
 /// Handles a specific command.
@@ -127,8 +129,15 @@ pub fn wait_command(
   command command: String,
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleCommand(command, continue))
+  bot.wait_handler(
+    ctx:,
+    handler: HandleCommand(command, continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles multiple commands.
@@ -152,8 +161,15 @@ pub fn wait_commands(
   commands commands: List(String),
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleCommands(commands, continue))
+  bot.wait_handler(
+    ctx:,
+    handler: HandleCommands(commands, continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles text messages.
@@ -172,8 +188,10 @@ pub fn wait_text(
   ctx ctx: Context(session, error),
   continue continue: fn(Context(session, error), String) ->
     Result(Context(session, error), error),
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleText(continue))
+  bot.wait_handler(ctx:, handler: HandleText(continue), handle_else:, timeout:)
 }
 
 /// Handles messages that match the given `Hears`.
@@ -196,8 +214,15 @@ pub fn wait_hears(
   ctx ctx: Context(session, error),
   hears hears: Hears,
   continue continue,
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleHears(hears, continue))
+  bot.wait_handler(
+    ctx:,
+    handler: HandleHears(hears, continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles any message.
@@ -215,8 +240,18 @@ pub fn handle_message(
 /// Stops bot message handling from current chat and waits for any message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_message(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandleMessage(continue))
+pub fn wait_message(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(
+    ctx:,
+    handler: HandleMessage(continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles messages from inline keyboard callback.
@@ -240,8 +275,15 @@ pub fn wait_callback_query(
   ctx ctx: Context(session, error),
   filter filter: CallbackQueryFilter,
   continue continue,
+  or handle_else,
+  timeout timeout,
 ) {
-  bot.wait_handler(ctx, HandleCallbackQuery(filter, continue))
+  bot.wait_handler(
+    ctx:,
+    handler: HandleCallbackQuery(filter, continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles voice messages.
@@ -256,8 +298,13 @@ pub fn handle_voice(
 /// Stops bot message handling from current chat and waits for a voice message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_voice(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandleVoice(continue))
+pub fn wait_voice(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(ctx:, handler: HandleVoice(continue), handle_else:, timeout:)
 }
 
 /// Handles audio messages.
@@ -272,8 +319,13 @@ pub fn handle_audio(
 /// Stops bot message handling from current chat and waits for an audio message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_audio(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandleAudio(continue))
+pub fn wait_audio(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(ctx:, handler: HandleAudio(continue), handle_else:, timeout:)
 }
 
 /// Handles video messages.
@@ -288,8 +340,13 @@ pub fn handle_video(
 /// Stops bot message handling from current chat and waits for a video message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_video(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandleVideo(continue))
+pub fn wait_video(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(ctx:, handler: HandleVideo(continue), handle_else:, timeout:)
 }
 
 /// Handles photo messages.
@@ -304,8 +361,18 @@ pub fn handle_photos(
 /// Stops bot message handling from current chat and waits for a photo message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_photos(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandlePhotos(continue))
+pub fn wait_photos(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(
+    ctx:,
+    handler: HandlePhotos(continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Handles web app data messages.
@@ -323,8 +390,18 @@ pub fn handle_web_app_data(
 /// Stops bot message handling from current chat and waits for a web app data message.
 ///
 /// See [conversation](/docs/conversation)
-pub fn wait_web_app_data(ctx ctx: Context(session, error), continue continue) {
-  bot.wait_handler(ctx, HandleWebAppData(continue))
+pub fn wait_web_app_data(
+  ctx ctx: Context(session, error),
+  continue continue,
+  or handle_else,
+  timeout timeout,
+) {
+  bot.wait_handler(
+    ctx:,
+    handler: HandleWebAppData(continue),
+    handle_else:,
+    timeout:,
+  )
 }
 
 /// Set a catch handler for all handlers.

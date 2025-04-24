@@ -3,13 +3,16 @@ import gleam/function
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/otp/actor
 import gleam/regexp.{type Regexp}
 import gleam/result
 import gleam/string
-import telega/internal/log
+import gleam/time/duration
+import gleam/time/timestamp.{type Timestamp}
 
 import telega/internal/config.{type Config}
+import telega/internal/log
 import telega/internal/registry.{type RegistrySubject}
 
 import telega/error
@@ -154,7 +157,19 @@ pub opaque type ChatInstanceMessage(session, error) {
     handlers: List(Handler(session, error)),
     reply_with: Subject(Bool),
   )
-  WaitHandlerChatInstanceMessage(handler: Handler(session, error))
+  WaitHandlerChatInstanceMessage(
+    handler: Handler(session, error),
+    handle_else: Option(Handler(session, error)),
+    timeout: Option(Int),
+  )
+}
+
+type Continuation(session, error) {
+  Continuation(
+    handler: Handler(session, error),
+    handle_else: Option(Handler(session, error)),
+    ttl: Option(Timestamp),
+  )
 }
 
 type ChatInstance(session, error) {
@@ -165,7 +180,7 @@ type ChatInstance(session, error) {
     catch_handler: CatchHandler(session, error),
     session_settings: SessionSettings(session, error),
     self: ChatInstanceSubject(session, error),
-    continuation: Option(Handler(session, error)),
+    continuation: Option(Continuation(session, error)),
   )
 }
 
@@ -226,44 +241,128 @@ fn handle_update_chat_instance(
 
 fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
   case message {
-    HandleNewChatInstanceMessage(update:, handlers:, reply_with:) -> {
-      let context = new_context(chat:, update:)
-      case chat.continuation {
+    HandleNewChatInstanceMessage(update:, handlers:, reply_with:) ->
+      do_handle_new_chat_instance_message(
+        context: new_context(chat:, update:),
+        chat:,
+        update:,
+        handlers:,
+        reply_with:,
+      )
+    WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
+      actor.continue(
+        ChatInstance(
+          ..chat,
+          continuation: Some(
+            Continuation(handler:, handle_else:, ttl: {
+              use timeout <- option.map(timeout)
+              timestamp.system_time()
+              |> timestamp.add(duration.seconds(timeout))
+            }),
+          ),
+        ),
+      )
+  }
+}
+
+fn do_handle_new_chat_instance_message(
+  context context: Context(session, error),
+  chat chat: ChatInstance(session, error),
+  update update,
+  handlers handlers,
+  reply_with reply_with,
+) {
+  case chat.continuation {
+    // There is a continuation, handle the update with it
+    Some(continuation) ->
+      case continuation.ttl {
+        Some(ttl) -> {
+          case timestamp.compare(ttl, timestamp.system_time()) {
+            // When ttl is expired, handle update without continuation
+            order.Lt ->
+              do_handle_new_chat_instance_message(
+                context:,
+                chat: ChatInstance(..chat, continuation: None),
+                update:,
+                handlers:,
+                reply_with:,
+              )
+            _ ->
+              do_handle_continuation(
+                context:,
+                continuation:,
+                update:,
+                reply_with:,
+                chat:,
+              )
+          }
+        }
         None ->
-          case
-            loop_handlers(
-              chat:,
-              context:,
-              update:,
-              handlers:,
-              config: chat.config,
-            )
-          {
-            Ok(new_session) -> {
-              actor.send(reply_with, True)
-              actor.continue(ChatInstance(..chat, session: new_session))
+          do_handle_continuation(
+            context:,
+            continuation:,
+            update:,
+            reply_with:,
+            chat:,
+          )
+      }
+    None ->
+      case
+        loop_handlers(chat:, context:, update:, handlers:, config: chat.config)
+      {
+        Ok(new_session) -> {
+          actor.send(reply_with, True)
+          actor.continue(ChatInstance(..chat, session: new_session))
+        }
+        Error(e) -> {
+          case chat.catch_handler(context, e) {
+            Ok(_) -> {
+              actor.send(reply_with, False)
+              actor.continue(chat)
             }
             Error(e) -> {
-              case chat.catch_handler(context, e) {
-                Ok(_) -> {
-                  actor.send(reply_with, False)
-                  actor.continue(chat)
-                }
-                Error(e) -> {
-                  log.error_d("Error in catch handler: ", e)
-                  actor.Stop(process.Normal)
-                }
-              }
+              log.error_d("Error in catch handler: ", e)
+              actor.Stop(process.Normal)
             }
           }
-        // There is a continuation, handle the update with it
-        Some(handler) -> {
+        }
+      }
+  }
+}
+
+fn do_handle_continuation(
+  context context,
+  continuation continuation: Continuation(session, error),
+  update update,
+  reply_with reply_with,
+  chat chat,
+) {
+  case do_handle(context:, update:, handler: continuation.handler) {
+    Some(Ok(Context(session: new_session, ..))) -> {
+      actor.send(reply_with, True)
+      actor.continue(
+        ChatInstance(..chat, session: new_session, continuation: None),
+      )
+    }
+    Some(Error(e)) -> {
+      case chat.catch_handler(context, e) {
+        Ok(_) -> {
+          actor.send(reply_with, False)
+          actor.continue(chat)
+        }
+        Error(e) -> {
+          log.error_d("Error in catch handler: ", e)
+          actor.Stop(process.Normal)
+        }
+      }
+    }
+    None -> {
+      case continuation.handle_else {
+        Some(handler) ->
           case do_handle(context:, update:, handler:) {
             Some(Ok(Context(session: new_session, ..))) -> {
               actor.send(reply_with, True)
-              actor.continue(
-                ChatInstance(..chat, session: new_session, continuation: None),
-              )
+              actor.continue(ChatInstance(..chat, session: new_session))
             }
             Some(Error(e)) -> {
               case chat.catch_handler(context, e) {
@@ -272,21 +371,22 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
                   actor.continue(chat)
                 }
                 Error(e) -> {
-                  log.error_d("Error in catch handler: ", e)
+                  log.error_d("Error in catch else handler: ", e)
                   actor.Stop(process.Normal)
                 }
               }
             }
             None -> {
-              actor.send(reply_with, True)
+              actor.send(reply_with, False)
               actor.continue(chat)
             }
           }
+        None -> {
+          actor.send(reply_with, False)
+          actor.continue(chat)
         }
       }
     }
-    WaitHandlerChatInstanceMessage(handler: handler) ->
-      actor.continue(ChatInstance(..chat, continuation: Some(handler)))
   }
 }
 
@@ -478,8 +578,19 @@ fn extract_update_handlers(handlers, update) {
 }
 
 /// Pass any handler to start waiting
-pub fn wait_handler(ctx: Context(session, error), handler) {
-  process.send(ctx.chat_subject, WaitHandlerChatInstanceMessage(handler))
+///
+/// `or` - calls if there are any other updates
+/// `timeout` - the conversation will be canceled after this timeout
+pub fn wait_handler(
+  ctx ctx: Context(session, error),
+  handler handler,
+  handle_else handle_else,
+  timeout timeout,
+) {
+  process.send(
+    ctx.chat_subject,
+    WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
+  )
   Ok(ctx)
 }
 

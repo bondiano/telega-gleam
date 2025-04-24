@@ -45,17 +45,24 @@ fn t_welcome_message(language) -> String {
   }
 }
 
-fn t_change_language_message(language) -> String {
+fn t_change_language_message(language) {
   case language {
     English -> "Choose your language"
     Russian -> "Выберите ваш язык"
   }
 }
 
-fn t_language_changed_message(language) -> String {
+fn t_language_changed_message(language) {
   case language {
     English -> "Language changed to English"
     Russian -> "Язык изменен на русский"
+  }
+}
+
+fn t_none_keyboard_message(language) {
+  case language {
+    English -> "Use buttons to change language"
+    Russian -> "Используйте кнопки для смены языка"
   }
 }
 
@@ -70,10 +77,21 @@ fn change_languages_keyboard(ctx: BotContext, _) {
     telega_keyboard.to_markup(keyboard),
   ))
 
-  use _, text <- telega.wait_hears(ctx, telega_keyboard.hear(keyboard))
+  use _, text <- telega.wait_hears(
+    ctx,
+    telega_keyboard.hear(keyboard),
+    or: bot.HandleAll(handle_none_keyboard_message) |> Some,
+    timeout: None,
+  )
   let language = language_keyboard.option_to_language(text)
   use _ <- try(reply.with_text(ctx, t_language_changed_message(language)))
   bot.next_session(ctx, LanguageBotSession(language))
+}
+
+fn handle_none_keyboard_message(ctx: BotContext, _) {
+  use <- telega.log_context(ctx, "change language with none keyboard")
+  use _ <- try(reply.with_text(ctx, t_none_keyboard_message(ctx.session.lang)))
+  bot.next_session(ctx, LanguageBotSession(ctx.session.lang))
 }
 
 fn handle_inline_change_language(ctx: BotContext, _) {
@@ -91,6 +109,8 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx,
     telega_keyboard.filter_inline_keyboard_query(keyboard),
+    or: None,
+    timeout: Some(1000),
   )
 
   let assert Ok(language_callback) =
