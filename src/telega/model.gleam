@@ -2047,6 +2047,124 @@ pub type BusinessOpeningHours {
   )
 }
 
+/// **Official reference:** Describes the position of a clickable area within a story.
+pub type StoryAreaPosition {
+  StoryAreaPosition(
+    /// The abscissa of the area's center, as a percentage of the media width
+    x_percentage: Float,
+    /// The ordinate of the area's center, as a percentage of the media height
+    y_percentage: Float,
+    /// The width of the area's rectangle, as a percentage of the media width
+    width_percentage: Float,
+    /// The height of the area's rectangle, as a percentage of the media height
+    height_percentage: Float,
+    /// The clockwise rotation angle of the rectangle, in degrees; 0-360
+    rotation_angle: Float,
+    /// The radius of the rectangle corner rounding, as a percentage of the media width
+    corner_radius_percentage: Float,
+  )
+}
+
+/// **Official reference:** Describes the physical address of a location.
+pub type LocationAddress {
+  LocationAddress(
+    /// The two-letter ISO 3166-1 alpha-2 country code of the country where the location is located
+    country_code: String,
+    /// Optional. State of the location
+    state: Option(String),
+    /// Optional. City of the location
+    city: Option(String),
+    /// Optional. Street address of the location
+    street: Option(String),
+  )
+}
+
+/// **Official reference:** Describes the type of a clickable area on a story. Currently, it can be one of
+pub type StoryAreaType {
+  StoryAreaType(
+    /// Type of the area, always “location”
+    type_: String,
+    /// Location latitude in degrees
+    latitude: Float,
+    /// Location longitude in degrees
+    longitude: Float,
+    /// Optional. Address of the location
+    address: Option(LocationAddress),
+  )
+}
+
+/// **Official reference:** Describes a story area pointing to a location. Currently, a story can have up to 10 location areas.
+pub type StoryAreaTypeLocation {
+  StoryAreaTypeLocation(
+    /// Type of the area, always “location”
+    type_: String,
+    /// Location latitude in degrees
+    latitude: Float,
+    /// Location longitude in degrees
+    longitude: Float,
+    /// Optional. Address of the location
+    address: Option(LocationAddress),
+  )
+}
+
+/// **Official reference:** Describes a story area pointing to a suggested reaction. Currently, a story can have up to 5 suggested reaction areas.
+pub type StoryAreaTypeSuggestedReaction {
+  StoryAreaTypeSuggestedReaction(
+    /// Type of the area, always “suggested_reaction”
+    type_: String,
+    /// Type of the reaction
+    reaction_type: ReactionType,
+    /// Optional. Pass True if the reaction area has a dark background
+    is_dark: Option(Bool),
+    /// Optional. Pass True if reaction area corner is flipped
+    is_flipped: Option(Bool),
+  )
+}
+
+/// **Official reference:** Describes a story area pointing to an HTTP or tg:// link. Currently, a story can have up to 3 link areas.
+pub type StoryAreaTypeLink {
+  StoryAreaTypeLink(
+    /// Type of the area, always “link”
+    type_: String,
+    /// HTTP or tg:// URL to be opened when the area is clicked
+    url: String,
+  )
+}
+
+/// **Official reference:** Describes a story area containing weather information. Currently, a story can have up to 3 weather areas.
+pub type StoryAreaTypeWeather {
+  StoryAreaTypeWeather(
+    /// Type of the area, always “weather”
+    type_: String,
+    /// Temperature, in degree Celsius
+    temperature: Float,
+    /// Emoji representing the weather
+    emoji: String,
+    /// A color of the area background in the ARGB format
+    background_color: Int,
+  )
+}
+
+/// **Official reference:** Describes a story area pointing to a unique gift. Currently, a story can have at most 1 unique gift area.
+pub type StoryAreaTypeUniqueGift {
+  StoryAreaTypeUniqueGift(
+    /// Type of the area, always “unique_gift”
+    type_: String,
+    /// Unique name of the gift
+    name: String,
+  )
+}
+
+/// **Official reference:** Describes a clickable area on a story media.
+pub type StoryArea {
+  StoryArea(
+    /// Position of the area
+    position: StoryAreaPosition,
+    /// Type of the area
+    type_: StoryAreaType,
+  )
+}
+
 /// **Official reference:** Represents a location to which a chat is connected.
 pub type ChatLocation {
   ChatLocation(
@@ -2830,6 +2948,42 @@ pub type InputProfilePhotoAnimated {
     animation: String,
     /// Optional. Timestamp in seconds of the frame that will be used as the static profile photo. Defaults to 0.0.
     main_frame_timestamp: Option(Float),
+  )
+}
+
+/// **Official reference:** This object describes the content of a story to post. Currently, it can be one of
+pub type InputStoryContent {
+  InputStoryContent(
+    /// Type of the content, must be photo
+    type_: String,
+    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    photo: String,
+  )
+}
+
+/// **Official reference:** Describes a photo to post as a story.
+pub type InputStoryContentPhoto {
+  InputStoryContentPhoto(
+    /// Type of the content, must be photo
+    type_: String,
+    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    photo: String,
+  )
+}
+
+/// **Official reference:** Describes a video to post as a story.
+pub type InputStoryContentVideo {
+  InputStoryContentVideo(
+    /// Type of the content, must be video
+    type_: String,
+    /// The video to post as a story. The video must be of the size 720x1280, streamable, encoded with H.265 codec, with key frames added each second in the MPEG4 format, and must not exceed 30 MB. The video can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the video was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    video: String,
+    /// Optional. Precise duration of the video in seconds; 0-60
+    duration: Option(Float),
+    /// Optional. Timestamp in seconds of the frame that will be used as the static cover for the story. Defaults to 0.0.
+    cover_frame_timestamp: Option(Float),
+    /// Optional. Pass True if the video has no sound
+    is_animation: Option(Bool),
   )
 }
 
@@ -12881,6 +13035,113 @@ pub fn encode_business_opening_hours(
   ])
 }
 
+pub fn encode_story_area_position(
+  story_area_position: StoryAreaPosition,
+) -> Json {
+  json_object_filter_nulls([
+    #("x_percentage", json.float(story_area_position.x_percentage)),
+    #("y_percentage", json.float(story_area_position.y_percentage)),
+    #("width_percentage", json.float(story_area_position.width_percentage)),
+    #("height_percentage", json.float(story_area_position.height_percentage)),
+    #("rotation_angle", json.float(story_area_position.rotation_angle)),
+    #(
+      "corner_radius_percentage",
+      json.float(story_area_position.corner_radius_percentage),
+    ),
+  ])
+}
+
+pub fn encode_location_address(location_address: LocationAddress) -> Json {
+  json_object_filter_nulls([
+    #("country_code", json.string(location_address.country_code)),
+    #("state", json.nullable(location_address.state, json.string)),
+    #("city", json.nullable(location_address.city, json.string)),
+    #("street", json.nullable(location_address.street, json.string)),
+  ])
+}
+
+pub fn encode_story_area_type(story_area_type: StoryAreaType) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type.type_)),
+    #("latitude", json.float(story_area_type.latitude)),
+    #("longitude", json.float(story_area_type.longitude)),
+    #(
+      "address",
+      json.nullable(story_area_type.address, encode_location_address),
+    ),
+  ])
+}
+
+pub fn encode_story_area_type_location(
+  story_area_type_location: StoryAreaTypeLocation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_location.type_)),
+    #("latitude", json.float(story_area_type_location.latitude)),
+    #("longitude", json.float(story_area_type_location.longitude)),
+    #(
+      "address",
+      json.nullable(story_area_type_location.address, encode_location_address),
+    ),
+  ])
+}
+
+pub fn encode_story_area_type_suggested_reaction(
+  story_area_type_suggested_reaction: StoryAreaTypeSuggestedReaction,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_suggested_reaction.type_)),
+    #(
+      "reaction_type",
+      encode_reaction_type(story_area_type_suggested_reaction.reaction_type),
+    ),
+    #(
+      "is_dark",
+      json.nullable(story_area_type_suggested_reaction.is_dark, json.bool),
+    ),
+    #(
+      "is_flipped",
+      json.nullable(story_area_type_suggested_reaction.is_flipped, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_story_area_type_link(
+  story_area_type_link: StoryAreaTypeLink,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_link.type_)),
+    #("url", json.string(story_area_type_link.url)),
+  ])
+}
+
+pub fn encode_story_area_type_weather(
+  story_area_type_weather: StoryAreaTypeWeather,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_weather.type_)),
+    #("temperature", json.float(story_area_type_weather.temperature)),
+    #("emoji", json.string(story_area_type_weather.emoji)),
+    #("background_color", json.int(story_area_type_weather.background_color)),
+  ])
+}
+
+pub fn encode_story_area_type_unique_gift(
+  story_area_type_unique_gift: StoryAreaTypeUniqueGift,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_unique_gift.type_)),
+    #("name", json.string(story_area_type_unique_gift.name)),
+  ])
+}
+
+pub fn encode_story_area(story_area: StoryArea) -> Json {
+  json_object_filter_nulls([
+    #("position", encode_story_area_position(story_area.position)),
+    #("type", encode_story_area_type(story_area.type_)),
+  ])
+}
+
 pub fn encode_chat_location(chat_location: ChatLocation) -> Json {
   json_object_filter_nulls([
     #("location", encode_location(chat_location.location)),
@@ -12968,6 +13229,220 @@ pub fn encode_forum_topic(forum_topic: ForumTopic) -> Json {
       "icon_custom_emoji_id",
       json.nullable(forum_topic.icon_custom_emoji_id, json.string),
     ),
+  ])
+}
+
+pub fn encode_gift(gift: Gift) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(gift.id)),
+    #("sticker", encode_sticker(gift.sticker)),
+    #("star_count", json.int(gift.star_count)),
+    #("upgrade_star_count", json.nullable(gift.upgrade_star_count, json.int)),
+    #("total_count", json.nullable(gift.total_count, json.int)),
+    #("remaining_count", json.nullable(gift.remaining_count, json.int)),
+  ])
+}
+
+pub fn encode_gifts(gifts: Gifts) -> Json {
+  json_object_filter_nulls([#("gifts", json.array(_, encode_gift)(gifts.gifts))])
+}
+
+pub fn encode_unique_gift_model(unique_gift_model: UniqueGiftModel) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_model.name)),
+    #("sticker", encode_sticker(unique_gift_model.sticker)),
+    #("rarity_per_mille", json.int(unique_gift_model.rarity_per_mille)),
+  ])
+}
+
+pub fn encode_unique_gift_symbol(unique_gift_symbol: UniqueGiftSymbol) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_symbol.name)),
+    #("sticker", encode_sticker(unique_gift_symbol.sticker)),
+    #("rarity_per_mille", json.int(unique_gift_symbol.rarity_per_mille)),
+  ])
+}
+
+pub fn encode_unique_gift_backdrop_colors(
+  unique_gift_backdrop_colors: UniqueGiftBackdropColors,
+) -> Json {
+  json_object_filter_nulls([
+    #("center_color", json.int(unique_gift_backdrop_colors.center_color)),
+    #("edge_color", json.int(unique_gift_backdrop_colors.edge_color)),
+    #("symbol_color", json.int(unique_gift_backdrop_colors.symbol_color)),
+    #("text_color", json.int(unique_gift_backdrop_colors.text_color)),
+  ])
+}
+
+pub fn encode_unique_gift_backdrop(
+  unique_gift_backdrop: UniqueGiftBackdrop,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_backdrop.name)),
+    #("colors", encode_unique_gift_backdrop_colors(unique_gift_backdrop.colors)),
+    #("rarity_per_mille", json.int(unique_gift_backdrop.rarity_per_mille)),
+  ])
+}
+
+pub fn encode_unique_gift(unique_gift: UniqueGift) -> Json {
+  json_object_filter_nulls([
+    #("base_name", json.string(unique_gift.base_name)),
+    #("name", json.string(unique_gift.name)),
+    #("number", json.int(unique_gift.number)),
+    #("model", encode_unique_gift_model(unique_gift.model)),
+    #("symbol", encode_unique_gift_symbol(unique_gift.symbol)),
+    #("backdrop", encode_unique_gift_backdrop(unique_gift.backdrop)),
+  ])
+}
+
+pub fn encode_gift_info(gift_info: GiftInfo) -> Json {
+  json_object_filter_nulls([
+    #("gift", encode_gift(gift_info.gift)),
+    #("owned_gift_id", json.nullable(gift_info.owned_gift_id, json.string)),
+    #(
+      "convert_star_count",
+      json.nullable(gift_info.convert_star_count, json.int),
+    ),
+    #(
+      "prepaid_upgrade_star_count",
+      json.nullable(gift_info.prepaid_upgrade_star_count, json.int),
+    ),
+    #("can_be_upgraded", json.nullable(gift_info.can_be_upgraded, json.bool)),
+    #("text", json.nullable(gift_info.text, json.string)),
+    #(
+      "entities",
+      json.nullable(gift_info.entities, json.array(_, encode_message_entity)),
+    ),
+    #("is_private", json.nullable(gift_info.is_private, json.bool)),
+  ])
+}
+
+pub fn encode_unique_gift_info(unique_gift_info: UniqueGiftInfo) -> Json {
+  json_object_filter_nulls([
+    #("gift", encode_unique_gift(unique_gift_info.gift)),
+    #("origin", json.string(unique_gift_info.origin)),
+    #(
+      "owned_gift_id",
+      json.nullable(unique_gift_info.owned_gift_id, json.string),
+    ),
+    #(
+      "transfer_star_count",
+      json.nullable(unique_gift_info.transfer_star_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_owned_gift(owned_gift: OwnedGift) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(owned_gift.type_)),
+    #("gift", encode_gift(owned_gift.gift)),
+    #("owned_gift_id", json.nullable(owned_gift.owned_gift_id, json.string)),
+    #("sender_user", json.nullable(owned_gift.sender_user, encode_user)),
+    #("send_date", json.int(owned_gift.send_date)),
+    #("text", json.nullable(owned_gift.text, json.string)),
+    #(
+      "entities",
+      json.nullable(owned_gift.entities, json.array(_, encode_message_entity)),
+    ),
+    #("is_private", json.nullable(owned_gift.is_private, json.bool)),
+    #("is_saved", json.nullable(owned_gift.is_saved, json.bool)),
+    #("can_be_upgraded", json.nullable(owned_gift.can_be_upgraded, json.bool)),
+    #("was_refunded", json.nullable(owned_gift.was_refunded, json.bool)),
+    #(
+      "convert_star_count",
+      json.nullable(owned_gift.convert_star_count, json.int),
+    ),
+    #(
+      "prepaid_upgrade_star_count",
+      json.nullable(owned_gift.prepaid_upgrade_star_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_owned_gift_regular(owned_gift_regular: OwnedGiftRegular) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(owned_gift_regular.type_)),
+    #("gift", encode_gift(owned_gift_regular.gift)),
+    #(
+      "owned_gift_id",
+      json.nullable(owned_gift_regular.owned_gift_id, json.string),
+    ),
+    #("sender_user", json.nullable(owned_gift_regular.sender_user, encode_user)),
+    #("send_date", json.int(owned_gift_regular.send_date)),
+    #("text", json.nullable(owned_gift_regular.text, json.string)),
+    #(
+      "entities",
+      json.nullable(owned_gift_regular.entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("is_private", json.nullable(owned_gift_regular.is_private, json.bool)),
+    #("is_saved", json.nullable(owned_gift_regular.is_saved, json.bool)),
+    #(
+      "can_be_upgraded",
+      json.nullable(owned_gift_regular.can_be_upgraded, json.bool),
+    ),
+    #("was_refunded", json.nullable(owned_gift_regular.was_refunded, json.bool)),
+    #(
+      "convert_star_count",
+      json.nullable(owned_gift_regular.convert_star_count, json.int),
+    ),
+    #(
+      "prepaid_upgrade_star_count",
+      json.nullable(owned_gift_regular.prepaid_upgrade_star_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_owned_gift_unique(owned_gift_unique: OwnedGiftUnique) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(owned_gift_unique.type_)),
+    #("gift", encode_unique_gift(owned_gift_unique.gift)),
+    #(
+      "owned_gift_id",
+      json.nullable(owned_gift_unique.owned_gift_id, json.string),
+    ),
+    #("sender_user", json.nullable(owned_gift_unique.sender_user, encode_user)),
+    #("send_date", json.int(owned_gift_unique.send_date)),
+    #("is_saved", json.nullable(owned_gift_unique.is_saved, json.bool)),
+    #(
+      "can_be_transferred",
+      json.nullable(owned_gift_unique.can_be_transferred, json.bool),
+    ),
+    #(
+      "transfer_star_count",
+      json.nullable(owned_gift_unique.transfer_star_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_owned_gifts(owned_gifts: OwnedGifts) -> Json {
+  json_object_filter_nulls([
+    #("total_count", json.int(owned_gifts.total_count)),
+    #("gifts", json.array(_, encode_owned_gift)(owned_gifts.gifts)),
+    #("next_offset", json.nullable(owned_gifts.next_offset, json.string)),
+  ])
+}
+
+pub fn encode_accepted_gift_types(
+  accepted_gift_types: AcceptedGiftTypes,
+) -> Json {
+  json_object_filter_nulls([
+    #("unlimited_gifts", json.bool(accepted_gift_types.unlimited_gifts)),
+    #("limited_gifts", json.bool(accepted_gift_types.limited_gifts)),
+    #("unique_gifts", json.bool(accepted_gift_types.unique_gifts)),
+    #(
+      "premium_subscription",
+      json.bool(accepted_gift_types.premium_subscription),
+    ),
+  ])
+}
+
+pub fn encode_star_amount(star_amount: StarAmount) -> Json {
+  json_object_filter_nulls([
+    #("amount", json.int(star_amount.amount)),
+    #("nanostar_amount", json.nullable(star_amount.nanostar_amount, json.int)),
   ])
 }
 
@@ -13421,6 +13896,67 @@ pub fn encode_input_paid_media_video(
   ])
 }
 
+pub fn encode_input_profile_photo_static(
+  input_profile_photo_static: InputProfilePhotoStatic,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_profile_photo_static.type_)),
+    #("photo", json.string(input_profile_photo_static.photo)),
+  ])
+}
+
+pub fn encode_input_profile_photo_animated(
+  input_profile_photo_animated: InputProfilePhotoAnimated,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_profile_photo_animated.type_)),
+    #("animation", json.string(input_profile_photo_animated.animation)),
+    #(
+      "main_frame_timestamp",
+      json.nullable(
+        input_profile_photo_animated.main_frame_timestamp,
+        json.float,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_story_content(
+  input_story_content: InputStoryContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_story_content.type_)),
+    #("photo", json.string(input_story_content.photo)),
+  ])
+}
+
+pub fn encode_input_story_content_photo(
+  input_story_content_photo: InputStoryContentPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_story_content_photo.type_)),
+    #("photo", json.string(input_story_content_photo.photo)),
+  ])
+}
+
+pub fn encode_input_story_content_video(
+  input_story_content_video: InputStoryContentVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_story_content_video.type_)),
+    #("video", json.string(input_story_content_video.video)),
+    #("duration", json.nullable(input_story_content_video.duration, json.float)),
+    #(
+      "cover_frame_timestamp",
+      json.nullable(input_story_content_video.cover_frame_timestamp, json.float),
+    ),
+    #(
+      "is_animation",
+      json.nullable(input_story_content_video.is_animation, json.bool),
+    ),
+  ])
+}
+
 pub fn encode_sticker(sticker: Sticker) -> Json {
   json_object_filter_nulls([
     #("file_id", json.string(sticker.file_id)),
@@ -13480,21 +14016,6 @@ pub fn encode_input_sticker(input_sticker: InputSticker) -> Json {
       json.nullable(input_sticker.keywords, json.array(_, json.string)),
     ),
   ])
-}
-
-pub fn encode_gift(gift: Gift) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(gift.id)),
-    #("sticker", encode_sticker(gift.sticker)),
-    #("star_count", json.int(gift.star_count)),
-    #("upgrade_star_count", json.nullable(gift.upgrade_star_count, json.int)),
-    #("total_count", json.nullable(gift.total_count, json.int)),
-    #("remaining_count", json.nullable(gift.remaining_count, json.int)),
-  ])
-}
-
-pub fn encode_gifts(gifts: Gifts) -> Json {
-  json_object_filter_nulls([#("gifts", json.array(_, encode_gift)(gifts.gifts))])
 }
 
 pub fn encode_inline_query(inline_query: InlineQuery) -> Json {
@@ -15966,6 +16487,16 @@ pub fn encode_input_media(value: InputMedia) -> Json {
 
     InputMediaVideoInputMedia(inner_value) ->
       encode_input_media_video(inner_value)
+  }
+}
+
+pub fn encode_input_profile_photo(value: InputProfilePhoto) -> Json {
+  case value {
+    InputProfilePhotoStaticInputProfilePhoto(inner_value) ->
+      encode_input_profile_photo_static(inner_value)
+
+    InputProfilePhotoAnimatedInputProfilePhoto(inner_value) ->
+      encode_input_profile_photo_animated(inner_value)
   }
 }
 
@@ -20356,6 +20887,436 @@ pub fn encode_get_game_high_scores_parameters(
     #("chat_id", json.nullable(params.chat_id, json.int)),
     #("message_id", json.nullable(params.message_id, json.int)),
     #("inline_message_id", json.nullable(params.inline_message_id, json.string)),
+  ])
+}
+
+// ReadBusinessMessageParameters ------------------------------------------------------------
+
+pub type ReadBusinessMessageParameters {
+  ReadBusinessMessageParameters(
+    /// Unique identifier of the business connection on behalf of which to read the message
+    business_connection_id: String,
+    /// Unique identifier of the chat in which the message was received. The chat must have been active in the last 24 hours.
+    chat_id: Int,
+    /// Unique identifier of the message to mark as read
+    message_id: Int,
+  )
+}
+
+pub fn encode_read_business_message_parameters(
+  params: ReadBusinessMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("chat_id", json.int(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+  ])
+}
+
+// DeleteBusinessMessagesParameters ------------------------------------------------------------
+
+pub type DeleteBusinessMessagesParameters {
+  DeleteBusinessMessagesParameters(
+    /// Unique identifier of the business connection on behalf of which to delete the messages
+    business_connection_id: String,
+    /// A JSON-serialized list of 1-100 identifiers of messages to delete. All messages must be from the same chat. See deleteMessage for limitations on which messages can be deleted
+    message_ids: List(Int),
+  )
+}
+
+pub fn encode_delete_business_messages_parameters(
+  params: DeleteBusinessMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("message_ids", json.array(params.message_ids, json.int)),
+  ])
+}
+
+// SetBusinessAccountNameParameters ------------------------------------------------------------
+
+pub type SetBusinessAccountNameParameters {
+  SetBusinessAccountNameParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// The new value of the first name for the business account; 1-64 characters
+    first_name: String,
+    /// The new value of the last name for the business account; 0-64 characters
+    last_name: Option(String),
+  )
+}
+
+pub fn encode_set_business_account_name_parameters(
+  params: SetBusinessAccountNameParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("first_name", json.string(params.first_name)),
+    #("last_name", json.nullable(params.last_name, json.string)),
+  ])
+}
+
+// SetBusinessAccountUsernameParameters ------------------------------------------------------------
+
+pub type SetBusinessAccountUsernameParameters {
+  SetBusinessAccountUsernameParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// The new value of the username for the business account; 0-32 characters
+    username: Option(String),
+  )
+}
+
+pub fn encode_set_business_account_username_parameters(
+  params: SetBusinessAccountUsernameParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("username", json.nullable(params.username, json.string)),
+  ])
+}
+
+// SetBusinessAccountBioParameters ------------------------------------------------------------
+
+pub type SetBusinessAccountBioParameters {
+  SetBusinessAccountBioParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// The new value of the bio for the business account; 0-140 characters
+    bio: Option(String),
+  )
+}
+
+pub fn encode_set_business_account_bio_parameters(
+  params: SetBusinessAccountBioParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("bio", json.nullable(params.bio, json.string)),
+  ])
+}
+
+// SetBusinessAccountProfilePhotoParameters ------------------------------------------------------------
+
+pub type SetBusinessAccountProfilePhotoParameters {
+  SetBusinessAccountProfilePhotoParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// The new profile photo to set
+    photo: InputProfilePhoto,
+    /// Pass True to set the public photo, which will be visible even if the main photo is hidden by the business account's privacy settings. An account can have only one public photo.
+    is_public: Option(Bool),
+  )
+}
+
+pub fn encode_set_business_account_profile_photo_parameters(
+  params: SetBusinessAccountProfilePhotoParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("photo", encode_input_profile_photo(params.photo)),
+    #("is_public", json.nullable(params.is_public, json.bool)),
+  ])
+}
+
+// RemoveBusinessAccountProfilePhotoParameters ------------------------------------------------------------
+
+pub type RemoveBusinessAccountProfilePhotoParameters {
+  RemoveBusinessAccountProfilePhotoParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Pass True to remove the public photo, which is visible even if the main photo is hidden by the business account's privacy settings. After the main photo is removed, the previous profile photo (if present) becomes the main photo.
+    is_public: Option(Bool),
+  )
+}
+
+pub fn encode_remove_business_account_profile_photo_parameters(
+  params: RemoveBusinessAccountProfilePhotoParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("is_public", json.nullable(params.is_public, json.bool)),
+  ])
+}
+
+// SetBusinessAccountGiftSettingsParameters ------------------------------------------------------------
+
+pub type SetBusinessAccountGiftSettingsParameters {
+  SetBusinessAccountGiftSettingsParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Pass True, if a button for sending a gift to the user or by the business account must always be shown in the input field
+    show_gift_button: Bool,
+    /// Types of gifts accepted by the business account
+    accepted_gift_types: AcceptedGiftTypes,
+  )
+}
+
+pub fn encode_set_business_account_gift_settings_parameters(
+  params: SetBusinessAccountGiftSettingsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("show_gift_button", json.bool(params.show_gift_button)),
+    #(
+      "accepted_gift_types",
+      encode_accepted_gift_types(params.accepted_gift_types),
+    ),
+  ])
+}
+
+// GetBusinessAccountStarBalanceParameters ------------------------------------------------------------
+
+pub type GetBusinessAccountStarBalanceParameters {
+  GetBusinessAccountStarBalanceParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+  )
+}
+
+pub fn encode_get_business_account_star_balance_parameters(
+  params: GetBusinessAccountStarBalanceParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+  ])
+}
+
+// TransferBusinessAccountStarsParameters ------------------------------------------------------------
+
+pub type TransferBusinessAccountStarsParameters {
+  TransferBusinessAccountStarsParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Number of Telegram Stars to transfer; 1-10000
+    star_count: Int,
+  )
+}
+
+pub fn encode_transfer_business_account_stars_parameters(
+  params: TransferBusinessAccountStarsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("star_count", json.int(params.star_count)),
+  ])
+}
+
+// GetBusinessAccountGiftsParameters ------------------------------------------------------------
+
+pub type GetBusinessAccountGiftsParameters {
+  GetBusinessAccountGiftsParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Pass True to exclude gifts that aren't saved to the account's profile page
+    exclude_unsaved: Option(Bool),
+    /// Pass True to exclude gifts that are saved to the account's profile page
+    exclude_saved: Option(Bool),
+    /// Pass True to exclude gifts that can be purchased an unlimited number of times
+    exclude_unlimited: Option(Bool),
+    /// Pass True to exclude gifts that can be purchased a limited number of times
+    exclude_limited: Option(Bool),
+    /// Pass True to exclude unique gifts
+    exclude_unique: Option(Bool),
+    /// Pass True to sort results by gift price instead of send date. Sorting is applied before pagination.
+    sort_by_price: Option(Bool),
+    /// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
+    offset: Option(String),
+    /// The maximum number of gifts to be returned; 1-100. Defaults to 100
+    limit: Option(Int),
+  )
+}
+
+pub fn encode_get_business_account_gifts_parameters(
+  params: GetBusinessAccountGiftsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("exclude_unsaved", json.nullable(params.exclude_unsaved, json.bool)),
+    #("exclude_saved", json.nullable(params.exclude_saved, json.bool)),
+    #("exclude_unlimited", json.nullable(params.exclude_unlimited, json.bool)),
+    #("exclude_limited", json.nullable(params.exclude_limited, json.bool)),
+    #("exclude_unique", json.nullable(params.exclude_unique, json.bool)),
+    #("sort_by_price", json.nullable(params.sort_by_price, json.bool)),
+    #("offset", json.nullable(params.offset, json.string)),
+    #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// ConvertGiftToStarsParameters ------------------------------------------------------------
+
+pub type ConvertGiftToStarsParameters {
+  ConvertGiftToStarsParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the regular gift that should be converted to Telegram Stars
+    owned_gift_id: String,
+  )
+}
+
+pub fn encode_convert_gift_to_stars_parameters(
+  params: ConvertGiftToStarsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("owned_gift_id", json.string(params.owned_gift_id)),
+  ])
+}
+
+// UpgradeGiftParameters ------------------------------------------------------------
+
+pub type UpgradeGiftParameters {
+  UpgradeGiftParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the regular gift that should be upgraded to a unique one
+    owned_gift_id: String,
+    /// Pass True to keep the original gift text, sender and receiver in the upgraded gift
+    keep_original_details: Option(Bool),
+    /// The amount of Telegram Stars that will be paid for the upgrade from the business account balance. If gift.prepaid_upgrade_star_count > 0, then pass 0, otherwise, the can_transfer_stars business bot right is required and gift.upgrade_star_count must be passed.
+    star_count: Option(Int),
+  )
+}
+
+pub fn encode_upgrade_gift_parameters(params: UpgradeGiftParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("owned_gift_id", json.string(params.owned_gift_id)),
+    #(
+      "keep_original_details",
+      json.nullable(params.keep_original_details, json.bool),
+    ),
+    #("star_count", json.nullable(params.star_count, json.int)),
+  ])
+}
+
+// TransferGiftParameters ------------------------------------------------------------
+
+pub type TransferGiftParameters {
+  TransferGiftParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the regular gift that should be transferred
+    owned_gift_id: String,
+    /// Unique identifier of the chat which will own the gift. The chat must be active in the last 24 hours.
+    new_owner_chat_id: Int,
+    /// The amount of Telegram Stars that will be paid for the transfer from the business account balance. If positive, then the can_transfer_stars business bot right is required.
+    star_count: Option(Int),
+  )
+}
+
+pub fn encode_transfer_gift_parameters(params: TransferGiftParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("owned_gift_id", json.string(params.owned_gift_id)),
+    #("new_owner_chat_id", json.int(params.new_owner_chat_id)),
+    #("star_count", json.nullable(params.star_count, json.int)),
+  ])
+}
+
+// PostStoryParameters ------------------------------------------------------------
+
+pub type PostStoryParameters {
+  PostStoryParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Content of the story
+    content: InputStoryContent,
+    /// Period after which the story is moved to the archive, in seconds; must be one of 6 * 3600, 12 * 3600, 86400, or 2 * 86400
+    active_period: Int,
+    /// Caption of the story, 0-2048 characters after entities parsing
+    caption: Option(String),
+    /// Mode for parsing entities in the story caption. See formatting options for more details.
+    parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of parse_mode
+    caption_entities: Option(List(MessageEntity)),
+    /// A JSON-serialized list of clickable areas to be shown on the story
+    areas: Option(List(StoryArea)),
+    /// Pass True to keep the story accessible after it expires
+    post_to_chat_page: Option(Bool),
+    /// Pass True if the content of the story must be protected from forwarding and screenshotting
+    protect_content: Option(Bool),
+  )
+}
+
+pub fn encode_post_story_parameters(params: PostStoryParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("content", encode_input_story_content(params.content)),
+    #("active_period", json.int(params.active_period)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, fn(entities) {
+        json.array(entities, encode_message_entity)
+      }),
+    ),
+    #(
+      "areas",
+      json.nullable(params.areas, fn(areas) {
+        json.array(areas, encode_story_area)
+      }),
+    ),
+    #("post_to_chat_page", json.nullable(params.post_to_chat_page, json.bool)),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+  ])
+}
+
+// EditStoryParameters ------------------------------------------------------------
+
+pub type EditStoryParameters {
+  EditStoryParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the story to edit
+    story_id: Int,
+    /// Content of the story
+    content: InputStoryContent,
+    /// Caption of the story, 0-2048 characters after entities parsing
+    caption: Option(String),
+    /// Mode for parsing entities in the story caption. See formatting options for more details.
+    parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of parse_mode
+    caption_entities: Option(List(MessageEntity)),
+    /// A JSON-serialized list of clickable areas to be shown on the story
+    areas: Option(List(StoryArea)),
+  )
+}
+
+pub fn encode_edit_story_parameters(params: EditStoryParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("story_id", json.int(params.story_id)),
+    #("content", encode_input_story_content(params.content)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("areas", json.nullable(params.areas, json.array(_, encode_story_area))),
+  ])
+}
+
+// DeleteStoryParameters ------------------------------------------------------------
+
+pub type DeleteStoryParameters {
+  DeleteStoryParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the story to delete
+    story_id: Int,
+  )
+}
+
+pub fn encode_delete_story_parameters(params: DeleteStoryParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("story_id", json.int(params.story_id)),
   ])
 }
 

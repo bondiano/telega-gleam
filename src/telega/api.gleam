@@ -656,6 +656,262 @@ pub fn remove_chat_verification(client client, parameters parameters) {
   |> map_response(decode.bool)
 }
 
+/// Marks incoming message as read on behalf of a business account. Requires the *can_read_messages* business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#readbusinessmessage
+pub fn read_business_message(client client, parameters parameters) {
+  let body_json = model.encode_read_business_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "readBusinessMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Delete messages on behalf of a business account. Requires the can_delete_sent_messages business bot right to delete messages sent by the bot itself, or the can_delete_all_messages business bot right to delete any message. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletebusinessmessages
+pub fn delete_business_messages(client client, parameters parameters) {
+  let body_json = model.encode_delete_business_messages_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteBusinessMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the username of a managed business account. Requires the can_change_username business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setbusinessaccountusername
+pub fn set_business_account_username(client client, parameters parameters) {
+  let body_json =
+    model.encode_set_business_account_username_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setBusinessAccountUsername",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the bio of a managed business account. Requires the can_change_bio business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setbusinessaccountbio
+pub fn set_business_account_bio(client client, parameters parameters) {
+  let body_json = model.encode_set_business_account_bio_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setBusinessAccountBio",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the first and last name of a managed business account. Requires the can_change_name business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setbusinessaccountname
+pub fn set_business_account_name(client client, parameters parameters) {
+  let body_json = model.encode_set_business_account_name_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setBusinessAccountName",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the profile photo of a managed business account. Requires the *can_edit_profile_photo* business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setbusinessaccountprofilephoto
+pub fn set_business_account_profile_photo(client client, parameters parameters) {
+  let body_json =
+    model.encode_set_business_account_profile_photo_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setBusinessAccountProfilePhoto",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Removes the current profile photo of a managed business account. Requires the *can_edit_profile_photo* business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#removebusinessaccountprofilephoto
+pub fn remove_business_account_profile_photo(
+  client client,
+  parameters parameters,
+) {
+  let body_json =
+    model.encode_remove_business_account_profile_photo_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "removeBusinessAccountProfilePhoto",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the privacy settings pertaining to incoming gifts in a managed business account. Requires the *can_change_gift_settings* business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setbusinessaccountgiftsettings
+pub fn set_business_account_gift_settings(client client, parameters parameters) {
+  let body_json =
+    model.encode_set_business_account_gift_settings_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setBusinessAccountGiftSettings",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Returns the amount of Telegram Stars owned by a managed business account. Requires the can_view_gifts_and_stars business bot right. Returns [StarAmount](https://core.telegram.org/bots/api#staramount) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getbusinessaccountstarbalance
+pub fn get_business_account_star_balance(client client, parameters parameters) {
+  let body_json =
+    model.encode_get_business_account_star_balance_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getBusinessAccountStarBalance",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.star_amount_decoder())
+}
+
+/// Transfers Telegram Stars from the business account balance to the bot's balance. Requires the can_transfer_stars business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#transferbusinessaccountstars
+pub fn transfer_business_account_stars(client client, parameters parameters) {
+  let body_json =
+    model.encode_transfer_business_account_stars_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "transferBusinessAccountStars",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Returns the gifts received and owned by a managed business account. Requires the *can_view_gifts_and_stars* business bot right. Returns [OwnedGifts](https://core.telegram.org/bots/api#ownedgifts) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getbusinessaccountgifts
+pub fn get_business_account_gifts(client client, parameters parameters) {
+  let body_json = model.encode_get_business_account_gifts_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getBusinessAccountGifts",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(model.owned_gifts_decoder())
+}
+
+/// Converts a given regular gift to Telegram Stars. Requires the *can_convert_gifts_to_stars* business bot right. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#convertgifttostars
+pub fn convert_gift_to_stars(client client, parameters parameters) {
+  let body_json = model.encode_convert_gift_to_stars_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "convertGiftToStars",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Upgrades a given regular gift to a unique gift. Requires the *can_transfer_and_upgrade_gifts* business bot right. Additionally requires the *can_transfer_stars* business bot right if the upgrade is paid. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#upgradegift
+pub fn upgrade_gift(client client, parameters parameters) {
+  let body_json = model.encode_upgrade_gift_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "upgradeGift",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Transfers an owned unique gift to another user. Requires the *can_transfer_and_upgrade_gifts* business bot right. Requires *can_transfer_stars* business bot right if the transfer is paid. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#transfergift
+pub fn transfer_gift(client client, parameters parameters) {
+  let body_json = model.encode_transfer_gift_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "transferGift",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Posts a story on behalf of a managed business account. Requires the *can_manage_stories* business bot right. Returns [Story](https://core.telegram.org/bots/api#story) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#poststory
+pub fn post_business_story(client client, parameters parameters) {
+  let body_json = model.encode_post_story_parameters(parameters)
+
+  new_post_request(client:, path: "postStory", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(model.story_decoder())
+}
+
+/// Edits a story previously posted by the bot on behalf of a managed business account. Requires the *can_manage_stories* business bot right. Returns [Story](https://core.telegram.org/bots/api#story) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editstory
+pub fn edit_story(client client, parameters parameters) {
+  let body_json = model.encode_edit_story_parameters(parameters)
+
+  new_post_request(client:, path: "editStory", body: json.to_string(body_json))
+  |> fetch(client)
+  |> map_response(model.story_decoder())
+}
+
+/// Deletes a story previously posted by the bot on behalf of a managed business account. Requires the can_manage_stories business bot right. Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletestory
+pub fn delete_story(client client, parameters parameters) {
+  let body_json = model.encode_delete_story_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteStory",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
 /// Use this method to get up-to-date information about the chat. Returns a [ChatFullInfo](https://core.telegram.org/bots/api#chatfullinfo) object on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#getchat
