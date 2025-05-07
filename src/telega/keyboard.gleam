@@ -1,4 +1,24 @@
 //// This module contains the keyboard constructors and useful utilities to work with keyboards
+//// You can create a keyboard with `new` or `new_inline`.
+////
+//// The simplest way to create a keyboard is to use `new` and use `hear` to listen for button presses:
+//// ```gleam
+//// let keyboard = keyboard.new([
+////   [keyboard.button("Button 1"), keyboard.button("Button 2")],
+////   [keyboard.button("Button 3"), keyboard.button("Button 4")],
+//// ])
+//// ```
+////
+//// If you're using inline keyboard, you can use `new_inline` and `filter_inline_keyboard_query` to listen for button presses:
+////
+//// ```gleam
+//// let keyboard = keyboard.new_inline([
+////   [keyboard.inline_button("Button 1", keyboard.pack_callback(callback_data, "data"))],
+//// ])
+////
+//// // In handler:
+//// let filter = keyboard.filter_inline_keyboard_query(keyboard)
+//// ```
 
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -95,6 +115,11 @@ pub fn button(text: String) -> KeyboardButton {
   )
 }
 
+/// Create a new web app button
+pub fn web_app_button(text text: String, url url: String) -> KeyboardButton {
+  KeyboardButton(..button(text), web_app: Some(model.WebAppInfo(url:)))
+}
+
 // Inline keyboard ------------------------------------------------------------------------------------
 
 pub opaque type InlineKeyboard {
@@ -133,6 +158,27 @@ pub fn inline_button(
   )
 }
 
+/// Create a new web app button
+pub fn inline_web_app_button(
+  text text: String,
+  url url: String,
+) -> InlineKeyboardButton {
+  InlineKeyboardButton(
+    text:,
+    web_app: Some(model.WebAppInfo(url:)),
+    callback_data: None,
+    url: None,
+    login_url: None,
+    pay: None,
+    switch_inline_query: None,
+    switch_inline_query_current_chat: None,
+    switch_inline_query_chosen_chat: None,
+    callback_game: None,
+    copy_text: None,
+  )
+}
+
+/// Filter for inline keyboard queries
 pub fn filter_inline_keyboard_query(
   keyboard: InlineKeyboard,
 ) -> CallbackQueryFilter {
