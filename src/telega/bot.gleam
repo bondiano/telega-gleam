@@ -55,13 +55,15 @@ pub type CatchHandler(session, error) =
 const bot_actor_init_timeout = 500
 
 pub fn start(
-  registry_subject registry_subject,
-  config config,
-  bot_info bot_info,
-  handlers handlers,
-  session_settings session_settings,
-  catch_handler catch_handler,
-) {
+  registry_subject registry_subject: Subject(
+    registry.RegistryMessage(ChatInstanceMessage(h, i)),
+  ),
+  config config: Config,
+  bot_info bot_info: User,
+  handlers handlers: List(Handler(h, i)),
+  session_settings session_settings: SessionSettings(h, i),
+  catch_handler catch_handler: fn(Context(h, i), i) -> Result(Nil, i),
+) -> Result(Subject(BotMessage), error.TelegaError) {
   actor.start_spec(actor.Spec(
     init: fn() {
       let self = process.new_subject()
@@ -87,11 +89,11 @@ pub fn start(
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
-pub fn cancel_conversation(bot bot: Bot(session, error), key key) {
+pub fn cancel_conversation(bot bot: Bot(session, error), key key: String) -> Nil {
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
-fn bot_loop(message, bot) {
+fn bot_loop(message: BotMessage, bot: Bot(e, f)) -> actor.Next(g, Bot(e, f)) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) -> {
       case handle_update_bot_message(bot:, update:, reply_with:) {
@@ -111,9 +113,9 @@ fn bot_loop(message, bot) {
 
 fn handle_update_bot_message(
   bot bot: Bot(session, error),
-  update update,
-  reply_with reply_with,
-) {
+  update update: Update,
+  reply_with reply_with: Subject(Bool),
+) -> Result(Nil, error.TelegaError) {
   let key = build_session_key(update)
 
   case registry.get(key:, in: bot.registry_subject) {
@@ -191,7 +193,7 @@ fn start_chat_instance(
   config config: Config,
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
-) {
+) -> Result(Subject(ChatInstanceMessage(session, error)), error.TelegaError) {
   actor.start_spec(actor.Spec(
     init: fn() {
       let self = process.new_subject()
@@ -227,11 +229,11 @@ fn start_chat_instance(
 }
 
 fn handle_update_chat_instance(
-  chat_subject chat_subject,
-  update update,
+  chat_subject chat_subject: Subject(ChatInstanceMessage(session, error)),
+  update update: Update,
   handlers handlers: List(Handler(session, error)),
-  reply_with reply_with,
-) {
+  reply_with reply_with: Subject(Bool),
+) -> Result(Nil, d) {
   actor.send(
     chat_subject,
     HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
@@ -239,7 +241,10 @@ fn handle_update_chat_instance(
   |> Ok
 }
 
-fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
+fn loop_chat_instance(
+  message: ChatInstanceMessage(session, error),
+  chat: ChatInstance(session, error),
+) -> actor.Next(c, ChatInstance(session, error)) {
   case message {
     HandleNewChatInstanceMessage(update:, handlers:, reply_with:) ->
       do_handle_new_chat_instance_message(
@@ -268,10 +273,10 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
 fn do_handle_new_chat_instance_message(
   context context: Context(session, error),
   chat chat: ChatInstance(session, error),
-  update update,
-  handlers handlers,
-  reply_with reply_with,
-) {
+  update update: Update,
+  handlers handlers: List(Handler(session, error)),
+  reply_with reply_with: Subject(Bool),
+) -> actor.Next(b, ChatInstance(session, error)) {
   case chat.continuation {
     // There is a continuation, handle the update with it
     Some(continuation) ->
@@ -331,12 +336,12 @@ fn do_handle_new_chat_instance_message(
 }
 
 fn do_handle_continuation(
-  context context,
+  context context: Context(session, error),
   continuation continuation: Continuation(session, error),
-  update update,
-  reply_with reply_with,
-  chat chat,
-) {
+  update update: Update,
+  reply_with reply_with: Subject(Bool),
+  chat chat: ChatInstance(session, error),
+) -> actor.Next(a, ChatInstance(session, error)) {
   case do_handle(context:, update:, handler: continuation.handler) {
     Some(Ok(Context(session: new_session, ..))) -> {
       actor.send(reply_with, True)
@@ -468,7 +473,7 @@ pub type Hears {
   HearRegexes(regexes: List(Regexp))
 }
 
-fn check_hears(text, hear) -> Bool {
+fn check_hears(text: String, hear: Hears) -> Bool {
   case hear {
     HearText(str) -> text == str
     HearTexts(strings) -> list.contains(strings, text)
@@ -551,7 +556,15 @@ pub type Handler(session, error) {
   )
 }
 
-fn extract_update_handlers(handlers, update) {
+pub type HandlerDispatcher(session, error) {
+  // FeatureHandlerDispatcher(feature.Feature(session, error))
+  HandlerDispatcher(Handler(session, error))
+}
+
+fn extract_update_handlers(
+  handlers: List(Handler(o, p)),
+  update: Update,
+) -> List(Handler(o, p)) {
   list.filter(handlers, fn(handler) {
     case handler, update {
       HandleAll(_), _ -> True
@@ -583,10 +596,10 @@ fn extract_update_handlers(handlers, update) {
 /// `timeout` - the conversation will be canceled after this timeout
 pub fn wait_handler(
   ctx ctx: Context(session, error),
-  handler handler,
-  handle_else handle_else,
-  timeout timeout,
-) {
+  handler handler: Handler(session, error),
+  handle_else handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+) -> Result(Context(session, error), n) {
   process.send(
     ctx.chat_subject,
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
@@ -594,7 +607,11 @@ pub fn wait_handler(
   Ok(ctx)
 }
 
-fn do_handle(context context, update update, handler handler) {
+fn do_handle(
+  context context: Context(l, m),
+  update update: Update,
+  handler handler: Handler(l, m),
+) -> Option(Result(Context(l, m), m)) {
   // We already filtered updates and receives only valid handlers
   case handler, update {
     HandleAll(handler:), _ -> context |> handler(update) |> Some
@@ -628,11 +645,11 @@ fn do_handle(context context, update update, handler handler) {
 
 fn loop_handlers(
   chat chat: ChatInstance(session, error),
-  context context,
-  config config,
-  update update,
-  handlers handlers,
-) {
+  context context: Context(j, error),
+  config config: k,
+  update update: Update,
+  handlers handlers: List(Handler(j, error)),
+) -> Result(session, error) {
   case handlers {
     [handler, ..rest] ->
       case do_handle(context:, update:, handler:) {
@@ -650,3 +667,12 @@ fn loop_handlers(
     [] -> chat.session_settings.persist_session(chat.key, chat.session)
   }
 }
+
+// Feature --------------------------------------------------------------------------
+
+pub opaque type Feature(session, error) {
+  Feature
+}
+
+pub type FeatureHandler(session, error) =
+  fn(Context(session, error)) -> Feature(session, error)

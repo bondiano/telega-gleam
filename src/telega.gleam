@@ -14,10 +14,10 @@ import telega/internal/utils
 import telega/api
 import telega/bot.{
   type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
-  type Handler, type Hears, type SessionSettings, HandleAll, HandleAudio,
-  HandleCallbackQuery, HandleChatMember, HandleCommand, HandleCommands,
-  HandleHears, HandleMessage, HandlePhotos, HandleText, HandleVideo, HandleVoice,
-  HandleWebAppData, SessionSettings,
+  type FeatureHandler, type Handler, type Hears, type SessionSettings, HandleAll,
+  HandleAudio, HandleCallbackQuery, HandleChatMember, HandleCommand,
+  HandleCommands, HandleHears, HandleMessage, HandlePhotos, HandleText,
+  HandleVideo, HandleVoice, HandleWebAppData, SessionSettings,
 }
 import telega/client.{type TelegramClient}
 import telega/error
@@ -529,7 +529,7 @@ pub fn set_allowed_updates(
 pub fn set_certificate(
   builder: TelegaBuilder(session, error),
   certificate: model.File,
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, certificate: Some(certificate))
 }
 
@@ -541,6 +541,14 @@ pub fn set_api_client(
   api_client: TelegramClient,
 ) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, config: config.Config(..builder.config, api_client:))
+}
+
+pub fn feature(
+  builder: TelegaBuilder(session, error),
+  feature: FeatureHandler(session, error),
+) -> TelegaBuilder(session, error) {
+  // TelegaBuilder(..builder, handlers: [Feature(feature), ..builder.handlers])
+  todo
 }
 
 /// Initialize a Telega instance.
