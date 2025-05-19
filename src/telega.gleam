@@ -19,6 +19,7 @@ import telega/bot.{
   HandleHears, HandleMessage, HandlePhotos, HandleText, HandleVideo, HandleVoice,
   HandleWebAppData, SessionSettings,
 }
+import telega/client.{type TelegramClient}
 import telega/error
 import telega/model.{type Update, type User}
 import telega/update.{type Command}
@@ -530,6 +531,16 @@ pub fn set_certificate(
   certificate: model.File,
 ) {
   TelegaBuilder(..builder, certificate: Some(certificate))
+}
+
+/// Pass custom api client to the builder.
+///
+/// Useful if you want set custom fetch function or pass your api client options
+pub fn set_api_client(
+  builder: TelegaBuilder(session, error),
+  api_client: TelegramClient,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, config: config.Config(..builder.config, api_client:))
 }
 
 /// Initialize a Telega instance.
