@@ -36,7 +36,7 @@ fn set_name_command_handler(ctx, _) {
   use <- telega.log_context(ctx, "set_name command")
   use _ <- try(reply.with_text(ctx, "What's your name?"))
 
-  use ctx, name <- telega.wait_text(ctx)
+  use ctx, name <- telega.wait_text(ctx, or: None, timeout: Some(1000))
   use _ <- try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
 
   bot.next_session(ctx, NameBotSession(name: name))

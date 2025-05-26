@@ -92,7 +92,7 @@ pub fn handle_all(
   bot builder: TelegaBuilder(session, error),
   handler handler: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, handlers: [HandleAll(handler), ..builder.handlers])
 }
 
@@ -101,11 +101,11 @@ pub fn handle_all(
 /// See [conversation](/docs/conversation)
 pub fn wait_any(
   ctx ctx: Context(session, error),
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
   continue handler: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
-  or handle_else,
-  timeout timeout,
-) {
+) -> Result(Context(session, error), b) {
   bot.wait_handler(ctx:, handler: HandleAll(handler:), handle_else:, timeout:)
 }
 
@@ -128,11 +128,11 @@ pub fn handle_command(
 pub fn wait_command(
   ctx ctx: Context(session, error),
   command command: String,
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
-  or handle_else,
-  timeout timeout,
-) {
+) -> Result(Context(session, error), c) {
   bot.wait_handler(
     ctx:,
     handler: HandleCommand(command, continue),
@@ -160,11 +160,11 @@ pub fn handle_commands(
 pub fn wait_commands(
   ctx ctx: Context(session, error),
   commands commands: List(String),
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
-  or handle_else,
-  timeout timeout,
-) {
+) -> Result(Context(session, error), d) {
   bot.wait_handler(
     ctx:,
     handler: HandleCommands(commands, continue),
@@ -187,11 +187,11 @@ pub fn handle_text(
 /// See [conversation](/docs/conversation)
 pub fn wait_text(
   ctx ctx: Context(session, error),
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), String) ->
     Result(Context(session, error), error),
-  or handle_else,
-  timeout timeout,
-) {
+) -> Result(Context(session, error), a) {
   bot.wait_handler(ctx:, handler: HandleText(continue), handle_else:, timeout:)
 }
 
@@ -214,10 +214,11 @@ pub fn handle_hears(
 pub fn wait_hears(
   ctx ctx: Context(session, error),
   hears hears: Hears,
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), String) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), e) {
   bot.wait_handler(
     ctx:,
     handler: HandleHears(hears, continue),
@@ -231,7 +232,7 @@ pub fn handle_message(
   bot builder: TelegaBuilder(session, error),
   handler handler: fn(Context(session, error), model.Message) ->
     Result(Context(session, error), error),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, handlers: [
     HandleMessage(handler:),
     ..builder.handlers
@@ -243,10 +244,11 @@ pub fn handle_message(
 /// See [conversation](/docs/conversation)
 pub fn wait_message(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), model.Message) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), f) {
   bot.wait_handler(
     ctx:,
     handler: HandleMessage(continue),
@@ -261,8 +263,9 @@ pub fn wait_message(
 pub fn handle_callback_query(
   bot builder: TelegaBuilder(session, error),
   filter filter: CallbackQueryFilter,
-  handler handler,
-) {
+  handler handler: fn(Context(session, error), String, String) ->
+    Result(Context(session, error), error),
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, handlers: [
     HandleCallbackQuery(filter, handler),
     ..builder.handlers
@@ -275,10 +278,11 @@ pub fn handle_callback_query(
 pub fn wait_callback_query(
   ctx ctx: Context(session, error),
   filter filter: CallbackQueryFilter,
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), String, String) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), g) {
   bot.wait_handler(
     ctx:,
     handler: HandleCallbackQuery(filter, continue),
@@ -292,7 +296,7 @@ pub fn handle_voice(
   bot builder: TelegaBuilder(session, error),
   handler handler: fn(Context(session, error), model.Voice) ->
     Result(Context(session, error), error),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, handlers: [HandleVoice(handler), ..builder.handlers])
 }
 
@@ -301,10 +305,11 @@ pub fn handle_voice(
 /// See [conversation](/docs/conversation)
 pub fn wait_voice(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), model.Voice) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), h) {
   bot.wait_handler(ctx:, handler: HandleVoice(continue), handle_else:, timeout:)
 }
 
@@ -322,10 +327,11 @@ pub fn handle_audio(
 /// See [conversation](/docs/conversation)
 pub fn wait_audio(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), model.Audio) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), i) {
   bot.wait_handler(ctx:, handler: HandleAudio(continue), handle_else:, timeout:)
 }
 
@@ -343,10 +349,11 @@ pub fn handle_video(
 /// See [conversation](/docs/conversation)
 pub fn wait_video(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), model.Video) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), j) {
   bot.wait_handler(ctx:, handler: HandleVideo(continue), handle_else:, timeout:)
 }
 
@@ -364,10 +371,11 @@ pub fn handle_photos(
 /// See [conversation](/docs/conversation)
 pub fn wait_photos(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), List(model.PhotoSize)) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), k) {
   bot.wait_handler(
     ctx:,
     handler: HandlePhotos(continue),
@@ -393,10 +401,11 @@ pub fn handle_web_app_data(
 /// See [conversation](/docs/conversation)
 pub fn wait_web_app_data(
   ctx ctx: Context(session, error),
-  continue continue,
-  or handle_else,
-  timeout timeout,
-) {
+  or handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error), model.WebAppData) ->
+    Result(Context(session, error), error),
+) -> Result(Context(session, error), l) {
   bot.wait_handler(
     ctx:,
     handler: HandleWebAppData(continue),
@@ -412,7 +421,7 @@ pub fn wait_web_app_data(
 pub fn with_catch_handler(
   builder builder: TelegaBuilder(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, catch_handler: Some(catch_handler))
 }
 
@@ -421,7 +430,7 @@ pub fn handle_chat_member(
   bot builder: TelegaBuilder(session, error),
   handler handler: fn(Context(session, error), model.ChatMemberUpdated) ->
     Result(Context(session, error), error),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, handlers: [
     HandleChatMember(handler),
     ..builder.handlers
@@ -433,7 +442,7 @@ pub fn log_context(
   ctx ctx: Context(session, error),
   prefix prefix: String,
   handler handler: fn() -> Result(Context(session, error), error),
-) {
+) -> Result(Context(session, error), error) {
   let id = utils.random_string(5)
   let prefix = "[" <> prefix <> ":" <> id <> "] "
 
@@ -460,11 +469,11 @@ pub fn log_context(
 
 /// Construct a session settings.
 pub fn with_session_settings(
-  builder,
-  persist_session persist_session,
-  get_session get_session,
-  default_session default_session,
-) {
+  builder: TelegaBuilder(session, error),
+  persist_session persist_session: fn(String, session) -> Result(session, error),
+  get_session get_session: fn(String) -> Result(Option(session), error),
+  default_session default_session: fn() -> session,
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(
     ..builder,
     session_settings: Some(SessionSettings(
@@ -477,7 +486,9 @@ pub fn with_session_settings(
 
 /// Initialize a Telega instance with a `Nil` session.
 /// Useful when you don't need to persist the session.
-pub fn init_nil_session(builder: TelegaBuilder(Nil, error)) {
+pub fn init_nil_session(
+  builder: TelegaBuilder(Nil, error),
+) -> Result(Telega(Nil, error), error.TelegaError) {
   let persist_session = fn(_, _) { Ok(Nil) }
   let get_session = fn(_) { Ok(Some(Nil)) }
   let default_session = fn() { Nil }
@@ -497,7 +508,7 @@ pub fn init_nil_session(builder: TelegaBuilder(Nil, error)) {
 pub fn set_drop_pending_updates(
   builder: TelegaBuilder(session, error),
   drop_pending_updates: Bool,
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, drop_pending_updates: Some(drop_pending_updates))
 }
 
@@ -505,7 +516,7 @@ pub fn set_drop_pending_updates(
 pub fn set_max_connections(
   builder: TelegaBuilder(session, error),
   max_connections: Int,
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, max_connections: Some(max_connections))
 }
 
@@ -513,7 +524,7 @@ pub fn set_max_connections(
 pub fn set_ip_address(
   builder: TelegaBuilder(session, error),
   ip_address: String,
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, ip_address: Some(ip_address))
 }
 
@@ -521,7 +532,7 @@ pub fn set_ip_address(
 pub fn set_allowed_updates(
   builder: TelegaBuilder(session, error),
   allowed_updates: List(String),
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, allowed_updates: Some(allowed_updates))
 }
 
@@ -529,7 +540,7 @@ pub fn set_allowed_updates(
 pub fn set_certificate(
   builder: TelegaBuilder(session, error),
   certificate: model.File,
-) {
+) -> TelegaBuilder(session, error) {
   TelegaBuilder(..builder, certificate: Some(certificate))
 }
 
@@ -546,7 +557,9 @@ pub fn set_api_client(
 /// Initialize a Telega instance.
 /// This function should be called **only** after all handlers are added to the builder.
 /// It will set the webhook and start handling messages.
-pub fn init(builder: TelegaBuilder(session, error)) {
+pub fn init(
+  builder: TelegaBuilder(session, error),
+) -> Result(Telega(session, error), error.TelegaError) {
   use is_ok <- result.try(api.set_webhook(
     builder.config.api_client,
     model.SetWebhookParameters(
@@ -589,7 +602,10 @@ fn nil_catch_handler(_, _) {
 }
 
 /// Handle an update from the Telegram API.
-pub fn handle_update(telega: Telega(session, error), raw_update: Update) {
+pub fn handle_update(
+  telega: Telega(session, error),
+  raw_update: Update,
+) -> Result(Bool, error.TelegaError) {
   update.raw_to_update(raw_update)
   |> bot.handle_update(telega.bot_subject, _)
 }

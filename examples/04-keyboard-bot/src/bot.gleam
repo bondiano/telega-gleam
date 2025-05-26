@@ -78,8 +78,8 @@ fn change_languages_keyboard(ctx: BotContext, _) {
   ))
 
   use _, text <- telega.wait_hears(
-    ctx,
-    telega_keyboard.hear(keyboard),
+    ctx:,
+    hears: telega_keyboard.hear(keyboard),
     or: bot.HandleAll(handle_none_keyboard_message) |> Some,
     timeout: None,
   )
@@ -107,8 +107,8 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   ))
 
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
-    ctx,
-    telega_keyboard.filter_inline_keyboard_query(keyboard),
+    ctx:,
+    filter: telega_keyboard.filter_inline_keyboard_query(keyboard),
     or: None,
     timeout: Some(1000),
   )
