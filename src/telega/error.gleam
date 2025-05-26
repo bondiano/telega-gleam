@@ -1,4 +1,3 @@
-import gleam/dynamic
 import gleam/int
 import gleam/json
 import gleam/string
@@ -9,7 +8,7 @@ pub type TelegaError {
   /// Returned by Bot API if server returns `ok: false`, indicating that your API request was invalid and failed
   TelegramApiError(error_code: Int, description: String)
   /// Returned if the Bot API server could not be reached or the request failed
-  FetchError(error: dynamic.Dynamic)
+  FetchError(error: String)
   /// Returned if the JSON response from the Bot API could not be decoded
   JsonDecodeError(error: json.DecodeError)
 

@@ -2,7 +2,6 @@
 //// It will be useful if you want to interact with the Telegram Bot API directly, without running a bot.
 //// But it will be more convenient to use the `reply` module in bot handlers.
 
-import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/http/response.{type Response}
 import gleam/int
@@ -2233,7 +2232,7 @@ fn map_response(
 ) {
   use response <- result.try(response)
 
-  json.decode(from: response.body, using: parse_api_response(_, result_decoder))
+  json.parse(from: response.body, using: response_decoder(result_decoder))
   |> result.map_error(error.JsonDecodeError)
   |> result.then(fn(response) {
     case response {
@@ -2244,19 +2243,6 @@ fn map_response(
         Error(error.TelegramApiError(error_code, description))
       }
     }
-  })
-}
-
-fn parse_api_response(json, result_decoder) {
-  decode.run(json, response_decoder(result_decoder))
-  |> result.map_error(fn(errors) {
-    list.map(errors, fn(error) {
-      dynamic.DecodeError(
-        expected: error.expected,
-        found: error.found,
-        path: error.path,
-      )
-    })
   })
 }
 

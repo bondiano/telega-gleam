@@ -9,7 +9,6 @@
 ///   ...
 /// }
 /// ```
-import gleam/dynamic
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
@@ -17,6 +16,7 @@ import gleam/http/response.{type Response}
 import gleam/httpc
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/string
 
 import telega/error.{type TelegaError}
 import telega/internal/log
@@ -72,7 +72,7 @@ pub fn set_tg_api_url(client client, tg_api_url tg_api_url) {
 
 fn fetch_httpc_adapter(req: Request(String)) {
   httpc.send(req)
-  |> result.map_error(fn(error) { error.FetchError(dynamic.from(error)) })
+  |> result.map_error(fn(error) { error.FetchError(string.inspect(error)) })
 }
 
 // TODO: add rate limit handling
