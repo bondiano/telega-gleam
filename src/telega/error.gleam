@@ -29,7 +29,7 @@ pub type TelegaError {
   UnknownUpdateError(update: model.Update)
 }
 
-pub fn to_string(error) {
+pub fn to_string(error: TelegaError) -> String {
   case error {
     TelegramApiError(error_code, description) ->
       "Telegram API error: " <> int.to_string(error_code) <> " " <> description

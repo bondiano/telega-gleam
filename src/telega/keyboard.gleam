@@ -65,7 +65,7 @@ pub fn hear(keyboard: Keyboard) -> Hears {
 }
 
 /// Build a reply markup for `Message` from a keyboard
-pub fn to_markup(keyboard: Keyboard) {
+pub fn to_markup(keyboard: Keyboard) -> model.SendMessageReplyMarkupParameters {
   model.SendMessageReplyReplyKeyboardMarkupParameters(model.ReplyKeyboardMarkup(
     keyboard: keyboard.buttons,
     resize_keyboard: keyboard.resize_keyboard,
@@ -132,7 +132,9 @@ pub fn new_inline(buttons: List(List(InlineKeyboardButton))) -> InlineKeyboard {
 }
 
 /// Build a reply markup for `Message` from an inline keyboard
-pub fn to_inline_markup(keyboard: InlineKeyboard) {
+pub fn to_inline_markup(
+  keyboard: InlineKeyboard,
+) -> model.SendMessageReplyMarkupParameters {
   model.SendMessageReplyInlineKeyboardMarkupParameters(
     model.InlineKeyboardMarkup(inline_keyboard: keyboard.buttons),
   )
@@ -220,7 +222,7 @@ pub fn new_callback_data(
   id id: String,
   serialize serialize: fn(data) -> String,
   deserialize deserialize: fn(String) -> data,
-) {
+) -> KeyboardCallbackData(data) {
   KeyboardCallbackData(id:, serialize:, deserialize:, delimiter: ":")
 }
 

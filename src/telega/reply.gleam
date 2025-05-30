@@ -13,7 +13,10 @@ import telega/model.{type SendDiceParameters}
 /// Use this method to send text messages.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
-pub fn with_text(ctx ctx: Context(session, error), text text: String) {
+pub fn with_text(
+  ctx ctx: Context(session, error),
+  text text: String,
+) -> Result(model.Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
     parameters: model.SendMessageParameters(
@@ -41,7 +44,7 @@ pub fn with_markup(
   ctx ctx: Context(session, error),
   text text: String,
   markup reply_markup: model.SendMessageReplyMarkupParameters,
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
     parameters: model.SendMessageParameters(
@@ -68,7 +71,7 @@ pub fn with_markup(
 pub fn with_dice(
   ctx ctx: Context(session, error),
   parameters parameters: Option(SendDiceParameters),
-) {
+) -> Result(model.Message, error.TelegaError) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
@@ -92,7 +95,7 @@ pub fn with_dice(
 pub fn edit_text(
   ctx ctx: Context(session, error),
   parameters parameters: model.EditMessageTextParameters,
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.edit_message_text(ctx.config.api_client, parameters)
 }
 
@@ -103,7 +106,7 @@ pub fn edit_text(
 pub fn forward(
   ctx ctx: Context(session, error),
   parameters parameters: model.ForwardMessageParameters,
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.forward_message(ctx.config.api_client, parameters)
 }
 
@@ -115,12 +118,15 @@ pub fn forward(
 pub fn answer_callback_query(
   ctx ctx: Context(session, error),
   parameters parameters: model.AnswerCallbackQueryParameters,
-) {
+) -> Result(Bool, error.TelegaError) {
   api.answer_callback_query(ctx.config.api_client, parameters)
 }
 
 /// Get download link for the file.
-pub fn with_file_link(ctx ctx: Context(session, error), file_id file_id: String) {
+pub fn with_file_link(
+  ctx ctx: Context(session, error),
+  file_id file_id: String,
+) -> Result(String, error.TelegaError) {
   use file <- result.try(api.get_file(ctx.config.api_client, file_id))
   use file_path <- result.try(option.to_result(
     file.file_path,
@@ -143,7 +149,7 @@ pub fn with_poll(
   ctx ctx: Context(session, error),
   question question: String,
   options options: List(String),
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.send_poll(
     ctx.config.api_client,
     parameters: model.SendPollParameters(
@@ -184,7 +190,7 @@ pub fn with_invoice(
   payload payload: String,
   currency currency: String,
   prices prices: List(#(String, Int)),
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.send_invoice(
     ctx.config.api_client,
     parameters: model.SendInvoiceParameters(
@@ -230,7 +236,7 @@ pub fn with_invoice(
 pub fn with_sticker(
   ctx ctx: Context(session, error),
   sticker sticker: model.FileOrString,
-) {
+) -> Result(model.Message, error.TelegaError) {
   api.send_sticker(
     ctx.config.api_client,
     parameters: model.SendStickerParameters(

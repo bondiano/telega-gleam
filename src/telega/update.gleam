@@ -200,7 +200,7 @@ pub type Command {
   )
 }
 
-pub fn decode_raw(json: Dynamic) {
+pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
   decode.run(json, model.update_decoder())
   |> result.map_error(fn(e) {
     error.DecodeUpdateError(
@@ -213,7 +213,7 @@ pub fn decode_raw(json: Dynamic) {
 }
 
 /// Decode a update from the Telegram API to `Update` instance.
-pub fn raw_to_update(raw_update: ModelUpdate) {
+pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
   use <- try_decode_callback_query(raw_update)
   use <- try_decode_channel_post(raw_update)
   use <- try_decode_edited_message(raw_update)
@@ -247,7 +247,7 @@ pub fn raw_to_update(raw_update: ModelUpdate) {
   panic as { "Unknown update: " <> string.inspect(raw_update) }
 }
 
-pub fn to_string(update: Update) {
+pub fn to_string(update: Update) -> String {
   case update {
     CommandUpdate(command:, from_id:, ..) ->
       "command \"" <> command.command <> "\" from " <> int.to_string(from_id)

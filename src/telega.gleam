@@ -105,7 +105,7 @@ pub fn wait_any(
   timeout timeout: Option(Int),
   continue handler: fn(Context(session, error), update.Update) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), b) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(ctx:, handler: HandleAll(handler:), handle_else:, timeout:)
 }
 
@@ -132,7 +132,7 @@ pub fn wait_command(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), c) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleCommand(command, continue),
@@ -164,7 +164,7 @@ pub fn wait_commands(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), Command) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), d) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleCommands(commands, continue),
@@ -191,7 +191,7 @@ pub fn wait_text(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), String) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), a) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(ctx:, handler: HandleText(continue), handle_else:, timeout:)
 }
 
@@ -218,7 +218,7 @@ pub fn wait_hears(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), String) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), e) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleHears(hears, continue),
@@ -248,7 +248,7 @@ pub fn wait_message(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), model.Message) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), f) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleMessage(continue),
@@ -282,7 +282,7 @@ pub fn wait_callback_query(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), String, String) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), g) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleCallbackQuery(filter, continue),
@@ -309,7 +309,7 @@ pub fn wait_voice(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), model.Voice) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), h) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(ctx:, handler: HandleVoice(continue), handle_else:, timeout:)
 }
 
@@ -331,7 +331,7 @@ pub fn wait_audio(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), model.Audio) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), i) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(ctx:, handler: HandleAudio(continue), handle_else:, timeout:)
 }
 
@@ -353,7 +353,7 @@ pub fn wait_video(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), model.Video) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), j) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(ctx:, handler: HandleVideo(continue), handle_else:, timeout:)
 }
 
@@ -375,7 +375,7 @@ pub fn wait_photos(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), List(model.PhotoSize)) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), k) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandlePhotos(continue),
@@ -405,7 +405,7 @@ pub fn wait_web_app_data(
   timeout timeout: Option(Int),
   continue continue: fn(Context(session, error), model.WebAppData) ->
     Result(Context(session, error), error),
-) -> Result(Context(session, error), l) {
+) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
     handler: HandleWebAppData(continue),

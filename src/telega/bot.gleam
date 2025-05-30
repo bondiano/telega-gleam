@@ -55,13 +55,15 @@ pub type CatchHandler(session, error) =
 const bot_actor_init_timeout = 500
 
 pub fn start(
-  registry_subject registry_subject,
-  config config,
-  bot_info bot_info,
-  handlers handlers,
-  session_settings session_settings,
-  catch_handler catch_handler,
-) {
+  registry_subject registry_subject: Subject(
+    registry.RegistryMessage(ChatInstanceMessage(session, error)),
+  ),
+  config config: Config,
+  bot_info bot_info: User,
+  handlers handlers: List(Handler(session, error)),
+  session_settings session_settings: SessionSettings(session, error),
+  catch_handler catch_handler: CatchHandler(session, error),
+) -> Result(Subject(BotMessage), error.TelegaError) {
   actor.start_spec(actor.Spec(
     init: fn() {
       let self = process.new_subject()
@@ -87,7 +89,7 @@ pub fn start(
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
-pub fn cancel_conversation(bot bot: Bot(session, error), key key) {
+pub fn cancel_conversation(bot bot: Bot(session, error), key key: String) -> Nil {
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
@@ -431,7 +433,10 @@ pub type SessionSettings(session, error) {
   )
 }
 
-pub fn next_session(ctx ctx, session session) {
+pub fn next_session(
+  ctx ctx: Context(session, error),
+  session session: session,
+) -> Result(Context(session, error), error) {
   Ok(Context(..ctx, session:))
 }
 
@@ -583,10 +588,10 @@ fn extract_update_handlers(handlers, update) {
 /// `timeout` - the conversation will be canceled after this timeout
 pub fn wait_handler(
   ctx ctx: Context(session, error),
-  handler handler,
-  handle_else handle_else,
-  timeout timeout,
-) {
+  handler handler: Handler(session, error),
+  handle_else handle_else: Option(Handler(session, error)),
+  timeout timeout: Option(Int),
+) -> Result(Context(session, error), error) {
   process.send(
     ctx.chat_subject,
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
