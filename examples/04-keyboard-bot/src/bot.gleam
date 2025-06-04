@@ -1,6 +1,8 @@
 import dotenv_gleam
 import envoy
 import gleam/erlang/process
+import gleam/int
+import gleam/list
 import gleam/option.{None, Some}
 import mist
 import wisp.{type Response}
