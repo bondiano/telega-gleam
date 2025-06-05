@@ -19,7 +19,6 @@ import gleam/result
 import gleam/string
 
 import telega/error.{type TelegaError}
-import telega/internal/log
 
 const default_retry_delay = 1000
 
@@ -108,7 +107,6 @@ fn send_with_retry(
         Ok(response) -> {
           case response.status {
             429 -> {
-              log.warn("Telegram API throttling, HTTP 429 'Too Many Requests'")
               // TODO: remake it with smart request balancer
               // https://github.com/energizer91/smart-request-balancer/tree/master - for reference
               process.sleep(default_retry_delay)

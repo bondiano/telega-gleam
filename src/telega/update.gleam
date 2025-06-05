@@ -908,10 +908,10 @@ fn new_poll_update(raw: ModelUpdate, poll: Poll) {
   PollUpdate(
     raw:,
     poll:,
-    from_id: 0,
     // TODO: Polls don't have a direct from_id, we should use the user id from the poll_answer
-    chat_id: 0,
+    from_id: 0,
     // TODO: Polls don't have a direct chat_id, we should use the chat id from the poll_answer
+    chat_id: 0,
   )
 }
 

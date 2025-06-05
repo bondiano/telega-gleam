@@ -1,5 +1,6 @@
 import carpenter/table
 import gleam/option.{None, Some}
+
 import telega
 
 pub type NameBotSession {

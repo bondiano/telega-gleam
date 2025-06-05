@@ -1,5 +1,6 @@
-import session.{type Language, English, Russian}
 import telega/keyboard.{type KeyboardCallbackData}
+
+import session.{type Language, English, Russian}
 
 const keyboard_id = "language"
 

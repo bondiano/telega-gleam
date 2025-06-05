@@ -4,6 +4,9 @@ import gleam/erlang/process
 import gleam/option.{None, Some}
 import mist
 import session.{type NameBotSession, NameBotSession}
+import wisp
+import wisp/wisp_mist
+
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
@@ -11,8 +14,6 @@ import telega/bot.{type Context}
 import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
-import wisp
-import wisp/wisp_mist
 
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
