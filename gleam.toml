@@ -14,7 +14,7 @@ pages = [
     { title = "Conversation", path="docs/conversation.html", source="docs/conversation.md" },
 ]
 
-gleam = ">= 1.11.0"
+gleam = ">= 1.11.1"
 target = "erlang"
 
 [dependencies]
