@@ -8,18 +8,20 @@ pub type LanguageInlineKeyboardData =
   KeyboardCallbackData(Language)
 
 pub fn new_inline_keyboard(lang, callback_data) {
-  keyboard.new_inline([
-    [
-      keyboard.inline_button(
-        text: t_russian_button_text(lang),
-        callback_data: keyboard.pack_callback(callback_data, Russian),
-      ),
-      keyboard.inline_button(
-        text: t_english_button_text(lang),
-        callback_data: keyboard.pack_callback(callback_data, English),
-      ),
-    ],
-  ])
+  let russian_callback = keyboard.pack_callback(callback_data, Russian)
+  let english_callback = keyboard.pack_callback(callback_data, English)
+  
+  let assert Ok(russian_button) = keyboard.inline_button(
+    text: t_russian_button_text(lang),
+    callback_data: russian_callback,
+  )
+  
+  let assert Ok(english_button) = keyboard.inline_button(
+    text: t_english_button_text(lang),
+    callback_data: english_callback,
+  )
+  
+  keyboard.new_inline([[russian_button, english_button]])
 }
 
 pub fn new_keyboard(lang) {
@@ -29,7 +31,7 @@ pub fn new_keyboard(lang) {
   }
 
   keyboard.new([buttons_row])
-  |> keyboard.one_time
+  |> keyboard.one_time()
 }
 
 pub fn option_to_language(option) {

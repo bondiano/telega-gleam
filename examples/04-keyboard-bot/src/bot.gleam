@@ -106,9 +106,11 @@ fn handle_inline_change_language(ctx: BotContext, _) {
     telega_keyboard.to_inline_markup(keyboard),
   ))
 
+  let assert Ok(filter) = telega_keyboard.filter_inline_keyboard_query(keyboard)
+  
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx:,
-    filter: telega_keyboard.filter_inline_keyboard_query(keyboard),
+    filter: filter,
     or: None,
     timeout: Some(1000),
   )

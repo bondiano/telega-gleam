@@ -1,16 +1,17 @@
-/// Module provides a simple interface to the Telegram Bot API and uses `httpc` as a default HTTP client.
-/// If you want to use `telega` as a Telegram client, you can use only this module.
-///
-/// ```gleam
-/// import telega/client
-/// import telega/api
-///
-/// fn main() {
-///   ...
-///   let response = client.new(token) |> api.send_message(client, send_message_parameters)
-///   ...
-/// }
-/// ```
+//// Module provides a simple interface to the Telegram Bot API and uses `httpc` as a default HTTP client.
+//// If you want to use `telega` as a Telegram client, you can use only this module.
+////
+//// ```gleam
+//// import telega/client
+//// import telega/api
+////
+//// fn main() {
+////   ...
+////   let response = client.new(token) |> api.send_message(client, send_message_parameters)
+////   ...
+//// }
+//// ```
+
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
