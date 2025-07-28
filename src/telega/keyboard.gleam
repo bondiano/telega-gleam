@@ -212,6 +212,7 @@
 //// - Cache callback data configurations to avoid recreation
 //// - Consider using `one_time()` keyboards for single interactions
 
+import gleam/function
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -250,7 +251,7 @@ pub opaque type Keyboard {
 /// ```
 pub fn new(buttons: List(List(KeyboardButton))) -> Keyboard {
   Keyboard(
-    buttons: buttons,
+    buttons:,
     is_persistent: None,
     resize_keyboard: None,
     one_time_keyboard: None,
@@ -964,7 +965,7 @@ pub fn set_callback_data_delimiter(
   data: KeyboardCallbackData(data),
   delimiter: String,
 ) -> KeyboardCallbackData(data) {
-  KeyboardCallbackData(..data, delimiter: delimiter)
+  KeyboardCallbackData(..data, delimiter:)
 }
 
 /// Pack callback data into a callback
@@ -1015,9 +1016,11 @@ pub fn unpack_callback(
 /// }
 /// ```
 pub fn string_callback_data(id: String) -> KeyboardCallbackData(String) {
-  new_callback_data(id: id, serialize: fn(data) { data }, deserialize: fn(data) {
-    data
-  })
+  new_callback_data(
+    id: id,
+    serialize: function.identity,
+    deserialize: function.identity,
+  )
 }
 
 /// Create an integer callback data configuration.
@@ -1063,13 +1066,19 @@ pub fn int_callback_data(id: String) -> KeyboardCallbackData(Int) {
 /// ```
 pub fn bool_callback_data(id: String) -> KeyboardCallbackData(Bool) {
   new_callback_data(
-    id: id,
-    serialize: fn(data) {
-      case data {
-        True -> "true"
-        False -> "false"
-      }
-    },
-    deserialize: fn(data) { data == "true" },
+    id:,
+    serialize: serialize_bool,
+    deserialize: deserialize_bool,
   )
+}
+
+fn serialize_bool(data: Bool) -> String {
+  case data {
+    True -> "true"
+    False -> "false"
+  }
+}
+
+fn deserialize_bool(data: String) -> Bool {
+  data == "true"
 }

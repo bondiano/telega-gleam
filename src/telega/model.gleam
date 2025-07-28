@@ -5501,8 +5501,9 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(giveaway_completed_decoder()),
   )
-  use paid_message_price_changed <- decode.field(
+  use paid_message_price_changed <- decode.optional_field(
     "paid_message_price_changed",
+    None,
     decode.optional(paid_message_price_changed_decoder()),
   )
   use video_chat_scheduled <- decode.optional_field(

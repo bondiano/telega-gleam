@@ -18,7 +18,7 @@ import bot/utils
 import language_keyboard
 import session.{type LanguageBotSession, English, LanguageBotSession, Russian}
 
-fn middleware(req, bot, handle_request) {
+fn middleware(bot, req, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
@@ -28,7 +28,7 @@ fn middleware(req, bot, handle_request) {
 }
 
 fn handle_request(bot, req) {
-  use req <- middleware(req, bot)
+  use req <- middleware(bot, req)
 
   case wisp.path_segments(req) {
     ["health"] -> wisp.ok()
@@ -67,9 +67,9 @@ fn t_none_keyboard_message(language) {
 }
 
 fn change_languages_keyboard(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "change language with keyboard")
+  use ctx <- telega.log_context(ctx, "change language with keyboard")
 
-  let language = ctx.session.lang
+  let language = ctx.session.language
   let keyboard = language_keyboard.new_keyboard(language)
   use _ <- try(reply.with_markup(
     ctx,
@@ -89,15 +89,18 @@ fn change_languages_keyboard(ctx: BotContext, _) {
 }
 
 fn handle_none_keyboard_message(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "change language with none keyboard")
-  use _ <- try(reply.with_text(ctx, t_none_keyboard_message(ctx.session.lang)))
-  bot.next_session(ctx, LanguageBotSession(ctx.session.lang))
+  use ctx <- telega.log_context(ctx, "change language with none keyboard")
+  use _ <- try(reply.with_text(
+    ctx,
+    t_none_keyboard_message(ctx.session.language),
+  ))
+  bot.next_session(ctx, LanguageBotSession(ctx.session.language))
 }
 
 fn handle_inline_change_language(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "change language inline")
+  use ctx <- telega.log_context(ctx, "change language inline")
 
-  let language = ctx.session.lang
+  let language = ctx.session.language
   let callback_data = language_keyboard.build_keyboard_callback_data()
   let keyboard = language_keyboard.new_inline_keyboard(language, callback_data)
   use message <- try(reply.with_markup(
@@ -107,7 +110,7 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   ))
 
   let assert Ok(filter) = telega_keyboard.filter_inline_keyboard_query(keyboard)
-  
+
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx:,
     filter: filter,
@@ -147,13 +150,13 @@ const commands = [
 ]
 
 fn start_command_handler(ctx: BotContext, _) {
-  use <- telega.log_context(ctx, "start")
+  use ctx <- telega.log_context(ctx, "start")
   use _ <- try(telega_api.set_my_commands(
     ctx.config.api_client,
     telega_model.bot_commands_from(commands),
     None,
   ))
-  use _ <- try(reply.with_text(ctx, t_welcome_message(ctx.session.lang)))
+  use _ <- try(reply.with_text(ctx, t_welcome_message(ctx.session.language)))
 
   Ok(ctx)
 }

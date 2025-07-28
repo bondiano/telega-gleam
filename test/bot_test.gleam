@@ -295,6 +295,8 @@ pub fn context_next_session_test() {
       config: config,
       session: TestSession(counter: 5),
       chat_subject: chat_subject,
+      start_time: None,
+      log_prefix: None,
     )
 
   let new_session = TestSession(counter: 10)
@@ -323,6 +325,8 @@ pub fn handler_types_test() {
       config: create_test_config(),
       session: TestSession(counter: 0),
       chat_subject: process.new_subject(),
+      start_time: None,
+      log_prefix: None,
     )
 
   let handle_all = bot.HandleAll(fn(ctx, _update) { Ok(ctx) })
@@ -344,6 +348,8 @@ pub fn wait_handler_test() {
       config: create_test_config(),
       session: TestSession(counter: 0),
       chat_subject: process.new_subject(),
+      start_time: None,
+      log_prefix: None,
     )
 
   let handler = bot.HandleText(fn(ctx, _text) { Ok(ctx) })

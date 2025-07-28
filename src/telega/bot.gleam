@@ -77,7 +77,7 @@ pub fn start(
   |> actor.on_message(bot_loop)
   |> actor.start
   |> result.map(fn(started) { started.data })
-  |> result.map_error(fn(err) { error.BotStartError(string.inspect(err)) })
+  |> result.map_error(error.BotStartError)
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
@@ -419,6 +419,9 @@ pub type Context(session, error) {
     config: Config,
     session: session,
     chat_subject: ChatInstanceSubject(session, error),
+    /// Used to calculate the duration of the conversation in logs
+    start_time: Option(Timestamp),
+    log_prefix: Option(String),
   )
 }
 
@@ -432,6 +435,8 @@ fn new_context(
     key: chat.key,
     session: chat.session,
     chat_subject: chat.self,
+    start_time: None,
+    log_prefix: None,
   )
 }
 

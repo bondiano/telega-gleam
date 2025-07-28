@@ -3,6 +3,7 @@ import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response.{Response as HttpResponse}
 import gleam/result
+import telega/internal/log
 
 import wisp.{
   type Request as WispRequest, type Response as WispResponse,
@@ -42,8 +43,13 @@ pub fn handle_bot(
   // Telegram will wait response from the server, before sending the next update
   // So we need to handle it in a separate process and return response immediately.
   process.spawn(fn() {
-    let assert Ok(message) = update.decode_raw(json)
-    telega.handle_update(telega, message)
+    case update.decode_raw(json) {
+      Ok(message) -> {
+        telega.handle_update(telega, message)
+        Nil
+      }
+      Error(error) -> log.error_d("Failed to decode update", error)
+    }
   })
 
   wisp.ok()

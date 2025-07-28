@@ -33,14 +33,14 @@ fn handle_request(bot, req) {
 }
 
 fn dice_command_handler(ctx, _) {
-  use <- telega.log_context(ctx, "dice")
+  use ctx <- telega.log_context(ctx, "dice")
   use _ <- try(reply.with_dice(ctx, None))
 
   Ok(ctx)
 }
 
 fn start_command_handler(ctx, _) {
-  use <- telega.log_context(ctx, "start")
+  use ctx <- telega.log_context(ctx, "start")
 
   use _ <- try(telega_api.set_my_commands(
     ctx.config.api_client,

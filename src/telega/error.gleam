@@ -21,13 +21,16 @@ pub type TelegaError {
   SetWebhookError
   NoSessionSettingsError
 
+  // Start errors
   RegistryStartError(reason: String)
-  BotStartError(reason: String)
+  BotStartError(reason: actor.StartError)
   ChatInstanceStartError(reason: actor.StartError)
 
   FileNotFoundError
 
   DecodeUpdateError(reason: String)
+
+  /// Occurs when the update is not handled by any handler
   UnknownUpdateError(update: model.Update)
 }
 
@@ -41,7 +44,7 @@ pub fn to_string(error: TelegaError) -> String {
     SetWebhookError -> "Failed to set webhook"
     NoSessionSettingsError -> "Session settings not initialized"
     RegistryStartError(reason) -> "Failed to start registry: " <> reason
-    BotStartError(reason) -> "Failed to start bot: " <> reason
+    BotStartError(reason) -> "Failed to start bot: " <> string.inspect(reason)
     ChatInstanceStartError(reason) ->
       "Failed to start chat instance: " <> string.inspect(reason)
     FileNotFoundError -> "File not found"

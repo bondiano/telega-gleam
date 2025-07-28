@@ -15,10 +15,10 @@ import telega/internal/utils
 import telega/api
 import telega/bot.{
   type BotSubject, type CallbackQueryFilter, type CatchHandler, type Context,
-  type Handler, type Hears, type SessionSettings, HandleAll, HandleAudio,
-  HandleCallbackQuery, HandleChatMember, HandleCommand, HandleCommands,
-  HandleHears, HandleMessage, HandlePhotos, HandleText, HandleVideo, HandleVoice,
-  HandleWebAppData, SessionSettings,
+  type Handler, type Hears, type SessionSettings, Context, HandleAll,
+  HandleAudio, HandleCallbackQuery, HandleChatMember, HandleCommand,
+  HandleCommands, HandleHears, HandleMessage, HandlePhotos, HandleText,
+  HandleVideo, HandleVoice, HandleWebAppData, SessionSettings,
 }
 import telega/client.{type TelegramClient}
 import telega/error
@@ -136,9 +136,9 @@ pub fn wait_command(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleCommand(command, continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleCommand(command, continue),
   )
 }
 
@@ -168,9 +168,9 @@ pub fn wait_commands(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleCommands(commands, continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleCommands(commands, continue),
   )
 }
 
@@ -222,9 +222,9 @@ pub fn wait_hears(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleHears(hears, continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleHears(hears, continue),
   )
 }
 
@@ -252,9 +252,9 @@ pub fn wait_message(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleMessage(continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleMessage(continue),
   )
 }
 
@@ -286,9 +286,9 @@ pub fn wait_callback_query(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleCallbackQuery(filter, continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleCallbackQuery(filter, continue),
   )
 }
 
@@ -379,9 +379,9 @@ pub fn wait_photos(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandlePhotos(continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandlePhotos(continue),
   )
 }
 
@@ -409,9 +409,9 @@ pub fn wait_web_app_data(
 ) -> Result(Context(session, error), error) {
   bot.wait_handler(
     ctx:,
-    handler: HandleWebAppData(continue),
-    handle_else:,
     timeout:,
+    handle_else:,
+    handler: HandleWebAppData(continue),
   )
 }
 
@@ -438,22 +438,29 @@ pub fn handle_chat_member(
   ])
 }
 
+// TODO: figure out how to correct log continuation
 /// Log the message and error message if the handler fails.
 pub fn log_context(
   ctx ctx: Context(session, error),
   prefix prefix: String,
-  handler handler: fn() -> Result(Context(session, error), error),
+  handler handler: fn(Context(session, error)) ->
+    Result(Context(session, error), error),
 ) -> Result(Context(session, error), error) {
-  let id = utils.random_string(5)
-  let prefix = "[" <> prefix <> ":" <> id <> "] "
+  let start_time = option.unwrap(ctx.start_time, timestamp.system_time())
+  let log_prefix =
+    option.lazy_unwrap(ctx.log_prefix, fn() {
+      let id = utils.random_string(5)
+      "[" <> prefix <> ": " <> id <> "] "
+    })
 
-  log.info(prefix <> "received update: " <> update.to_string(ctx.update))
+  let ctx = Context(..ctx, start_time: Some(start_time))
 
-  let start_time = timestamp.system_time()
+  log.info(log_prefix <> "received update: " <> update.to_string(ctx.update))
+
   let result =
-    handler()
+    handler(ctx)
     |> result.map_error(fn(e) {
-      log.error(prefix <> "handler failed: " <> string.inspect(e))
+      log.error(log_prefix <> "handler failed: " <> string.inspect(e))
       e
     })
   let end_time = timestamp.system_time()
@@ -465,7 +472,7 @@ pub fn log_context(
     |> float.truncate
     |> int.to_string
 
-  log.info(prefix <> "handler completed in " <> time <> "ms")
+  log.info(log_prefix <> "handler completed in " <> time <> "ms")
 
   result
 }

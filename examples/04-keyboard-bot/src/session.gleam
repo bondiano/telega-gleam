@@ -8,11 +8,11 @@ pub type Language {
 }
 
 pub type LanguageBotSession {
-  LanguageBotSession(lang: Language)
+  LanguageBotSession(language: Language)
 }
 
 fn default_session() {
-  LanguageBotSession(lang: English)
+  LanguageBotSession(language: English)
 }
 
 pub fn attach(bot) {

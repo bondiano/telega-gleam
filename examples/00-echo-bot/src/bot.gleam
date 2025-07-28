@@ -14,7 +14,7 @@ fn handle_request(bot, req) {
 }
 
 fn echo_handler(ctx, update) {
-  use <- telega.log_context(ctx, "echo")
+  use ctx <- telega.log_context(ctx, "echo")
   let assert Ok(_) = case update {
     TextUpdate(text:, ..) -> reply.with_text(ctx, text)
     CommandUpdate(command:, ..) -> reply.with_text(ctx, command.text)
