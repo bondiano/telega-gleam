@@ -167,6 +167,14 @@ fn create_test_update() -> update.Update {
       video_chat_participants_invited: None,
       web_app_data: None,
       reply_markup: None,
+      checklist: None,
+      checklist_tasks_added: None,
+      checklist_tasks_done: None,
+      direct_message_price_changed: None,
+      gift: None,
+      paid_message_price_changed: None,
+      paid_star_count: None,
+      unique_gift: None,
     )
 
   update.TextUpdate(

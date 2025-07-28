@@ -461,6 +461,8 @@ pub type Message {
     media_group_id: Option(String),
     /// Optional. Signature of the post author for messages in channels, or the custom title of an anonymous group administrator
     author_signature: Option(String),
+    /// Optional. The number of Telegram Stars that were paid by the sender of the message to send it
+    paid_star_count: Option(Int),
     /// Optional. For text messages, the actual UTF-8 text of the message
     text: Option(String),
     /// Optional. For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text
@@ -497,6 +499,8 @@ pub type Message {
     show_caption_above_media: Option(Bool),
     /// Optional. True, if the message media is covered by a spoiler animation
     has_media_spoiler: Option(Bool),
+    /// Optional. Message is a checklist
+    checklist: Option(Checklist),
     /// Optional. Message is a shared contact, information about the contact
     contact: Option(Contact),
     /// Optional. Message is a dice with random value
@@ -543,6 +547,10 @@ pub type Message {
     users_shared: Option(UsersShared),
     /// Optional. Service message: a chat was shared with the bot
     chat_shared: Option(ChatShared),
+    /// Optional. Service message: a regular gift was sent or received
+    gift: Option(GiftInfo),
+    /// Optional. Service message: a unique gift was sent or received
+    unique_gift: Option(UniqueGiftInfo),
     /// Optional. The domain name of the website on which the user has logged in. More about Telegram Login »
     connected_website: Option(String),
     /// Optional. Service message: the user allowed the bot to write messages after adding it to the attachment or side menu, launching a Web App from a link, or accepting an explicit request from a Web App sent by the method requestWriteAccess
@@ -555,6 +563,12 @@ pub type Message {
     boost_added: Option(ChatBoostAdded),
     /// Optional. Service message: chat background set
     chat_background_set: Option(ChatBackground),
+    /// Optional. Service message: some tasks in a checklist were marked as done or not done
+    checklist_tasks_done: Option(ChecklistTasksDone),
+    /// Optional. Service message: tasks were added to a checklist
+    checklist_tasks_added: Option(ChecklistTasksAdded),
+    /// Optional. Service message: the price for paid messages in the corresponding direct messages chat of a channel has changed
+    direct_message_price_changed: Option(DirectMessagePriceChanged),
     /// Optional. Service message: forum topic created
     forum_topic_created: Option(ForumTopicCreated),
     /// Optional. Service message: forum topic edited
@@ -575,6 +589,8 @@ pub type Message {
     giveaway_winners: Option(GiveawayWinners),
     /// Optional. Service message: a giveaway without public winners was completed
     giveaway_completed: Option(GiveawayCompleted),
+    /// Optional. Service message: the price for paid messages has changed in the chat
+    paid_message_price_changed: Option(PaidMessagePriceChanged),
     /// Optional. Service message: video chat scheduled
     video_chat_scheduled: Option(VideoChatScheduled),
     /// Optional. Service message: video chat started
@@ -677,6 +693,8 @@ pub type ExternalReplyInfo {
     voice: Option(Voice),
     /// Optional. True, if the message media is covered by a spoiler animation
     has_media_spoiler: Option(Bool),
+    /// Optional. Message is a checklist
+    checklist: Option(Checklist),
     /// Optional. Message is a shared contact, information about the contact
     contact: Option(Contact),
     /// Optional. Message is a dice with random value
@@ -1068,6 +1086,92 @@ pub type Poll {
   )
 }
 
+/// **Official reference:** Describes a task in a checklist.
+pub type ChecklistTask {
+  ChecklistTask(
+    /// Unique identifier of the task
+    id: Int,
+    /// Text of the task
+    text: String,
+    /// Optional. Special entities that appear in the task text
+    text_entities: Option(List(MessageEntity)),
+    /// Optional. User that completed the task; omitted if the task wasn't completed
+    completed_by_user: Option(User),
+    /// Optional. Point in time (Unix timestamp) when the task was completed; 0 if the task wasn't completed
+    completion_date: Option(Int),
+  )
+}
+
+/// **Official reference:** Describes a checklist.
+pub type Checklist {
+  Checklist(
+    /// Title of the checklist
+    title: String,
+    /// Optional. Special entities that appear in the checklist title
+    title_entities: Option(List(MessageEntity)),
+    /// List of tasks in the checklist
+    tasks: List(ChecklistTask),
+    /// Optional. True, if users other than the creator of the list can add tasks to the list
+    others_can_add_tasks: Option(Bool),
+    /// Optional. True, if users other than the creator of the list can mark tasks as done or not done
+    others_can_mark_tasks_as_done: Option(Bool),
+  )
+}
+
+/// **Official reference:** Describes a task to add to a checklist.
+pub type InputChecklistTask {
+  InputChecklistTask(
+    /// Unique identifier of the task; must be positive and unique among all task identifiers currently present in the checklist
+    id: Int,
+    /// Text of the task; 1-100 characters after entities parsing
+    text: String,
+    /// Optional. Mode for parsing entities in the text. See formatting options for more details.
+    parse_mode: String,
+    /// Optional. List of special entities that appear in the text, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
+    text_entities: Option(List(MessageEntity)),
+  )
+}
+
+/// **Official reference:** Describes a checklist to create.
+pub type InputChecklist {
+  InputChecklist(
+    /// Title of the checklist; 1-255 characters after entities parsing
+    title: String,
+    /// Optional. Mode for parsing entities in the title. See formatting options for more details.
+    parse_mode: String,
+    /// Optional. List of special entities that appear in the title, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
+    title_entities: Option(List(MessageEntity)),
+    /// List of 1-30 tasks in the checklist
+    tasks: List(InputChecklistTask),
+    /// Optional. Pass True if other users can add tasks to the checklist
+    others_can_add_tasks: Option(Bool),
+    /// Optional. Pass True if other users can mark tasks as done or not done in the checklist
+    others_can_mark_tasks_as_done: Option(Bool),
+  )
+}
+
+/// **Official reference:** Describes a service message about checklist tasks marked as done or not done.
+pub type ChecklistTasksDone {
+  ChecklistTasksDone(
+    /// Optional. Message containing the checklist whose tasks were marked as done or not done. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    checklist_message: Option(Message),
+    /// Optional. Identifiers of the tasks that were marked as done
+    marked_as_done_task_ids: Option(List(Int)),
+    /// Optional. Identifiers of the tasks that were marked as not done
+    marked_as_not_done_task_ids: Option(List(Int)),
+  )
+}
+
+/// **Official reference:** Describes a service message about tasks added to a checklist.
+pub type ChecklistTasksAdded {
+  ChecklistTasksAdded(
+    /// Optional. Message containing the checklist to which the tasks were added. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    checklist_message: Option(Message),
+    /// List of tasks added to the checklist
+    tasks: List(ChecklistTask),
+  )
+}
+
 /// **Official reference:** This object represents a point on the map.
 pub type Location {
   Location(
@@ -1359,6 +1463,24 @@ pub type VideoChatParticipantsInvited {
   VideoChatParticipantsInvited(
     /// New members that were invited to the video chat
     users: List(User),
+  )
+}
+
+/// **Official reference:** Describes a service message about a change in the price of paid messages within a chat.
+pub type PaidMessagePriceChanged {
+  PaidMessagePriceChanged(
+    /// The new number of Telegram Stars that must be paid by non-administrator users of the supergroup chat for each sent message
+    paid_message_star_count: Int,
+  )
+}
+
+/// **Official reference:** Describes a service message about a change in the price of direct messages sent to a channel chat.
+pub type DirectMessagePriceChanged {
+  DirectMessagePriceChanged(
+    /// True, if direct messages are enabled for the channel chat; false otherwise
+    are_direct_messages_enabled: Bool,
+    /// Optional. The new number of Telegram Stars that must be paid by users for each direct message sent to the channel. Does not apply to users who have been exempted by administrators. Defaults to 0.
+    direct_message_star_count: Option(Int),
   )
 }
 
@@ -1755,7 +1877,7 @@ pub type ChatAdministratorRights {
   ChatAdministratorRights(
     /// True, if the user's presence in the chat is hidden
     is_anonymous: Bool,
-    /// True, if the administrator can access the chat event log, get boost list, see hidden supergroup and channel members, report spam messages and ignore slow mode. Implied by any other administrator privilege.
+    /// True, if the administrator can access the chat event log, get boost list, see hidden supergroup and channel members, report spam messages, ignore slow mode, and send messages to the chat without paying Telegram Stars. Implied by any other administrator privilege.
     can_manage_chat: Bool,
     /// True, if the administrator can delete messages of other users
     can_delete_messages: Bool,
@@ -1775,7 +1897,7 @@ pub type ChatAdministratorRights {
     can_edit_stories: Bool,
     /// True, if the administrator can delete stories posted by other users
     can_delete_stories: Bool,
-    /// Optional. True, if the administrator can post messages in the channel, or access channel statistics; for channels only
+    /// Optional. True, if the administrator can post messages in the channel, approve suggested posts, or access channel statistics; for channels only
     can_post_messages: Option(Bool),
     /// Optional. True, if the administrator can edit messages of other users and can pin messages; for channels only
     can_edit_messages: Option(Bool),
@@ -1833,7 +1955,7 @@ pub type ChatMemberAdministrator {
     can_be_edited: Bool,
     /// True, if the user's presence in the chat is hidden
     is_anonymous: Bool,
-    /// True, if the administrator can access the chat event log, get boost list, see hidden supergroup and channel members, report spam messages and ignore slow mode. Implied by any other administrator privilege.
+    /// True, if the administrator can access the chat event log, get boost list, see hidden supergroup and channel members, report spam messages, ignore slow mode, and send messages to the chat without paying Telegram Stars. Implied by any other administrator privilege.
     can_manage_chat: Bool,
     /// True, if the administrator can delete messages of other users
     can_delete_messages: Bool,
@@ -2357,12 +2479,16 @@ pub type UniqueGiftInfo {
   UniqueGiftInfo(
     /// Information about the gift
     gift: UniqueGift,
-    /// Origin of the gift. Currently, either “upgrade” or “transfer”
+    /// Origin of the gift. Currently, either “upgrade” for gifts upgraded from regular gifts, “transfer” for gifts transferred from other users or channels, or “resale” for gifts bought from other users
     origin: String,
+    /// Optional. For gifts bought from other users, the price paid for the gift
+    last_resale_star_count: Option(Int),
     /// Optional. Unique identifier of the received gift for the bot; only present for gifts received on behalf of business accounts
     owned_gift_id: Option(String),
     /// Optional. Number of Telegram Stars that must be paid to transfer the gift; omitted if the bot cannot transfer the gift
     transfer_star_count: Option(Int),
+    /// Optional. Point in time (Unix timestamp) when the gift can be transferred. If it is in the past, then the gift can be transferred now
+    next_transfer_date: Option(Int),
   )
 }
 
@@ -2449,6 +2575,8 @@ pub type OwnedGiftUnique {
     can_be_transferred: Option(Bool),
     /// Optional. Number of Telegram Stars that must be paid to transfer the gift; omitted if the bot cannot transfer the gift
     transfer_star_count: Option(Int),
+    /// Optional. Point in time (Unix timestamp) when the gift can be transferred. If it is in the past, then the gift can be transferred now
+    next_transfer_date: Option(Int),
   )
 }
 
@@ -2704,7 +2832,7 @@ pub type BusinessBotRights {
     /// Optional. True, if the bot can mark incoming private messages as read
     can_read_messages: Option(Bool),
     /// Optional. True, if the bot can delete messages sent by the bot
-    can_delete_outgoing_messages: Option(Bool),
+    can_delete_sent_messages: Option(Bool),
     /// Optional. True, if the bot can delete all private messages in managed chats
     can_delete_all_messages: Option(Bool),
     /// Optional. True, if the bot can edit the first and last name of the business account
@@ -5053,6 +5181,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(decode.string),
   )
+  use paid_star_count <- decode.optional_field(
+    "paid_star_count",
+    None,
+    decode.optional(decode.int),
+  )
   use text <- decode.optional_field(
     "text",
     None,
@@ -5142,6 +5275,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "has_media_spoiler",
     None,
     decode.optional(decode.bool),
+  )
+  use checklist <- decode.optional_field(
+    "checklist",
+    None,
+    decode.optional(checklist_decoder()),
   )
   use contact <- decode.optional_field(
     "contact",
@@ -5263,6 +5401,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(decode.string),
   )
+  use gift <- decode.optional_field(
+    "gift",
+    None,
+    decode.optional(gift_info_decoder()),
+  )
+  use unique_gift <- decode.optional_field(
+    "unique_gift",
+    None,
+    decode.optional(unique_gift_info_decoder()),
+  )
   use write_access_allowed <- decode.optional_field(
     "write_access_allowed",
     None,
@@ -5287,6 +5435,21 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "chat_background_set",
     None,
     decode.optional(chat_background_decoder()),
+  )
+  use checklist_tasks_done <- decode.optional_field(
+    "checklist_tasks_done",
+    None,
+    decode.optional(checklist_tasks_done_decoder()),
+  )
+  use checklist_tasks_added <- decode.optional_field(
+    "checklist_tasks_added",
+    None,
+    decode.optional(checklist_tasks_added_decoder()),
+  )
+  use direct_message_price_changed <- decode.optional_field(
+    "direct_message_price_changed",
+    None,
+    decode.optional(direct_message_price_changed_decoder()),
   )
   use forum_topic_created <- decode.optional_field(
     "forum_topic_created",
@@ -5337,6 +5500,10 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "giveaway_completed",
     None,
     decode.optional(giveaway_completed_decoder()),
+  )
+  use paid_message_price_changed <- decode.field(
+    "paid_message_price_changed",
+    decode.optional(paid_message_price_changed_decoder()),
   )
   use video_chat_scheduled <- decode.optional_field(
     "video_chat_scheduled",
@@ -5391,6 +5558,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     is_from_offline: is_from_offline,
     media_group_id: media_group_id,
     author_signature: author_signature,
+    paid_star_count: paid_star_count,
     text: text,
     entities: entities,
     link_preview_options: link_preview_options,
@@ -5409,6 +5577,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     caption_entities: caption_entities,
     show_caption_above_media: show_caption_above_media,
     has_media_spoiler: has_media_spoiler,
+    checklist: checklist,
     contact: contact,
     dice: dice,
     game: game,
@@ -5432,12 +5601,17 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     refunded_payment: refunded_payment,
     users_shared: users_shared,
     chat_shared: chat_shared,
+    gift: gift,
+    unique_gift: unique_gift,
     connected_website: connected_website,
     write_access_allowed: write_access_allowed,
     passport_data: passport_data,
     proximity_alert_triggered: proximity_alert_triggered,
     boost_added: boost_added,
     chat_background_set: chat_background_set,
+    checklist_tasks_done: checklist_tasks_done,
+    checklist_tasks_added: checklist_tasks_added,
+    direct_message_price_changed: direct_message_price_changed,
     forum_topic_created: forum_topic_created,
     forum_topic_edited: forum_topic_edited,
     forum_topic_closed: forum_topic_closed,
@@ -5448,6 +5622,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     giveaway: giveaway,
     giveaway_winners: giveaway_winners,
     giveaway_completed: giveaway_completed,
+    paid_message_price_changed: paid_message_price_changed,
     video_chat_scheduled: video_chat_scheduled,
     video_chat_started: video_chat_started,
     video_chat_ended: video_chat_ended,
@@ -5597,6 +5772,11 @@ pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
     None,
     decode.optional(decode.bool),
   )
+  use checklist <- decode.optional_field(
+    "checklist",
+    None,
+    decode.optional(checklist_decoder()),
+  )
   use contact <- decode.optional_field(
     "contact",
     None,
@@ -5658,6 +5838,7 @@ pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
     video_note: video_note,
     voice: voice,
     has_media_spoiler: has_media_spoiler,
+    checklist: checklist,
     contact: contact,
     dice: dice,
     game: game,
@@ -6206,6 +6387,131 @@ pub fn poll_decoder() -> decode.Decoder(Poll) {
   ))
 }
 
+pub fn checklist_task_decoder() -> decode.Decoder(ChecklistTask) {
+  use id <- decode.field("id", decode.int)
+  use text <- decode.field("text", decode.string)
+  use text_entities <- decode.field(
+    "text_entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use completed_by_user <- decode.field(
+    "completed_by_user",
+    decode.optional(user_decoder()),
+  )
+  use completion_date <- decode.field(
+    "completion_date",
+    decode.optional(decode.int),
+  )
+  decode.success(ChecklistTask(
+    id: id,
+    text: text,
+    text_entities: text_entities,
+    completed_by_user: completed_by_user,
+    completion_date: completion_date,
+  ))
+}
+
+pub fn checklist_decoder() -> decode.Decoder(Checklist) {
+  use title <- decode.field("title", decode.string)
+  use title_entities <- decode.field(
+    "title_entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
+  use others_can_add_tasks <- decode.field(
+    "others_can_add_tasks",
+    decode.optional(decode.bool),
+  )
+  use others_can_mark_tasks_as_done <- decode.field(
+    "others_can_mark_tasks_as_done",
+    decode.optional(decode.bool),
+  )
+  decode.success(Checklist(
+    title: title,
+    title_entities: title_entities,
+    tasks: tasks,
+    others_can_add_tasks: others_can_add_tasks,
+    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
+  ))
+}
+
+pub fn input_checklist_task_decoder() -> decode.Decoder(InputChecklistTask) {
+  use id <- decode.field("id", decode.int)
+  use text <- decode.field("text", decode.string)
+  use parse_mode <- decode.field("parse_mode", decode.string)
+  use text_entities <- decode.field(
+    "text_entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  decode.success(InputChecklistTask(
+    id: id,
+    text: text,
+    parse_mode: parse_mode,
+    text_entities: text_entities,
+  ))
+}
+
+pub fn input_checklist_decoder() -> decode.Decoder(InputChecklist) {
+  use title <- decode.field("title", decode.string)
+  use parse_mode <- decode.field("parse_mode", decode.string)
+  use title_entities <- decode.field(
+    "title_entities",
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use tasks <- decode.field(
+    "tasks",
+    decode.list(input_checklist_task_decoder()),
+  )
+  use others_can_add_tasks <- decode.field(
+    "others_can_add_tasks",
+    decode.optional(decode.bool),
+  )
+  use others_can_mark_tasks_as_done <- decode.field(
+    "others_can_mark_tasks_as_done",
+    decode.optional(decode.bool),
+  )
+  decode.success(InputChecklist(
+    title: title,
+    parse_mode: parse_mode,
+    title_entities: title_entities,
+    tasks: tasks,
+    others_can_add_tasks: others_can_add_tasks,
+    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
+  ))
+}
+
+pub fn checklist_tasks_done_decoder() -> decode.Decoder(ChecklistTasksDone) {
+  use checklist_message <- decode.field(
+    "checklist_message",
+    decode.optional(message_decoder()),
+  )
+  use marked_as_done_task_ids <- decode.field(
+    "marked_as_done_task_ids",
+    decode.optional(decode.list(decode.int)),
+  )
+  use marked_as_not_done_task_ids <- decode.field(
+    "marked_as_not_done_task_ids",
+    decode.optional(decode.list(decode.int)),
+  )
+  decode.success(ChecklistTasksDone(
+    checklist_message: checklist_message,
+    marked_as_done_task_ids: marked_as_done_task_ids,
+    marked_as_not_done_task_ids: marked_as_not_done_task_ids,
+  ))
+}
+
+pub fn checklist_tasks_added_decoder() -> decode.Decoder(ChecklistTasksAdded) {
+  use checklist_message <- decode.field(
+    "checklist_message",
+    decode.optional(message_decoder()),
+  )
+  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
+  decode.success(ChecklistTasksAdded(
+    checklist_message: checklist_message,
+    tasks: tasks,
+  ))
+}
+
 pub fn location_decoder() -> decode.Decoder(Location) {
   use latitude <- decode.field("latitude", decode.float)
   use longitude <- decode.field("longitude", decode.float)
@@ -6573,6 +6879,35 @@ pub fn video_chat_participants_invited_decoder() -> decode.Decoder(
 ) {
   use users <- decode.field("users", decode.list(user_decoder()))
   decode.success(VideoChatParticipantsInvited(users: users))
+}
+
+pub fn paid_message_price_changed_decoder() -> decode.Decoder(
+  PaidMessagePriceChanged,
+) {
+  use paid_message_star_count <- decode.field(
+    "paid_message_star_count",
+    decode.int,
+  )
+  decode.success(PaidMessagePriceChanged(
+    paid_message_star_count: paid_message_star_count,
+  ))
+}
+
+pub fn direct_message_price_changed_decoder() -> decode.Decoder(
+  DirectMessagePriceChanged,
+) {
+  use are_direct_messages_enabled <- decode.field(
+    "are_direct_messages_enabled",
+    decode.bool,
+  )
+  use direct_message_star_count <- decode.field(
+    "direct_message_star_count",
+    decode.optional(decode.int),
+  )
+  decode.success(DirectMessagePriceChanged(
+    are_direct_messages_enabled: are_direct_messages_enabled,
+    direct_message_star_count: direct_message_star_count,
+  ))
 }
 
 pub fn giveaway_created_decoder() -> decode.Decoder(GiveawayCreated) {
@@ -7915,6 +8250,10 @@ pub fn gift_info_decoder() -> decode.Decoder(GiftInfo) {
 pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
   use gift <- decode.field("gift", unique_gift_decoder())
   use origin <- decode.field("origin", decode.string)
+  use last_resale_star_count <- decode.field(
+    "last_resale_star_count",
+    decode.optional(decode.int),
+  )
   use owned_gift_id <- decode.field(
     "owned_gift_id",
     decode.optional(decode.string),
@@ -7923,11 +8262,18 @@ pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
     "transfer_star_count",
     decode.optional(decode.int),
   )
+  use next_transfer_date <- decode.field(
+    "next_transfer_date",
+    decode.optional(decode.int),
+  )
+
   decode.success(UniqueGiftInfo(
     gift: gift,
     origin: origin,
+    last_resale_star_count: last_resale_star_count,
     owned_gift_id: owned_gift_id,
     transfer_star_count: transfer_star_count,
+    next_transfer_date: next_transfer_date,
   ))
 }
 
@@ -8050,6 +8396,11 @@ pub fn owned_gift_unique_decoder() -> decode.Decoder(OwnedGiftUnique) {
     "transfer_star_count",
     decode.optional(decode.int),
   )
+  use next_transfer_date <- decode.field(
+    "next_transfer_date",
+    decode.optional(decode.int),
+  )
+
   decode.success(OwnedGiftUnique(
     type_: type_,
     gift: gift,
@@ -8059,6 +8410,7 @@ pub fn owned_gift_unique_decoder() -> decode.Decoder(OwnedGiftUnique) {
     is_saved: is_saved,
     can_be_transferred: can_be_transferred,
     transfer_star_count: transfer_star_count,
+    next_transfer_date: next_transfer_date,
   ))
 }
 
@@ -8279,8 +8631,8 @@ pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
     "can_read_messages",
     decode.optional(decode.bool),
   )
-  use can_delete_outgoing_messages <- decode.field(
-    "can_delete_outgoing_messages",
+  use can_delete_sent_messages <- decode.field(
+    "can_delete_sent_messages",
     decode.optional(decode.bool),
   )
   use can_delete_all_messages <- decode.field(
@@ -8327,7 +8679,7 @@ pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
   decode.success(BusinessBotRights(
     can_reply: can_reply,
     can_read_messages: can_read_messages,
-    can_delete_outgoing_messages: can_delete_outgoing_messages,
+    can_delete_sent_messages: can_delete_sent_messages,
     can_delete_all_messages: can_delete_all_messages,
     can_edit_name: can_edit_name,
     can_edit_bio: can_edit_bio,
@@ -11470,6 +11822,21 @@ pub fn encode_message(message: Message) -> Json {
       json.nullable(message.chat_background_set, encode_chat_background),
     ),
     #(
+      "checklist_tasks_done",
+      json.nullable(message.checklist_tasks_done, encode_checklist_tasks_done),
+    ),
+    #(
+      "checklist_tasks_added",
+      json.nullable(message.checklist_tasks_added, encode_checklist_tasks_added),
+    ),
+    #(
+      "direct_message_price_changed",
+      json.nullable(
+        message.direct_message_price_changed,
+        encode_direct_message_price_changed,
+      ),
+    ),
+    #(
       "forum_topic_created",
       json.nullable(message.forum_topic_created, encode_forum_topic_created),
     ),
@@ -11928,6 +12295,133 @@ pub fn encode_poll(poll: Poll) -> Json {
   ])
 }
 
+pub fn encode_checklist_task(checklist_task: ChecklistTask) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(checklist_task.id)),
+    #("text", json.string(checklist_task.text)),
+    #(
+      "text_entities",
+      json.nullable(checklist_task.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "completed_by_user",
+      json.nullable(checklist_task.completed_by_user, encode_user),
+    ),
+    #(
+      "completion_date",
+      json.nullable(checklist_task.completion_date, json.int),
+    ),
+  ])
+}
+
+pub fn encode_checklist(checklist: Checklist) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(checklist.title)),
+    #(
+      "title_entities",
+      json.nullable(checklist.title_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("tasks", json.array(_, encode_checklist_task)(checklist.tasks)),
+    #(
+      "others_can_add_tasks",
+      json.nullable(checklist.others_can_add_tasks, json.bool),
+    ),
+    #(
+      "others_can_mark_tasks_as_done",
+      json.nullable(checklist.others_can_mark_tasks_as_done, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_checklist_task(
+  input_checklist_task: InputChecklistTask,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(input_checklist_task.id)),
+    #("text", json.string(input_checklist_task.text)),
+    #("parse_mode", json.string(input_checklist_task.parse_mode)),
+    #(
+      "text_entities",
+      json.nullable(input_checklist_task.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+  ])
+}
+
+pub fn encode_input_checklist(input_checklist: InputChecklist) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(input_checklist.title)),
+    #("parse_mode", json.string(input_checklist.parse_mode)),
+    #(
+      "title_entities",
+      json.nullable(input_checklist.title_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "tasks",
+      json.array(_, encode_input_checklist_task)(input_checklist.tasks),
+    ),
+    #(
+      "others_can_add_tasks",
+      json.nullable(input_checklist.others_can_add_tasks, json.bool),
+    ),
+    #(
+      "others_can_mark_tasks_as_done",
+      json.nullable(input_checklist.others_can_mark_tasks_as_done, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_checklist_tasks_done(
+  checklist_tasks_done: ChecklistTasksDone,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "checklist_message",
+      json.nullable(checklist_tasks_done.checklist_message, encode_message),
+    ),
+    #(
+      "marked_as_done_task_ids",
+      json.nullable(checklist_tasks_done.marked_as_done_task_ids, json.array(
+        _,
+        json.int,
+      )),
+    ),
+    #(
+      "marked_as_not_done_task_ids",
+      json.nullable(
+        checklist_tasks_done.marked_as_not_done_task_ids,
+        json.array(_, json.int),
+      ),
+    ),
+  ])
+}
+
+pub fn encode_checklist_tasks_added(
+  checklist_tasks_added: ChecklistTasksAdded,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "checklist_message",
+      json.nullable(checklist_tasks_added.checklist_message, encode_message),
+    ),
+    #(
+      "tasks",
+      json.array(_, encode_checklist_task)(checklist_tasks_added.tasks),
+    ),
+  ])
+}
+
 pub fn encode_location(location: Location) -> Json {
   json_object_filter_nulls([
     #("latitude", json.float(location.latitude)),
@@ -12205,6 +12699,35 @@ pub fn encode_video_chat_participants_invited(
     #(
       "users",
       json.array(_, encode_user)(video_chat_participants_invited.users),
+    ),
+  ])
+}
+
+pub fn encode_paid_message_price_changed(
+  paid_message_price_changed: PaidMessagePriceChanged,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "paid_message_star_count",
+      json.int(paid_message_price_changed.paid_message_star_count),
+    ),
+  ])
+}
+
+pub fn encode_direct_message_price_changed(
+  direct_message_price_changed: DirectMessagePriceChanged,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "are_direct_messages_enabled",
+      json.bool(direct_message_price_changed.are_direct_messages_enabled),
+    ),
+    #(
+      "direct_message_star_count",
+      json.nullable(
+        direct_message_price_changed.direct_message_star_count,
+        json.int,
+      ),
     ),
   ])
 }
@@ -13323,12 +13846,20 @@ pub fn encode_unique_gift_info(unique_gift_info: UniqueGiftInfo) -> Json {
     #("gift", encode_unique_gift(unique_gift_info.gift)),
     #("origin", json.string(unique_gift_info.origin)),
     #(
+      "last_resale_star_count",
+      json.nullable(unique_gift_info.last_resale_star_count, json.int),
+    ),
+    #(
       "owned_gift_id",
       json.nullable(unique_gift_info.owned_gift_id, json.string),
     ),
     #(
       "transfer_star_count",
       json.nullable(unique_gift_info.transfer_star_count, json.int),
+    ),
+    #(
+      "next_transfer_date",
+      json.nullable(unique_gift_info.next_transfer_date, json.int),
     ),
   ])
 }
@@ -13414,6 +13945,10 @@ pub fn encode_owned_gift_unique(owned_gift_unique: OwnedGiftUnique) -> Json {
     #(
       "transfer_star_count",
       json.nullable(owned_gift_unique.transfer_star_count, json.int),
+    ),
+    #(
+      "next_transfer_date",
+      json.nullable(owned_gift_unique.next_transfer_date, json.int),
     ),
   ])
 }
@@ -13635,8 +14170,8 @@ pub fn encode_business_bot_rights(
       json.nullable(business_bot_rights.can_read_messages, json.bool),
     ),
     #(
-      "can_delete_outgoing_messages",
-      json.nullable(business_bot_rights.can_delete_outgoing_messages, json.bool),
+      "can_delete_sent_messages",
+      json.nullable(business_bot_rights.can_delete_sent_messages, json.bool),
     ),
     #(
       "can_delete_all_messages",
