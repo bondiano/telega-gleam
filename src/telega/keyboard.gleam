@@ -11,24 +11,46 @@
 ////
 //// ### Basic Reply Keyboard
 //// ```gleam
+//// // Traditional array-based approach
 //// let keyboard = keyboard.new([
 ////   [keyboard.button("Option 1"), keyboard.button("Option 2")],
 ////   [keyboard.contact_button("📞 Share Contact"), keyboard.location_button("📍 Location")],
 //// ])
 //// |> keyboard.one_time()
 //// |> keyboard.resized()
+////
+//// // New builder pattern approach (recommended)
+//// let keyboard = keyboard.builder()
+////   |> keyboard.text("Option 1")
+////   |> keyboard.text("Option 2")
+////   |> keyboard.next_row()
+////   |> keyboard.contact("📞 Share Contact")
+////   |> keyboard.location("📍 Location")
+////   |> keyboard.build()
+////   |> keyboard.one_time()
+////   |> keyboard.resized()
 //// ```
 ////
 //// ### Inline Keyboard with Callbacks
 //// ```gleam
 //// let callback_data = keyboard.string_callback_data("action")
-//// let assert Ok(button) = keyboard.inline_button("Click Me", 
+////
+//// // Traditional approach
+//// let assert Ok(button) = keyboard.inline_button("Click Me",
 ////   keyboard.pack_callback(callback_data, "click"))
-//// 
 //// let keyboard = keyboard.new_inline([[
 ////   button,
 ////   keyboard.inline_url_button("Visit", "https://example.com"),
 //// ]])
+////
+//// // Builder pattern approach (recommended)
+//// let callback = keyboard.pack_callback(callback_data, "click")
+//// let assert Ok(keyboard) = {
+////   use builder <- result.try(keyboard.inline_builder()
+////     |> keyboard.inline_text("Click Me", callback))
+////   let builder = keyboard.inline_url(builder, "Visit", "https://example.com")
+////   Ok(keyboard.inline_build(builder))
+//// }
 ////
 //// // In your handler:
 //// let assert Ok(filter) = keyboard.filter_inline_keyboard_query(keyboard)
@@ -37,7 +59,7 @@
 //// ### Grid Layouts
 //// ```gleam
 //// let buttons = [
-////   keyboard.button("1"), keyboard.button("2"), 
+////   keyboard.button("1"), keyboard.button("2"),
 ////   keyboard.button("3"), keyboard.button("4"),
 //// ]
 //// let grid_keyboard = keyboard.grid(buttons, 2) // 2x2 grid
@@ -66,13 +88,46 @@
 //// - Inline button creation with validation
 //// - Filter creation for callback queries
 ////
+//// ## Builder Pattern API
+////
+//// The keyboard module provides a fluent builder API similar to Grammy/GramIO:
+////
+//// ### Reply Keyboard Builder
+//// ```gleam
+//// let keyboard = keyboard.builder()
+////   |> keyboard.text("Yes")
+////   |> keyboard.text("No")
+////   |> keyboard.next_row()
+////   |> keyboard.contact("📞 Contact")
+////   |> keyboard.location("📍 Location")
+////   |> keyboard.next_row()
+////   |> keyboard.web_app("Open App", "https://example.com")
+////   |> keyboard.build()
+////   |> keyboard.one_time()
+//// ```
+////
+//// ### Inline Keyboard Builder
+//// ```gleam
+//// let callback_data = keyboard.string_callback_data("menu")
+////
+//// let result = keyboard.inline_builder()
+////   |> keyboard.inline_text("Settings", keyboard.pack_callback(callback_data, "settings"))
+////   |> result.try(keyboard.inline_text(_, "About", keyboard.pack_callback(callback_data, "about")))
+////   |> result.try(fn(builder) {
+////     let builder = keyboard.inline_next_row(builder)
+////     let builder = keyboard.inline_url(builder, "Help", "https://help.example.com")
+////     Ok(keyboard.inline_build(builder))
+////   })
+//// ```
+////
 //// ## Best Practices
 ////
-//// 1. **Use typed callback data** for better type safety
-//// 2. **Validate callback data length** before creating buttons
-//// 3. **Use grid layouts** for better UX with many buttons
-//// 4. **Handle Result types** properly when using validation functions
-//// 5. **Use one-time keyboards** for single-use interactions
+//// 1. **Use builder pattern** for complex keyboards (recommended over arrays)
+//// 2. **Use typed callback data** for better type safety
+//// 3. **Validate callback data length** before creating buttons
+//// 4. **Use grid layouts** for better UX with many buttons
+//// 5. **Handle Result types** properly when using validation functions
+//// 6. **Use one-time keyboards** for single-use interactions
 ////
 //// ## Advanced Usage Patterns
 ////
@@ -100,7 +155,7 @@
 //// ) -> InlineKeyboard {
 ////   let page_callback = keyboard.int_callback_data("page")
 ////   let buttons = []
-////   
+////
 ////   // Build buttons list
 ////   let buttons = case current_page > 1 {
 ////     True -> {
@@ -112,12 +167,12 @@
 ////     }
 ////     False -> buttons
 ////   }
-////   
+////
 ////   // Add page indicator
 ////   let page_info = int.to_string(current_page) <> "/" <> int.to_string(total_pages)
 ////   let info_btn = keyboard.inline_copy_text_button(page_info, page_info)
 ////   let buttons = [info_btn, ..buttons]
-////   
+////
 ////   // Add next button
 ////   let buttons = case current_page < total_pages {
 ////     True -> {
@@ -129,7 +184,7 @@
 ////     }
 ////     False -> buttons
 ////   }
-////   
+////
 ////   keyboard.new_inline([list.reverse(buttons)])
 //// }
 //// ```
@@ -211,7 +266,7 @@ pub fn new(buttons: List(List(KeyboardButton))) -> Keyboard {
 /// ```gleam
 /// let keyboard = keyboard.new([[keyboard.button("Yes"), keyboard.button("No")]])
 /// let hears = keyboard.hear(keyboard)
-/// 
+///
 /// use _, text <- telega.wait_hears(ctx:, hears:, or: None, timeout: None)
 /// case text {
 ///   "Yes" -> // handle yes
@@ -331,6 +386,169 @@ pub fn inline_single(button: InlineKeyboardButton) -> InlineKeyboard {
   new_inline([[button]])
 }
 
+// Builder Pattern Functions ----------------------------------------------------------------------
+
+/// Create a new keyboard builder for method chaining.
+/// This provides a more ergonomic API for building complex keyboards.
+///
+/// ## Example
+/// ```gleam
+/// let keyboard = keyboard.builder()
+///   |> keyboard.text("Option 1")
+///   |> keyboard.text("Option 2")
+///   |> keyboard.next_row()
+///   |> keyboard.text("Cancel")
+///   |> keyboard.build()
+/// ```
+pub fn builder() -> KeyboardBuilder {
+  KeyboardBuilder(rows: [], current_row: [])
+}
+
+/// Create a new inline keyboard builder for method chaining.
+/// This provides a more ergonomic API for building complex inline keyboards.
+///
+/// ## Example
+/// ```gleam
+/// let callback_data = keyboard.string_callback_data("action")
+/// let keyboard = keyboard.inline_builder()
+///   |> keyboard.inline_text("Button 1", keyboard.pack_callback(callback_data, "btn1"))
+///   |> keyboard.inline_text("Button 2", keyboard.pack_callback(callback_data, "btn2"))
+///   |> keyboard.inline_next_row()
+///   |> keyboard.inline_url("Visit", "https://example.com")
+///   |> keyboard.inline_build()
+/// ```
+pub fn inline_builder() -> InlineKeyboardBuilder {
+  InlineKeyboardBuilder(rows: [], current_row: [])
+}
+
+/// Add a text button to the current row of the keyboard builder.
+pub fn text(builder: KeyboardBuilder, text: String) -> KeyboardBuilder {
+  let button = button(text)
+  KeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add a contact request button to the current row of the keyboard builder.
+pub fn contact(builder: KeyboardBuilder, text: String) -> KeyboardBuilder {
+  let button = contact_button(text)
+  KeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add a location request button to the current row of the keyboard builder.
+pub fn location(builder: KeyboardBuilder, text: String) -> KeyboardBuilder {
+  let button = location_button(text)
+  KeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add a web app button to the current row of the keyboard builder.
+pub fn web_app(
+  builder: KeyboardBuilder,
+  text: String,
+  url: String,
+) -> KeyboardBuilder {
+  let button = web_app_button(text, url)
+  KeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Start a new row in the keyboard builder.
+pub fn next_row(builder: KeyboardBuilder) -> KeyboardBuilder {
+  case builder.current_row {
+    [] -> builder
+    _ -> {
+      let new_row = list.reverse(builder.current_row)
+      KeyboardBuilder(rows: [new_row, ..builder.rows], current_row: [])
+    }
+  }
+}
+
+/// Build the final keyboard from the builder.
+pub fn build(builder: KeyboardBuilder) -> Keyboard {
+  let final_builder = case builder.current_row {
+    [] -> builder
+    _ -> next_row(builder)
+  }
+  let all_rows = list.reverse(final_builder.rows)
+  new(all_rows)
+}
+
+/// Add an inline text button with callback data to the current row.
+pub fn inline_text(
+  builder: InlineKeyboardBuilder,
+  text: String,
+  callback: KeyboardCallback(data),
+) -> Result(InlineKeyboardBuilder, String) {
+  case inline_button(text, callback) {
+    Ok(button) ->
+      Ok(
+        InlineKeyboardBuilder(..builder, current_row: [
+          button,
+          ..builder.current_row
+        ]),
+      )
+    Error(msg) -> Error(msg)
+  }
+}
+
+/// Add an inline URL button to the current row.
+pub fn inline_url(
+  builder: InlineKeyboardBuilder,
+  text: String,
+  url: String,
+) -> InlineKeyboardBuilder {
+  let button = inline_url_button(text, url)
+  InlineKeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add an inline web app button to the current row.
+pub fn inline_web_app(
+  builder: InlineKeyboardBuilder,
+  text: String,
+  url: String,
+) -> InlineKeyboardBuilder {
+  let button = inline_web_app_button(text, url)
+  InlineKeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add an inline switch query button to the current row.
+pub fn inline_switch_query(
+  builder: InlineKeyboardBuilder,
+  text: String,
+  query: String,
+) -> InlineKeyboardBuilder {
+  let button = inline_switch_query_button(text, query)
+  InlineKeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Add an inline copy text button to the current row.
+pub fn inline_copy_text(
+  builder: InlineKeyboardBuilder,
+  text: String,
+  copy_text: String,
+) -> InlineKeyboardBuilder {
+  let button = inline_copy_text_button(text, copy_text)
+  InlineKeyboardBuilder(..builder, current_row: [button, ..builder.current_row])
+}
+
+/// Start a new row in the inline keyboard builder.
+pub fn inline_next_row(builder: InlineKeyboardBuilder) -> InlineKeyboardBuilder {
+  case builder.current_row {
+    [] -> builder
+    _ -> {
+      let new_row = list.reverse(builder.current_row)
+      InlineKeyboardBuilder(rows: [new_row, ..builder.rows], current_row: [])
+    }
+  }
+}
+
+/// Build the final inline keyboard from the builder.
+pub fn inline_build(builder: InlineKeyboardBuilder) -> InlineKeyboard {
+  let final_builder = case builder.current_row {
+    [] -> builder
+    _ -> inline_next_row(builder)
+  }
+  let all_rows = list.reverse(final_builder.rows)
+  new_inline(all_rows)
+}
+
 /// Create a new keyboard button
 pub fn button(text: String) -> KeyboardButton {
   KeyboardButton(
@@ -442,6 +660,25 @@ pub fn chat_button(
   )
 }
 
+// Keyboard Builder -------------------------------------------------------------------------------
+
+/// A keyboard builder for creating keyboards with method chaining.
+/// This provides a more ergonomic API similar to Grammy/GramIO.
+pub opaque type KeyboardBuilder {
+  KeyboardBuilder(
+    rows: List(List(KeyboardButton)),
+    current_row: List(KeyboardButton),
+  )
+}
+
+/// An inline keyboard builder for creating inline keyboards with method chaining.
+pub opaque type InlineKeyboardBuilder {
+  InlineKeyboardBuilder(
+    rows: List(List(InlineKeyboardButton)),
+    current_row: List(InlineKeyboardButton),
+  )
+}
+
 // Inline keyboard ------------------------------------------------------------------------------------
 
 pub opaque type InlineKeyboard {
@@ -454,9 +691,9 @@ pub opaque type InlineKeyboard {
 /// ## Example
 /// ```gleam
 /// let callback_data = keyboard.string_callback_data("action")
-/// let assert Ok(callback_btn) = keyboard.inline_button("Click", 
+/// let assert Ok(callback_btn) = keyboard.inline_button("Click",
 ///   keyboard.pack_callback(callback_data, "click"))
-/// 
+///
 /// let keyboard = keyboard.new_inline([
 ///   [callback_btn, keyboard.inline_url_button("Visit", "https://example.com")],
 ///   [keyboard.inline_copy_text_button("Copy", "Hello World!")],
@@ -606,21 +843,21 @@ pub fn inline_copy_text_button(
 /// ## Example
 /// ```gleam
 /// let callback_data = keyboard.string_callback_data("action")
-/// let assert Ok(button1) = keyboard.inline_button("Yes", 
+/// let assert Ok(button1) = keyboard.inline_button("Yes",
 ///   keyboard.pack_callback(callback_data, "yes"))
-/// let assert Ok(button2) = keyboard.inline_button("No", 
+/// let assert Ok(button2) = keyboard.inline_button("No",
 ///   keyboard.pack_callback(callback_data, "no"))
-/// 
+///
 /// let keyboard = keyboard.new_inline([[button1, button2]])
 /// let assert Ok(filter) = keyboard.filter_inline_keyboard_query(keyboard)
-/// 
+///
 /// // In your handler:
 /// use ctx, payload, query_id <- telega.wait_callback_query(
 ///   ctx:, filter:, or: None, timeout: None
 /// )
 /// let assert Ok(callback) = keyboard.unpack_callback(payload, callback_data)
 /// ```
-/// 
+///
 /// ## Errors
 /// - Returns `Error` if the keyboard has no callback buttons
 /// - Returns `Error` if the callback data creates an invalid regex pattern
@@ -695,13 +932,13 @@ pub type KeyboardCallback(data) {
 ///   Delete
 ///   Edit
 /// }
-/// 
+///
 /// let action_callback = keyboard.new_callback_data(
 ///   id: "action",
-///   serialize: fn(action) { 
+///   serialize: fn(action) {
 ///     case action {
 ///       Save -> "save"
-///       Delete -> "delete" 
+///       Delete -> "delete"
 ///       Edit -> "edit"
 ///     }
 ///   },
@@ -769,7 +1006,7 @@ pub fn unpack_callback(
 /// let callback_data = keyboard.string_callback_data("action")
 /// let callback = keyboard.pack_callback(callback_data, "delete_user")
 /// let assert Ok(button) = keyboard.inline_button("Delete", callback)
-/// 
+///
 /// // In your callback handler:
 /// let assert Ok(unpacked) = keyboard.unpack_callback(payload, callback_data)
 /// case unpacked.data {
@@ -791,7 +1028,7 @@ pub fn string_callback_data(id: String) -> KeyboardCallbackData(String) {
 /// let page_callback = keyboard.int_callback_data("page")
 /// let next_page = keyboard.pack_callback(page_callback, 2)
 /// let assert Ok(button) = keyboard.inline_button("Next →", next_page)
-/// 
+///
 /// // In your callback handler:
 /// let assert Ok(unpacked) = keyboard.unpack_callback(payload, page_callback)
 /// let page_number = unpacked.data // Int
@@ -813,10 +1050,10 @@ pub fn int_callback_data(id: String) -> KeyboardCallbackData(Int) {
 /// let toggle_callback = keyboard.bool_callback_data("notifications")
 /// let enable_btn = keyboard.pack_callback(toggle_callback, True)
 /// let disable_btn = keyboard.pack_callback(toggle_callback, False)
-/// 
+///
 /// let assert Ok(enable) = keyboard.inline_button("🔔 Enable", enable_btn)
 /// let assert Ok(disable) = keyboard.inline_button("🔕 Disable", disable_btn)
-/// 
+///
 /// // In your callback handler:
 /// let assert Ok(unpacked) = keyboard.unpack_callback(payload, toggle_callback)
 /// case unpacked.data {

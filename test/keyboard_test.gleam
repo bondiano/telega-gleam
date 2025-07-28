@@ -374,3 +374,233 @@ pub fn hear_keyboard_test() {
     _ -> should.fail()
   }
 }
+
+pub fn keyboard_builder_basic_test() {
+  let kb =
+    keyboard.builder()
+    |> keyboard.text("Button 1")
+    |> keyboard.text("Button 2")
+    |> keyboard.build()
+
+  let markup = keyboard.to_markup(kb)
+  case markup {
+    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+      should.equal(reply_keyboard.keyboard, [
+        [keyboard.button("Button 1"), keyboard.button("Button 2")],
+      ])
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn keyboard_builder_multi_row_test() {
+  let kb =
+    keyboard.builder()
+    |> keyboard.text("Row 1 Button 1")
+    |> keyboard.text("Row 1 Button 2")
+    |> keyboard.next_row()
+    |> keyboard.text("Row 2 Button 1")
+    |> keyboard.build()
+
+  let markup = keyboard.to_markup(kb)
+  case markup {
+    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+      should.equal(reply_keyboard.keyboard, [
+        [keyboard.button("Row 1 Button 1"), keyboard.button("Row 1 Button 2")],
+        [keyboard.button("Row 2 Button 1")],
+      ])
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn keyboard_builder_special_buttons_test() {
+  let kb =
+    keyboard.builder()
+    |> keyboard.contact("Share Contact")
+    |> keyboard.location("Share Location")
+    |> keyboard.next_row()
+    |> keyboard.web_app("Open App", "https://example.com")
+    |> keyboard.build()
+
+  let markup = keyboard.to_markup(kb)
+  case markup {
+    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+      let expected_row1 = [
+        keyboard.contact_button("Share Contact"),
+        keyboard.location_button("Share Location"),
+      ]
+      let expected_row2 = [
+        keyboard.web_app_button("Open App", "https://example.com"),
+      ]
+      should.equal(reply_keyboard.keyboard, [expected_row1, expected_row2])
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn keyboard_builder_empty_test() {
+  let kb =
+    keyboard.builder()
+    |> keyboard.build()
+
+  let markup = keyboard.to_markup(kb)
+  case markup {
+    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+      should.equal(reply_keyboard.keyboard, [])
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn inline_keyboard_builder_basic_test() {
+  let callback_data = keyboard.string_callback_data("action")
+  let callback1 = keyboard.pack_callback(callback_data, "btn1")
+  let callback2 = keyboard.pack_callback(callback_data, "btn2")
+
+  case
+    keyboard.inline_builder()
+    |> keyboard.inline_text("Button 1", callback1)
+  {
+    Ok(builder) -> {
+      case keyboard.inline_text(builder, "Button 2", callback2) {
+        Ok(builder) -> {
+          let kb = keyboard.inline_build(builder)
+          let markup = keyboard.to_inline_markup(kb)
+          case markup {
+            model.SendMessageReplyInlineKeyboardMarkupParameters(
+              inline_keyboard,
+            ) -> {
+              case inline_keyboard.inline_keyboard {
+                [[button1, button2]] -> {
+                  should.equal(button1.text, "Button 1")
+                  should.equal(button2.text, "Button 2")
+                }
+                _ -> should.fail()
+              }
+            }
+            _ -> should.fail()
+          }
+        }
+        Error(_) -> should.fail()
+      }
+    }
+    Error(_) -> should.fail()
+  }
+}
+
+pub fn inline_keyboard_builder_multi_row_test() {
+  let callback_data = keyboard.string_callback_data("action")
+  let callback1 = keyboard.pack_callback(callback_data, "btn1")
+  let callback2 = keyboard.pack_callback(callback_data, "btn2")
+
+  case
+    keyboard.inline_builder()
+    |> keyboard.inline_text("Row 1 Button", callback1)
+  {
+    Ok(builder) -> {
+      let builder = keyboard.inline_next_row(builder)
+      case keyboard.inline_text(builder, "Row 2 Button", callback2) {
+        Ok(builder) -> {
+          let kb = keyboard.inline_build(builder)
+          let markup = keyboard.to_inline_markup(kb)
+          case markup {
+            model.SendMessageReplyInlineKeyboardMarkupParameters(
+              inline_keyboard,
+            ) -> {
+              case inline_keyboard.inline_keyboard {
+                [[row1_btn], [row2_btn]] -> {
+                  should.equal(row1_btn.text, "Row 1 Button")
+                  should.equal(row2_btn.text, "Row 2 Button")
+                }
+                _ -> should.fail()
+              }
+            }
+            _ -> should.fail()
+          }
+        }
+        Error(_) -> should.fail()
+      }
+    }
+    Error(_) -> should.fail()
+  }
+}
+
+pub fn inline_keyboard_builder_mixed_buttons_test() {
+  let callback_data = keyboard.string_callback_data("action")
+  let callback = keyboard.pack_callback(callback_data, "action")
+
+  case
+    keyboard.inline_builder()
+    |> keyboard.inline_text("Callback", callback)
+  {
+    Ok(builder) -> {
+      let builder = keyboard.inline_url(builder, "URL", "https://example.com")
+      let builder = keyboard.inline_next_row(builder)
+      let builder =
+        keyboard.inline_web_app(builder, "WebApp", "https://app.example.com")
+      let builder = keyboard.inline_copy_text(builder, "Copy", "Hello!")
+
+      let kb = keyboard.inline_build(builder)
+      let markup = keyboard.to_inline_markup(kb)
+      case markup {
+        model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+          case inline_keyboard.inline_keyboard {
+            [[callback_btn, url_btn], [webapp_btn, copy_btn]] -> {
+              should.equal(callback_btn.text, "Callback")
+              should.equal(url_btn.text, "URL")
+              should.equal(webapp_btn.text, "WebApp")
+              should.equal(copy_btn.text, "Copy")
+            }
+            _ -> should.fail()
+          }
+        }
+        _ -> should.fail()
+      }
+    }
+    Error(_) -> should.fail()
+  }
+}
+
+pub fn inline_keyboard_builder_switch_query_test() {
+  let builder =
+    keyboard.inline_builder()
+    |> keyboard.inline_switch_query("Share", "hello world")
+    |> keyboard.inline_next_row()
+    |> keyboard.inline_url("Visit", "https://example.com")
+
+  let kb = keyboard.inline_build(builder)
+  let markup = keyboard.to_inline_markup(kb)
+  case markup {
+    model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+      case inline_keyboard.inline_keyboard {
+        [[share_btn], [visit_btn]] -> {
+          should.equal(share_btn.text, "Share")
+          should.equal(share_btn.switch_inline_query, Some("hello world"))
+          should.equal(visit_btn.text, "Visit")
+          should.equal(visit_btn.url, Some("https://example.com"))
+        }
+        _ -> should.fail()
+      }
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn builder_vs_manual_equivalence_test() {
+  let builder_kb =
+    keyboard.builder()
+    |> keyboard.text("Yes")
+    |> keyboard.text("No")
+    |> keyboard.next_row()
+    |> keyboard.text("Cancel")
+    |> keyboard.build()
+
+  let manual_kb =
+    keyboard.new([
+      [keyboard.button("Yes"), keyboard.button("No")],
+      [keyboard.button("Cancel")],
+    ])
+
+  should.equal(keyboard.to_markup(builder_kb), keyboard.to_markup(manual_kb))
+}

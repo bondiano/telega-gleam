@@ -1,3 +1,5 @@
+import gleam/result
+
 import telega/keyboard.{type KeyboardCallbackData}
 
 import session.{type Language, English, Russian}
@@ -10,27 +12,36 @@ pub type LanguageInlineKeyboardData =
 pub fn new_inline_keyboard(lang, callback_data) {
   let russian_callback = keyboard.pack_callback(callback_data, Russian)
   let english_callback = keyboard.pack_callback(callback_data, English)
-  
-  let assert Ok(russian_button) = keyboard.inline_button(
-    text: t_russian_button_text(lang),
-    callback_data: russian_callback,
-  )
-  
-  let assert Ok(english_button) = keyboard.inline_button(
-    text: t_english_button_text(lang),
-    callback_data: english_callback,
-  )
-  
-  keyboard.new_inline([[russian_button, english_button]])
+
+  let assert Ok(keyboard_result) = {
+    use builder <- result.try(
+      keyboard.inline_builder()
+      |> keyboard.inline_text(t_russian_button_text(lang), russian_callback),
+    )
+    use builder <- result.try(keyboard.inline_text(
+      builder,
+      t_english_button_text(lang),
+      english_callback,
+    ))
+    Ok(keyboard.inline_build(builder))
+  }
+
+  keyboard_result
 }
 
 pub fn new_keyboard(lang) {
-  let buttons_row = case lang {
-    Russian -> [keyboard.button(t_english_button_text(lang))]
-    English -> [keyboard.button(t_russian_button_text(lang))]
+  let keyboard_result = case lang {
+    Russian ->
+      keyboard.builder()
+      |> keyboard.text(t_english_button_text(lang))
+      |> keyboard.build()
+    English ->
+      keyboard.builder()
+      |> keyboard.text(t_russian_button_text(lang))
+      |> keyboard.build()
   }
 
-  keyboard.new([buttons_row])
+  keyboard_result
   |> keyboard.one_time()
 }
 
