@@ -39,3 +39,7 @@ fn do_random_string(n, acc, alphabet_length) {
     }
   }
 }
+
+pub fn seconds_to_milliseconds(time: Float) -> Float {
+  time *. 1000.0
+}

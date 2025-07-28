@@ -1,5 +1,6 @@
 import gleam/int
 import gleam/json
+import gleam/otp/actor
 import gleam/string
 
 import telega/model
@@ -15,13 +16,14 @@ pub type TelegaError {
   /// Returned if the bot failed to call `handle_update`
   BotHandleUpdateError(reason: String)
 
+  /// Returned if the bot failed to convert API request to HTTP request
   ApiToRequestConvertError
   SetWebhookError
   NoSessionSettingsError
 
   RegistryStartError(reason: String)
   BotStartError(reason: String)
-  ChatInstanceStartError(reason: String)
+  ChatInstanceStartError(reason: actor.StartError)
 
   FileNotFoundError
 
@@ -41,7 +43,7 @@ pub fn to_string(error: TelegaError) -> String {
     RegistryStartError(reason) -> "Failed to start registry: " <> reason
     BotStartError(reason) -> "Failed to start bot: " <> reason
     ChatInstanceStartError(reason) ->
-      "Failed to start chat instance: " <> reason
+      "Failed to start chat instance: " <> string.inspect(reason)
     FileNotFoundError -> "File not found"
     DecodeUpdateError(reason) -> "Failed to decode update: " <> reason
     BotHandleUpdateError(reason) -> "Failed to handle update: " <> reason

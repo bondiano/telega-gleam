@@ -23,14 +23,14 @@ const secret_header = "x-telegram-bot-api-secret-token"
 /// import telega.{type Bot}
 /// import telega/adapters/wisp as telega_wisp
 ///
-/// fn handle_request(req: Request, bot: Bot) -> Response {
-///   use <- telega_wisp.handle_bot(req)
+/// fn handle_request(bot: Bot, req: Request) -> Response {
+///   use <- telega_wisp.handle_bot(req, bot)
 ///   // ...
 /// }
 /// ```
 pub fn handle_bot(
-  request req: WispRequest,
   telega telega: Telega(session, error),
+  req req: WispRequest,
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
   use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
@@ -39,17 +39,14 @@ pub fn handle_bot(
     HttpResponse(401, [], WispEmptyBody)
   })
 
-  case update.decode_raw(json) {
-    Ok(message) -> {
-      // Telegram will wait response from the server, before sending the next update
-      // So we need to handle it in a separate process and return response immediately.
-      process.start(linked: True, running: fn() {
-        telega.handle_update(telega, message)
-      })
-      wisp.ok()
-    }
-    Error(_) -> wisp.internal_server_error()
-  }
+  // Telegram will wait response from the server, before sending the next update
+  // So we need to handle it in a separate process and return response immediately.
+  process.spawn(fn() {
+    let assert Ok(message) = update.decode_raw(json)
+    telega.handle_update(telega, message)
+  })
+
+  wisp.ok()
 }
 
 fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {

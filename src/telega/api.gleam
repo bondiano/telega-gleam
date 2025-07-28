@@ -2652,7 +2652,7 @@ fn map_response(
 
   json.parse(from: response.body, using: response_decoder(result_decoder))
   |> result.map_error(error.JsonDecodeError)
-  |> result.then(fn(response) {
+  |> result.try(fn(response) {
     case response {
       ApiSuccessResponse(result: result, ..) -> {
         Ok(result)

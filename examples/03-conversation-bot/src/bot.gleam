@@ -1,4 +1,3 @@
-import dotenv_gleam
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
@@ -15,17 +14,19 @@ import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
 
-fn middleware(req, bot, handle_request) {
+import bot/utils
+
+fn middleware(bot, req, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
-  use <- telega_wisp.handle_bot(req, bot)
+  use <- telega_wisp.handle_bot(bot, req)
   use req <- wisp.handle_head(req)
   handle_request(req)
 }
 
 fn handle_request(bot, req) {
-  use req <- middleware(req, bot)
+  use req <- middleware(bot, req)
 
   case wisp.path_segments(req) {
     ["health"] -> wisp.ok()
@@ -84,7 +85,7 @@ fn build_bot() {
 }
 
 pub fn main() {
-  dotenv_gleam.config()
+  let assert Ok(_) = utils.env_config()
   wisp.configure_logger()
 
   let assert Ok(bot) = build_bot()
@@ -93,7 +94,7 @@ pub fn main() {
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
     |> mist.new
     |> mist.port(8000)
-    |> mist.start_http
+    |> mist.start
 
   process.sleep_forever()
 }

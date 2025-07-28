@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/float
+import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
@@ -460,14 +461,18 @@ pub fn log_context(
     start_time
     |> timestamp.difference(end_time)
     |> duration.to_seconds
-    |> float.to_string
+    |> utils.seconds_to_milliseconds
+    |> float.truncate
+    |> int.to_string
 
-  log.info(prefix <> "handler completed in " <> time <> " seconds")
+  log.info(prefix <> "handler completed in " <> time <> "ms")
 
   result
 }
 
 /// Construct a session settings.
+///
+/// `get_session` should return `Ok(None)` if there is no session for the given key `default_session` will be used in this case. `Error` will crash chat actor.
 pub fn with_session_settings(
   builder: TelegaBuilder(session, error),
   persist_session persist_session: fn(String, session) -> Result(session, error),
@@ -602,10 +607,7 @@ fn nil_catch_handler(_, _) {
 }
 
 /// Handle an update from the Telegram API.
-pub fn handle_update(
-  telega: Telega(session, error),
-  raw_update: Update,
-) -> Result(Bool, error.TelegaError) {
+pub fn handle_update(telega: Telega(session, error), raw_update: Update) -> Bool {
   update.raw_to_update(raw_update)
   |> bot.handle_update(telega.bot_subject, _)
 }

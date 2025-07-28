@@ -1,7 +1,6 @@
-import carpenter/table
-import gleam/option.{None, Some}
-
 import telega
+
+import bot/storage
 
 pub type NameBotSession {
   NameBotSession(name: String)
@@ -12,21 +11,14 @@ fn default_session() {
 }
 
 pub fn attach(bot) {
-  let assert Ok(session_table) =
-    table.build("session")
-    |> table.privacy(table.Public)
-    |> table.set
+  let assert Ok(session_storage) = storage.start()
 
   telega.with_session_settings(
     bot,
-    get_session: fn(key) {
-      case table.lookup(session_table, key) {
-        [#(_, session), ..] -> session |> Some |> Ok
-        _ -> Ok(None)
-      }
-    },
+    get_session: fn(key) { storage.get(session_storage, key) |> Ok },
     persist_session: fn(key, session) {
-      table.insert(session_table, [#(key, session)])
+      storage.set(session_storage, key, session)
+
       Ok(session)
     },
     default_session:,

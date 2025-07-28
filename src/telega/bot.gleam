@@ -1,5 +1,4 @@
 import gleam/erlang/process.{type Subject}
-import gleam/function
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -52,8 +51,6 @@ pub opaque type BotMessage {
 pub type CatchHandler(session, error) =
   fn(Context(session, error), error) -> Result(Nil, error)
 
-const bot_actor_init_timeout = 500
-
 pub fn start(
   registry_subject registry_subject: Subject(
     registry.RegistryMessage(ChatInstanceMessage(session, error)),
@@ -64,27 +61,22 @@ pub fn start(
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
 ) -> Result(Subject(BotMessage), error.TelegaError) {
-  actor.start_spec(actor.Spec(
-    init: fn() {
-      let self = process.new_subject()
-      let selector =
-        process.new_selector() |> process.selecting(self, function.identity)
-      let bot =
-        Bot(
-          self:,
-          registry_subject:,
-          config:,
-          bot_info:,
-          handlers:,
-          session_settings:,
-          catch_handler:,
-        )
+  let self = process.new_subject()
+  let bot =
+    Bot(
+      self:,
+      registry_subject:,
+      config:,
+      bot_info:,
+      handlers:,
+      session_settings:,
+      catch_handler:,
+    )
 
-      actor.Ready(bot, selector)
-    },
-    loop: bot_loop,
-    init_timeout: bot_actor_init_timeout,
-  ))
+  actor.new(bot)
+  |> actor.on_message(bot_loop)
+  |> actor.start
+  |> result.map(fn(started) { started.data })
   |> result.map_error(fn(err) { error.BotStartError(string.inspect(err)) })
 }
 
@@ -93,14 +85,14 @@ pub fn cancel_conversation(bot bot: Bot(session, error), key key: String) -> Nil
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
-fn bot_loop(message, bot) {
+fn bot_loop(bot, message) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) -> {
       case handle_update_bot_message(bot:, update:, reply_with:) {
         Ok(_) -> actor.continue(bot)
         Error(error) -> {
           log.error_d("Error in handler: ", error)
-          actor.Stop(process.Normal)
+          actor.stop()
         }
       }
     }
@@ -121,29 +113,28 @@ fn handle_update_bot_message(
   case registry.get(key:, in: bot.registry_subject) {
     Some(chat_subject) -> {
       let handlers = extract_update_handlers(bot.handlers, update)
-      handle_update_chat_instance(
-        chat_subject:,
-        update:,
-        handlers:,
-        reply_with:,
+      actor.send(
+        chat_subject,
+        HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
       )
+      |> Ok
     }
     None -> {
-      use chat_subject <- result.try(start_chat_instance(
+      use subject <- result.try(start_chat_instance(
         key:,
         config: bot.config,
         session_settings: bot.session_settings,
         catch_handler: bot.catch_handler,
       ))
-      registry.register(key:, in: bot.registry_subject, subject: chat_subject)
+      let chat_subject =
+        registry.register(key:, in: bot.registry_subject, subject:)
 
       let handlers = extract_update_handlers(bot.handlers, update)
-      handle_update_chat_instance(
-        chat_subject:,
-        update:,
-        handlers:,
-        reply_with:,
+      actor.send(
+        chat_subject,
+        HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
       )
+      |> Ok
     }
   }
 }
@@ -186,7 +177,7 @@ type ChatInstance(session, error) {
   )
 }
 
-const chat_instance_actor_init_timeout = 250
+const initialisation_timeout = 100
 
 fn start_chat_instance(
   key key: String,
@@ -194,54 +185,38 @@ fn start_chat_instance(
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
 ) {
-  actor.start_spec(actor.Spec(
-    init: fn() {
-      let self = process.new_subject()
-      let selector =
-        process.new_selector() |> process.selecting(self, function.identity)
+  let session = case session_settings.get_session(key) {
+    Ok(Some(session)) -> session
+    Ok(None) -> session_settings.default_session()
+    Error(error) ->
+      panic as { "Failed to get session: " <> string.inspect(error) }
+  }
 
-      let session = case session_settings.get_session(key) {
-        Ok(Some(session)) -> session
-        Ok(None) -> session_settings.default_session()
-        Error(error) ->
-          panic as { "Failed to get session: " <> string.inspect(error) }
-      }
-
+  use started <- result.try(
+    actor.new_with_initialiser(initialisation_timeout, fn(subject) {
       let chat_instance =
         ChatInstance(
           key:,
           config:,
           session:,
-          self:,
           session_settings:,
           catch_handler:,
+          self: subject,
           continuation: None,
         )
-
-      actor.Ready(chat_instance, selector)
-    },
-    loop: loop_chat_instance,
-    init_timeout: chat_instance_actor_init_timeout,
-  ))
-  |> result.map_error(fn(error) {
-    error.ChatInstanceStartError(string.inspect(error))
-  })
-}
-
-fn handle_update_chat_instance(
-  chat_subject chat_subject,
-  update update,
-  handlers handlers: List(Handler(session, error)),
-  reply_with reply_with,
-) {
-  actor.send(
-    chat_subject,
-    HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
+      actor.initialised(chat_instance)
+      |> actor.returning(subject)
+      |> Ok
+    })
+    |> actor.on_message(loop_chat_instance)
+    |> actor.start
+    |> result.map_error(error.ChatInstanceStartError),
   )
-  |> Ok
+
+  Ok(started.data)
 }
 
-fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
+fn loop_chat_instance(chat: ChatInstance(session, error), message) {
   case message {
     HandleNewChatInstanceMessage(update:, handlers:, reply_with:) ->
       do_handle_new_chat_instance_message(
@@ -252,18 +227,16 @@ fn loop_chat_instance(message, chat: ChatInstance(session, error)) {
         reply_with:,
       )
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
-      actor.continue(
-        ChatInstance(
-          ..chat,
-          continuation: Some(
-            Continuation(handler:, handle_else:, ttl: {
-              use timeout <- option.map(timeout)
-              timestamp.system_time()
-              |> timestamp.add(duration.seconds(timeout))
-            }),
-          ),
-        ),
+      ChatInstance(
+        ..chat,
+        continuation: Continuation(handler:, handle_else:, ttl: {
+            use timeout <- option.map(timeout)
+            timestamp.system_time()
+            |> timestamp.add(duration.seconds(timeout))
+          })
+          |> Some,
       )
+      |> actor.continue
   }
 }
 
@@ -324,7 +297,7 @@ fn do_handle_new_chat_instance_message(
             }
             Error(e) -> {
               log.error_d("Error in catch handler: ", e)
-              actor.Stop(process.Normal)
+              actor.stop()
             }
           }
         }
@@ -333,18 +306,38 @@ fn do_handle_new_chat_instance_message(
 }
 
 fn do_handle_continuation(
-  context context,
+  context context: Context(session, error),
   continuation continuation: Continuation(session, error),
-  update update,
-  reply_with reply_with,
-  chat chat,
+  update update: Update,
+  reply_with reply_with: Subject(Bool),
+  chat chat: ChatInstance(session, error),
 ) {
   case do_handle(context:, update:, handler: continuation.handler) {
     Some(Ok(Context(session: new_session, ..))) -> {
-      actor.send(reply_with, True)
-      actor.continue(
-        ChatInstance(..chat, session: new_session, continuation: None),
-      )
+      // Persist the new session after continuation completes
+      case chat.session_settings.persist_session(chat.key, new_session) {
+        Ok(persisted_session) -> {
+          actor.send(reply_with, True)
+          actor.continue(
+            ChatInstance(..chat, session: persisted_session, continuation: None),
+          )
+        }
+        Error(e) -> {
+          case chat.catch_handler(context, e) {
+            Ok(_) -> {
+              actor.send(reply_with, False)
+              actor.continue(chat)
+            }
+            Error(e) -> {
+              log.error_d(
+                "Error in session persistence after continuation: ",
+                e,
+              )
+              actor.stop()
+            }
+          }
+        }
+      }
     }
     Some(Error(e)) -> {
       case chat.catch_handler(context, e) {
@@ -354,7 +347,7 @@ fn do_handle_continuation(
         }
         Error(e) -> {
           log.error_d("Error in catch handler: ", e)
-          actor.Stop(process.Normal)
+          actor.stop()
         }
       }
     }
@@ -363,8 +356,32 @@ fn do_handle_continuation(
         Some(handler) ->
           case do_handle(context:, update:, handler:) {
             Some(Ok(Context(session: new_session, ..))) -> {
-              actor.send(reply_with, True)
-              actor.continue(ChatInstance(..chat, session: new_session))
+              // Persist the new session after handle_else completes
+              case
+                chat.session_settings.persist_session(chat.key, new_session)
+              {
+                Ok(persisted_session) -> {
+                  actor.send(reply_with, True)
+                  actor.continue(
+                    ChatInstance(..chat, session: persisted_session),
+                  )
+                }
+                Error(e) -> {
+                  case chat.catch_handler(context, e) {
+                    Ok(_) -> {
+                      actor.send(reply_with, False)
+                      actor.continue(chat)
+                    }
+                    Error(e) -> {
+                      log.error_d(
+                        "Error in session persistence after handle_else: ",
+                        e,
+                      )
+                      actor.stop()
+                    }
+                  }
+                }
+              }
             }
             Some(Error(e)) -> {
               case chat.catch_handler(context, e) {
@@ -374,7 +391,7 @@ fn do_handle_continuation(
                 }
                 Error(e) -> {
                   log.error_d("Error in catch else handler: ", e)
-                  actor.Stop(process.Normal)
+                  actor.stop()
                 }
               }
             }
@@ -456,8 +473,7 @@ pub fn get_session(
 // User should use methods from `telega` module.
 @internal
 pub fn handle_update(bot_subject bot_subject, update update) {
-  process.try_call_forever(bot_subject, HandleUpdateBotMessage(update, _))
-  |> result.map_error(fn(e) { error.BotHandleUpdateError(string.inspect(e)) })
+  process.call_forever(bot_subject, HandleUpdateBotMessage(update, _))
 }
 
 // Hears --------------------------------------------------------------------------
@@ -592,7 +608,7 @@ pub fn wait_handler(
   handle_else handle_else: Option(Handler(session, error)),
   timeout timeout: Option(Int),
 ) -> Result(Context(session, error), error) {
-  process.send(
+  actor.send(
     ctx.chat_subject,
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
   )
@@ -652,6 +668,6 @@ fn loop_handlers(
         Some(Error(e)) -> Error(e)
         None -> loop_handlers(chat:, context:, config:, update:, handlers: rest)
       }
-    [] -> chat.session_settings.persist_session(chat.key, chat.session)
+    [] -> chat.session_settings.persist_session(chat.key, context.session)
   }
 }

@@ -1,4 +1,6 @@
-/// If you want to use telega only as a Telegram client, you can use this module.
+/// Module provides a simple interface to the Telegram Bot API and uses `httpc` as a default HTTP client.
+/// If you want to use `telega` as a Telegram client, you can use only this module.
+///
 /// ```gleam
 /// import telega/client
 /// import telega/api
@@ -62,6 +64,7 @@ pub fn set_fetch_client(
   TelegramClient(..client, fetch_client:)
 }
 
+/// Set the maximum number of times to retry sending a API message.
 pub fn set_max_retry_attempts(
   client client: TelegramClient,
   max_retry_attempts max_retry_attempts: Int,
@@ -69,6 +72,7 @@ pub fn set_max_retry_attempts(
   TelegramClient(..client, max_retry_attempts:)
 }
 
+/// Set the Telegram Bot API URL.
 pub fn set_tg_api_url(
   client client: TelegramClient,
   tg_api_url tg_api_url: String,

@@ -1,9 +1,8 @@
-import dotenv_gleam
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
 import mist
-import wisp.{type Response}
+import wisp
 import wisp/wisp_mist
 
 import telega
@@ -15,19 +14,20 @@ import telega/keyboard as telega_keyboard
 import telega/model.{EditMessageTextParameters} as telega_model
 import telega/reply
 
+import bot/utils
 import language_keyboard
 import session.{type LanguageBotSession, English, LanguageBotSession, Russian}
 
-fn middleware(req, bot, handle_request) -> Response {
+fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
-  use <- telega_wisp.handle_bot(req, bot)
+  use <- telega_wisp.handle_bot(bot, req)
   use req <- wisp.handle_head(req)
   handle_request(req)
 }
 
-fn handle_request(bot, req) -> Response {
+fn handle_request(bot, req) {
   use req <- middleware(req, bot)
 
   case wisp.path_segments(req) {
@@ -172,7 +172,7 @@ fn build_bot() {
 }
 
 pub fn main() {
-  dotenv_gleam.config()
+  let assert Ok(_) = utils.env_config()
   wisp.configure_logger()
 
   let assert Ok(bot) = build_bot()
@@ -181,7 +181,7 @@ pub fn main() {
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
     |> mist.new
     |> mist.port(8000)
-    |> mist.start_http
+    |> mist.start
 
   process.sleep_forever()
 }

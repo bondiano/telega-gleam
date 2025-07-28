@@ -4,13 +4,13 @@ description = "A Telega Session example"
 
 [dependencies]
 gleam_stdlib = ">= 0.60.0 and < 1.0.0"
-gleam_erlang = ">= 0.34.0 and < 1.0.0"
+gleam_erlang = ">= 1.2.0 and < 2.0.0"
+gleam_otp = ">= 1.0.0 and < 2.0.0"
 wisp = ">= 1.7.0 and < 2.0.0"
-telega = { path = "../.." }
-mist = ">= 4.0.4 and < 5.0.0"
-dotenv_gleam = ">= 1.0.7 and < 2.0.0"
+mist = ">= 5.0.0 and < 6.0.0"
 envoy = ">= 1.0.2 and < 2.0.0"
-carpenter = ">= 0.3.1 and < 1.0.0"
+simplifile = ">= 2.3.0 and < 3.0.0"
+telega = { path = "../.." }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

@@ -10,10 +10,17 @@ type Msg
 pub fn simple_actor_test() {
   let assert Ok(simple_registry) = registry.start()
 
-  let assert Ok(actor_a) =
-    actor.start(Nil, fn(_msg: Msg, state) { actor.continue(state) })
-  let assert Ok(actor_b) =
-    actor.start(Nil, fn(_msg: Msg, state) { actor.continue(state) })
+  let assert Ok(started_a) =
+    actor.new(Nil)
+    |> actor.on_message(fn(_state, _msg: Msg) { actor.continue(Nil) })
+    |> actor.start
+  let assert Ok(started_b) =
+    actor.new(Nil)
+    |> actor.on_message(fn(_state, _msg: Msg) { actor.continue(Nil) })
+    |> actor.start
+
+  let actor_a = started_a.data
+  let actor_b = started_b.data
 
   registry.register(in: simple_registry, key: "actor_a", subject: actor_a)
   registry.register(in: simple_registry, key: "actor_b", subject: actor_b)
@@ -34,28 +41,35 @@ type MsgEcho {
 pub fn still_work_after_crash_test() {
   let assert Ok(simple_registry) = registry.start()
 
-  let assert Ok(actor_a) =
-    actor.start(Nil, fn(msg: MsgEcho, state) {
+  let assert Ok(started_a) =
+    actor.new(Nil)
+    |> actor.on_message(fn(_state, msg: MsgEcho) {
       case msg {
         MsgEcho(subj, "crash") -> {
-          actor.send(subj, "ok")
-          actor.Stop(process.Abnormal("Ohh, no, it crashed"))
+          process.send(subj, "ok")
+          actor.stop()
         }
         MsgEcho(subj, echo_) -> {
-          actor.send(subj, echo_)
-          actor.continue(state)
+          process.send(subj, echo_)
+          actor.continue(Nil)
         }
       }
     })
-  let assert Ok(actor_b) =
-    actor.start(Nil, fn(msg: MsgEcho, state) {
+    |> actor.start
+  let assert Ok(started_b) =
+    actor.new(Nil)
+    |> actor.on_message(fn(_state, msg: MsgEcho) {
       case msg {
         MsgEcho(subj, echo_) -> {
-          actor.send(subj, echo_)
-          actor.continue(state)
+          process.send(subj, echo_)
+          actor.continue(Nil)
         }
       }
     })
+    |> actor.start
+
+  let actor_a = started_a.data
+  let actor_b = started_b.data
 
   registry.register(in: simple_registry, key: "actor_a", subject: actor_a)
   registry.register(in: simple_registry, key: "actor_b", subject: actor_b)
@@ -63,10 +77,11 @@ pub fn still_work_after_crash_test() {
   let assert Some(got_a) = registry.get(in: simple_registry, key: "actor_a")
   let assert Some(got_b) = registry.get(in: simple_registry, key: "actor_b")
 
-  process.call(got_a, MsgEcho(_, "crash"), 100)
-  process.subject_owner(got_a)
+  process.call(got_a, 100, MsgEcho(_, "crash"))
+  let assert Ok(pid) = process.subject_owner(got_a)
+  pid
   |> process.is_alive
   |> should.equal(False)
 
-  process.call(got_b, MsgEcho(_, "ok"), 100) |> should.equal("ok")
+  process.call(got_b, 100, MsgEcho(_, "ok")) |> should.equal("ok")
 }

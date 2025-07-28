@@ -1,4 +1,3 @@
-import dotenv_gleam
 import envoy
 import gleam/bool
 import gleam/erlang/process
@@ -16,11 +15,13 @@ import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
 
+import bot/utils
+
 fn middleware(req, bot, handle_request) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
-  use <- telega_wisp.handle_bot(req, bot)
+  use <- telega_wisp.handle_bot(bot, req)
   use req <- wisp.handle_head(req)
   handle_request(req)
 }
@@ -39,7 +40,7 @@ fn set_name_command_handler(ctx: BotContext, _) {
   use <- telega.log_context(ctx, "set_name command")
   use _ <- try(reply.with_text(ctx, "What's your name?"))
 
-  bot.next_session(ctx, NameBotSession(name: ctx.session.name, state: SetName))
+  bot.next_session(ctx, NameBotSession(..ctx.session, state: SetName))
 }
 
 fn set_name_message_handler(ctx: BotContext, name) {
@@ -47,7 +48,7 @@ fn set_name_message_handler(ctx: BotContext, name) {
   use <- telega.log_context(ctx, "set_name")
   use _ <- try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
 
-  bot.next_session(ctx, NameBotSession(name: name, state: WaitName))
+  bot.next_session(ctx, NameBotSession(name:, state: WaitName))
 }
 
 fn get_name_command_handler(ctx: BotContext, _) {
@@ -92,7 +93,7 @@ fn build_bot() {
 }
 
 pub fn main() {
-  dotenv_gleam.config()
+  let assert Ok(_) = utils.env_config()
   wisp.configure_logger()
 
   let assert Ok(bot) = build_bot()
@@ -101,7 +102,7 @@ pub fn main() {
     wisp_mist.handler(handle_request(bot, _), secret_key_base)
     |> mist.new
     |> mist.port(8000)
-    |> mist.start_http
+    |> mist.start
 
   process.sleep_forever()
 }
