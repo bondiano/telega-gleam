@@ -21,8 +21,8 @@ jobs:
       - name: Install Dependencies
         run: gleam deps download
 
-      - name: Test
-        run: gleam test
-
       - name: Check Format
         run: gleam format --check src test
+
+      - name: Test
+        run: gleam test
