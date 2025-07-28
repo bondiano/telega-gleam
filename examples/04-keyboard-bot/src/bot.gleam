@@ -9,6 +9,7 @@ import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
+import telega/client as telega_client
 import telega/error as telega_error
 import telega/keyboard as telega_keyboard
 import telega/model.{EditMessageTextParameters} as telega_model
@@ -144,28 +145,31 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
-const commands = [
-  #("/lang", "Shows custom keyboard with languages"),
-  #("/lang_inline", "Change language inline"),
-]
-
 fn start_command_handler(ctx: BotContext, _) {
   use ctx <- telega.log_context(ctx, "start")
-  use _ <- try(telega_api.set_my_commands(
-    ctx.config.api_client,
-    telega_model.bot_commands_from(commands),
-    None,
-  ))
   use _ <- try(reply.with_text(ctx, t_welcome_message(ctx.session.language)))
 
   Ok(ctx)
 }
+
+const commands = [
+  #("/lang", "Shows custom keyboard with languages"),
+  #("/lang_inline", "Change language inline"),
+]
 
 fn build_bot() {
   let assert Ok(token) = envoy.get("BOT_TOKEN")
   let assert Ok(webhook_path) = envoy.get("WEBHOOK_PATH")
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
+
+  let client = telega_client.new(token)
+  let assert Ok(_) =
+    telega_api.set_my_commands(
+      client,
+      telega_model.bot_commands_from(commands),
+      None,
+    )
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.handle_command("start", start_command_handler)

@@ -109,10 +109,10 @@ fn handle_update_bot_message(
   reply_with reply_with,
 ) {
   let key = build_session_key(update)
+  let handlers = extract_update_handlers(bot.handlers, update)
 
   case registry.get(key:, in: bot.registry_subject) {
     Some(chat_subject) -> {
-      let handlers = extract_update_handlers(bot.handlers, update)
       actor.send(
         chat_subject,
         HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
@@ -129,7 +129,6 @@ fn handle_update_bot_message(
       let chat_subject =
         registry.register(key:, in: bot.registry_subject, subject:)
 
-      let handlers = extract_update_handlers(bot.handlers, update)
       actor.send(
         chat_subject,
         HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
@@ -177,7 +176,7 @@ type ChatInstance(session, error) {
   )
 }
 
-const initialisation_timeout = 100
+const initialisation_timeout = 10
 
 fn start_chat_instance(
   key key: String,

@@ -10,6 +10,7 @@ import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
+import telega/client as telega_client
 import telega/error as telega_error
 import telega/model as telega_model
 import telega/reply
@@ -53,15 +54,6 @@ fn get_name_command_handler(ctx: BotContext, _) {
 
 fn start_command_handler(ctx, _) {
   use ctx <- telega.log_context(ctx, "start")
-
-  use _ <- try(telega_api.set_my_commands(
-    client: ctx.config.api_client,
-    commands: telega_model.bot_commands_from([
-      #("/set_name", "Set name"),
-      #("/get_name", "Get name"),
-    ]),
-    parameters: None,
-  ))
   use _ <- try(reply.with_text(
     ctx,
     "Hello! I'm a Name bot. You can set your name with /set_name command.",
@@ -70,11 +62,21 @@ fn start_command_handler(ctx, _) {
   Ok(ctx)
 }
 
+const commands = [#("/set_name", "Set name"), #("/get_name", "Get name")]
+
 fn build_bot() {
   let assert Ok(token) = envoy.get("BOT_TOKEN")
   let assert Ok(webhook_path) = envoy.get("WEBHOOK_PATH")
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
+
+  let client = telega_client.new(token)
+  let assert Ok(_) =
+    telega_api.set_my_commands(
+      client,
+      telega_model.bot_commands_from(commands),
+      None,
+    )
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.handle_command("start", start_command_handler)
