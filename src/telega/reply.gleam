@@ -21,7 +21,7 @@ pub fn with_text(
   api.send_message(
     ctx.config.api_client,
     parameters: model.SendMessageParameters(
-      text: text,
+      text:,
       chat_id: model.Str(ctx.key),
       business_connection_id: None,
       message_thread_id: None,

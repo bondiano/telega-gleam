@@ -1,7 +1,9 @@
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
+import gleam/result
 import mist
+import taskle
 import wisp
 import wisp/wisp_mist
 
@@ -114,7 +116,7 @@ fn handle_inline_change_language(ctx: BotContext, _) {
 
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx:,
-    filter: filter,
+    filter:,
     or: None,
     timeout: Some(1000),
   )
@@ -123,24 +125,35 @@ fn handle_inline_change_language(ctx: BotContext, _) {
     telega_keyboard.unpack_callback(payload, callback_data)
   let language = language_callback.data
 
-  use _ <- try(reply.answer_callback_query(
-    ctx,
-    telega_model.new_answer_callback_query_parameters(callback_query_id),
-  ))
+  let cb_answer_task = [
+    taskle.async(fn() {
+      use _ <- result.map(reply.answer_callback_query(
+        ctx,
+        telega_model.new_answer_callback_query_parameters(callback_query_id),
+      ))
 
-  use _ <- try(reply.edit_text(
-    ctx,
-    EditMessageTextParameters(
-      text: t_language_changed_message(language),
-      message_id: Some(message.message_id),
-      chat_id: Some(telega_model.Str(ctx.key)),
-      entities: None,
-      inline_message_id: None,
-      link_preview_options: None,
-      parse_mode: None,
-      reply_markup: None,
-    ),
-  ))
+      Nil
+    }),
+    taskle.async(fn() {
+      use _ <- result.map(reply.edit_text(
+        ctx,
+        EditMessageTextParameters(
+          text: t_language_changed_message(language),
+          message_id: Some(message.message_id),
+          chat_id: Some(telega_model.Str(ctx.key)),
+          entities: None,
+          inline_message_id: None,
+          link_preview_options: None,
+          parse_mode: None,
+          reply_markup: None,
+        ),
+      ))
+
+      Nil
+    }),
+  ]
+
+  use _ <- try_taskle(taskle.all_settled(cb_answer_task, 1000))
 
   bot.next_session(ctx, LanguageBotSession(language))
 }
@@ -200,8 +213,16 @@ type BotContext =
 
 type BotError {
   TelegaBotError(telega_error.TelegaError)
+  TaskleError(taskle.Error)
 }
 
 fn try(result, fun) {
   telega_error.try(result, TelegaBotError, fun)
+}
+
+fn try_taskle(result, fun) {
+  case result {
+    Ok(x) -> fun(x)
+    Error(e) -> Error(TaskleError(e))
+  }
 }

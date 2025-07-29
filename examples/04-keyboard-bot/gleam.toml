@@ -10,6 +10,7 @@ wisp = ">= 1.7.0 and < 2.0.0"
 mist = ">= 5.0.0 and < 6.0.0"
 envoy = ">= 1.0.2 and < 2.0.0"
 simplifile = ">= 2.3.0 and < 3.0.0"
+taskle = ">= 1.1.0 and < 2.0.0"
 telega = { path = "../.." }
 
 [dev-dependencies]

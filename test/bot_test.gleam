@@ -221,12 +221,12 @@ pub fn bot_start_test() {
 
   let result =
     bot.start(
-      registry_subject: registry_subject,
-      config: config,
-      bot_info: bot_info,
-      handlers: handlers,
-      session_settings: session_settings,
-      catch_handler: catch_handler,
+      registry_subject:,
+      config:,
+      bot_info:,
+      handlers:,
+      session_settings:,
+      catch_handler:,
     )
 
   result
@@ -243,12 +243,12 @@ pub fn bot_handle_update_test() {
 
   let assert Ok(bot_subject) =
     bot.start(
-      registry_subject: registry_subject,
-      config: config,
-      bot_info: bot_info,
-      handlers: handlers,
-      session_settings: session_settings,
-      catch_handler: catch_handler,
+      registry_subject:,
+      config:,
+      bot_info:,
+      handlers:,
+      session_settings:,
+      catch_handler:,
     )
 
   let test_update = create_test_update()
@@ -292,9 +292,9 @@ pub fn context_next_session_test() {
     bot.Context(
       key: "test_chat:123",
       update: test_update,
-      config: config,
+      config:,
       session: TestSession(counter: 5),
-      chat_subject: chat_subject,
+      chat_subject:,
       start_time: None,
       log_prefix: None,
     )
@@ -341,7 +341,7 @@ pub fn handler_types_test() {
 }
 
 pub fn wait_handler_test() {
-  let test_ctx =
+  let ctx =
     bot.Context(
       key: "test",
       update: create_test_update(),
@@ -354,12 +354,7 @@ pub fn wait_handler_test() {
 
   let handler = bot.HandleText(fn(ctx, _text) { Ok(ctx) })
   let result =
-    bot.wait_handler(
-      ctx: test_ctx,
-      handler: handler,
-      handle_else: None,
-      timeout: Some(1000),
-    )
+    bot.wait_handler(ctx:, handler:, handle_else: None, timeout: Some(1000))
 
   result |> should.be_ok
 }

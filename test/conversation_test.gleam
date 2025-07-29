@@ -197,7 +197,7 @@ fn build_minimal_raw_update(
   update_id: Int,
 ) -> model.Update {
   model.Update(
-    update_id: update_id,
+    update_id:,
     message: Some(message),
     edited_message: None,
     channel_post: None,
@@ -274,7 +274,7 @@ pub fn basic_conversation_flow_test() {
       bot.wait_handler(
         ctx: ctx,
         handler: bot.HandleText(fn(ctx, name) {
-          bot.next_session(ctx, TestSession(name: name))
+          bot.next_session(ctx, TestSession(name:))
         }),
         handle_else: None,
         timeout: Some(5000),
@@ -314,7 +314,7 @@ pub fn conversation_with_session_persistence_test() {
       bot.wait_handler(
         ctx:,
         handler: bot.HandleText(fn(ctx, name) {
-          bot.next_session(ctx, TestSession(name: name))
+          bot.next_session(ctx, TestSession(name:))
         }),
         handle_else: None,
         timeout: Some(5000),
@@ -364,7 +364,7 @@ pub fn conversation_timeout_test() {
       bot.wait_handler(
         ctx:,
         handler: bot.HandleText(fn(ctx, name) {
-          bot.next_session(ctx, TestSession(name: name))
+          bot.next_session(ctx, TestSession(name:))
         }),
         handle_else: None,
         timeout: Some(100),
@@ -400,7 +400,7 @@ pub fn conversation_with_handle_else_test() {
       bot.wait_handler(
         ctx: ctx,
         handler: bot.HandleText(fn(ctx, name) {
-          bot.next_session(ctx, TestSession(name: name))
+          bot.next_session(ctx, TestSession(name:))
         }),
         handle_else: Some(
           bot.HandleCommand("cancel", fn(ctx, _) {

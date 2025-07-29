@@ -868,7 +868,8 @@ pub fn filter_inline_keyboard_query(
   let options =
     keyboard.buttons
     |> list.flat_map(fn(row) {
-      list.map(row, fn(button) { button.callback_data })
+      use button <- list.map(row)
+      button.callback_data
     })
     |> option.values
     |> string.join("|")
