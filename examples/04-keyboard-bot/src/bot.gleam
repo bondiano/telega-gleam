@@ -1,7 +1,6 @@
 import envoy
 import gleam/erlang/process
 import gleam/option.{None, Some}
-import gleam/result
 import mist
 import taskle
 import wisp
@@ -125,17 +124,15 @@ fn handle_inline_change_language(ctx: BotContext, _) {
     telega_keyboard.unpack_callback(payload, callback_data)
   let language = language_callback.data
 
-  let cb_answer_task = [
+  use _ <- try_taskle(taskle.await2(
     taskle.async(fn() {
-      use _ <- result.map(reply.answer_callback_query(
+      reply.answer_callback_query(
         ctx,
         telega_model.new_answer_callback_query_parameters(callback_query_id),
-      ))
-
-      Nil
+      )
     }),
     taskle.async(fn() {
-      use _ <- result.map(reply.edit_text(
+      reply.edit_text(
         ctx,
         EditMessageTextParameters(
           text: t_language_changed_message(language),
@@ -147,13 +144,10 @@ fn handle_inline_change_language(ctx: BotContext, _) {
           parse_mode: None,
           reply_markup: None,
         ),
-      ))
-
-      Nil
+      )
     }),
-  ]
-
-  use _ <- try_taskle(taskle.all_settled(cb_answer_task, 1000))
+    1000,
+  ))
 
   bot.next_session(ctx, LanguageBotSession(language))
 }
