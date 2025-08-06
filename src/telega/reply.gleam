@@ -9,6 +9,7 @@ import telega/api
 import telega/bot.{type Context}
 import telega/client
 import telega/error
+import telega/format.{type FormattedText}
 import telega/model.{type SendDiceParameters}
 
 /// Use this method to send text messages.
@@ -62,6 +63,170 @@ pub fn with_markup(
       reply_parameters: None,
       message_effect_id: None,
       allow_paid_broadcast: None,
+    ),
+  )
+}
+
+/// Use this method to send formatted text messages.
+///
+/// ## Example
+/// ```gleam
+/// let formatted = format.build()
+///   |> format.bold_text("Important!")
+///   |> format.to_formatted()
+/// reply.with_formatted(ctx, formatted)
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_formatted(
+  ctx ctx: Context(session, error),
+  formatted formatted: FormattedText,
+) -> Result(model.Message, error.TelegaError) {
+  let #(text, parse_mode) = format.render(formatted)
+
+  api.send_message(
+    ctx.config.api_client,
+    parameters: model.SendMessageParameters(
+      text:,
+      chat_id: model.Str(ctx.key),
+      parse_mode: Some(format.parse_mode_to_string(parse_mode)),
+      business_connection_id: None,
+      message_thread_id: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send HTML formatted text messages.
+///
+/// ## Example
+/// ```gleam
+/// let html = format.bold("Hello") <> " " <> format.italic("World")
+/// reply.with_html(ctx, html)
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_html(
+  ctx ctx: Context(session, error),
+  html html: String,
+) -> Result(model.Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: model.SendMessageParameters(
+      text: html,
+      chat_id: model.Str(ctx.key),
+      parse_mode: Some("HTML"),
+      business_connection_id: None,
+      message_thread_id: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send Markdown formatted text messages.
+///
+/// ## Example
+/// ```gleam
+/// reply.with_markdown(ctx, "*Bold* _Italic_")
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_markdown(
+  ctx ctx: Context(session, error),
+  markdown markdown: String,
+) -> Result(model.Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: model.SendMessageParameters(
+      text: markdown,
+      chat_id: model.Str(ctx.key),
+      parse_mode: Some("Markdown"),
+      business_connection_id: None,
+      message_thread_id: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send MarkdownV2 formatted text messages.
+///
+/// ## Example
+/// ```gleam
+/// reply.with_markdown_v2(ctx, "*Bold* _Italic_ __Underline__")
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_markdown_v2(
+  ctx ctx: Context(session, error),
+  markdown markdown: String,
+) -> Result(model.Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: model.SendMessageParameters(
+      text: markdown,
+      chat_id: model.Str(ctx.key),
+      parse_mode: Some("MarkdownV2"),
+      business_connection_id: None,
+      message_thread_id: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send formatted text messages with keyboard markup.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_formatted_markup(
+  ctx ctx: Context(session, error),
+  formatted formatted: FormattedText,
+  markup reply_markup: model.SendMessageReplyMarkupParameters,
+) -> Result(model.Message, error.TelegaError) {
+  let #(text, parse_mode) = format.render(formatted)
+
+  api.send_message(
+    ctx.config.api_client,
+    parameters: model.SendMessageParameters(
+      text:,
+      chat_id: model.Str(ctx.key),
+      parse_mode: Some(format.parse_mode_to_string(parse_mode)),
+      reply_markup: Some(reply_markup),
+      business_connection_id: None,
+      message_thread_id: None,
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
     ),
   )
 }

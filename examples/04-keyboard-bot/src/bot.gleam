@@ -12,6 +12,7 @@ import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/client as telega_client
 import telega/error as telega_error
+import telega/format as fmt
 import telega/keyboard as telega_keyboard
 import telega/model.{EditMessageTextParameters} as telega_model
 import telega/reply
@@ -38,33 +39,65 @@ fn handle_request(bot, req) {
   }
 }
 
-fn t_welcome_message(language) -> String {
+fn t_welcome_message(language) {
   case language {
     English ->
-      "Hello! I'm a Change Language bot. You can change language with /lang or /lang_inline commands."
+      fmt.build()
+      |> fmt.bold_text("Hello! ")
+      |> fmt.text("I'm a Change Language bot.")
+      |> fmt.line_break()
+      |> fmt.text("You can change language with ")
+      |> fmt.code_text("/lang")
+      |> fmt.text(" or ")
+      |> fmt.code_text("/lang_inline")
+      |> fmt.text(" commands.")
+      |> fmt.to_formatted()
     Russian ->
-      "Привет! Я бот для смены языка. Вы можете сменить язык с помощью команд /lang или /lang_inline."
+      fmt.build()
+      |> fmt.bold_text("Привет! ")
+      |> fmt.text("Я бот для смены языка.")
+      |> fmt.line_break()
+      |> fmt.text("Вы можете сменить язык с помощью команд ")
+      |> fmt.code_text("/lang")
+      |> fmt.text(" или ")
+      |> fmt.code_text("/lang_inline")
+      |> fmt.text(".")
+      |> fmt.to_formatted()
   }
 }
 
 fn t_change_language_message(language) {
   case language {
-    English -> "Choose your language"
-    Russian -> "Выберите ваш язык"
+    English ->
+      fmt.build()
+      |> fmt.underline_text("Choose your language")
+      |> fmt.to_formatted()
+    Russian ->
+      fmt.build()
+      |> fmt.underline_text("Выберите ваш язык")
+      |> fmt.to_formatted()
   }
 }
 
 fn t_language_changed_message(language) {
   case language {
-    English -> "Language changed to English"
-    Russian -> "Язык изменен на русский"
+    English -> fmt.bold("✅ Language changed to ") <> fmt.code("English")
+    Russian -> fmt.bold("✅ Язык изменен на ") <> fmt.code("русский")
   }
 }
 
 fn t_none_keyboard_message(language) {
   case language {
-    English -> "Use buttons to change language"
-    Russian -> "Используйте кнопки для смены языка"
+    English ->
+      fmt.build()
+      |> fmt.spoiler_text("⚠️ ")
+      |> fmt.italic_text("Use buttons to change language")
+      |> fmt.to_html()
+    Russian ->
+      fmt.build()
+      |> fmt.spoiler_text("⚠️ ")
+      |> fmt.italic_text("Используйте кнопки для смены языка")
+      |> fmt.to_html()
   }
 }
 
@@ -73,7 +106,7 @@ fn change_languages_keyboard(ctx: BotContext, _) {
 
   let language = ctx.session.language
   let keyboard = language_keyboard.new_keyboard(language)
-  use _ <- try(reply.with_markup(
+  use _ <- try(reply.with_formatted_markup(
     ctx,
     t_change_language_message(language),
     telega_keyboard.to_markup(keyboard),
@@ -86,13 +119,13 @@ fn change_languages_keyboard(ctx: BotContext, _) {
     timeout: None,
   )
   let language = language_keyboard.option_to_language(text)
-  use _ <- try(reply.with_text(ctx, t_language_changed_message(language)))
+  use _ <- try(reply.with_html(ctx, t_language_changed_message(language)))
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
 fn handle_none_keyboard_message(ctx: BotContext, _) {
   use ctx <- telega.log_context(ctx, "change language with none keyboard")
-  use _ <- try(reply.with_text(
+  use _ <- try(reply.with_html(
     ctx,
     t_none_keyboard_message(ctx.session.language),
   ))
@@ -105,10 +138,10 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   let language = ctx.session.language
   let callback_data = language_keyboard.build_keyboard_callback_data()
   let keyboard = language_keyboard.new_inline_keyboard(language, callback_data)
-  use message <- try(reply.with_markup(
+  use message <- try(reply.with_formatted_markup(
     ctx,
     t_change_language_message(language),
-    telega_keyboard.to_inline_markup(keyboard),
+    telega_keyboard.inline_to_markup(keyboard),
   ))
 
   let assert Ok(filter) = telega_keyboard.filter_inline_keyboard_query(keyboard)
@@ -124,37 +157,42 @@ fn handle_inline_change_language(ctx: BotContext, _) {
     telega_keyboard.unpack_callback(payload, callback_data)
   let language = language_callback.data
 
-  use _ <- try_taskle(taskle.await2(
-    taskle.async(fn() {
-      reply.answer_callback_query(
-        ctx,
-        telega_model.new_answer_callback_query_parameters(callback_query_id),
-      )
-    }),
-    taskle.async(fn() {
-      reply.edit_text(
-        ctx,
-        EditMessageTextParameters(
-          text: t_language_changed_message(language),
-          message_id: Some(message.message_id),
-          chat_id: Some(telega_model.Str(ctx.key)),
-          entities: None,
-          inline_message_id: None,
-          link_preview_options: None,
-          parse_mode: None,
-          reply_markup: None,
-        ),
-      )
-    }),
-    1000,
-  ))
+  let tasks =
+    taskle.await2(
+      taskle.async(fn() {
+        reply.answer_callback_query(
+          ctx,
+          telega_model.new_answer_callback_query_parameters(callback_query_id),
+        )
+      }),
+      taskle.async(fn() {
+        reply.edit_text(
+          ctx,
+          EditMessageTextParameters(
+            text: t_language_changed_message(language),
+            message_id: Some(message.message_id),
+            chat_id: Some(telega_model.Str(ctx.key)),
+            entities: None,
+            inline_message_id: None,
+            link_preview_options: None,
+            parse_mode: None,
+            reply_markup: None,
+          ),
+        )
+      }),
+      1000,
+    )
 
+  use _ <- try_taskle(tasks)
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
 fn start_command_handler(ctx: BotContext, _) {
   use ctx <- telega.log_context(ctx, "start")
-  use _ <- try(reply.with_text(ctx, t_welcome_message(ctx.session.language)))
+  use _ <- try(reply.with_formatted(
+    ctx,
+    t_welcome_message(ctx.session.language),
+  ))
 
   Ok(ctx)
 }

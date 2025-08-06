@@ -550,6 +550,15 @@ pub fn inline_build(builder: InlineKeyboardBuilder) -> InlineKeyboard {
   new_inline(all_rows)
 }
 
+/// Build a reply markup for `Message` from an inline keyboard
+pub fn inline_to_markup(
+  keyboard: InlineKeyboard,
+) -> model.SendMessageReplyMarkupParameters {
+  model.SendMessageReplyInlineKeyboardMarkupParameters(
+    model.InlineKeyboardMarkup(inline_keyboard: keyboard.buttons),
+  )
+}
+
 /// Create a new keyboard button
 pub fn button(text: String) -> KeyboardButton {
   KeyboardButton(
