@@ -43,3 +43,10 @@ fn do_random_string(n, acc, alphabet_length) {
 pub fn seconds_to_milliseconds(time: Float) -> Float {
   time *. 1000.0
 }
+
+@external(erlang, "erlang", "system_time")
+fn erlang_system_time_millisecond() -> Int
+
+pub fn current_time_ms() -> Int {
+  erlang_system_time_millisecond() / 1_000_000
+}

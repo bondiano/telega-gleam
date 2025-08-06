@@ -170,7 +170,7 @@ fn build_bot() {
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
-  let client = telega_client.new(token)
+  let assert Ok(client) = telega_client.new_with_queue(token)
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
@@ -179,6 +179,7 @@ fn build_bot() {
     )
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
+  |> telega.set_api_client(client)
   |> telega.handle_command("start", start_command_handler)
   |> telega.handle_command("lang", change_languages_keyboard)
   |> telega.handle_command("lang_inline", handle_inline_change_language)
