@@ -592,7 +592,7 @@ pub fn init(
     option.to_result(builder.session_settings, error.NoSessionSettingsError)
 
   use session_settings <- result.try(session_settings)
-  use registry_subject <- result.try(registry.start())
+  use registry <- result.try(registry.start())
 
   let catch_handler =
     option.lazy_unwrap(builder.catch_handler, fn() { nil_catch_handler })
@@ -600,7 +600,7 @@ pub fn init(
   use bot_subject <- result.try(bot.start(
     bot_info:,
     catch_handler:,
-    registry_subject:,
+    registry:,
     session_settings:,
     config: builder.config,
     handlers: builder.handlers,

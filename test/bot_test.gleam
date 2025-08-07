@@ -212,7 +212,7 @@ fn create_test_update() -> update.Update {
 }
 
 pub fn bot_start_test() {
-  let assert Ok(registry_subject) = registry.start()
+  let assert Ok(registry) = registry.start()
   let config = create_test_config()
   let bot_info = create_test_user()
   let handlers = []
@@ -221,7 +221,7 @@ pub fn bot_start_test() {
 
   let result =
     bot.start(
-      registry_subject:,
+      registry:,
       config:,
       bot_info:,
       handlers:,
@@ -234,7 +234,7 @@ pub fn bot_start_test() {
 }
 
 pub fn bot_handle_update_test() {
-  let assert Ok(registry_subject) = registry.start()
+  let assert Ok(registry) = registry.start()
   let config = create_test_config()
   let bot_info = create_test_user()
   let handlers = []
@@ -243,7 +243,7 @@ pub fn bot_handle_update_test() {
 
   let assert Ok(bot_subject) =
     bot.start(
-      registry_subject:,
+      registry:,
       config:,
       bot_info:,
       handlers:,
@@ -283,7 +283,7 @@ pub fn session_settings_test() {
 }
 
 pub fn context_next_session_test() {
-  let assert Ok(_registry_subject) = registry.start()
+  let assert Ok(_registry) = registry.start()
   let config = create_test_config()
   let test_update = create_test_update()
   let chat_subject = process.new_subject()

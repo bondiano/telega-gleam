@@ -1,93 +1,61 @@
-import gleam/dict.{type Dict}
+import gleam/erlang/atom
 import gleam/erlang/process.{type Subject}
 import gleam/option.{type Option}
-import gleam/otp/actor
-import gleam/result
-import gleam/string
 
 import telega/error
 
-/// Registry itself is an actor storing a list of actors (eg. per-chat bot state instances).
+type EtsTable
+
 pub opaque type Registry(message) {
-  Registry(actors: Dict(String, Subject(message)))
+  Registry(table: EtsTable)
 }
 
-pub opaque type RegistryMessage(message) {
-  Register(
-    reply_with: Subject(Subject(message)),
-    key: String,
-    self: Subject(message),
-  )
-  Get(reply_with: Subject(Option(Subject(message))), key: String)
-  Unregister(key: String)
-  Shutdown
+pub fn start() -> Result(Registry(message), error.TelegaError) {
+  let table =
+    ets_new(atom.create("telega_registry"), [
+      atom.create("set"),
+      atom.create("public"),
+    ])
+  Ok(Registry(table:))
 }
 
-pub type RegistrySubject(message) =
-  Subject(RegistryMessage(message))
-
-/// Starts a new registry.
-pub fn start() -> Result(Subject(RegistryMessage(message)), error.TelegaError) {
-  let initial_state = Registry(actors: dict.new())
-
-  actor.new(initial_state)
-  |> actor.on_message(handle_message)
-  |> actor.start
-  |> result.map(fn(started) { started.data })
-  |> result.map_error(fn(error) {
-    error.RegistryStartError(string.inspect(error))
-  })
+pub fn stop(registry: Registry(message)) -> Bool {
+  ets_delete_table(registry.table)
 }
-
-pub fn stop(in actor: RegistrySubject(message)) -> Nil {
-  actor.send(actor, Shutdown)
-}
-
-const register_timeout = 3
 
 pub fn register(
-  in actor: RegistrySubject(message),
+  registry: Registry(message),
   key key: String,
   subject subject: Subject(message),
-) -> Subject(message) {
-  actor.call(actor, register_timeout, Register(_, key, subject))
+) -> Bool {
+  ets_insert(registry.table, #(key, subject))
 }
 
-pub fn unregister(in actor: RegistrySubject(message), key key: String) -> Nil {
-  actor.send(actor, Unregister(key))
+pub fn unregister(registry: Registry(message), key key: String) -> Bool {
+  ets_delete(registry.table, key)
 }
-
-const try_get_timeout = 10
 
 pub fn get(
-  in actor: RegistrySubject(message),
+  registry: Registry(message),
   key key: String,
 ) -> Option(Subject(message)) {
-  process.call(actor, try_get_timeout, Get(_, key))
-}
-
-fn handle_message(self: Registry(message), message: RegistryMessage(message)) {
-  case message {
-    Get(reply_with, key) -> {
-      dict.get(self.actors, key)
-      |> option.from_result
-      |> process.send(reply_with, _)
-
-      actor.continue(self)
-    }
-
-    Register(reply_with, key, subject) -> {
-      let actors = dict.insert(self.actors, key, subject)
-      process.send(reply_with, subject)
-
-      actor.continue(Registry(actors:))
-    }
-
-    Unregister(key) -> {
-      let actors = dict.delete(self.actors, key)
-      actor.continue(Registry(actors:))
-    }
-
-    Shutdown -> actor.stop()
+  case ets_lookup(registry.table, key) {
+    [] -> option.None
+    [#(_, subject), ..] -> option.Some(subject)
   }
 }
+
+@external(erlang, "ets", "new")
+fn ets_new(name: atom.Atom, options: List(atom.Atom)) -> EtsTable
+
+@external(erlang, "ets", "insert")
+fn ets_insert(table: EtsTable, tuple: #(String, Subject(message))) -> Bool
+
+@external(erlang, "ets", "lookup")
+fn ets_lookup(table: EtsTable, key: String) -> List(#(String, Subject(message)))
+
+@external(erlang, "ets", "delete")
+fn ets_delete(table: EtsTable, key: String) -> Bool
+
+@external(erlang, "ets", "delete")
+fn ets_delete_table(table: EtsTable) -> Bool

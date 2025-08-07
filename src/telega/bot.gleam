@@ -12,7 +12,7 @@ import gleam/time/timestamp.{type Timestamp}
 
 import telega/internal/config.{type Config}
 import telega/internal/log
-import telega/internal/registry.{type RegistrySubject}
+import telega/internal/registry.{type Registry}
 
 import telega/error
 import telega/model.{type User}
@@ -31,7 +31,7 @@ pub opaque type Bot(session, error) {
     catch_handler: CatchHandler(session, error),
     session_settings: SessionSettings(session, error),
     handlers: List(Handler(session, error)),
-    registry_subject: RegistrySubject(ChatInstanceMessage(session, error)),
+    registry: Registry(ChatInstanceMessage(session, error)),
   )
 }
 
@@ -52,9 +52,7 @@ pub type CatchHandler(session, error) =
   fn(Context(session, error), error) -> Result(Nil, error)
 
 pub fn start(
-  registry_subject registry_subject: Subject(
-    registry.RegistryMessage(ChatInstanceMessage(session, error)),
-  ),
+  registry registry: Registry(ChatInstanceMessage(session, error)),
   config config: Config,
   bot_info bot_info: User,
   handlers handlers: List(Handler(session, error)),
@@ -65,7 +63,7 @@ pub fn start(
   let bot =
     Bot(
       self:,
-      registry_subject:,
+      registry:,
       config:,
       bot_info:,
       handlers:,
@@ -97,7 +95,7 @@ fn bot_loop(bot, message) {
       }
     }
     CancelConversationBotMessage(key:) -> {
-      registry.unregister(bot.registry_subject, key)
+      registry.unregister(bot.registry, key)
       actor.continue(bot)
     }
   }
@@ -111,7 +109,7 @@ fn handle_update_bot_message(
   let key = build_session_key(update)
   let handlers = extract_update_handlers(bot.handlers, update)
 
-  case registry.get(key:, in: bot.registry_subject) {
+  case registry.get(bot.registry, key:) {
     Some(chat_subject) -> {
       actor.send(
         chat_subject,
@@ -126,11 +124,10 @@ fn handle_update_bot_message(
         session_settings: bot.session_settings,
         catch_handler: bot.catch_handler,
       ))
-      let chat_subject =
-        registry.register(key:, in: bot.registry_subject, subject:)
+      registry.register(bot.registry, key:, subject:)
 
       actor.send(
-        chat_subject,
+        subject,
         HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
       )
       |> Ok

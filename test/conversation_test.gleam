@@ -250,14 +250,14 @@ fn build_test_bot(
   handlers: List(bot.Handler(TestSession, TestError)),
   session_settings: bot.SessionSettings(TestSession, TestError),
 ) -> bot.BotSubject {
-  let assert Ok(registry_subject) = registry.start()
+  let assert Ok(registry) = registry.start()
   let config = create_test_config()
   let bot_info = create_test_user()
   let catch_handler = create_test_catch_handler()
 
   let assert Ok(bot_subject) =
     bot.start(
-      registry_subject:,
+      registry:,
       config:,
       bot_info:,
       handlers:,

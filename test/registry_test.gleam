@@ -22,11 +22,11 @@ pub fn simple_actor_test() {
   let actor_a = started_a.data
   let actor_b = started_b.data
 
-  registry.register(in: simple_registry, key: "actor_a", subject: actor_a)
-  registry.register(in: simple_registry, key: "actor_b", subject: actor_b)
+  registry.register(simple_registry, key: "actor_a", subject: actor_a)
+  registry.register(simple_registry, key: "actor_b", subject: actor_b)
 
-  let assert Some(got_a) = registry.get(in: simple_registry, key: "actor_a")
-  let assert Some(got_b) = registry.get(in: simple_registry, key: "actor_b")
+  let assert Some(got_a) = registry.get(simple_registry, key: "actor_a")
+  let assert Some(got_b) = registry.get(simple_registry, key: "actor_b")
 
   got_a
   |> should.equal(actor_a)
@@ -71,11 +71,11 @@ pub fn still_work_after_crash_test() {
   let actor_a = started_a.data
   let actor_b = started_b.data
 
-  registry.register(in: simple_registry, key: "actor_a", subject: actor_a)
-  registry.register(in: simple_registry, key: "actor_b", subject: actor_b)
+  registry.register(simple_registry, key: "actor_a", subject: actor_a)
+  registry.register(simple_registry, key: "actor_b", subject: actor_b)
 
-  let assert Some(got_a) = registry.get(in: simple_registry, key: "actor_a")
-  let assert Some(got_b) = registry.get(in: simple_registry, key: "actor_b")
+  let assert Some(got_a) = registry.get(simple_registry, key: "actor_a")
+  let assert Some(got_b) = registry.get(simple_registry, key: "actor_b")
 
   process.call(got_a, 100, MsgEcho(_, "crash"))
   let assert Ok(pid) = process.subject_owner(got_a)
