@@ -25,4 +25,4 @@ jobs:
         run: gleam format --check src test
 
       - name: Test
-        run: gleam test
+        run: GLEAM_LOG=trace gleam test
