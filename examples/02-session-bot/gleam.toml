@@ -1,6 +1,6 @@
 name = "bot"
 version = "1.0.0"
-description = "A Telega Session example"
+description = "Telega Session example"
 
 [dependencies]
 gleam_stdlib = ">= 0.60.0 and < 1.0.0"

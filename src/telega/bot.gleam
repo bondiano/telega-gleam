@@ -583,15 +583,8 @@ fn extract_update_handlers(handlers, update) {
       HandleText(_), TextUpdate(..) -> True
       HandleHears(hears: hears, ..), TextUpdate(text: text, ..) ->
         check_hears(text, hears)
-      HandleCommand(
-        command: command,
-        ..,
-      ),
-        CommandUpdate(
-          command: update_command,
-          ..,
-        )
-      -> update_command.command == command
+      HandleCommand(command:, ..), CommandUpdate(command: update_command, ..) ->
+        update_command.command == command
       HandleCallbackQuery(filter: filter, ..), CallbackQueryUpdate(query:, ..) ->
         case query.data {
           Some(data) -> regexp.check(filter.re, data)
@@ -623,9 +616,9 @@ fn do_handle(context context, update update, handler handler) {
   // We already filtered updates and receives only valid handlers
   case handler, update {
     HandleAll(handler:), _ -> context |> handler(update) |> Some
-    HandleText(handler:), TextUpdate(text: text, ..) ->
+    HandleText(handler:), TextUpdate(text:, ..) ->
       context |> handler(text) |> Some
-    HandleHears(handler:, ..), TextUpdate(text: text, ..) ->
+    HandleHears(handler:, ..), TextUpdate(text:, ..) ->
       context |> handler(text) |> Some
     HandleCommand(handler:, ..), CommandUpdate(command: update_command, ..) ->
       context |> handler(update_command) |> Some

@@ -17314,10 +17314,7 @@ pub fn bot_command_scope_to_json(scope: BotCommandScope) {
       json_object_filter_nulls([
         #("type", json.string("all_chat_administrators")),
       ])
-    BotCommandScopeChatBotCommandScope(BotCommandScopeChat(
-      chat_id: chat_id,
-      ..,
-    )) ->
+    BotCommandScopeChatBotCommandScope(BotCommandScopeChat(chat_id: chat_id, ..)) ->
       json_object_filter_nulls([
         #("type", json.string("chat")),
         #("chat_id", encode_int_or_string(chat_id)),
