@@ -7,7 +7,7 @@ import gleeunit/should
 import telega/bot
 import telega/internal/config
 import telega/internal/registry
-import telega/model
+import telega/model/types
 import telega/update
 
 pub type TestSession {
@@ -27,8 +27,8 @@ fn create_test_config() -> config.Config {
   )
 }
 
-fn create_test_user() -> model.User {
-  model.User(
+fn create_test_user() -> types.User {
+  types.User(
     id: 123_456_789,
     is_bot: True,
     first_name: "TestBot",
@@ -59,10 +59,10 @@ fn create_test_catch_handler() -> bot.CatchHandler(TestSession, TestError) {
 
 fn create_test_update() -> update.Update {
   let message =
-    model.Message(
+    types.Message(
       message_id: 1,
       message_thread_id: None,
-      from: Some(model.User(
+      from: Some(types.User(
         id: 987_654_321,
         is_bot: False,
         first_name: "TestUser",
@@ -82,7 +82,7 @@ fn create_test_update() -> update.Update {
       sender_business_bot: None,
       date: 1_640_995_200,
       business_connection_id: None,
-      chat: model.Chat(
+      chat: types.Chat(
         id: 123_456_789,
         type_: Some("private"),
         title: None,
@@ -182,7 +182,7 @@ fn create_test_update() -> update.Update {
     from_id: 987_654_321,
     chat_id: 123_456_789,
     text: "Hello",
-    raw: model.Update(
+    raw: types.Update(
       update_id: 1,
       message: Some(message),
       edited_message: None,

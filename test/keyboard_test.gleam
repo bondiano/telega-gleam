@@ -4,7 +4,11 @@ import gleeunit
 import gleeunit/should
 import telega/bot.{HearTexts}
 import telega/keyboard
-import telega/model
+import telega/model/types.{
+  SendMessageReplyInlineKeyboardMarkupParameters,
+  SendMessageReplyRemoveKeyboardMarkupParameters,
+  SendMessageReplyReplyKeyboardMarkupParameters,
+}
 
 pub fn main() {
   gleeunit.main()
@@ -17,7 +21,7 @@ pub fn new_keyboard_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [[button1, button2]])
       should.equal(reply_keyboard.resize_keyboard, None)
     }
@@ -37,7 +41,7 @@ pub fn keyboard_options_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.one_time_keyboard, Some(True))
       should.equal(reply_keyboard.is_persistent, Some(True))
       should.equal(reply_keyboard.resize_keyboard, Some(True))
@@ -89,7 +93,7 @@ pub fn new_inline_keyboard_test() {
 
   let markup = keyboard.to_inline_markup(kb)
   case markup {
-    model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+    SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
       should.equal(inline_keyboard.inline_keyboard, [[button]])
     }
     _ -> should.fail()
@@ -207,7 +211,7 @@ pub fn single_keyboard_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [[button]])
     }
     _ -> should.fail()
@@ -220,7 +224,7 @@ pub fn inline_single_test() {
 
   let markup = keyboard.to_inline_markup(kb)
   case markup {
-    model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+    SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
       should.equal(inline_keyboard.inline_keyboard, [[button]])
     }
     _ -> should.fail()
@@ -238,7 +242,7 @@ pub fn grid_keyboard_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [
         [keyboard.button("1"), keyboard.button("2")],
         [keyboard.button("3"), keyboard.button("4")],
@@ -258,7 +262,7 @@ pub fn inline_grid_test() {
 
   let markup = keyboard.to_inline_markup(kb)
   case markup {
-    model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+    SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
       should.equal(inline_keyboard.inline_keyboard, [
         [
           keyboard.inline_url_button("1", "https://1.com"),
@@ -274,7 +278,7 @@ pub fn inline_grid_test() {
 pub fn remove_keyboard_test() {
   let markup = keyboard.remove()
   case markup {
-    model.SendMessageReplyRemoveKeyboardMarkupParameters(remove_keyboard) -> {
+    SendMessageReplyRemoveKeyboardMarkupParameters(remove_keyboard) -> {
       should.equal(remove_keyboard.remove_keyboard, True)
       should.equal(remove_keyboard.selective, None)
     }
@@ -384,7 +388,7 @@ pub fn keyboard_builder_basic_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [
         [keyboard.button("Button 1"), keyboard.button("Button 2")],
       ])
@@ -404,7 +408,7 @@ pub fn keyboard_builder_multi_row_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [
         [keyboard.button("Row 1 Button 1"), keyboard.button("Row 1 Button 2")],
         [keyboard.button("Row 2 Button 1")],
@@ -425,7 +429,7 @@ pub fn keyboard_builder_special_buttons_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       let expected_row1 = [
         keyboard.contact_button("Share Contact"),
         keyboard.location_button("Share Location"),
@@ -446,7 +450,7 @@ pub fn keyboard_builder_empty_test() {
 
   let markup = keyboard.to_markup(kb)
   case markup {
-    model.SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
+    SendMessageReplyReplyKeyboardMarkupParameters(reply_keyboard) -> {
       should.equal(reply_keyboard.keyboard, [])
     }
     _ -> should.fail()
@@ -468,9 +472,7 @@ pub fn inline_keyboard_builder_basic_test() {
           let kb = keyboard.inline_build(builder)
           let markup = keyboard.to_inline_markup(kb)
           case markup {
-            model.SendMessageReplyInlineKeyboardMarkupParameters(
-              inline_keyboard,
-            ) -> {
+            SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
               case inline_keyboard.inline_keyboard {
                 [[button1, button2]] -> {
                   should.equal(button1.text, "Button 1")
@@ -505,9 +507,7 @@ pub fn inline_keyboard_builder_multi_row_test() {
           let kb = keyboard.inline_build(builder)
           let markup = keyboard.to_inline_markup(kb)
           case markup {
-            model.SendMessageReplyInlineKeyboardMarkupParameters(
-              inline_keyboard,
-            ) -> {
+            SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
               case inline_keyboard.inline_keyboard {
                 [[row1_btn], [row2_btn]] -> {
                   should.equal(row1_btn.text, "Row 1 Button")
@@ -544,7 +544,7 @@ pub fn inline_keyboard_builder_mixed_buttons_test() {
       let kb = keyboard.inline_build(builder)
       let markup = keyboard.to_inline_markup(kb)
       case markup {
-        model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+        SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
           case inline_keyboard.inline_keyboard {
             [[callback_btn, url_btn], [webapp_btn, copy_btn]] -> {
               should.equal(callback_btn.text, "Callback")
@@ -572,7 +572,7 @@ pub fn inline_keyboard_builder_switch_query_test() {
   let kb = keyboard.inline_build(builder)
   let markup = keyboard.to_inline_markup(kb)
   case markup {
-    model.SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
+    SendMessageReplyInlineKeyboardMarkupParameters(inline_keyboard) -> {
       case inline_keyboard.inline_keyboard {
         [[share_btn], [visit_btn]] -> {
           should.equal(share_btn.text, "Share")

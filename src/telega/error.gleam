@@ -3,7 +3,7 @@ import gleam/json
 import gleam/otp/actor
 import gleam/string
 
-import telega/model
+import telega/model/types.{type Update}
 
 pub type TelegaError {
   /// Returned by Bot API if server returns `ok: false`, indicating that your API request was invalid and failed
@@ -31,7 +31,7 @@ pub type TelegaError {
   DecodeUpdateError(reason: String)
 
   /// Occurs when the update is not handled by any handler
-  UnknownUpdateError(update: model.Update)
+  UnknownUpdateError(update: Update)
 }
 
 pub fn to_string(error: TelegaError) -> String {

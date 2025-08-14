@@ -15,7 +15,10 @@ import telega/internal/log
 import telega/internal/registry.{type Registry}
 
 import telega/error
-import telega/model.{type User}
+import telega/model/types.{
+  type Audio, type ChatMemberUpdated, type Message, type PhotoSize, type User,
+  type Video, type Voice, type WebAppData,
+}
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
   CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
@@ -63,12 +66,12 @@ pub fn start(
   let bot =
     Bot(
       self:,
-      registry:,
       config:,
       bot_info:,
-      handlers:,
-      session_settings:,
       catch_handler:,
+      session_settings:,
+      handlers:,
+      registry:,
     )
 
   actor.new(bot)
@@ -532,32 +535,32 @@ pub type Handler(session, error) {
   )
   /// Handle any message.
   HandleMessage(
-    handler: fn(Context(session, error), model.Message) ->
+    handler: fn(Context(session, error), Message) ->
       Result(Context(session, error), error),
   )
   /// Handle voice messages.
   HandleVoice(
-    handler: fn(Context(session, error), model.Voice) ->
+    handler: fn(Context(session, error), Voice) ->
       Result(Context(session, error), error),
   )
   /// Handle audio messages.
   HandleAudio(
-    handler: fn(Context(session, error), model.Audio) ->
+    handler: fn(Context(session, error), Audio) ->
       Result(Context(session, error), error),
   )
   /// Handle video messages.
   HandleVideo(
-    handler: fn(Context(session, error), model.Video) ->
+    handler: fn(Context(session, error), Video) ->
       Result(Context(session, error), error),
   )
   /// Handle photo messages.
   HandlePhotos(
-    handler: fn(Context(session, error), List(model.PhotoSize)) ->
+    handler: fn(Context(session, error), List(PhotoSize)) ->
       Result(Context(session, error), error),
   )
   /// Handle web app data messages.
   HandleWebAppData(
-    handler: fn(Context(session, error), model.WebAppData) ->
+    handler: fn(Context(session, error), WebAppData) ->
       Result(Context(session, error), error),
   )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
@@ -568,7 +571,7 @@ pub type Handler(session, error) {
   )
   /// Handle chat member update (when user joins/leaves a group). The bot must be an administrator in the chat and must explicitly specify "chat_member" in the list of `allowed_updates` to receive these updates.
   HandleChatMember(
-    handler: fn(Context(session, error), model.ChatMemberUpdated) ->
+    handler: fn(Context(session, error), ChatMemberUpdated) ->
       Result(Context(session, error), error),
   )
 }
@@ -625,17 +628,17 @@ fn do_handle(context context, update update, handler handler) {
       use data <- option.map(query.data)
       handler(context, data, query.id)
     }
-    HandleMessage(handler:), MessageUpdate(message:, ..) ->
+    HandleMessage(handler), MessageUpdate(message:, ..) ->
       context |> handler(message) |> Some
-    HandleChatMember(handler:), ChatMemberUpdate(chat_member_updated:, ..) ->
+    HandleChatMember(handler), ChatMemberUpdate(chat_member_updated:, ..) ->
       context |> handler(chat_member_updated) |> Some
-    HandleVoice(handler:), VoiceUpdate(voice:, ..) ->
+    HandleVoice(handler), VoiceUpdate(voice:, ..) ->
       context |> handler(voice) |> Some
-    HandleAudio(handler:), AudioUpdate(audio:, ..) ->
+    HandleAudio(handler), AudioUpdate(audio:, ..) ->
       context |> handler(audio) |> Some
-    HandleVideo(handler:), VideoUpdate(video:, ..) ->
+    HandleVideo(handler), VideoUpdate(video:, ..) ->
       context |> handler(video) |> Some
-    HandleWebAppData(handler:), WebAppUpdate(web_app_data:, ..) ->
+    HandleWebAppData(handler), WebAppUpdate(web_app_data:, ..) ->
       context |> handler(web_app_data) |> Some
     _, _ -> None
   }

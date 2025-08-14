@@ -222,9 +222,15 @@ import gleam/string
 import telega/bot.{
   type CallbackQueryFilter, type Hears, CallbackQueryFilter, HearTexts,
 }
-import telega/model.{
-  type InlineKeyboardButton, type KeyboardButton, InlineKeyboardButton,
-  KeyboardButton,
+
+import telega/model/types.{
+  type ChatAdministratorRights, type InlineKeyboardButton, type KeyboardButton,
+  type SendMessageReplyMarkupParameters, CopyTextButton, InlineKeyboardButton,
+  InlineKeyboardMarkup, KeyboardButton, KeyboardButtonPollType,
+  KeyboardButtonRequestChat, KeyboardButtonRequestUsers, ReplyKeyboardMarkup,
+  ReplyKeyboardRemove, SendMessageReplyInlineKeyboardMarkupParameters,
+  SendMessageReplyRemoveKeyboardMarkupParameters,
+  SendMessageReplyReplyKeyboardMarkupParameters, WebAppInfo,
 }
 
 // Keyboard -------------------------------------------------------------------------------------------
@@ -282,8 +288,8 @@ pub fn hear(keyboard: Keyboard) -> Hears {
 }
 
 /// Build a reply markup for `Message` from a keyboard
-pub fn to_markup(keyboard: Keyboard) -> model.SendMessageReplyMarkupParameters {
-  model.SendMessageReplyReplyKeyboardMarkupParameters(model.ReplyKeyboardMarkup(
+pub fn to_markup(keyboard: Keyboard) -> SendMessageReplyMarkupParameters {
+  SendMessageReplyReplyKeyboardMarkupParameters(ReplyKeyboardMarkup(
     keyboard: keyboard.buttons,
     resize_keyboard: keyboard.resize_keyboard,
     one_time_keyboard: keyboard.one_time_keyboard,
@@ -371,10 +377,11 @@ fn chunk_list(list: List(a), size: Int) -> List(List(a)) {
 }
 
 /// Remove keyboard markup - useful for hiding keyboards
-pub fn remove() -> model.SendMessageReplyMarkupParameters {
-  model.SendMessageReplyRemoveKeyboardMarkupParameters(
-    model.ReplyKeyboardRemove(remove_keyboard: True, selective: None),
-  )
+pub fn remove() -> SendMessageReplyMarkupParameters {
+  SendMessageReplyRemoveKeyboardMarkupParameters(ReplyKeyboardRemove(
+    remove_keyboard: True,
+    selective: None,
+  ))
 }
 
 /// Create a single-button keyboard
@@ -553,10 +560,10 @@ pub fn inline_build(builder: InlineKeyboardBuilder) -> InlineKeyboard {
 /// Build a reply markup for `Message` from an inline keyboard
 pub fn inline_to_markup(
   keyboard: InlineKeyboard,
-) -> model.SendMessageReplyMarkupParameters {
-  model.SendMessageReplyInlineKeyboardMarkupParameters(
-    model.InlineKeyboardMarkup(inline_keyboard: keyboard.buttons),
-  )
+) -> SendMessageReplyMarkupParameters {
+  SendMessageReplyInlineKeyboardMarkupParameters(InlineKeyboardMarkup(
+    inline_keyboard: keyboard.buttons,
+  ))
 }
 
 /// Create a new keyboard button
@@ -574,7 +581,7 @@ pub fn button(text: String) -> KeyboardButton {
 
 /// Create a new web app button
 pub fn web_app_button(text text: String, url url: String) -> KeyboardButton {
-  KeyboardButton(..button(text), web_app: Some(model.WebAppInfo(url:)))
+  KeyboardButton(..button(text), web_app: Some(WebAppInfo(url:)))
 }
 
 /// Create a button that requests the user's contact information.
@@ -608,7 +615,7 @@ pub fn poll_button(
 ) -> KeyboardButton {
   KeyboardButton(
     ..button(text),
-    request_poll: Some(model.KeyboardButtonPollType(type_: poll_type)),
+    request_poll: Some(KeyboardButtonPollType(type_: poll_type)),
   )
 }
 
@@ -625,7 +632,7 @@ pub fn users_button(
 ) -> KeyboardButton {
   KeyboardButton(
     ..button(text),
-    request_users: Some(model.KeyboardButtonRequestUsers(
+    request_users: Some(KeyboardButtonRequestUsers(
       request_id:,
       user_is_bot:,
       user_is_premium:,
@@ -645,8 +652,8 @@ pub fn chat_button(
   chat_is_forum: Option(Bool),
   chat_has_username: Option(Bool),
   chat_is_created: Option(Bool),
-  user_administrator_rights: Option(model.ChatAdministratorRights),
-  bot_administrator_rights: Option(model.ChatAdministratorRights),
+  user_administrator_rights: Option(ChatAdministratorRights),
+  bot_administrator_rights: Option(ChatAdministratorRights),
   bot_is_member: Option(Bool),
   request_title: Option(Bool),
   request_username: Option(Bool),
@@ -654,7 +661,7 @@ pub fn chat_button(
 ) -> KeyboardButton {
   KeyboardButton(
     ..button(text),
-    request_chat: Some(model.KeyboardButtonRequestChat(
+    request_chat: Some(KeyboardButtonRequestChat(
       request_id:,
       chat_is_channel:,
       chat_is_forum:,
@@ -716,10 +723,10 @@ pub fn new_inline(buttons: List(List(InlineKeyboardButton))) -> InlineKeyboard {
 /// Build a reply markup for `Message` from an inline keyboard
 pub fn to_inline_markup(
   keyboard: InlineKeyboard,
-) -> model.SendMessageReplyMarkupParameters {
-  model.SendMessageReplyInlineKeyboardMarkupParameters(
-    model.InlineKeyboardMarkup(inline_keyboard: keyboard.buttons),
-  )
+) -> SendMessageReplyMarkupParameters {
+  SendMessageReplyInlineKeyboardMarkupParameters(InlineKeyboardMarkup(
+    inline_keyboard: keyboard.buttons,
+  ))
 }
 
 /// Create a new inline button with callback data
@@ -773,7 +780,7 @@ pub fn inline_web_app_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
-    web_app: Some(model.WebAppInfo(url:)),
+    web_app: Some(WebAppInfo(url:)),
     callback_data: None,
     url: None,
     login_url: None,
@@ -833,7 +840,7 @@ pub fn inline_copy_text_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
-    copy_text: Some(model.CopyTextButton(text: copy_text)),
+    copy_text: Some(CopyTextButton(text: copy_text)),
     callback_data: None,
     url: None,
     login_url: None,

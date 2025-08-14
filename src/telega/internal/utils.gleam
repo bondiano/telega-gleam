@@ -1,4 +1,6 @@
 import gleam/int
+import gleam/json.{type Json}
+import gleam/list
 import gleam/string
 
 pub fn normalize_url(url: String) {
@@ -49,4 +51,15 @@ fn erlang_system_time_millisecond() -> Int
 
 pub fn current_time_ms() -> Int {
   erlang_system_time_millisecond() / 1_000_000
+}
+
+pub fn json_object_filter_nulls(entries: List(#(String, Json))) -> Json {
+  let null = json.null()
+
+  entries
+  |> list.filter(fn(entry) {
+    let #(_, value) = entry
+    value != null
+  })
+  |> json.object
 }

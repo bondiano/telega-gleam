@@ -8,7 +8,8 @@ import gleam/result
 import gleam/string
 
 import telega/error
-import telega/model.{
+import telega/model/decoder.{update_decoder}
+import telega/model/types.{
   type Audio, type BusinessConnection, type BusinessMessagesDeleted,
   type CallbackQuery, type ChatBoostRemoved, type ChatJoinRequest,
   type ChatMemberUpdated, type ChosenInlineResult, type InlineQuery,
@@ -16,6 +17,7 @@ import telega/model.{
   type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
   type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
   type Update as ModelUpdate, type Video, type Voice, type WebAppData,
+  InaccessibleMessageMaybeInaccessibleMessage, MessageMaybeInaccessibleMessage,
 }
 
 /// Messages represent the data that the bot receives from the Telegram API.
@@ -201,7 +203,7 @@ pub type Command {
 }
 
 pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
-  decode.run(json, model.update_decoder())
+  decode.run(json, update_decoder())
   |> result.map_error(fn(e) {
     error.DecodeUpdateError(
       "Cannot decode update: "
@@ -485,9 +487,9 @@ fn new_callback_query_update(raw: ModelUpdate, callback_query: CallbackQuery) {
     chat_id: case callback_query.message {
       Some(message) ->
         case message {
-          model.MessageMaybeInaccessibleMessage(message) -> message.chat.id
-          model.InaccessibleMessageMaybeInaccessibleMessage(message) ->
-            message.chat.id
+          MessageMaybeInaccessibleMessage(message) -> message.chat.id
+          InaccessibleMessageMaybeInaccessibleMessage(inaccessible) ->
+            inaccessible.chat.id
         }
       None -> callback_query.from.id
     },

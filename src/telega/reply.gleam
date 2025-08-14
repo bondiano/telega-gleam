@@ -10,7 +10,13 @@ import telega/bot.{type Context}
 import telega/client
 import telega/error
 import telega/format.{type FormattedText}
-import telega/model.{type SendDiceParameters}
+import telega/model/types.{
+  type AnswerCallbackQueryParameters, type EditMessageTextParameters,
+  type FileOrString, type ForwardMessageParameters, type Message,
+  type SendDiceParameters, type SendMessageReplyMarkupParameters, LabeledPrice,
+  SendDiceParameters, SendInvoiceParameters, SendMessageParameters,
+  SendPollParameters, SendStickerParameters, Str,
+}
 
 /// Use this method to send text messages.
 ///
@@ -18,12 +24,12 @@ import telega/model.{type SendDiceParameters}
 pub fn with_text(
   ctx ctx: Context(session, error),
   text text: String,
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       business_connection_id: None,
       message_thread_id: None,
       parse_mode: None,
@@ -45,13 +51,13 @@ pub fn with_text(
 pub fn with_markup(
   ctx ctx: Context(session, error),
   text text: String,
-  markup reply_markup: model.SendMessageReplyMarkupParameters,
-) -> Result(model.Message, error.TelegaError) {
+  markup reply_markup: SendMessageReplyMarkupParameters,
+) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       reply_markup: Some(reply_markup),
       business_connection_id: None,
       message_thread_id: None,
@@ -81,14 +87,14 @@ pub fn with_markup(
 pub fn with_formatted(
   ctx ctx: Context(session, error),
   formatted formatted: FormattedText,
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   let #(text, parse_mode) = format.render(formatted)
 
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       business_connection_id: None,
       message_thread_id: None,
@@ -116,12 +122,12 @@ pub fn with_formatted(
 pub fn with_html(
   ctx ctx: Context(session, error),
   html html: String,
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text: html,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       parse_mode: Some("HTML"),
       business_connection_id: None,
       message_thread_id: None,
@@ -148,12 +154,12 @@ pub fn with_html(
 pub fn with_markdown(
   ctx ctx: Context(session, error),
   markdown markdown: String,
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text: markdown,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       parse_mode: Some("Markdown"),
       business_connection_id: None,
       message_thread_id: None,
@@ -180,12 +186,12 @@ pub fn with_markdown(
 pub fn with_markdown_v2(
   ctx ctx: Context(session, error),
   markdown markdown: String,
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text: markdown,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       parse_mode: Some("MarkdownV2"),
       business_connection_id: None,
       message_thread_id: None,
@@ -207,15 +213,15 @@ pub fn with_markdown_v2(
 pub fn with_formatted_markup(
   ctx ctx: Context(session, error),
   formatted formatted: FormattedText,
-  markup reply_markup: model.SendMessageReplyMarkupParameters,
-) -> Result(model.Message, error.TelegaError) {
+  markup reply_markup: SendMessageReplyMarkupParameters,
+) -> Result(Message, error.TelegaError) {
   let #(text, parse_mode) = format.render(formatted)
 
   api.send_message(
     ctx.config.api_client,
-    parameters: model.SendMessageParameters(
+    parameters: SendMessageParameters(
       text:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       reply_markup: Some(reply_markup),
       business_connection_id: None,
@@ -237,12 +243,12 @@ pub fn with_formatted_markup(
 pub fn with_dice(
   ctx ctx: Context(session, error),
   parameters parameters: Option(SendDiceParameters),
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   let parameters =
     parameters
     |> option.lazy_unwrap(fn() {
-      model.SendDiceParameters(
-        chat_id: model.Str(ctx.key),
+      SendDiceParameters(
+        chat_id: Str(ctx.key),
         message_thread_id: None,
         emoji: None,
         disable_notification: None,
@@ -260,8 +266,8 @@ pub fn with_dice(
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
   ctx ctx: Context(session, error),
-  parameters parameters: model.EditMessageTextParameters,
-) -> Result(model.Message, error.TelegaError) {
+  parameters parameters: EditMessageTextParameters,
+) -> Result(Message, error.TelegaError) {
   api.edit_message_text(ctx.config.api_client, parameters)
 }
 
@@ -271,8 +277,8 @@ pub fn edit_text(
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward(
   ctx ctx: Context(session, error),
-  parameters parameters: model.ForwardMessageParameters,
-) -> Result(model.Message, error.TelegaError) {
+  parameters parameters: ForwardMessageParameters,
+) -> Result(Message, error.TelegaError) {
   api.forward_message(ctx.config.api_client, parameters)
 }
 
@@ -283,7 +289,7 @@ pub fn forward(
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
   ctx ctx: Context(session, error),
-  parameters parameters: model.AnswerCallbackQueryParameters,
+  parameters parameters: AnswerCallbackQueryParameters,
 ) -> Result(Bool, error.TelegaError) {
   api.answer_callback_query(ctx.config.api_client, parameters)
 }
@@ -315,13 +321,13 @@ pub fn with_poll(
   ctx ctx: Context(session, error),
   question question: String,
   options options: List(String),
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_poll(
     ctx.config.api_client,
-    parameters: model.SendPollParameters(
+    parameters: SendPollParameters(
       question:,
       options:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,
@@ -356,19 +362,19 @@ pub fn with_invoice(
   payload payload: String,
   currency currency: String,
   prices prices: List(#(String, Int)),
-) -> Result(model.Message, error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   api.send_invoice(
     ctx.config.api_client,
-    parameters: model.SendInvoiceParameters(
+    parameters: SendInvoiceParameters(
       title:,
       description:,
       payload:,
       currency:,
       prices: list.map(prices, fn(price) {
         let #(label, amount) = price
-        model.LabeledPrice(label:, amount:)
+        LabeledPrice(label:, amount:)
       }),
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,
@@ -401,13 +407,13 @@ pub fn with_invoice(
 /// **Official reference:** https://core.telegram.org/bots/api#sendsticker
 pub fn with_sticker(
   ctx ctx: Context(session, error),
-  sticker sticker: model.FileOrString,
-) -> Result(model.Message, error.TelegaError) {
+  sticker sticker: FileOrString,
+) -> Result(Message, error.TelegaError) {
   api.send_sticker(
     ctx.config.api_client,
-    parameters: model.SendStickerParameters(
+    parameters: SendStickerParameters(
       sticker:,
-      chat_id: model.Str(ctx.key),
+      chat_id: Str(ctx.key),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,

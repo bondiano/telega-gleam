@@ -5,7 +5,7 @@ import gleeunit/should
 import telega/bot
 import telega/internal/config
 import telega/internal/registry
-import telega/model
+import telega/model/types
 import telega/update
 
 pub type TestSession {
@@ -31,8 +31,8 @@ fn create_test_config() -> config.Config {
   )
 }
 
-fn create_test_user() -> model.User {
-  model.User(
+fn create_test_user() -> types.User {
+  types.User(
     id: test_bot_id,
     is_bot: True,
     first_name: "TestBot",
@@ -64,8 +64,8 @@ fn create_test_catch_handler() -> bot.CatchHandler(TestSession, TestError) {
   fn(_ctx, _error) { Ok(Nil) }
 }
 
-fn build_test_user() -> model.User {
-  model.User(
+fn build_test_user() -> types.User {
+  types.User(
     id: test_user_id,
     is_bot: False,
     first_name: "TestUser",
@@ -82,8 +82,8 @@ fn build_test_user() -> model.User {
   )
 }
 
-fn build_test_chat() -> model.Chat {
-  model.Chat(
+fn build_test_chat() -> types.Chat {
+  types.Chat(
     id: test_chat_id,
     type_: Some("private"),
     title: None,
@@ -94,8 +94,8 @@ fn build_test_chat() -> model.Chat {
   )
 }
 
-fn build_minimal_message(text: String) -> model.Message {
-  model.Message(
+fn build_minimal_message(text: String) -> types.Message {
+  types.Message(
     message_id: 1,
     message_thread_id: None,
     from: Some(build_test_user()),
@@ -193,10 +193,10 @@ fn build_minimal_message(text: String) -> model.Message {
 }
 
 fn build_minimal_raw_update(
-  message: model.Message,
+  message: types.Message,
   update_id: Int,
-) -> model.Update {
-  model.Update(
+) -> types.Update {
+  types.Update(
     update_id:,
     message: Some(message),
     edited_message: None,
