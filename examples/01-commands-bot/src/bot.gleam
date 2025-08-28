@@ -10,7 +10,7 @@ import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/client as telega_client
 import telega/error as telega_error
-import telega/model as telega_model
+import telega/model/encoder as telega_encoder
 import telega/reply
 
 import bot/utils
@@ -63,7 +63,7 @@ fn build_bot() {
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
-      telega_model.bot_commands_from(commands),
+      telega_encoder.bot_commands_from(commands),
       None,
     )
 

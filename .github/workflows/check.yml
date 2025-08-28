@@ -7,6 +7,11 @@ on:
       - main
   pull_request:
 
+env:
+  # Disable Erlang compiler optimizations to avoid compilation hangs
+  # with deeply nested functions generated from Gleam's use syntax
+  ERL_COMPILER_OPTIONS: '[no_inline, {inline_size, 0}]'
+
 jobs:
   test:
     runs-on: ubuntu-latest

@@ -14,7 +14,10 @@ import telega/client as telega_client
 import telega/error as telega_error
 import telega/format as fmt
 import telega/keyboard as telega_keyboard
-import telega/model.{EditMessageTextParameters} as telega_model
+import telega/model/encoder as telega_model_encoder
+import telega/model/types.{
+  AnswerCallbackQueryParameters, EditMessageTextParameters, Str,
+}
 import telega/reply
 
 import bot/utils
@@ -162,7 +165,13 @@ fn handle_inline_change_language(ctx: BotContext, _) {
       taskle.async(fn() {
         reply.answer_callback_query(
           ctx,
-          telega_model.new_answer_callback_query_parameters(callback_query_id),
+          AnswerCallbackQueryParameters(
+            callback_query_id: callback_query_id,
+            text: None,
+            show_alert: None,
+            url: None,
+            cache_time: None,
+          ),
         )
       }),
       taskle.async(fn() {
@@ -171,7 +180,7 @@ fn handle_inline_change_language(ctx: BotContext, _) {
           EditMessageTextParameters(
             text: t_language_changed_message(language),
             message_id: Some(message.message_id),
-            chat_id: Some(telega_model.Str(ctx.key)),
+            chat_id: Some(Str(ctx.key)),
             entities: None,
             inline_message_id: None,
             link_preview_options: None,
@@ -212,7 +221,7 @@ fn build_bot() {
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
-      telega_model.bot_commands_from(commands),
+      telega_model_encoder.bot_commands_from(commands),
       None,
     )
 
