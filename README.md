@@ -14,6 +14,7 @@ A [Gleam](https://gleam.run/) library for the Telegram Bot API.
 - an interface to the Telegram Bot HTTP-based APIs `telega/api`
 - an client for the Telegram Bot API `telega/client`
 - adapter to use with [wisp](https://github.com/gleam-wisp/wisp)
+- polling implementation
 - session bot implementation
 - conversation implementation
 - convenient utilities for common tasks
@@ -24,68 +25,51 @@ A [Gleam](https://gleam.run/) library for the Telegram Bot API.
 
 First, visit [@BotFather](https://t.me/botfather) to create a new bot. Copy **the token** and save it for later.
 
-Initiate a gleam project and add `telega` and `wisp` as a dependencies:
+Initiate a gleam project and add `telega` and `gleam_erlang` as a dependencies:
 
 ```sh
 $ gleam new first_tg_bot
 $ cd first_tg_bot
-$ gleam add telega wisp mist gleam_erlang
+$ gleam add telega gleam_erlang
 ```
 
 Replace the `first_tg_bot.gleam` file content with the following code:
 
 ```gleam
 import gleam/erlang/process
-import gleam/option.{None}
-import mist
 import telega
-import telega/adapters/wisp as telega_wisp
+import telega/polling
 import telega/reply
 import telega/update.{CommandUpdate, TextUpdate}
-import wisp
-import wisp/wisp_mist
-
-fn handle_request(bot, req) {
-  use <- telega_wisp.handle_bot(bot, req)
-  wisp.not_found()
-}
 
 fn echo_handler(ctx, update) {
   use ctx <- telega.log_context(ctx, "echo")
-  let assert Ok(_) = case update {
-    TextUpdate(text:, ..) -> reply.with_text(ctx, text)
-    CommandUpdate(command:, ..) -> reply.with_text(ctx, command.text)
-    _ -> panic as "No text message"
+
+  case update {
+    TextUpdate(text:, ..) -> {
+      let assert Ok(_) = reply.with_text(ctx, text)
+      Ok(ctx)
+    }
+    CommandUpdate(command:, ..) -> {
+      let assert Ok(_) = reply.with_text(ctx, "Command: " <> command.text)
+      Ok(ctx)
+    }
+    _ -> Ok(ctx)
   }
-  Ok(ctx)
 }
 
 pub fn main() {
-  wisp.configure_logger()
-
   let assert Ok(bot) =
-    telega.new(
-      token: "your bot token from @BotFather",
-      url: "your bot url",
-      webhook_path: "secret path",
-      secret_token: None,
-    )
+    telega.new_for_polling(token: "BOT_TOKEN")
     |> telega.handle_all(echo_handler)
     |> telega.init_nil_session()
-
-  let assert Ok(_) =
-    wisp_mist.handler(handle_request(bot, _), wisp.random_string(64))
-    |> mist.new
-    |> mist.port(8000)
-    |> mist.start
+  let assert Ok(_poller) = polling.init_polling_default(bot)
 
   process.sleep_forever()
 }
 ```
 
-Replace `"your bot token from @BotFather"` with the token you received from the BotFather. Set the `url` and `webhook_path` to your server's URL and the desired path for the webhook. If you don't have a server yet, you can use [ngrok](https://ngrok.com/) or [localtunnel](https://localtunnel.me/) to create a tunnel to your local machine.
-
-Then run the bot:
+Replace `"BOT_TOKEN"` with the token you received from the BotFather. Then run the bot:
 
 ```sh
 $ gleam run

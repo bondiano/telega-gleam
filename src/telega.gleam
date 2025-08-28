@@ -46,6 +46,20 @@ pub opaque type TelegaBuilder(session, error) {
   )
 }
 
+/// Internal function to get bot subject for polling
+@internal
+pub fn get_bot_subject_internal(telega: Telega(session, error)) -> BotSubject {
+  telega.bot_subject
+}
+
+/// Internal function to get client for polling
+@internal
+pub fn get_client_internal(
+  telega: Telega(session, error),
+) -> client.TelegramClient {
+  telega.config.api_client
+}
+
 /// Check if a path is the webhook path for the bot.
 ///
 /// Useful if you plan to implement own adapter.
@@ -78,6 +92,29 @@ pub fn new(
   TelegaBuilder(
     handlers: [],
     config: config.new(token:, webhook_path:, secret_token:, url:),
+    session_settings: None,
+    bot_subject: None,
+    catch_handler: None,
+    drop_pending_updates: None,
+    max_connections: None,
+    ip_address: None,
+    allowed_updates: None,
+    certificate: None,
+  )
+}
+
+/// Create a new Telega instance optimized for long polling.
+///
+/// This is a convenience function for polling bots that don't need webhook configuration.
+pub fn new_for_polling(token token: String) {
+  TelegaBuilder(
+    handlers: [],
+    config: config.new(
+      token:,
+      webhook_path: "/webhook",
+      secret_token: None,
+      url: "https://api.telegram.org",
+    ),
     session_settings: None,
     bot_subject: None,
     catch_handler: None,

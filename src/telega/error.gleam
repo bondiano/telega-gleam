@@ -32,6 +32,9 @@ pub type TelegaError {
 
   /// Occurs when the update is not handled by any handler
   UnknownUpdateError(update: Update)
+
+  /// General actor error (e.g., from polling)
+  ActorError(reason: String)
 }
 
 pub fn to_string(error: TelegaError) -> String {
@@ -51,6 +54,7 @@ pub fn to_string(error: TelegaError) -> String {
     DecodeUpdateError(reason) -> "Failed to decode update: " <> reason
     BotHandleUpdateError(reason) -> "Failed to handle update: " <> reason
     UnknownUpdateError(update) -> "Unknown update: " <> string.inspect(update)
+    ActorError(reason) -> "Actor error: " <> reason
   }
 }
 
