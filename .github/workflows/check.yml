@@ -8,9 +8,10 @@ on:
   pull_request:
 
 env:
-  # Disable Erlang compiler optimizations to avoid compilation hangs
-  # with deeply nested functions generated from Gleam's use syntax
-  ERL_COMPILER_OPTIONS: '[no_inline, {inline_size, 0}]'
+  # Increase inline size limit to avoid compilation hangs with deeply nested functions
+  # Default is 24, we use 5 to handle Gleam's deeply nested use expressions
+  # See: https://github.com/gleam-lang/gleam/issues/4287
+  ERL_COMPILER_OPTIONS: '[{inline_size, 5}]'
 
 jobs:
   test:
