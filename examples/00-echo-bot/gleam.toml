@@ -4,7 +4,6 @@ description = "Telega Echo Bot example with long polling"
 
 [dependencies]
 gleam_stdlib = ">= 0.60.0 and < 1.0.0"
-gleam_erlang = ">= 1.2.0 and < 2.0.0"
 telega = { path = "../.." }
 
 [dev-dependencies]

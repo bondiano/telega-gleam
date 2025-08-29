@@ -356,5 +356,5 @@ pub fn wait_handler_test() {
   let result =
     bot.wait_handler(ctx:, handler:, handle_else: None, timeout: Some(1000))
 
-  result |> should.be_ok
+  should.be_ok(result)
 }

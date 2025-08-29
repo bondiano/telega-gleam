@@ -5,7 +5,6 @@
 //// from Telegram and dispatches them to the bot's message handlers.
 
 import gleam/erlang/process.{type Subject}
-import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
@@ -76,6 +75,7 @@ pub type PollingMessage {
   PollNext(offset: Int)
   InjectUpdates(updates: List(Update), offset: Int)
   SetSelf(subject: Subject(PollingMessage))
+  HandleError(error: TelegaError, offset: Int)
 }
 
 /// State for the polling worker
@@ -85,6 +85,7 @@ type PollingState {
     offset: Option(Int),
     is_running: Bool,
     self: Option(Subject(PollingMessage)),
+    consecutive_errors: Int,
   )
 }
 
@@ -93,7 +94,13 @@ fn start_polling_worker(
   config: PollingConfig,
 ) -> Result(Subject(PollingMessage), actor.StartError) {
   let initial_state =
-    PollingState(config:, offset: None, is_running: False, self: None)
+    PollingState(
+      config:,
+      offset: None,
+      is_running: False,
+      self: None,
+      consecutive_errors: 0,
+    )
 
   use started <- result.try(
     actor.new(initial_state)
@@ -117,12 +124,6 @@ fn handle_polling_message(
     }
 
     StartPolling(offset) -> {
-      let offset_str = case offset {
-        Some(o) -> int.to_string(o)
-        None -> "none"
-      }
-      log.info("Starting polling with offset: " <> offset_str)
-
       let new_state = PollingState(..state, offset:, is_running: True)
 
       case state.self {
@@ -138,7 +139,6 @@ fn handle_polling_message(
     }
 
     StopPolling -> {
-      log.info("Stopping polling")
       actor.continue(PollingState(..state, is_running: False))
     }
 
@@ -149,11 +149,19 @@ fn handle_polling_message(
           case poll_updates(state, offset) {
             Ok(new_offset) -> {
               schedule_next_poll(state, new_offset)
-              actor.continue(PollingState(..state, offset: Some(new_offset)))
+              actor.continue(
+                PollingState(
+                  ..state,
+                  offset: Some(new_offset),
+                  consecutive_errors: 0,
+                ),
+              )
             }
-            Error(_error) -> {
-              log.error("Polling error occurred")
-              schedule_next_poll(state, offset)
+            Error(error) -> {
+              case state.self {
+                Some(self) -> process.send(self, HandleError(error, offset))
+                None -> Nil
+              }
               actor.continue(state)
             }
           }
@@ -165,6 +173,85 @@ fn handle_polling_message(
       list.each(updates, fn(update) { process_update(state.config.bot, update) })
       let new_offset = calculate_new_offset(updates, offset)
       actor.continue(PollingState(..state, offset: Some(new_offset)))
+    }
+
+    HandleError(error, offset) -> {
+      let new_consecutive_errors = state.consecutive_errors + 1
+
+      // Error handling strategy:
+      // - Critical errors (auth, not found, etc.) stop polling immediately
+      // - Network/temporary errors retry with exponential backoff
+      // - After 10 consecutive errors of any type, stop polling
+      let should_stop = case error {
+        // API errors with specific codes that indicate critical issues
+        error.TelegramApiError(401, _) -> True
+        // Unauthorized - invalid token
+        error.TelegramApiError(404, _) -> True
+
+        // Not found - bot deleted
+        // Too many consecutive errors of any type
+        _ if new_consecutive_errors >= 10 -> True
+
+        // Network and temporary errors are recoverable
+        error.FetchError(_) -> False
+        error.TelegramApiError(429, _) -> False
+        // Rate limit
+        error.TelegramApiError(500, _) -> False
+        // Server error
+        error.TelegramApiError(502, _) -> False
+        // Bad gateway
+        error.TelegramApiError(503, _) -> False
+        // Service unavailable
+        error.JsonDecodeError(_) -> False
+
+        // Might be temporary API issue
+        // Other errors are considered critical
+        _ -> True
+      }
+
+      case should_stop {
+        True -> {
+          log.error(
+            "Critical polling error (consecutive: "
+            <> string.inspect(new_consecutive_errors)
+            <> "): "
+            <> error.to_string(error)
+            <> " - stopping polling",
+          )
+          actor.stop()
+        }
+        False -> {
+          log.error(
+            "Recoverable polling error (consecutive: "
+            <> string.inspect(new_consecutive_errors)
+            <> "): "
+            <> error.to_string(error)
+            <> " - retrying",
+          )
+
+          // Exponential backoff for retries
+          let delay = case new_consecutive_errors {
+            n if n <= 3 -> 1000
+            // 1 second for first 3 errors
+            n if n <= 6 -> 5000
+            // 5 seconds for next 3 errors
+            _ -> 10_000
+            // 10 seconds for remaining errors
+          }
+
+          case state.self {
+            Some(self) -> {
+              process.send_after(self, delay, PollNext(offset))
+              Nil
+            }
+            None -> Nil
+          }
+
+          actor.continue(
+            PollingState(..state, consecutive_errors: new_consecutive_errors),
+          )
+        }
+      }
     }
   }
 }
@@ -225,10 +312,29 @@ fn schedule_next_poll(state: PollingState, offset: Int) -> Nil {
       process.send_after(self, delay, PollNext(offset))
       Nil
     }
-    None -> {
-      log.error("Cannot schedule next poll: no self reference")
-    }
+    None -> Nil
   }
+}
+
+/// Internal function to start polling with given configuration and offset
+fn start_polling_internal(
+  config: PollingConfig,
+  offset: Option(Int),
+) -> Result(Poller, TelegaError) {
+  use _ <- result.try(api.delete_webhook(config.client))
+
+  use worker <- result.try(
+    start_polling_worker(config)
+    |> result.map_error(fn(err) {
+      error.ActorError(
+        "Failed to start polling worker: " <> string.inspect(err),
+      )
+    }),
+  )
+
+  process.send(worker, StartPolling(offset))
+
+  Ok(Poller(worker: worker, config: config, status: Starting))
 }
 
 /// Start polling with a Telega bot instance
@@ -249,18 +355,7 @@ pub fn init_polling(
       poll_interval,
     )
 
-  use worker <- result.try(
-    start_polling_worker(config)
-    |> result.map_error(fn(err) {
-      error.ActorError(
-        "Failed to start polling worker: " <> string.inspect(err),
-      )
-    }),
-  )
-
-  process.send(worker, StartPolling(None))
-
-  Ok(Poller(worker: worker, config: config, status: Starting))
+  start_polling_internal(config, None)
 }
 
 /// Start polling with default configuration
@@ -279,7 +374,6 @@ pub fn init_polling_default(
 /// Start polling with a custom offset
 pub fn init_polling_with_offset(
   telega: telega.Telega(session, error),
-  token: String,
   offset: Int,
   timeout timeout: Int,
   limit limit: Int,
@@ -288,7 +382,7 @@ pub fn init_polling_with_offset(
 ) -> Result(Poller, TelegaError) {
   let config =
     create_config(
-      client.new(token),
+      telega.get_client_internal(telega),
       telega.get_bot_subject_internal(telega),
       timeout,
       limit,
@@ -296,18 +390,7 @@ pub fn init_polling_with_offset(
       poll_interval,
     )
 
-  use worker <- result.try(
-    start_polling_worker(config)
-    |> result.map_error(fn(err) {
-      error.ActorError(
-        "Failed to start polling worker: " <> string.inspect(err),
-      )
-    }),
-  )
-
-  process.send(worker, StartPolling(Some(offset)))
-
-  Ok(Poller(worker: worker, config: config, status: Starting))
+  start_polling_internal(config, Some(offset))
 }
 
 /// Stop polling
@@ -335,5 +418,23 @@ pub fn is_running(poller: Poller) -> Bool {
   case poller.status {
     Running -> True
     _ -> False
+  }
+}
+
+/// Wait for the poller to finish
+/// This function blocks indefinitely until the polling worker stops
+pub fn wait_finish(poller: Poller) -> Nil {
+  case process.subject_owner(poller.worker) {
+    Ok(pid) -> {
+      let monitor = process.monitor(pid)
+      let selector =
+        process.new_selector()
+        |> process.select_specific_monitor(monitor, fn(_down_msg) { Nil })
+
+      process.selector_receive_forever(selector)
+    }
+    Error(_) -> {
+      process.sleep_forever()
+    }
   }
 }

@@ -1,4 +1,3 @@
-import gleam/erlang/process
 import telega
 import telega/polling
 import telega/reply
@@ -26,7 +25,7 @@ pub fn main() {
     |> telega.handle_all(echo_handler)
     |> telega.init_nil_session()
 
-  let assert Ok(_poller) = polling.init_polling_default(bot)
+  let assert Ok(poller) = polling.init_polling_default(bot)
 
-  process.sleep_forever()
+  polling.wait_finish(poller)
 }

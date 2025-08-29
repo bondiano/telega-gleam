@@ -25,18 +25,17 @@ A [Gleam](https://gleam.run/) library for the Telegram Bot API.
 
 First, visit [@BotFather](https://t.me/botfather) to create a new bot. Copy **the token** and save it for later.
 
-Initiate a gleam project and add `telega` and `gleam_erlang` as a dependencies:
+Initiate a gleam project and add `telega` as a dependencies:
 
 ```sh
 $ gleam new first_tg_bot
 $ cd first_tg_bot
-$ gleam add telega gleam_erlang
+$ gleam add telega
 ```
 
 Replace the `first_tg_bot.gleam` file content with the following code:
 
 ```gleam
-import gleam/erlang/process
 import telega
 import telega/polling
 import telega/reply
@@ -63,9 +62,10 @@ pub fn main() {
     telega.new_for_polling(token: "BOT_TOKEN")
     |> telega.handle_all(echo_handler)
     |> telega.init_nil_session()
-  let assert Ok(_poller) = polling.init_polling_default(bot)
 
-  process.sleep_forever()
+  let assert Ok(poller) = polling.init_polling_default(bot)
+
+  polling.wait_finish(poller)
 }
 ```
 
