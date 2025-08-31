@@ -159,6 +159,81 @@
 //// )
 //// ```
 ////
+//// ## Magic Filters
+////
+//// The router includes a powerful filter system for creating complex routing conditions:
+////
+//// ```gleam
+//// // Simple filters
+//// router
+//// |> router.on_filtered(router.is_private_chat(), handle_private)
+//// |> router.on_filtered(router.from_user(admin_id), handle_admin)
+////
+//// // Combining filters with AND logic
+//// router
+//// |> router.on_filtered(
+////   router.and2(
+////     router.is_group_chat(),
+////     router.text_starts_with("!")
+////   ),
+////   handle_group_command
+//// )
+////
+//// // Combining multiple filters
+//// router
+//// |> router.on_filtered(
+////   router.and([
+////     router.is_text(),
+////     router.from_users([admin1, admin2, admin3]),
+////     router.not(router.text_starts_with("/"))
+////   ]),
+////   handle_admin_text
+//// )
+////
+//// // OR logic for multiple conditions
+//// router
+//// |> router.on_filtered(
+////   router.or([
+////     router.text_equals("help"),
+////     router.text_equals("?"),
+////     router.command_equals("help")
+////   ]),
+////   show_help
+//// )
+//// ```
+////
+//// ### Available Filters
+////
+//// **Message Type Filters:**
+//// - `is_text()` - Text messages
+//// - `is_command()` - Command messages
+//// - `has_photo()` - Photo messages
+//// - `has_video()` - Video messages
+//// - `has_media()` - Any media (photo, video, audio, voice)
+//// - `is_callback_query()` - Callback button presses
+////
+//// **Text Content Filters:**
+//// - `text_equals(text)` - Exact text match
+//// - `text_starts_with(prefix)` - Text starts with prefix
+//// - `text_contains(substring)` - Text contains substring
+//// - `command_equals(cmd)` - Specific command
+////
+//// **User/Chat Filters:**
+//// - `from_user(user_id)` - From specific user
+//// - `from_users(user_ids)` - From any of the users
+//// - `in_chat(chat_id)` - In specific chat
+//// - `is_private_chat()` - Private messages only
+//// - `is_group_chat()` - Group/supergroup messages only
+////
+//// **Callback Query Filters:**
+//// - `callback_data_starts_with(prefix)` - Callback data prefix
+////
+//// **Filter Composition:**
+//// - `and(filters)` / `and2(f1, f2)` - All filters must match
+//// - `or(filters)` / `or2(f1, f2)` - Any filter must match
+//// - `not(filter)` - Negate a filter
+//// - `filter(name, check_fn)` - Custom filter function
+////
 //// ## Advanced Features
 ////
 //// ### Multiple Command Handlers
@@ -263,6 +338,14 @@ pub type Pattern {
   Suffix(String)
 }
 
+/// Filter type for composable update filtering
+pub opaque type Filter {
+  Filter(check: fn(Update) -> Bool, name: String)
+  And(left: Filter, right: Filter)
+  Or(left: Filter, right: Filter)
+  Not(filter: Filter)
+}
+
 /// Unified route type that encompasses all route types
 pub type Route(session, error) {
   TextPatternRoute(pattern: Pattern, handler: TextHandler(session, error))
@@ -271,6 +354,7 @@ pub type Route(session, error) {
   VoiceRoute(handler: VoiceHandler(session, error))
   AudioRoute(handler: AudioHandler(session, error))
   CustomRoute(matcher: fn(Update) -> Bool, handler: Handler(session, error))
+  FilteredRoute(filter: Filter, handler: Handler(session, error))
 }
 
 /// Create a new router
@@ -425,6 +509,275 @@ pub fn on_custom(
     Router(routes:, ..) ->
       Router(..router, routes: [CustomRoute(matcher:, handler:), ..routes])
     ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add a filtered route
+pub fn on_filtered(
+  router: Router(session, error),
+  filter: Filter,
+  handler: Handler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [FilteredRoute(filter:, handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Create a filter from a custom function
+pub fn filter(name: String, check: fn(Update) -> Bool) -> Filter {
+  Filter(check:, name:)
+}
+
+/// Combine filters with AND logic
+pub fn and(filters: List(Filter)) -> Filter {
+  case filters {
+    [] -> filter("always", fn(_) { True })
+    [f] -> f
+    [f1, f2] -> And(f1, f2)
+    [f1, ..rest] -> And(f1, and(rest))
+  }
+}
+
+/// Combine two filters with AND logic
+pub fn and2(left: Filter, right: Filter) -> Filter {
+  And(left, right)
+}
+
+/// Combine filters with OR logic
+pub fn or(filters: List(Filter)) -> Filter {
+  case filters {
+    [] -> filter("never", fn(_) { False })
+    [f] -> f
+    [f1, f2] -> Or(f1, f2)
+    [f1, ..rest] -> Or(f1, or(rest))
+  }
+}
+
+/// Combine two filters with OR logic
+pub fn or2(left: Filter, right: Filter) -> Filter {
+  Or(left, right)
+}
+
+/// Negate a filter
+pub fn not(f: Filter) -> Filter {
+  Not(f)
+}
+
+/// Filter for text messages
+pub fn is_text() -> Filter {
+  filter("is_text", fn(update) {
+    case update {
+      update.TextUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for text that equals a specific value
+pub fn text_equals(text: String) -> Filter {
+  filter("text_equals:" <> text, fn(update) {
+    case update {
+      update.TextUpdate(text: t, ..) -> t == text
+      _ -> False
+    }
+  })
+}
+
+/// Filter for text that starts with a prefix
+pub fn text_starts_with(prefix: String) -> Filter {
+  filter("text_starts_with:" <> prefix, fn(update) {
+    case update {
+      update.TextUpdate(text: t, ..) -> string.starts_with(t, prefix)
+      _ -> False
+    }
+  })
+}
+
+/// Filter for text that contains a substring
+pub fn text_contains(substring: String) -> Filter {
+  filter("text_contains:" <> substring, fn(update) {
+    case update {
+      update.TextUpdate(text: t, ..) -> string.contains(t, substring)
+      _ -> False
+    }
+  })
+}
+
+/// Filter for commands
+pub fn is_command() -> Filter {
+  filter("is_command", fn(update) {
+    case update {
+      update.CommandUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for specific command
+pub fn command_equals(cmd: String) -> Filter {
+  filter("command:" <> cmd, fn(update) {
+    case update {
+      update.CommandUpdate(command:, ..) -> command.command == cmd
+      _ -> False
+    }
+  })
+}
+
+/// Filter by user ID
+pub fn from_user(user_id: Int) -> Filter {
+  filter("from_user:" <> string.inspect(user_id), fn(update) {
+    case update {
+      update.TextUpdate(from_id:, ..) -> from_id == user_id
+      update.CommandUpdate(from_id:, ..) -> from_id == user_id
+      update.CallbackQueryUpdate(from_id:, ..) -> from_id == user_id
+      update.PhotoUpdate(from_id:, ..) -> from_id == user_id
+      update.VideoUpdate(from_id:, ..) -> from_id == user_id
+      update.VoiceUpdate(from_id:, ..) -> from_id == user_id
+      update.AudioUpdate(from_id:, ..) -> from_id == user_id
+      _ -> False
+    }
+  })
+}
+
+/// Filter by multiple user IDs
+pub fn from_users(user_ids: List(Int)) -> Filter {
+  filter("from_users", fn(update) {
+    case update {
+      update.TextUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      update.CommandUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      update.CallbackQueryUpdate(from_id:, ..) ->
+        list.contains(user_ids, from_id)
+      update.PhotoUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      update.VideoUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      update.VoiceUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      update.AudioUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
+      _ -> False
+    }
+  })
+}
+
+/// Filter by chat ID
+pub fn in_chat(chat_id: Int) -> Filter {
+  filter("in_chat:" <> string.inspect(chat_id), fn(update) {
+    case update {
+      update.TextUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.CommandUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.CallbackQueryUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.PhotoUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.VideoUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.VoiceUpdate(chat_id: cid, ..) -> cid == chat_id
+      update.AudioUpdate(chat_id: cid, ..) -> cid == chat_id
+      _ -> False
+    }
+  })
+}
+
+/// Filter for private chats
+pub fn is_private_chat() -> Filter {
+  filter("is_private_chat", fn(update) {
+    case update {
+      update.TextUpdate(message:, ..)
+      | update.CommandUpdate(message:, ..)
+      | update.PhotoUpdate(message:, ..)
+      | update.VideoUpdate(message:, ..)
+      | update.VoiceUpdate(message:, ..)
+      | update.AudioUpdate(message:, ..) ->
+        case message.chat.type_ {
+          Some("private") -> True
+          _ -> False
+        }
+      _ -> False
+    }
+  })
+}
+
+/// Filter for group chats
+pub fn is_group_chat() -> Filter {
+  filter("is_group_chat", fn(update) {
+    case update {
+      update.TextUpdate(message:, ..)
+      | update.CommandUpdate(message:, ..)
+      | update.PhotoUpdate(message:, ..)
+      | update.VideoUpdate(message:, ..)
+      | update.VoiceUpdate(message:, ..)
+      | update.AudioUpdate(message:, ..) ->
+        case message.chat.type_ {
+          Some("group") | Some("supergroup") -> True
+          _ -> False
+        }
+      _ -> False
+    }
+  })
+}
+
+/// Filter for photo messages
+pub fn has_photo() -> Filter {
+  filter("has_photo", fn(update) {
+    case update {
+      update.PhotoUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for video messages
+pub fn has_video() -> Filter {
+  filter("has_video", fn(update) {
+    case update {
+      update.VideoUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for media (photo, video, audio, voice)
+pub fn has_media() -> Filter {
+  filter("has_media", fn(update) {
+    case update {
+      update.PhotoUpdate(..)
+      | update.VideoUpdate(..)
+      | update.AudioUpdate(..)
+      | update.VoiceUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for callback queries
+pub fn is_callback_query() -> Filter {
+  filter("is_callback_query", fn(update) {
+    case update {
+      update.CallbackQueryUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for callback data that starts with prefix
+pub fn callback_data_starts_with(prefix: String) -> Filter {
+  filter("callback_data_starts_with:" <> prefix, fn(update) {
+    case update {
+      update.CallbackQueryUpdate(query:, ..) ->
+        case query.data {
+          Some(data) -> string.starts_with(data, prefix)
+          None -> False
+        }
+      _ -> False
+    }
+  })
+}
+
+/// Evaluate a filter against an update
+fn evaluate_filter(f: Filter, update: Update) -> Bool {
+  case f {
+    Filter(check:, ..) -> check(update)
+    And(left, right) ->
+      evaluate_filter(left, update) && evaluate_filter(right, update)
+    Or(left, right) ->
+      evaluate_filter(left, update) || evaluate_filter(right, update)
+    Not(filter) -> !evaluate_filter(filter, update)
   }
 }
 
@@ -798,6 +1151,7 @@ fn can_handle_update(router: Router(session, error), update: Update) -> Bool {
       || list.any(routes, fn(route) {
         case route {
           CustomRoute(matcher:, ..) -> matcher(update)
+          FilteredRoute(filter:, ..) -> evaluate_filter(filter, update)
           _ -> False
         }
       })
@@ -872,6 +1226,11 @@ pub fn scope(
           CustomRoute(matcher:, handler:) ->
             CustomRoute(
               matcher: fn(update) { predicate(update) && matcher(update) },
+              handler: handler,
+            )
+          FilteredRoute(filter: f, handler:) ->
+            FilteredRoute(
+              filter: and2(filter("scope", predicate), f),
               handler: handler,
             )
         }
@@ -1071,6 +1430,7 @@ fn find_matching_route(
               handler(ctx, audio)
             }
             CustomRoute(handler:, ..), _ -> handler
+            FilteredRoute(handler:, ..), _ -> handler
             _, _ -> fn(ctx, _) { Ok(ctx) }
           }
           Some(handler)
@@ -1090,6 +1450,7 @@ fn route_matches(route: Route(session, error), update: Update) -> Bool {
     VoiceRoute(..), update.VoiceUpdate(..) -> True
     AudioRoute(..), update.AudioUpdate(..) -> True
     CustomRoute(matcher:, ..), _ -> matcher(update)
+    FilteredRoute(filter:, ..), _ -> evaluate_filter(filter, update)
     _, _ -> False
   }
 }

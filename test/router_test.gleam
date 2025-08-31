@@ -348,7 +348,10 @@ pub fn middleware_integration_test() {
 }
 
 pub fn fallback_integration_test() {
-  let command_handler = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+  let command_handler = fn(
+    ctx: Context(String, TelegaError),
+    _cmd: update.Command,
+  ) {
     Ok(Context(..ctx, session: "command_handled"))
   }
 
@@ -564,7 +567,10 @@ pub fn router_composition_integration_test() {
 }
 
 pub fn media_handlers_integration_test() {
-  let photo_handler = fn(ctx: Context(String, TelegaError), _photos: List(types.PhotoSize)) {
+  let photo_handler = fn(
+    ctx: Context(String, TelegaError),
+    _photos: List(types.PhotoSize),
+  ) {
     Ok(Context(..ctx, session: "photo"))
   }
 
@@ -621,7 +627,10 @@ pub fn media_handlers_integration_test() {
 }
 
 pub fn recovery_middleware_integration_test() {
-  let failing_handler = fn(_ctx: Context(String, TelegaError), _cmd: update.Command) {
+  let failing_handler = fn(
+    _ctx: Context(String, TelegaError),
+    _cmd: update.Command,
+  ) {
     Error(error.ActorError("expected error"))
   }
 
@@ -1149,4 +1158,385 @@ pub fn merge_composed_with_composed_test() {
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router4_cmd4")
+}
+
+pub fn simple_filter_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(router.is_text(), fn(_ctx, _) {
+      Ok(test_context("text_matched"))
+    })
+    |> router.on_filtered(router.is_command(), fn(_ctx, _) {
+      Ok(test_context("command_matched"))
+    })
+
+  let text_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, text_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("text_matched")
+
+  let cmd_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "start", payload: None, text: "/start"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, cmd_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("command_matched")
+}
+
+pub fn filter_composition_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(router.is_text(), fn(_ctx, _) {
+      Ok(test_context("any_text"))
+    })
+    |> router.on_filtered(
+      router.and2(router.is_text(), router.text_starts_with("Hello")),
+      fn(_ctx, _) { Ok(test_context("hello_matched")) },
+    )
+
+  let hello_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hello World",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, hello_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("hello_matched")
+
+  let other_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Goodbye",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, other_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("any_text")
+}
+
+pub fn filter_or_logic_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(
+      router.or2(router.text_equals("help"), router.command_equals("help")),
+      fn(_ctx, _) { Ok(test_context("help_matched")) },
+    )
+
+  let text_help =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "help",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, text_help)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("help_matched")
+
+  let cmd_help =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "help", payload: None, text: "/help"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, cmd_help)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("help_matched")
+}
+
+pub fn filter_not_logic_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(
+      router.and2(router.is_text(), router.not(router.text_starts_with("/"))),
+      fn(_ctx, _) { Ok(test_context("not_command")) },
+    )
+
+  let text_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, text_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("not_command")
+
+  let cmd_like =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "/start",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, cmd_like)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial")
+}
+
+pub fn filter_user_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(router.from_user(123), fn(_ctx, _) {
+      Ok(test_context("user_123"))
+    })
+    |> router.on_filtered(router.from_users([456, 789]), fn(_ctx, _) {
+      Ok(test_context("special_users"))
+    })
+
+  let user123_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, user123_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("user_123")
+
+  let user456_update =
+    update.TextUpdate(
+      from_id: 456,
+      chat_id: 999,
+      text: "Hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, user456_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("special_users")
+}
+
+pub fn filter_chat_type_test() {
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(router.is_private_chat(), fn(_ctx, _) {
+      Ok(test_context("private_chat"))
+    })
+    |> router.on_filtered(router.is_group_chat(), fn(_ctx, _) {
+      Ok(test_context("group_chat"))
+    })
+
+  let private_msg =
+    types.Message(
+      ..test_message(),
+      chat: types.Chat(
+        id: 456,
+        type_: Some("private"),
+        title: None,
+        username: None,
+        first_name: Some("Test"),
+        last_name: Some("User"),
+        is_forum: None,
+      ),
+    )
+
+  let private_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hello",
+      message: private_msg,
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, private_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("private_chat")
+
+  let group_msg =
+    types.Message(
+      ..test_message(),
+      chat: types.Chat(
+        id: 789,
+        type_: Some("group"),
+        title: Some("Test Group"),
+        username: None,
+        first_name: None,
+        last_name: None,
+        is_forum: None,
+      ),
+    )
+
+  let group_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 789,
+      text: "Hello",
+      message: group_msg,
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, group_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("group_chat")
+}
+
+pub fn custom_filter_test() {
+  let is_long_text =
+    router.filter("long_text", fn(upd) {
+      case upd {
+        update.TextUpdate(text:, ..) -> string.length(text) > 10
+        _ -> False
+      }
+    })
+
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(router.is_text(), fn(_ctx, _) {
+      Ok(test_context("short_text"))
+    })
+    |> router.on_filtered(is_long_text, fn(_ctx, _) {
+      Ok(test_context("long_text"))
+    })
+
+  // Test long text
+  let long_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "This is a very long text message",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, long_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("long_text")
+
+  let short_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "Hi",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, short_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("short_text")
+}
+
+pub fn complex_filter_composition_test() {
+  let admin_ids = [100, 200, 300]
+
+  let test_router =
+    router.new("filter_test")
+    |> router.on_filtered(
+      router.and([
+        router.is_text(),
+        router.from_users(admin_ids),
+        router.text_starts_with("!"),
+        router.is_group_chat(),
+      ]),
+      fn(_ctx, _) { Ok(test_context("admin_group_command")) },
+    )
+
+  let group_msg =
+    types.Message(
+      ..test_message(),
+      chat: types.Chat(
+        id: 789,
+        type_: Some("group"),
+        title: Some("Test Group"),
+        username: None,
+        first_name: None,
+        last_name: None,
+        is_forum: None,
+      ),
+    )
+
+  let admin_update =
+    update.TextUpdate(
+      from_id: 200,
+      chat_id: 789,
+      text: "!ban user123",
+      message: group_msg,
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(test_router, ctx1, admin_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("admin_group_command")
+
+  let non_admin_update =
+    update.TextUpdate(
+      from_id: 999,
+      chat_id: 789,
+      text: "!ban user123",
+      message: group_msg,
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(test_router, ctx2, non_admin_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial")
 }
