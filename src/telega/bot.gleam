@@ -1,6 +1,5 @@
 import gleam/erlang/process.{type Subject}
 import gleam/int
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/order
 import gleam/otp/actor
@@ -33,10 +32,14 @@ pub opaque type Bot(session, error) {
     bot_info: User,
     catch_handler: CatchHandler(session, error),
     session_settings: SessionSettings(session, error),
-    handlers: List(Handler(session, error)),
+    // Store a handler function that encapsulates the router
+    router_handler: RouterHandler(session, error),
     registry: Registry(ChatInstanceMessage(session, error)),
   )
 }
+
+type RouterHandler(session, error) =
+  fn(Context(session, error), Update) -> Result(Context(session, error), error)
 
 pub type BotSubject =
   Subject(BotMessage)
@@ -58,7 +61,7 @@ pub fn start(
   registry registry: Registry(ChatInstanceMessage(session, error)),
   config config: Config,
   bot_info bot_info: User,
-  handlers handlers: List(Handler(session, error)),
+  router_handler router_handler: RouterHandler(session, error),
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
 ) -> Result(Subject(BotMessage), error.TelegaError) {
@@ -70,7 +73,7 @@ pub fn start(
       bot_info:,
       catch_handler:,
       session_settings:,
-      handlers:,
+      router_handler:,
       registry:,
     )
 
@@ -110,13 +113,12 @@ fn handle_update_bot_message(
   reply_with reply_with,
 ) {
   let key = build_session_key(update)
-  let handlers = extract_update_handlers(bot.handlers, update)
 
   case registry.get(bot.registry, key:) {
     Some(chat_subject) -> {
       actor.send(
         chat_subject,
-        HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
+        HandleNewChatInstanceMessage(update:, reply_with:),
       )
       |> Ok
     }
@@ -126,13 +128,11 @@ fn handle_update_bot_message(
         config: bot.config,
         session_settings: bot.session_settings,
         catch_handler: bot.catch_handler,
+        router_handler: bot.router_handler,
       ))
       registry.register(bot.registry, key:, subject:)
 
-      actor.send(
-        subject,
-        HandleNewChatInstanceMessage(update:, handlers:, reply_with:),
-      )
+      actor.send(subject, HandleNewChatInstanceMessage(update:, reply_with:))
       |> Ok
     }
   }
@@ -144,11 +144,7 @@ pub type ChatInstanceSubject(session, error) =
   Subject(ChatInstanceMessage(session, error))
 
 pub opaque type ChatInstanceMessage(session, error) {
-  HandleNewChatInstanceMessage(
-    update: Update,
-    handlers: List(Handler(session, error)),
-    reply_with: Subject(Bool),
-  )
+  HandleNewChatInstanceMessage(update: Update, reply_with: Subject(Bool))
   WaitHandlerChatInstanceMessage(
     handler: Handler(session, error),
     handle_else: Option(Handler(session, error)),
@@ -169,10 +165,11 @@ type ChatInstance(session, error) {
     key: String,
     session: session,
     config: Config,
-    catch_handler: CatchHandler(session, error),
     session_settings: SessionSettings(session, error),
     self: ChatInstanceSubject(session, error),
     continuation: Option(Continuation(session, error)),
+    router_handler: RouterHandler(session, error),
+    catch_handler: CatchHandler(session, error),
   )
 }
 
@@ -183,6 +180,7 @@ fn start_chat_instance(
   config config: Config,
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
+  router_handler router_handler: RouterHandler(session, error),
 ) {
   let session = case session_settings.get_session(key) {
     Ok(Some(session)) -> session
@@ -202,6 +200,7 @@ fn start_chat_instance(
           catch_handler:,
           self: subject,
           continuation: None,
+          router_handler:,
         )
       actor.initialised(chat_instance)
       |> actor.returning(subject)
@@ -217,12 +216,11 @@ fn start_chat_instance(
 
 fn loop_chat_instance(chat: ChatInstance(session, error), message) {
   case message {
-    HandleNewChatInstanceMessage(update:, handlers:, reply_with:) ->
+    HandleNewChatInstanceMessage(update:, reply_with:) ->
       do_handle_new_chat_instance_message(
         context: new_context(chat:, update:),
         chat:,
         update:,
-        handlers:,
         reply_with:,
       )
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
@@ -243,7 +241,6 @@ fn do_handle_new_chat_instance_message(
   context context: Context(session, error),
   chat chat: ChatInstance(session, error),
   update update,
-  handlers handlers,
   reply_with reply_with,
 ) {
   case chat.continuation {
@@ -258,7 +255,6 @@ fn do_handle_new_chat_instance_message(
                 context:,
                 chat: ChatInstance(..chat, continuation: None),
                 update:,
-                handlers:,
                 reply_with:,
               )
             _ ->
@@ -281,12 +277,26 @@ fn do_handle_new_chat_instance_message(
           )
       }
     None ->
-      case
-        loop_handlers(chat:, context:, update:, handlers:, config: chat.config)
-      {
-        Ok(new_session) -> {
-          actor.send(reply_with, True)
-          actor.continue(ChatInstance(..chat, session: new_session))
+      case chat.router_handler(context, update) {
+        Ok(Context(session: new_session, ..)) -> {
+          case chat.session_settings.persist_session(chat.key, new_session) {
+            Ok(persisted_session) -> {
+              actor.send(reply_with, True)
+              actor.continue(ChatInstance(..chat, session: persisted_session))
+            }
+            Error(e) -> {
+              case chat.catch_handler(context, e) {
+                Ok(_) -> {
+                  actor.send(reply_with, False)
+                  actor.continue(chat)
+                }
+                Error(e) -> {
+                  log.error_d("Error in session persistence: ", e)
+                  actor.stop()
+                }
+              }
+            }
+          }
         }
         Error(e) -> {
           case chat.catch_handler(context, e) {
@@ -355,7 +365,6 @@ fn do_handle_continuation(
         Some(handler) ->
           case do_handle(context:, update:, handler:) {
             Some(Ok(Context(session: new_session, ..))) -> {
-              // Persist the new session after handle_else completes
               case
                 chat.session_settings.persist_session(chat.key, new_session)
               {
@@ -480,7 +489,7 @@ pub fn handle_update(bot_subject bot_subject, update update) {
   process.call_forever(bot_subject, HandleUpdateBotMessage(update, _))
 }
 
-// Hears --------------------------------------------------------------------------
+// Handler ------------------------------------------------------------------------
 
 pub type CallbackQueryFilter {
   CallbackQueryFilter(re: Regexp)
@@ -493,17 +502,7 @@ pub type Hears {
   HearRegexes(regexes: List(Regexp))
 }
 
-fn check_hears(text, hear) -> Bool {
-  case hear {
-    HearText(str) -> text == str
-    HearTexts(strings) -> list.contains(strings, text)
-    HearRegex(re) -> regexp.check(re, text)
-    HearRegexes(regexes) -> list.any(regexes, regexp.check(_, text))
-  }
-}
-
-// Handler ------------------------------------------------------------------------
-
+// Handlers used for [conversation API](/docs/conversation)
 pub type Handler(session, error) {
   /// Handle all messages.
   HandleAll(
@@ -576,25 +575,6 @@ pub type Handler(session, error) {
   )
 }
 
-fn extract_update_handlers(handlers, update) {
-  list.filter(handlers, fn(handler) {
-    case handler, update {
-      HandleAll(_), _ -> True
-      HandleText(_), TextUpdate(..) -> True
-      HandleHears(hears: hears, ..), TextUpdate(text: text, ..) ->
-        check_hears(text, hears)
-      HandleCommand(command:, ..), CommandUpdate(command: update_command, ..) ->
-        update_command.command == command
-      HandleCallbackQuery(filter: filter, ..), CallbackQueryUpdate(query:, ..) ->
-        case query.data {
-          Some(data) -> regexp.check(filter.re, data)
-          None -> False
-        }
-      _, _ -> False
-    }
-  })
-}
-
 /// Pass any handler to start waiting
 ///
 /// `or` - calls if there are any other updates
@@ -641,30 +621,5 @@ fn do_handle(context context, update update, handler handler) {
     HandleWebAppData(handler), WebAppUpdate(web_app_data:, ..) ->
       context |> handler(web_app_data) |> Some
     _, _ -> None
-  }
-}
-
-fn loop_handlers(
-  chat chat: ChatInstance(session, error),
-  context context,
-  config config,
-  update update,
-  handlers handlers,
-) {
-  case handlers {
-    [handler, ..rest] ->
-      case do_handle(context:, update:, handler:) {
-        Some(Ok(Context(session: new_session, ..))) ->
-          loop_handlers(
-            chat:,
-            context: Context(..context, session: new_session),
-            handlers: rest,
-            update:,
-            config:,
-          )
-        Some(Error(e)) -> Error(e)
-        None -> loop_handlers(chat:, context:, config:, update:, handlers: rest)
-      }
-    [] -> chat.session_settings.persist_session(chat.key, context.session)
   }
 }

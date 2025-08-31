@@ -35,6 +35,8 @@ pub type TelegaError {
 
   /// General actor error (e.g., from polling)
   ActorError(reason: String)
+
+  RouterError(reason: String)
 }
 
 pub fn to_string(error: TelegaError) -> String {
@@ -55,6 +57,7 @@ pub fn to_string(error: TelegaError) -> String {
     BotHandleUpdateError(reason) -> "Failed to handle update: " <> reason
     UnknownUpdateError(update) -> "Unknown update: " <> string.inspect(update)
     ActorError(reason) -> "Actor error: " <> reason
+    RouterError(reason) -> "Router error: " <> reason
   }
 }
 

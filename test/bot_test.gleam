@@ -215,7 +215,7 @@ pub fn bot_start_test() {
   let assert Ok(registry) = registry.start()
   let config = create_test_config()
   let bot_info = create_test_user()
-  let handlers = []
+  let router_handler = fn(ctx, _update) { Ok(ctx) }
   let session_settings = create_test_session_settings()
   let catch_handler = create_test_catch_handler()
 
@@ -224,7 +224,7 @@ pub fn bot_start_test() {
       registry:,
       config:,
       bot_info:,
-      handlers:,
+      router_handler:,
       session_settings:,
       catch_handler:,
     )
@@ -237,7 +237,7 @@ pub fn bot_handle_update_test() {
   let assert Ok(registry) = registry.start()
   let config = create_test_config()
   let bot_info = create_test_user()
-  let handlers = []
+  let router_handler = fn(ctx, _update) { Ok(ctx) }
   let session_settings = create_test_session_settings()
   let catch_handler = create_test_catch_handler()
 
@@ -246,7 +246,7 @@ pub fn bot_handle_update_test() {
       registry:,
       config:,
       bot_info:,
-      handlers:,
+      router_handler:,
       session_settings:,
       catch_handler:,
     )

@@ -1,31 +1,33 @@
 import telega
 import telega/polling
 import telega/reply
-import telega/update.{CommandUpdate, TextUpdate}
+import telega/router
+import telega/update
 
-fn echo_handler(ctx, update) {
-  use ctx <- telega.log_context(ctx, "echo")
+fn handle_text(ctx, text) {
+  use ctx <- telega.log_context(ctx, "echo_text")
+  let assert Ok(_) = reply.with_text(ctx, text)
+  Ok(ctx)
+}
 
-  case update {
-    TextUpdate(text:, ..) -> {
-      let assert Ok(_) = reply.with_text(ctx, text)
-      Ok(ctx)
-    }
-    CommandUpdate(command:, ..) -> {
-      let assert Ok(_) = reply.with_text(ctx, "Command: " <> command.text)
-      Ok(ctx)
-    }
-    _ -> Ok(ctx)
-  }
+fn handle_command(ctx, command: update.Command) {
+  use ctx <- telega.log_context(ctx, "echo_command")
+  let assert Ok(_) = reply.with_text(ctx, "Command: " <> command.text)
+  Ok(ctx)
 }
 
 pub fn main() {
+  let router =
+    router.new("echo_bot")
+    |> router.on_any_text(handle_text)
+    |> router.on_commands(["start", "help"], handle_command)
+
   let assert Ok(bot) =
     telega.new_for_polling(token: "BOT_TOKEN")
-    |> telega.handle_all(echo_handler)
-    |> telega.init_nil_session()
+    |> telega.with_router(router)
+    |> telega.init_for_polling_nil_session()
 
-  let assert Ok(poller) = polling.init_polling_default(bot)
+  let assert Ok(poller) = polling.start_polling_default(bot)
 
   polling.wait_finish(poller)
 }

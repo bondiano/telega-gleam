@@ -1,5 +1,7 @@
 import gleam/erlang/process
+import gleam/list
 import gleam/option.{None, Some}
+import gleam/result
 import gleeunit/should
 
 import telega/bot
@@ -246,8 +248,28 @@ fn text_update(text: String) -> update.Update {
   )
 }
 
-fn build_test_bot(
+fn handlers_to_router_handler(
   handlers: List(bot.Handler(TestSession, TestError)),
+) -> fn(bot.Context(TestSession, TestError), update.Update) -> Result(bot.Context(TestSession, TestError), TestError) {
+  fn(ctx, upd) {
+    // Find and execute the first matching handler
+    list.find_map(handlers, fn(handler) {
+      case handler, upd {
+        bot.HandleCommand(command:, handler:), update.CommandUpdate(command: cmd, ..) if cmd.command == command -> 
+          Ok(handler(ctx, cmd))
+        bot.HandleText(handler:), update.TextUpdate(text:, ..) ->
+          Ok(handler(ctx, text))
+        bot.HandleAll(handler:), _ ->
+          Ok(handler(ctx, upd))
+        _, _ -> Error(Nil)
+      }
+    })
+    |> result.unwrap(Ok(ctx))
+  }
+}
+
+fn build_test_bot(
+  router_handler: fn(bot.Context(TestSession, TestError), update.Update) -> Result(bot.Context(TestSession, TestError), TestError),
   session_settings: bot.SessionSettings(TestSession, TestError),
 ) -> bot.BotSubject {
   let assert Ok(registry) = registry.start()
@@ -260,7 +282,7 @@ fn build_test_bot(
       registry:,
       config:,
       bot_info:,
-      handlers:,
+      router_handler:,
       session_settings:,
       catch_handler:,
     )
@@ -283,7 +305,7 @@ pub fn basic_conversation_flow_test() {
   ]
 
   let session_settings = create_default_session_settings()
-  let bot_subject = build_test_bot(handlers, session_settings)
+  let bot_subject = build_test_bot(handlers_to_router_handler(handlers), session_settings)
 
   let result1 = bot.handle_update(bot_subject, command_update("setname"))
   result1 |> should.be_true
@@ -327,7 +349,7 @@ pub fn conversation_with_session_persistence_test() {
     }),
   ]
 
-  let bot_subject = build_test_bot(handlers, session_settings)
+  let bot_subject = build_test_bot(handlers_to_router_handler(handlers), session_settings)
 
   let result1 = bot.handle_update(bot_subject, command_update("setname"))
   result1 |> should.be_true
@@ -373,7 +395,7 @@ pub fn conversation_timeout_test() {
   ]
 
   let session_settings = create_default_session_settings()
-  let bot_subject = build_test_bot(handlers, session_settings)
+  let bot_subject = build_test_bot(handlers_to_router_handler(handlers), session_settings)
 
   let result1 = bot.handle_update(bot_subject, command_update("setname"))
   result1 |> should.be_true
@@ -412,7 +434,7 @@ pub fn conversation_with_handle_else_test() {
     }),
   ]
 
-  let bot_subject = build_test_bot(handlers, session_settings)
+  let bot_subject = build_test_bot(handlers_to_router_handler(handlers), session_settings)
 
   let result1 = bot.handle_update(bot_subject, command_update("setname"))
   result1 |> should.be_true

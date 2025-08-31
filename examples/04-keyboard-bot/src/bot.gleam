@@ -15,10 +15,9 @@ import telega/error as telega_error
 import telega/format as fmt
 import telega/keyboard as telega_keyboard
 import telega/model/encoder as telega_model_encoder
-import telega/model/types.{
-  AnswerCallbackQueryParameters, EditMessageTextParameters, Str,
-}
+import telega/model/types.{AnswerCallbackQueryParameters}
 import telega/reply
+import telega/router
 
 import bot/utils
 import language_keyboard
@@ -84,9 +83,16 @@ fn t_change_language_message(language) {
 
 fn t_language_changed_message(language) {
   case language {
-    English -> fmt.bold("✅ Language changed to ") <> fmt.code("English")
-    Russian -> fmt.bold("✅ Язык изменен на ") <> fmt.code("русский")
+    English ->
+      fmt.build()
+      |> fmt.bold_text("✅ Language changed to ")
+      |> fmt.code_text("English")
+    Russian ->
+      fmt.build()
+      |> fmt.bold_text("✅ Язык изменен на ")
+      |> fmt.code_text("русский")
   }
+  |> fmt.to_formatted()
 }
 
 fn t_none_keyboard_message(language) {
@@ -95,16 +101,15 @@ fn t_none_keyboard_message(language) {
       fmt.build()
       |> fmt.spoiler_text("⚠️ ")
       |> fmt.italic_text("Use buttons to change language")
-      |> fmt.to_html()
     Russian ->
       fmt.build()
       |> fmt.spoiler_text("⚠️ ")
       |> fmt.italic_text("Используйте кнопки для смены языка")
-      |> fmt.to_html()
   }
+  |> fmt.to_html()
 }
 
-fn change_languages_keyboard(ctx: BotContext, _) {
+fn change_languages_keyboard(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "change language with keyboard")
 
   let language = ctx.session.language
@@ -122,11 +127,12 @@ fn change_languages_keyboard(ctx: BotContext, _) {
     timeout: None,
   )
   let language = language_keyboard.option_to_language(text)
-  use _ <- try(reply.with_html(ctx, t_language_changed_message(language)))
+  use _ <- try(reply.with_formatted(ctx, t_language_changed_message(language)))
+
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
-fn handle_none_keyboard_message(ctx: BotContext, _) {
+fn handle_none_keyboard_message(ctx: BotContext, _update) {
   use ctx <- telega.log_context(ctx, "change language with none keyboard")
   use _ <- try(reply.with_html(
     ctx,
@@ -135,7 +141,7 @@ fn handle_none_keyboard_message(ctx: BotContext, _) {
   bot.next_session(ctx, LanguageBotSession(ctx.session.language))
 }
 
-fn handle_inline_change_language(ctx: BotContext, _) {
+fn handle_inline_change_language(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "change language inline")
 
   let language = ctx.session.language
@@ -151,7 +157,7 @@ fn handle_inline_change_language(ctx: BotContext, _) {
 
   use ctx, payload, callback_query_id <- telega.wait_callback_query(
     ctx:,
-    filter:,
+    filter: Some(filter),
     or: None,
     timeout: Some(1000),
   )
@@ -175,18 +181,10 @@ fn handle_inline_change_language(ctx: BotContext, _) {
         )
       }),
       taskle.async(fn() {
-        reply.edit_text(
+        reply.edit_text_formatted(
           ctx,
-          EditMessageTextParameters(
-            text: t_language_changed_message(language),
-            message_id: Some(message.message_id),
-            chat_id: Some(Str(ctx.key)),
-            entities: None,
-            inline_message_id: None,
-            link_preview_options: None,
-            parse_mode: None,
-            reply_markup: None,
-          ),
+          message.message_id,
+          t_language_changed_message(language),
         )
       }),
       1000,
@@ -196,7 +194,7 @@ fn handle_inline_change_language(ctx: BotContext, _) {
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
-fn start_command_handler(ctx: BotContext, _) {
+fn start_command_handler(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "start")
   use _ <- try(reply.with_formatted(
     ctx,
@@ -225,11 +223,15 @@ fn build_bot() {
       None,
     )
 
+  let router =
+    router.new("keyboard_bot")
+    |> router.on_command("start", start_command_handler)
+    |> router.on_command("lang", change_languages_keyboard)
+    |> router.on_command("lang_inline", handle_inline_change_language)
+
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.set_api_client(client)
-  |> telega.handle_command("start", start_command_handler)
-  |> telega.handle_command("lang", change_languages_keyboard)
-  |> telega.handle_command("lang_inline", handle_inline_change_language)
+  |> telega.with_router(router)
   |> telega.set_drop_pending_updates(True)
   |> session.attach()
   |> telega.init()

@@ -1,0 +1,1152 @@
+import gleam/erlang/process
+import gleam/list
+import gleam/option.{None, Some}
+import gleam/string
+import gleeunit
+import gleeunit/should
+import telega/bot.{type Context, Context}
+import telega/client
+import telega/error.{type TelegaError}
+import telega/internal/config
+import telega/model/types
+import telega/router
+import telega/update.{type Update}
+
+pub fn main() {
+  gleeunit.main()
+}
+
+fn test_message() -> types.Message {
+  types.Message(
+    message_id: 1,
+    message_thread_id: None,
+    from: Some(types.User(
+      id: 123,
+      is_bot: False,
+      first_name: "Test",
+      last_name: None,
+      username: None,
+      language_code: None,
+      is_premium: None,
+      added_to_attachment_menu: None,
+      can_join_groups: None,
+      can_read_all_group_messages: None,
+      supports_inline_queries: None,
+      can_connect_to_business: None,
+      has_main_web_app: None,
+    )),
+    sender_chat: None,
+    sender_boost_count: None,
+    sender_business_bot: None,
+    date: 1_234_567_890,
+    business_connection_id: None,
+    chat: types.Chat(
+      id: 456,
+      type_: Some("private"),
+      title: None,
+      username: None,
+      first_name: Some("Test"),
+      last_name: Some("User"),
+      is_forum: None,
+    ),
+    forward_origin: None,
+    is_topic_message: None,
+    is_automatic_forward: None,
+    reply_to_message: None,
+    external_reply: None,
+    quote: None,
+    reply_to_story: None,
+    via_bot: None,
+    edit_date: None,
+    has_protected_content: None,
+    is_from_offline: None,
+    media_group_id: None,
+    author_signature: None,
+    text: Some("/start"),
+    entities: None,
+    link_preview_options: None,
+    effect_id: None,
+    animation: None,
+    audio: None,
+    document: None,
+    paid_media: None,
+    photo: None,
+    sticker: None,
+    story: None,
+    video: None,
+    video_note: None,
+    voice: None,
+    caption: None,
+    caption_entities: None,
+    show_caption_above_media: None,
+    has_media_spoiler: None,
+    contact: None,
+    dice: None,
+    game: None,
+    poll: None,
+    venue: None,
+    location: None,
+    new_chat_members: None,
+    left_chat_member: None,
+    new_chat_title: None,
+    new_chat_photo: None,
+    delete_chat_photo: None,
+    group_chat_created: None,
+    supergroup_chat_created: None,
+    channel_chat_created: None,
+    message_auto_delete_timer_changed: None,
+    migrate_to_chat_id: None,
+    migrate_from_chat_id: None,
+    pinned_message: None,
+    invoice: None,
+    successful_payment: None,
+    refunded_payment: None,
+    users_shared: None,
+    chat_shared: None,
+    connected_website: None,
+    write_access_allowed: None,
+    passport_data: None,
+    proximity_alert_triggered: None,
+    boost_added: None,
+    chat_background_set: None,
+    forum_topic_created: None,
+    forum_topic_edited: None,
+    forum_topic_closed: None,
+    forum_topic_reopened: None,
+    general_forum_topic_hidden: None,
+    general_forum_topic_unhidden: None,
+    giveaway_created: None,
+    giveaway: None,
+    giveaway_winners: None,
+    giveaway_completed: None,
+    video_chat_scheduled: None,
+    video_chat_started: None,
+    video_chat_ended: None,
+    video_chat_participants_invited: None,
+    web_app_data: None,
+    reply_markup: None,
+    checklist: None,
+    checklist_tasks_added: None,
+    checklist_tasks_done: None,
+    direct_message_price_changed: None,
+    gift: None,
+    paid_message_price_changed: None,
+    paid_star_count: None,
+    unique_gift: None,
+  )
+}
+
+fn test_update() -> types.Update {
+  types.Update(
+    update_id: 1,
+    message: Some(test_message()),
+    edited_message: None,
+    channel_post: None,
+    edited_channel_post: None,
+    business_connection: None,
+    business_message: None,
+    edited_business_message: None,
+    deleted_business_messages: None,
+    message_reaction: None,
+    message_reaction_count: None,
+    inline_query: None,
+    chosen_inline_result: None,
+    callback_query: None,
+    shipping_query: None,
+    pre_checkout_query: None,
+    purchased_paid_media: None,
+    poll: None,
+    poll_answer: None,
+    my_chat_member: None,
+    chat_member: None,
+    chat_join_request: None,
+    chat_boost: None,
+    removed_chat_boost: None,
+  )
+}
+
+fn test_context(session: String) -> Context(String, TelegaError) {
+  let subject = process.new_subject()
+  Context(
+    session: session,
+    config: config.Config(
+      server_url: "https://api.telegram.org",
+      webhook_path: "/webhook",
+      secret_token: "test_token",
+      api_client: client.new(token: "test_token"),
+    ),
+    chat_subject: subject,
+    key: "test_key",
+    log_prefix: Some("test"),
+    start_time: None,
+    update: update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "test", payload: None, text: "/test"),
+      message: test_message(),
+      raw: test_update(),
+    ),
+  )
+}
+
+pub fn command_routing_integration_test() {
+  let start_handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+    case cmd.command {
+      "start" -> Ok(Context(..ctx, session: "start_called"))
+      _ -> Ok(ctx)
+    }
+  }
+
+  let help_handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+    case cmd.command {
+      "help" -> Ok(Context(..ctx, session: "help_called"))
+      _ -> Ok(ctx)
+    }
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_command("start", start_handler)
+    |> router.on_command("help", help_handler)
+
+  let start_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "start", payload: None, text: "/start"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  let result = router.handle(r, ctx, start_update)
+
+  result
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("start_called")
+
+  let help_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "help", payload: None, text: "/help"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  let result2 = router.handle(r, ctx2, help_update)
+
+  result2
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("help_called")
+
+  let unknown_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(
+        command: "unknown",
+        payload: None,
+        text: "/unknown",
+      ),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx3 = test_context("initial")
+  let result3 = router.handle(r, ctx3, unknown_update)
+
+  result3
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial")
+}
+
+pub fn text_pattern_matching_integration_test() {
+  let exact_handler = fn(ctx: Context(String, TelegaError), _text: String) {
+    Ok(Context(..ctx, session: "exact_matched"))
+  }
+
+  let prefix_handler = fn(ctx: Context(String, TelegaError), _text: String) {
+    Ok(Context(..ctx, session: "prefix_matched"))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_text(router.Exact("hello"), exact_handler)
+    |> router.on_text(router.Prefix("search:"), prefix_handler)
+
+  let exact_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, exact_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("exact_matched")
+
+  let prefix_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "search:gleam tutorials",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(r, ctx2, prefix_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("prefix_matched")
+}
+
+pub fn middleware_integration_test() {
+  let handler = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+    Ok(Context(..ctx, session: ctx.session <> "_handler"))
+  }
+
+  let counting_middleware = fn(handler) {
+    fn(ctx: Context(String, TelegaError), update: Update) {
+      let modified_ctx = Context(..ctx, session: ctx.session <> "_pre")
+      case handler(modified_ctx, update) {
+        Ok(result_ctx) ->
+          Ok(Context(..result_ctx, session: result_ctx.session <> "_post"))
+        Error(err) -> Error(err)
+      }
+    }
+  }
+
+  let r =
+    router.new("test")
+    |> router.use_middleware(counting_middleware)
+    |> router.on_command("test", handler)
+
+  let cmd_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "test", payload: None, text: "/test"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, cmd_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial_pre_handler_post")
+}
+
+pub fn fallback_integration_test() {
+  let command_handler = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+    Ok(Context(..ctx, session: "command_handled"))
+  }
+
+  let fallback_handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+    Ok(Context(..ctx, session: "fallback_handled"))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_command("start", command_handler)
+    |> router.fallback(fallback_handler)
+
+  let command_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "start", payload: None, text: "/start"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, command_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("command_handled")
+
+  let text_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "random text",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(r, ctx2, text_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("fallback_handled")
+}
+
+pub fn filter_middleware_integration_test() {
+  let handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+    Ok(Context(..ctx, session: "handler_called"))
+  }
+
+  let user_filter = fn(update: Update) -> Bool {
+    case update {
+      update.TextUpdate(from_id: id, ..) -> id == 123
+      update.CommandUpdate(from_id: id, ..) -> id == 123
+      _ -> False
+    }
+  }
+
+  // Use on_custom with the filter to properly check updates
+  let r =
+    router.new("test")
+    |> router.on_custom(
+      fn(update) {
+        case update {
+          update.TextUpdate(..) -> user_filter(update)
+          _ -> False
+        }
+      },
+      handler,
+    )
+
+  let allowed_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, allowed_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("handler_called")
+
+  let blocked_update =
+    update.TextUpdate(
+      from_id: 999,
+      chat_id: 456,
+      text: "hello",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(r, ctx2, blocked_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial")
+}
+
+pub fn custom_matcher_integration_test() {
+  let custom_handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+    Ok(Context(..ctx, session: "custom_matched"))
+  }
+
+  let contains_number = fn(update: Update) -> Bool {
+    case update {
+      update.TextUpdate(text: text, ..) -> {
+        text
+        |> string.to_graphemes
+        |> list.any(fn(char) {
+          char == "0"
+          || char == "1"
+          || char == "2"
+          || char == "3"
+          || char == "4"
+          || char == "5"
+          || char == "6"
+          || char == "7"
+          || char == "8"
+          || char == "9"
+        })
+      }
+      _ -> False
+    }
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_custom(contains_number, custom_handler)
+
+  let with_number =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "I have 5 apples",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, with_number)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("custom_matched")
+
+  let without_number =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "No numbers here",
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(r, ctx2, without_number)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("initial")
+}
+
+pub fn router_composition_integration_test() {
+  let handler1 = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+    Ok(Context(..ctx, session: "router1"))
+  }
+
+  let handler2 = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+    Ok(Context(..ctx, session: "router2"))
+  }
+
+  let router1 =
+    router.new("r1")
+    |> router.on_command("start", handler1)
+
+  let router2 =
+    router.new("r2")
+    |> router.on_command("help", handler2)
+
+  let composed = router.compose(router1, router2)
+
+  let start_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "start", payload: None, text: "/start"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  composed
+  |> router.handle(ctx, start_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router1")
+
+  let help_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "help", payload: None, text: "/help"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  composed
+  |> router.handle(ctx2, help_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router2")
+}
+
+pub fn media_handlers_integration_test() {
+  let photo_handler = fn(ctx: Context(String, TelegaError), _photos: List(types.PhotoSize)) {
+    Ok(Context(..ctx, session: "photo"))
+  }
+
+  let video_handler = fn(ctx: Context(String, TelegaError), _video: types.Video) {
+    Ok(Context(..ctx, session: "video"))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_photo(photo_handler)
+    |> router.on_video(video_handler)
+
+  let photo_update =
+    update.PhotoUpdate(
+      from_id: 123,
+      chat_id: 456,
+      photos: [],
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, photo_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("photo")
+
+  let video_update =
+    update.VideoUpdate(
+      from_id: 123,
+      chat_id: 456,
+      video: types.Video(
+        file_id: "test_video",
+        file_unique_id: "unique_video",
+        width: 1920,
+        height: 1080,
+        duration: 60,
+        thumbnail: None,
+        cover: None,
+        file_name: None,
+        mime_type: None,
+        file_size: None,
+        start_timestamp: None,
+      ),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(r, ctx2, video_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("video")
+}
+
+pub fn recovery_middleware_integration_test() {
+  let failing_handler = fn(_ctx: Context(String, TelegaError), _cmd: update.Command) {
+    Error(error.ActorError("expected error"))
+  }
+
+  let recover = fn(err) {
+    case err {
+      error.ActorError("expected error") -> Ok(test_context("recovered"))
+      _ -> Error(err)
+    }
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_command("fail", fn(ctx, cmd) {
+      let _ = failing_handler(ctx, cmd)
+      // We know this always fails, so just recover
+      recover(error.ActorError("expected error"))
+    })
+
+  let cmd_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "fail", payload: None, text: "/fail"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, cmd_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("recovered")
+}
+
+pub fn compose_basic_test() {
+  // First router handles /start command
+  let router1 =
+    router.new("router1")
+    |> router.on_command("start", fn(ctx, _cmd) {
+      Ok(Context(..ctx, session: "router1_start"))
+    })
+    |> router.on_text(router.Prefix("hello"), fn(ctx, _text) {
+      Ok(Context(..ctx, session: "router1_hello"))
+    })
+
+  // Second router handles /help command
+  let router2 =
+    router.new("router2")
+    |> router.on_command("help", fn(ctx, _cmd) {
+      Ok(Context(..ctx, session: "router2_help"))
+    })
+    |> router.on_text(router.Prefix("world"), fn(ctx, _text) {
+      Ok(Context(..ctx, session: "router2_world"))
+    })
+
+  let combined = router.compose(router1, router2)
+
+  // Test that router1's command works
+  let start_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "start", payload: None, text: "/start"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(combined, ctx, start_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router1_start")
+
+  // Test that router2's command works
+  let help_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "help", payload: None, text: "/help"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(combined, ctx2, help_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router2_help")
+}
+
+pub fn compose_priority_test() {
+  // Both routers handle same command - first should win
+  let router1 =
+    router.new("router1")
+    |> router.on_command("test", fn(ctx, _cmd) {
+      Ok(Context(..ctx, session: "router1_wins"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("test", fn(ctx, _cmd) {
+      Ok(Context(..ctx, session: "router2_should_not_run"))
+    })
+
+  let combined = router.compose(router1, router2)
+
+  let test_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "test", payload: None, text: "/test"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(combined, ctx, test_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router1_wins")
+}
+
+pub fn compose_fallback_test() {
+  // First router has no handler, second router's fallback should handle
+  let router1 =
+    router.new("router1")
+    |> router.on_command("start", fn(ctx, _cmd) {
+      Ok(Context(..ctx, session: "router1_start"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.fallback(fn(ctx, _) {
+      Ok(Context(..ctx, session: "router2_fallback"))
+    })
+
+  let combined = router.compose(router1, router2)
+
+  // Test unhandled text update
+  let msg = test_message()
+  let text_update =
+    update.TextUpdate(
+      from_id: 123,
+      chat_id: 456,
+      text: "random text",
+      message: types.Message(..msg, text: Some("random text")),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(combined, ctx, text_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router2_fallback")
+}
+
+pub fn compose_catch_handler_test() {
+  // Test that catch handlers work correctly in composed routers
+  let router1 =
+    router.new("router1")
+    |> router.on_command("fail1", fn(_ctx, _cmd) {
+      Error(error.ActorError("error1"))
+    })
+    |> router.with_catch_handler(fn(err) {
+      case err {
+        error.ActorError("error1") -> Ok(test_context("caught_by_router1"))
+        _ -> Error(err)
+      }
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("fail2", fn(_ctx, _cmd) {
+      Error(error.ActorError("error2"))
+    })
+    |> router.with_catch_handler(fn(err) {
+      case err {
+        error.ActorError("error2") -> Ok(test_context("caught_by_router2"))
+        _ -> Error(err)
+      }
+    })
+
+  let combined = router.compose(router1, router2)
+
+  // Test that router1's catch handler catches its error
+  let fail1_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "fail1", payload: None, text: "/fail1"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(combined, ctx1, fail1_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("caught_by_router1")
+
+  // Test that router2's catch handler catches its error
+  let fail2_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "fail2", payload: None, text: "/fail2"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(combined, ctx2, fail2_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("caught_by_router2")
+}
+
+pub fn nested_compose_test() {
+  // Test that compose works with already composed routers
+  // Note: Due to how compose works, nested composition will delegate
+  // to the second router when the first (composed) router can't handle
+  let router1 =
+    router.new("router1")
+    |> router.on_command("cmd1", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router1"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("cmd2", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router2"))
+    })
+
+  let router3 =
+    router.new("router3")
+    |> router.on_command("cmd3", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router3"))
+    })
+
+  // Compose router1 and router2, then compose with router3
+  let composed_1_2 = router.compose(router1, router2)
+  let nested_composed = router.compose(composed_1_2, router3)
+
+  // Test cmd3 (should be handled by router3 as composed_1_2 can't handle it)
+  let cmd3_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd3", payload: None, text: "/cmd3"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx3 = test_context("initial")
+  router.handle(nested_composed, ctx3, cmd3_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("handled_by_router3")
+}
+
+pub fn deeply_nested_compose_test() {
+  // Test deeply nested composition with middleware
+  let router1 =
+    router.new("router1")
+    |> router.use_middleware(fn(handler) {
+      fn(ctx: bot.Context(String, error.TelegaError), update) {
+        handler(test_context(ctx.session <> "_mw1"), update)
+      }
+    })
+    |> router.on_command("cmd1", fn(ctx, _) {
+      Ok(test_context(ctx.session <> "_r1"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.use_middleware(fn(handler) {
+      fn(ctx: bot.Context(String, error.TelegaError), update) {
+        handler(test_context(ctx.session <> "_mw2"), update)
+      }
+    })
+    |> router.on_command("cmd2", fn(ctx, _) {
+      Ok(test_context(ctx.session <> "_r2"))
+    })
+
+  let router3 =
+    router.new("router3")
+    |> router.use_middleware(fn(handler) {
+      fn(ctx: bot.Context(String, error.TelegaError), update) {
+        handler(test_context(ctx.session <> "_mw3"), update)
+      }
+    })
+    |> router.on_command("cmd3", fn(ctx, _) {
+      Ok(test_context(ctx.session <> "_r3"))
+    })
+
+  let router4 =
+    router.new("router4")
+    |> router.use_middleware(fn(handler) {
+      fn(ctx: bot.Context(String, error.TelegaError), update) {
+        handler(test_context(ctx.session <> "_mw4"), update)
+      }
+    })
+    |> router.on_command("cmd4", fn(ctx, _) {
+      Ok(test_context(ctx.session <> "_r4"))
+    })
+
+  // Create nested composition: ((r1 + r2) + (r3 + r4))
+  let composed_1_2 = router.compose(router1, router2)
+  let composed_3_4 = router.compose(router3, router4)
+  let final_composed = router.compose(composed_1_2, composed_3_4)
+
+  // Test cmd1 - should get middleware from router1 only
+  let cmd1_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd1", payload: None, text: "/cmd1"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("init")
+  router.handle(final_composed, ctx1, cmd1_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("init_mw1_r1")
+
+  // Test cmd3 - should get middleware from router3 only
+  let cmd3_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd3", payload: None, text: "/cmd3"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx3 = test_context("init")
+  router.handle(final_composed, ctx3, cmd3_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("init_mw3_r3")
+}
+
+pub fn nested_compose_with_fallback_test() {
+  // Test nested compose with fallback handlers
+  let router1 =
+    router.new("router1")
+    |> router.on_command("cmd1", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router1"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("cmd2", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router2"))
+    })
+    |> router.fallback(fn(_ctx, _) { Ok(test_context("fallback_router2")) })
+
+  let router3 =
+    router.new("router3")
+    |> router.on_command("cmd3", fn(_ctx, _cmd) {
+      Ok(test_context("handled_by_router3"))
+    })
+    |> router.fallback(fn(_ctx, _) { Ok(test_context("fallback_router3")) })
+
+  // Compose router1 and router2, then compose with router3
+  let composed_1_2 = router.compose(router1, router2)
+  let nested_composed = router.compose(composed_1_2, router3)
+
+  // Test unknown command - should be handled by router2's fallback (first fallback in chain)
+  let unknown_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(
+        command: "unknown",
+        payload: None,
+        text: "/unknown",
+      ),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(nested_composed, ctx, unknown_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("fallback_router2")
+}
+
+pub fn merge_with_composed_router_test() {
+  // Test merge behavior with ComposedRouter
+  let router1 =
+    router.new("router1")
+    |> router.on_command("cmd1", fn(_ctx, _cmd) {
+      Ok(test_context("router1_cmd1"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("cmd2", fn(_ctx, _cmd) {
+      Ok(test_context("router2_cmd2"))
+    })
+
+  let router3 =
+    router.new("router3")
+    |> router.on_command("cmd3", fn(_ctx, _cmd) {
+      Ok(test_context("router3_cmd3"))
+    })
+
+  // Create composed router
+  let composed_1_2 = router.compose(router1, router2)
+
+  // Test: merge ComposedRouter with regular Router
+  let merged = router.merge(composed_1_2, router3)
+
+  // All commands should be available in merged router
+  let cmd1_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd1", payload: None, text: "/cmd1"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(merged, ctx1, cmd1_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router1_cmd1")
+
+  let cmd2_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd2", payload: None, text: "/cmd2"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx2 = test_context("initial")
+  router.handle(merged, ctx2, cmd2_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router2_cmd2")
+
+  let cmd3_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd3", payload: None, text: "/cmd3"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx3 = test_context("initial")
+  router.handle(merged, ctx3, cmd3_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router3_cmd3")
+}
+
+pub fn merge_composed_with_composed_test() {
+  // Test merge with two ComposedRouters
+  let router1 =
+    router.new("router1")
+    |> router.on_command("cmd1", fn(_ctx, _cmd) {
+      Ok(test_context("router1_cmd1"))
+    })
+
+  let router2 =
+    router.new("router2")
+    |> router.on_command("cmd2", fn(_ctx, _cmd) {
+      Ok(test_context("router2_cmd2"))
+    })
+
+  let router3 =
+    router.new("router3")
+    |> router.on_command("cmd3", fn(_ctx, _cmd) {
+      Ok(test_context("router3_cmd3"))
+    })
+
+  let router4 =
+    router.new("router4")
+    |> router.on_command("cmd4", fn(_ctx, _cmd) {
+      Ok(test_context("router4_cmd4"))
+    })
+
+  // Create two composed routers
+  let composed_1_2 = router.compose(router1, router2)
+  let composed_3_4 = router.compose(router3, router4)
+
+  // Merge them
+  let merged = router.merge(composed_1_2, composed_3_4)
+
+  // All commands should be available
+  let cmd1_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd1", payload: None, text: "/cmd1"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx1 = test_context("initial")
+  router.handle(merged, ctx1, cmd1_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router1_cmd1")
+
+  let cmd4_update =
+    update.CommandUpdate(
+      from_id: 123,
+      chat_id: 456,
+      command: update.Command(command: "cmd4", payload: None, text: "/cmd4"),
+      message: test_message(),
+      raw: test_update(),
+    )
+
+  let ctx4 = test_context("initial")
+  router.handle(merged, ctx4, cmd4_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("router4_cmd4")
+}

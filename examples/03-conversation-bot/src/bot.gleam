@@ -14,6 +14,7 @@ import telega/client as telega_client
 import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
+import telega/router
 
 import bot/utils
 
@@ -35,7 +36,7 @@ fn handle_request(bot, req) {
   }
 }
 
-fn set_name_command_handler(ctx, _) {
+fn set_name_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "set_name command")
   use _ <- try(reply.with_text(ctx, "What's your name?"))
 
@@ -45,20 +46,18 @@ fn set_name_command_handler(ctx, _) {
   bot.next_session(ctx, NameBotSession(name: name))
 }
 
-fn get_name_command_handler(ctx: BotContext, _) {
+fn get_name_command_handler(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "get_name command")
   use _ <- try(reply.with_text(ctx, "Your name is: " <> ctx.session.name))
-
   Ok(ctx)
 }
 
-fn start_command_handler(ctx, _) {
+fn start_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "start")
   use _ <- try(reply.with_text(
     ctx,
     "Hello! I'm a Name bot. You can set your name with /set_name command.",
   ))
-
   Ok(ctx)
 }
 
@@ -78,12 +77,16 @@ fn build_bot() {
       None,
     )
 
+  let router =
+    router.new("conversation_bot")
+    |> router.on_command("start", start_command_handler)
+    |> router.on_command("set_name", set_name_command_handler)
+    |> router.on_command("get_name", get_name_command_handler)
+
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
-  |> telega.handle_command("start", start_command_handler)
-  |> telega.handle_command("set_name", set_name_command_handler)
-  |> telega.handle_command("get_name", get_name_command_handler)
+  |> telega.with_router(router)
   |> session.attach
-  |> telega.init
+  |> telega.init()
 }
 
 pub fn main() {

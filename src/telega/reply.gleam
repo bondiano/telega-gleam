@@ -13,9 +13,10 @@ import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
   type FileOrString, type ForwardMessageParameters, type Message,
-  type SendDiceParameters, type SendMessageReplyMarkupParameters, LabeledPrice,
-  SendDiceParameters, SendInvoiceParameters, SendMessageParameters,
-  SendPollParameters, SendStickerParameters, Str,
+  type SendDiceParameters, type SendMessageReplyMarkupParameters,
+  EditMessageTextParameters, LabeledPrice, SendDiceParameters,
+  SendInvoiceParameters, SendMessageParameters, SendPollParameters,
+  SendStickerParameters, Str,
 }
 
 /// Use this method to send text messages.
@@ -268,6 +269,31 @@ pub fn edit_text(
   ctx ctx: Context(session, error),
   parameters parameters: EditMessageTextParameters,
 ) -> Result(Message, error.TelegaError) {
+  api.edit_message_text(ctx.config.api_client, parameters)
+}
+
+/// Use this method to edit formatted text messages.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
+pub fn edit_text_formatted(
+  ctx ctx: Context(session, error),
+  message_id message_id: Int,
+  formatted formatted: FormattedText,
+) -> Result(Message, error.TelegaError) {
+  let #(text, parse_mode) = format.render(formatted)
+
+  let parameters =
+    EditMessageTextParameters(
+      text:,
+      message_id: Some(message_id),
+      parse_mode: Some(format.parse_mode_to_string(parse_mode)),
+      chat_id: Some(Str(ctx.key)),
+      reply_markup: None,
+      entities: None,
+      link_preview_options: None,
+      inline_message_id: None,
+    )
+
   api.edit_message_text(ctx.config.api_client, parameters)
 }
 

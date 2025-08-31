@@ -338,7 +338,7 @@ fn start_polling_internal(
 }
 
 /// Start polling with a Telega bot instance
-pub fn init_polling(
+pub fn start_polling(
   telega: telega.Telega(session, error),
   timeout timeout: Int,
   limit limit: Int,
@@ -359,10 +359,10 @@ pub fn init_polling(
 }
 
 /// Start polling with default configuration
-pub fn init_polling_default(
+pub fn start_polling_default(
   telega: telega.Telega(session, error),
 ) -> Result(Poller, TelegaError) {
-  init_polling(
+  start_polling(
     telega,
     timeout: 30,
     limit: 100,
@@ -372,7 +372,7 @@ pub fn init_polling_default(
 }
 
 /// Start polling with a custom offset
-pub fn init_polling_with_offset(
+pub fn start_polling_with_offset(
   telega: telega.Telega(session, error),
   offset: Int,
   timeout timeout: Int,

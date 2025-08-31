@@ -12,6 +12,7 @@ import telega/client as telega_client
 import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
+import telega/router
 
 import bot/utils
 
@@ -33,20 +34,18 @@ fn handle_request(bot, req) {
   }
 }
 
-fn dice_command_handler(ctx, _) {
+fn dice_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "dice")
   use _ <- try(reply.with_dice(ctx, None))
-
   Ok(ctx)
 }
 
-fn start_command_handler(ctx, _) {
+fn start_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "start")
   use _ <- try(reply.with_text(
     ctx,
     "Hello! I'm a dice bot. You can roll a dice by sending /dice command.",
   ))
-
   Ok(ctx)
 }
 
@@ -67,10 +66,15 @@ fn build_bot() {
       None,
     )
 
+  let router =
+    router.new("commands_bot")
+    |> router.on_command("start", start_command_handler)
+    |> router.on_command("dice", dice_command_handler)
+
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
-  |> telega.handle_command("start", start_command_handler)
-  |> telega.handle_command("dice", dice_command_handler)
-  |> telega.init_nil_session
+  |> telega.with_router(router)
+  |> telega.with_nil_session()
+  |> telega.init()
 }
 
 pub fn main() {
