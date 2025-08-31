@@ -12,11 +12,11 @@ import telega/error
 import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
-  type FileOrString, type ForwardMessageParameters, type Message,
-  type SendDiceParameters, type SendMessageReplyMarkupParameters,
+  type FileOrString, type ForwardMessageParameters, type InputMedia,
+  type Message, type SendDiceParameters, type SendMessageReplyMarkupParameters,
   EditMessageTextParameters, LabeledPrice, SendDiceParameters,
-  SendInvoiceParameters, SendMessageParameters, SendPollParameters,
-  SendStickerParameters, Str,
+  SendInvoiceParameters, SendMediaGroupParameters, SendMessageParameters,
+  SendPollParameters, SendStickerParameters, Str,
 }
 
 /// Use this method to send text messages.
@@ -449,6 +449,46 @@ pub fn with_sticker(
       message_effect_id: None,
       emoji: None,
       reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send a group of photos, videos, documents or audios as an album.
+/// Documents and audio files can be only grouped in an album with messages of the same type.
+///
+/// ## Example
+/// ```gleam
+/// let media_group = media_group.new()
+///   |> media_group.add_photo("https://example.com/photo1.jpg", None)
+///   |> media_group.add_photo("https://example.com/photo2.jpg", Some(
+///     media_group.PhotoOptions(
+///       caption: Some("Second photo"),
+///       parse_mode: Some("Markdown"),
+///       ..media_group.default_photo_options()
+///     )
+///   ))
+///   |> media_group.build()
+///
+/// reply.with_media_group(ctx, media_group)
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
+pub fn with_media_group(
+  ctx ctx: Context(session, error),
+  media media: List(InputMedia),
+) -> Result(Message, error.TelegaError) {
+  api.send_media_group(
+    ctx.config.api_client,
+    parameters: SendMediaGroupParameters(
+      chat_id: Str(ctx.key),
+      media:,
+      business_connection_id: None,
+      message_thread_id: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      reply_parameters: None,
+      allow_paid_broadcast: None,
     ),
   )
 }

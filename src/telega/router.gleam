@@ -210,6 +210,7 @@
 //// - `has_photo()` - Photo messages
 //// - `has_video()` - Video messages
 //// - `has_media()` - Any media (photo, video, audio, voice)
+//// - `is_media_group()` - Media group/album messages
 //// - `is_callback_query()` - Callback button presses
 ////
 //// **Text Content Filters:**
@@ -255,6 +256,7 @@
 //// |> router.on_video(handle_video)
 //// |> router.on_voice(handle_voice_message)
 //// |> router.on_audio(handle_audio_file)
+//// |> router.on_media_group(handle_media_album)
 //// ```
 ////
 //// ### Handler Types
@@ -267,6 +269,7 @@
 //// - `VideoHandler` - Receives video object
 //// - `VoiceHandler` - Receives voice message
 //// - `AudioHandler` - Receives audio file
+//// - `MediaGroupHandler` - Receives media group ID and list of messages
 //// - `Handler` - Generic handler for any update type
 ////
 
@@ -323,6 +326,10 @@ pub type VoiceHandler(session, error) =
 pub type AudioHandler(session, error) =
   fn(Context(session, error), Audio) -> Result(Context(session, error), error)
 
+pub type MediaGroupHandler(session, error) =
+  fn(Context(session, error), String, List(Message)) ->
+    Result(Context(session, error), error)
+
 pub type MessageHandler(session, error) =
   fn(Context(session, error), Message) -> Result(Context(session, error), error)
 
@@ -353,6 +360,7 @@ pub type Route(session, error) {
   VideoRoute(handler: VideoHandler(session, error))
   VoiceRoute(handler: VoiceHandler(session, error))
   AudioRoute(handler: AudioHandler(session, error))
+  MediaGroupRoute(handler: MediaGroupHandler(session, error))
   CustomRoute(matcher: fn(Update) -> Bool, handler: Handler(session, error))
   FilteredRoute(filter: Filter, handler: Handler(session, error))
 }
@@ -495,6 +503,18 @@ pub fn on_audio(
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [AudioRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for media groups (albums of photos/videos)
+pub fn on_media_group(
+  router: Router(session, error),
+  handler: MediaGroupHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MediaGroupRoute(handler:), ..routes])
     ComposedRouter(..) as composed -> composed
   }
 }
@@ -727,6 +747,16 @@ pub fn has_video() -> Filter {
   filter("has_video", fn(update) {
     case update {
       update.VideoUpdate(..) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Filter for media group messages
+pub fn is_media_group() -> Filter {
+  filter("is_media_group", fn(update) {
+    case update {
+      update.MediaGroupUpdate(..) -> True
       _ -> False
     }
   })
@@ -1143,6 +1173,13 @@ fn can_handle_update(router: Router(session, error), update: Update) -> Bool {
               _ -> False
             }
           })
+        update.MediaGroupUpdate(..) ->
+          list.any(routes, fn(route) {
+            case route {
+              MediaGroupRoute(..) -> True
+              _ -> False
+            }
+          })
 
         _ -> False
       }
@@ -1220,6 +1257,13 @@ pub fn scope(
             AudioRoute(handler: fn(ctx, audio) {
               case predicate(ctx.update) {
                 True -> handler(ctx, audio)
+                False -> Ok(ctx)
+              }
+            })
+          MediaGroupRoute(handler:) ->
+            MediaGroupRoute(handler: fn(ctx, media_group_id, messages) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, media_group_id, messages)
                 False -> Ok(ctx)
               }
             })
@@ -1429,6 +1473,9 @@ fn find_matching_route(
             AudioRoute(handler:), update.AudioUpdate(audio:, ..) -> fn(ctx, _) {
               handler(ctx, audio)
             }
+            MediaGroupRoute(handler:),
+              update.MediaGroupUpdate(media_group_id:, messages:, ..)
+            -> fn(ctx, _) { handler(ctx, media_group_id, messages) }
             CustomRoute(handler:, ..), _ -> handler
             FilteredRoute(handler:, ..), _ -> handler
             _, _ -> fn(ctx, _) { Ok(ctx) }
@@ -1449,6 +1496,7 @@ fn route_matches(route: Route(session, error), update: Update) -> Bool {
     VideoRoute(..), update.VideoUpdate(..) -> True
     VoiceRoute(..), update.VoiceUpdate(..) -> True
     AudioRoute(..), update.AudioUpdate(..) -> True
+    MediaGroupRoute(..), update.MediaGroupUpdate(..) -> True
     CustomRoute(matcher:, ..), _ -> matcher(update)
     FilteredRoute(filter:, ..), _ -> evaluate_filter(filter, update)
     _, _ -> False

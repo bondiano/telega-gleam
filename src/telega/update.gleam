@@ -64,6 +64,13 @@ pub type Update {
     message: Message,
     raw: ModelUpdate,
   )
+  MediaGroupUpdate(
+    from_id: Int,
+    chat_id: Int,
+    media_group_id: String,
+    messages: List(Message),
+    raw: ModelUpdate,
+  )
   WebAppUpdate(
     from_id: Int,
     chat_id: Int,
@@ -267,6 +274,13 @@ pub fn to_string(update: Update) -> String {
       "audio " <> audio.file_id <> " from " <> int.to_string(from_id)
     VoiceUpdate(voice:, from_id:, ..) ->
       "voice " <> voice.file_id <> " from " <> int.to_string(from_id)
+    MediaGroupUpdate(media_group_id:, from_id:, messages:, ..) ->
+      "media group "
+      <> media_group_id
+      <> " with "
+      <> int.to_string(list.length(messages))
+      <> " items from "
+      <> int.to_string(from_id)
     WebAppUpdate(web_app_data:, from_id:, ..) ->
       "web app " <> web_app_data.data <> " from " <> int.to_string(from_id)
     CallbackQueryUpdate(query:, from_id:, ..) ->
