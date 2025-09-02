@@ -2,6 +2,7 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
+import telega/file
 import telega/media_group.{DocumentOptions, PhotoOptions, VideoOptions}
 import telega/model/types.{
   InputMediaDocumentInputMedia, InputMediaPhotoInputMedia,
@@ -24,9 +25,9 @@ pub fn new_builder_test() {
 pub fn add_photo_test() {
   let builder =
     media_group.new()
-    |> media_group.add_photo("photo.jpg", None)
+    |> media_group.add_photo(file.from_string("photo.jpg"), None)
     |> media_group.add_photo(
-      "photo2.jpg",
+      file.from_string("photo2.jpg"),
       Some(PhotoOptions(
         caption: Some("Test caption"),
         parse_mode: Some("Markdown"),
@@ -42,7 +43,6 @@ pub fn add_photo_test() {
   |> list.length()
   |> should.equal(2)
 
-  // Check first photo
   case list.first(media) {
     Ok(InputMediaPhotoInputMedia(photo)) -> {
       photo.media |> should.equal("photo.jpg")
@@ -51,7 +51,6 @@ pub fn add_photo_test() {
     _ -> panic as "Expected InputMediaPhotoInputMedia"
   }
 
-  // Check second photo
   case list.drop(media, 1) |> list.first() {
     Ok(InputMediaPhotoInputMedia(photo)) -> {
       photo.media |> should.equal("photo2.jpg")
@@ -65,9 +64,9 @@ pub fn add_photo_test() {
 pub fn add_video_test() {
   let builder =
     media_group.new()
-    |> media_group.add_video("video.mp4", None)
+    |> media_group.add_video(file.from_string("video.mp4"), None)
     |> media_group.add_video(
-      "video2.mp4",
+      file.from_string("video2.mp4"),
       Some(VideoOptions(
         caption: Some("Video caption"),
         parse_mode: Some("HTML"),
@@ -88,7 +87,6 @@ pub fn add_video_test() {
   |> list.length()
   |> should.equal(2)
 
-  // Check second video
   case list.drop(media, 1) |> list.first() {
     Ok(InputMediaVideoInputMedia(video)) -> {
       video.media |> should.equal("video2.mp4")
@@ -105,10 +103,10 @@ pub fn add_video_test() {
 pub fn mixed_media_test() {
   let builder =
     media_group.new()
-    |> media_group.add_photo("photo.jpg", None)
-    |> media_group.add_video("video.mp4", None)
+    |> media_group.add_photo(file.from_string("photo.jpg"), None)
+    |> media_group.add_video(file.from_string("video.mp4"), None)
     |> media_group.add_photo(
-      "photo2.jpg",
+      file.from_string("photo2.jpg"),
       Some(PhotoOptions(
         caption: Some("Last photo"),
         parse_mode: None,
@@ -124,7 +122,6 @@ pub fn mixed_media_test() {
   |> list.length()
   |> should.equal(3)
 
-  // Verify order and types
   case media {
     [
       InputMediaPhotoInputMedia(_),
@@ -140,9 +137,9 @@ pub fn mixed_media_test() {
 pub fn add_document_test() {
   let builder =
     media_group.new()
-    |> media_group.add_document("document.pdf", None)
+    |> media_group.add_document(file.from_string("document.pdf"), None)
     |> media_group.add_document(
-      "document2.pdf",
+      file.from_string("document2.pdf"),
       Some(DocumentOptions(
         caption: Some("Important document"),
         parse_mode: None,
@@ -169,8 +166,8 @@ pub fn add_document_test() {
 }
 
 pub fn helper_functions_test() {
-  // Test photo with caption helper
-  let photo = media_group.photo_with_caption("photo.jpg", "Caption")
+  let photo =
+    media_group.photo_with_caption(file.from_string("photo.jpg"), "Caption")
   case photo {
     InputMediaPhotoInputMedia(p) -> {
       p.media |> should.equal("photo.jpg")
@@ -179,8 +176,11 @@ pub fn helper_functions_test() {
     _ -> panic as "Expected InputMediaPhotoInputMedia"
   }
 
-  // Test video with caption helper
-  let video = media_group.video_with_caption("video.mp4", "Video caption")
+  let video =
+    media_group.video_with_caption(
+      file.from_string("video.mp4"),
+      "Video caption",
+    )
   case video {
     InputMediaVideoInputMedia(v) -> {
       v.media |> should.equal("video.mp4")

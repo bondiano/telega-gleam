@@ -445,13 +445,13 @@ pub fn send_video_note(
   |> map_response(decoder.message_decoder())
 }
 
-/// Use this method to send a group of photos, videos, documents or audio files as an album. Documents and audio files can be only grouped in an album with the first item having a filename. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+/// Use this method to send a group of photos, videos, documents or audio files as an album. Documents and audio files can be only grouped in an album with the first item having a filename. On success, an array of the sent Messages is returned.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
 pub fn send_media_group(
   client client: client.TelegramClient,
   parameters parameters: SendMediaGroupParameters,
-) -> Result(Message, error.TelegaError) {
+) -> Result(List(Message), error.TelegaError) {
   let body_json = encoder.encode_send_media_group_parameters(parameters)
 
   new_post_request(
@@ -460,7 +460,7 @@ pub fn send_media_group(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_decoder())
+  |> map_response(decoder.messages_array_decoder())
 }
 
 /// Use this method to send point on the map. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.

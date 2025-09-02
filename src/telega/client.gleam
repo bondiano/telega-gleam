@@ -115,6 +115,11 @@ pub fn set_tg_api_url(
   TelegramClient(..client, tg_api_url:)
 }
 
+/// Get the bot token from the client
+pub fn get_token(client: TelegramClient) -> String {
+  client.token
+}
+
 pub type RequestQueueConfig {
   RequestQueueConfig(
     rules: List(RequestQueueRule),

@@ -332,7 +332,7 @@ pub fn with_file_link(
   ))
 
   Ok(
-    client.get_api_url(ctx.config.api_client)
+    client.get_api_url(client: ctx.config.api_client)
     <> "/file/bot"
     <> ctx.config.secret_token
     <> "/"
@@ -455,6 +455,7 @@ pub fn with_sticker(
 
 /// Use this method to send a group of photos, videos, documents or audios as an album.
 /// Documents and audio files can be only grouped in an album with messages of the same type.
+/// Returns a list of messages that were sent.
 ///
 /// ## Example
 /// ```gleam
@@ -476,7 +477,7 @@ pub fn with_sticker(
 pub fn with_media_group(
   ctx ctx: Context(session, error),
   media media: List(InputMedia),
-) -> Result(Message, error.TelegaError) {
+) -> Result(List(Message), error.TelegaError) {
   api.send_media_group(
     ctx.config.api_client,
     parameters: SendMediaGroupParameters(

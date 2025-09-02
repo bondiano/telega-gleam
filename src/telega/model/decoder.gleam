@@ -787,6 +787,11 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
   ))
 }
 
+/// Decoder for an array of messages (used by sendMediaGroup)
+pub fn messages_array_decoder() -> decode.Decoder(List(Message)) {
+  decode.list(message_decoder())
+}
+
 pub fn message_decoder() -> decode.Decoder(Message) {
   use message_id <- decode.field("message_id", decode.int)
   use message_thread_id <- decode.optional_field(
