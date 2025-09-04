@@ -279,6 +279,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import telega/bot.{type Context}
+
 import telega/internal/log
 import telega/model/types.{
   type Audio, type Message, type PhotoSize, type Video, type Voice,
