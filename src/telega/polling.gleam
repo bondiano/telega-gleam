@@ -15,10 +15,13 @@ import telega
 import telega/api
 import telega/bot.{type BotSubject}
 import telega/client.{type TelegramClient}
-import telega/error.{type TelegaError}
+import telega/error.{type TelegaError, FetchError}
 import telega/internal/log
 import telega/model/types.{type Update, GetUpdatesParameters}
 import telega/update as update_module
+
+/// Threshold for logging persistent timeout issues
+const persistent_timeout_threshold = 10
 
 /// Internal configuration for the polling system
 type PollingConfig {
@@ -221,13 +224,39 @@ fn handle_polling_message(
           actor.stop()
         }
         False -> {
-          log.error(
-            "Recoverable polling error (consecutive: "
-            <> string.inspect(new_consecutive_errors)
-            <> "): "
-            <> error.to_string(error)
-            <> " - retrying",
-          )
+          // Only log non-timeout errors or persistent timeout issues
+          // Timeouts are normal for long polling when there are no updates
+          let is_timeout = case error {
+            FetchError(msg) ->
+              string.contains(msg, "ResponseTimeout")
+              || string.contains(msg, "Timeout")
+            _ -> False
+          }
+
+          case is_timeout {
+            True -> {
+              // Timeouts are expected in long polling - only log if persistent
+              case new_consecutive_errors > persistent_timeout_threshold {
+                True ->
+                  log.warning(
+                    "Persistent timeout issues detected (count: "
+                    <> string.inspect(new_consecutive_errors)
+                    <> ")",
+                  )
+                False -> Nil
+              }
+            }
+            False -> {
+              // Log actual errors (not timeouts)
+              log.error(
+                "Polling error (consecutive: "
+                <> string.inspect(new_consecutive_errors)
+                <> "): "
+                <> error.to_string(error)
+                <> " - retrying",
+              )
+            }
+          }
 
           // Exponential backoff for retries
           let delay = case new_consecutive_errors {

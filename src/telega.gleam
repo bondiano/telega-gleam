@@ -288,7 +288,24 @@ pub fn init_for_polling(
 ) -> Result(Telega(session, error), error.TelegaError) {
   let api_client = option.unwrap(builder.api_client, builder.config.api_client)
 
-  use bot_info <- result.try(api.get_me(api_client))
+  use bot_info <- result.try(
+    api.get_me(api_client)
+    |> result.map_error(fn(err) {
+      case err {
+        error.TelegramApiError(404, _desc) ->
+          error.TelegramApiError(
+            404,
+            "Bot not found. Please check that your BOT_TOKEN is valid and the bot exists. Get a valid token from @BotFather on Telegram.",
+          )
+        error.TelegramApiError(401, _desc) ->
+          error.TelegramApiError(
+            401,
+            "Unauthorized. Your bot token is invalid. Please get a valid token from @BotFather on Telegram.",
+          )
+        _ -> err
+      }
+    }),
+  )
 
   let session_settings =
     option.to_result(builder.session_settings, error.NoSessionSettingsError)

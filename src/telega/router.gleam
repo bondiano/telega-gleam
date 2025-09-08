@@ -279,6 +279,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import telega/bot.{type Context}
+
 import telega/internal/log
 import telega/model/types.{
   type Audio, type Message, type PhotoSize, type Video, type Voice,
@@ -386,6 +387,11 @@ pub fn on_command(
 ) -> Router(session, error) {
   case router {
     Router(commands:, ..) -> {
+      // Remove leading slash if present for consistency
+      let command_key = case string.starts_with(command, "/") {
+        True -> string.drop_start(command, 1)
+        False -> command
+      }
       let wrapped_handler = fn(ctx, upd) {
         case upd {
           update.CommandUpdate(command: cmd, ..) -> handler(ctx, cmd)
@@ -394,7 +400,7 @@ pub fn on_command(
       }
       Router(
         ..router,
-        commands: dict.insert(commands, command, wrapped_handler),
+        commands: dict.insert(commands, command_key, wrapped_handler),
       )
     }
     ComposedRouter(..) as composed -> composed

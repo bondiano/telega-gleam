@@ -1,10 +1,12 @@
-# Conversation
+# Conversation API
 
-`Conversation` is a powerful tool to build dialogue between the bot and users.
+Low-level conversation API for building interactive message handlers with `wait_*` functions.
+
+> **Looking for structured conversation management?** Check out the [Conversation Flows](./conversation-flows.md) guide for high-level flow modules (`dialog`, `flow`, `persistent_flow`).
 
 ## Introduction
 
-Conversations let you wait for messages. It's built into Telega and leverages BEAM actor system's power to create elegant, sequential conversational flows.
+The Conversation API provides fundamental building blocks for creating handlers that span multiple messages. It's built into Telega and leverages BEAM actor system's power to pause and resume handler execution.
 
 This API was inspired by [grammY's conversations plugin](https://grammy.dev/plugins/conversations), adapted to take advantage of Gleam and BEAM's capabilities.
 
