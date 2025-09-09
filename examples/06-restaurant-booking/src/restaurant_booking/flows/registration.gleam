@@ -11,30 +11,61 @@ import telega/flow
 import telega/keyboard
 import telega/reply
 
+/// Define strongly-typed steps for the registration flow
+pub type RegistrationStep {
+  Welcome
+  CollectName
+  CollectPhone
+  CollectEmail
+  ConfirmRegistration
+}
+
+fn step_to_string(step: RegistrationStep) -> String {
+  case step {
+    Welcome -> "welcome"
+    CollectName -> "collect_name"
+    CollectPhone -> "collect_phone"
+    CollectEmail -> "collect_email"
+    ConfirmRegistration -> "confirm_registration"
+  }
+}
+
+fn string_to_step(name: String) -> Result(RegistrationStep, Nil) {
+  case name {
+    "welcome" -> Ok(Welcome)
+    "collect_name" -> Ok(CollectName)
+    "collect_phone" -> Ok(CollectPhone)
+    "collect_email" -> Ok(CollectEmail)
+    "confirm_registration" -> Ok(ConfirmRegistration)
+    _ -> Error(Nil)
+  }
+}
+
 pub fn create_registration_flow(
   db: pog.Connection,
-) -> flow.PersistentFlow(Nil, String) {
+) -> flow.Flow(RegistrationStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
-  flow.new("registration", "welcome", storage)
-  |> flow.add_step("welcome", fn(ctx, instance) {
+  flow.new("registration", storage, step_to_string, string_to_step)
+  |> flow.add_step(Welcome, fn(ctx, instance) {
     welcome_step(ctx, instance, db)
   })
-  |> flow.add_step("collect_name", collect_name_step)
-  |> flow.add_step("collect_phone", collect_phone_step)
-  |> flow.add_step("collect_email", collect_email_step)
-  |> flow.add_step("confirm_registration", fn(ctx, instance) {
+  |> flow.add_step(CollectName, collect_name_step)
+  |> flow.add_step(CollectPhone, collect_phone_step)
+  |> flow.add_step(CollectEmail, collect_email_step)
+  |> flow.add_step(ConfirmRegistration, fn(ctx, instance) {
     confirm_registration_step(ctx, instance, db)
   })
   |> flow.on_complete(registration_complete)
   |> flow.on_error(registration_error)
+  |> flow.build(initial: Welcome)
 }
 
 pub fn welcome_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   use user_in_db <- result.try(
     sql.get_user(db, instance.user_id, instance.chat_id)
     |> result.map_error(fn(err) {
@@ -52,7 +83,7 @@ This will only take a few minutes.
 Let's start! 👋"
 
   case reply.with_text(ctx, message) {
-    Ok(_) -> flow.next(ctx, instance, "collect_name")
+    Ok(_) -> flow.next(ctx, instance, CollectName)
     Error(_) -> flow.cancel(ctx, instance)
   }
 }
@@ -60,14 +91,13 @@ Let's start! 👋"
 fn collect_name_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "name") {
     Some(name) -> {
       case string.length(name) >= 2 {
         True -> {
-          let instance =
-            flow.store_scene_data(instance, "collected_name", name)
-          flow.next(ctx, instance, "collect_phone")
+          let instance = flow.store_scene_data(instance, "collected_name", name)
+          flow.next(ctx, instance, CollectPhone)
         }
         False -> ask_for_name(ctx, instance)
       }
@@ -79,7 +109,7 @@ fn collect_name_step(
 fn ask_for_name(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case reply.with_text(ctx, "Please enter your full name:") {
     Ok(_) -> flow.wait(ctx, instance, "name_input_" <> instance.id)
     Error(_) -> flow.cancel(ctx, instance)
@@ -89,14 +119,14 @@ fn ask_for_name(
 fn collect_phone_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "phone") {
     Some(phone) -> {
       case is_valid_phone(phone) {
         True -> {
           let instance =
             flow.store_scene_data(instance, "collected_phone", phone)
-          flow.next(ctx, instance, "collect_email")
+          flow.next(ctx, instance, CollectEmail)
         }
         False -> ask_for_phone(ctx, instance)
       }
@@ -108,7 +138,7 @@ fn collect_phone_step(
 fn ask_for_phone(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   let message =
     "
 📱 Please provide your phone number:
@@ -126,14 +156,14 @@ Format: +1-555-123-4567 or (555) 123-4567
 fn collect_email_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "email") {
     Some(email) -> {
       let instance = case email |> string.trim |> string.lowercase {
         "skip" -> flow.store_scene_data(instance, "collected_email", "")
         _ -> flow.store_scene_data(instance, "collected_email", email)
       }
-      flow.next(ctx, instance, "confirm_registration")
+      flow.next(ctx, instance, ConfirmRegistration)
     }
     _ -> {
       let message =
@@ -156,7 +186,7 @@ fn confirm_registration_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_callback_bool(instance, "confirmation", "reg_confirm") {
     Some(True) -> save_and_complete(ctx, instance, db)
     Some(False) -> restart_registration(ctx, instance)
@@ -168,7 +198,7 @@ fn save_and_complete(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Error(e) -> {
       let _ = reply.with_text(ctx, "❌ " <> e)
@@ -199,27 +229,27 @@ fn save_and_complete(
 fn restart_registration(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   let _ = reply.with_text(ctx, "Starting over. Please enter your full name:")
-  flow.goto(ctx, flow.clear_scene_data(instance), "collect_name")
+  flow.goto(ctx, flow.clear_scene_data(instance), CollectName)
 }
 
 fn handle_text_response(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "confirmation") {
     None -> ask_for_confirmation(ctx, instance)
     Some(text) -> {
       case parse_edit_command(text) {
-        Some(#(field, prompt)) -> {
+        Some(#(step, prompt)) -> {
           let _ = reply.with_text(ctx, prompt)
           let cleared =
             flow.FlowInstance(
               ..instance,
               scene_data: dict.delete(instance.scene_data, "confirmation"),
             )
-          flow.goto(ctx, cleared, field)
+          flow.goto(ctx, cleared, step)
         }
         None ->
           ask_for_confirmation(
@@ -234,17 +264,18 @@ fn handle_text_response(
   }
 }
 
-fn parse_edit_command(text: String) -> option.Option(#(String, String)) {
+fn parse_edit_command(
+  text: String,
+) -> option.Option(#(RegistrationStep, String)) {
   case string.starts_with(string.lowercase(text), "edit ") {
     False -> None
     True -> {
       case string.drop_start(text, 5) |> string.trim |> string.lowercase {
-        "name" -> Some(#("collect_name", "Please enter your new name:"))
-        "phone" ->
-          Some(#("collect_phone", "Please enter your new phone number:"))
+        "name" -> Some(#(CollectName, "Please enter your new name:"))
+        "phone" -> Some(#(CollectPhone, "Please enter your new phone number:"))
         "email" ->
           Some(#(
-            "collect_email",
+            CollectEmail,
             "Please enter your new email (or type 'skip' to leave it empty):",
           ))
         _ -> None
@@ -256,7 +287,7 @@ fn parse_edit_command(text: String) -> option.Option(#(String, String)) {
 fn ask_for_confirmation(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Ok(reg_data) -> {
       let email_display = case reg_data.email {
@@ -279,13 +310,7 @@ To edit any field, type 'edit name', 'edit phone', or 'edit email'
       case
         reply.with_markup(ctx, message, keyboard.to_inline_markup(keyboard))
       {
-        Ok(_) ->
-          flow.wait_callback(
-            ctx,
-            instance,
-            "confirmation_" <> instance.id,
-            "reg_confirm",
-          )
+        Ok(_) -> flow.wait_callback(ctx, instance, "confirmation")
         Error(_) -> flow.cancel(ctx, instance)
       }
     }
@@ -319,7 +344,7 @@ Use /help for more options
 fn registration_error(
   ctx: Context(Nil, String),
   _instance: flow.FlowInstance,
-  _error: String,
+  _error: option.Option(String),
 ) -> Result(Context(Nil, String), String) {
   let message =
     "❌ Sorry, there was an error with your registration.

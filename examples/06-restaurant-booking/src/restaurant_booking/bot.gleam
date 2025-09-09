@@ -43,13 +43,15 @@ fn create_router(cfg: config.Config, db: pog.Connection) -> Router(Nil, String) 
   let registration_flow = registration.create_registration_flow(db)
   let booking_flow = booking.create_booking_flow(db)
 
+  let flow_registry =
+    flow.new_registry()
+    |> flow.register(flow.OnCommand("/start"), registration_flow)
+    |> flow.register(flow.OnCommand("/book"), booking_flow)
+
   router.new(cfg.restaurant_name <> constants.bot_name_suffix)
-  |> flow.register_flows([
-    #(flow.OnCommand("/start"), registration_flow),
-    #(flow.OnCommand("/book"), booking_flow),
-  ])
   |> router.on_command("/help", handlers.help)
   |> router.on_command("/my_bookings", fn(ctx, cmd) {
     handlers.my_bookings(db, ctx, cmd)
   })
+  |> flow.apply_to_router(flow_registry)
 }

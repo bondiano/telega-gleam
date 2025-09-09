@@ -96,7 +96,7 @@ fn db_rows_to_flow_instances(
 }
 
 /// Create real database storage for flow persistence
-pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage {
+pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage(String) {
   flow.FlowStorage(
     save: fn(instance) {
       // Convert flow state data to JSON

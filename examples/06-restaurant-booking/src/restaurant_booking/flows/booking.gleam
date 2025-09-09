@@ -1,6 +1,6 @@
 import gleam/dict
 import gleam/int
-import gleam/option.{Some}
+import gleam/option
 import gleam/result
 import gleam/string
 import gleam/time/calendar
@@ -13,56 +13,89 @@ import telega/reply
 import restaurant_booking/sql
 import restaurant_booking/util
 
+pub type BookingStep {
+  CheckUser
+  Welcome
+  Date
+  Time
+  Guests
+  Confirm
+}
+
+fn step_to_string(step: BookingStep) -> String {
+  case step {
+    CheckUser -> "check_user"
+    Welcome -> "welcome"
+    Date -> "date"
+    Time -> "time"
+    Guests -> "guests"
+    Confirm -> "confirm"
+  }
+}
+
+fn string_to_step(name: String) -> Result(BookingStep, Nil) {
+  case name {
+    "check_user" -> Ok(CheckUser)
+    "welcome" -> Ok(Welcome)
+    "date" -> Ok(Date)
+    "time" -> Ok(Time)
+    "guests" -> Ok(Guests)
+    "confirm" -> Ok(Confirm)
+    _ -> Error(Nil)
+  }
+}
+
 /// Create simplified booking flow using built-in helpers
 pub fn create_booking_flow(
   db: pog.Connection,
-) -> flow.PersistentFlow(Nil, String) {
+) -> flow.Flow(BookingStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
-  flow.new("booking", "check_user", storage)
-  |> flow.add_step("check_user", fn(ctx, instance) {
+  flow.new("booking", storage, step_to_string, string_to_step)
+  |> flow.add_step(CheckUser, fn(ctx, instance) {
     check_user_registration(db, ctx, instance)
   })
   |> flow.add_step(
-    "welcome",
+    Welcome,
     flow.message_step(
       fn(_) {
         "🍽️ Let's make your reservation at "
         <> util.get_restaurant_name()
         <> "!\n\nI'll help you book the perfect table."
       },
-      Some("date"),
+      option.Some(Date),
     ),
   )
   |> flow.add_step(
-    "date",
+    Date,
     flow.text_step(
       "📅 Enter date (YYYY-MM-DD):\nExample: 2024-12-25",
       "booking_date",
-      "time",
+      Time,
     ),
   )
   |> flow.add_step(
-    "time",
+    Time,
     flow.text_step(
       "🕐 Enter time (HH:MM):\nExample: 19:30\n\nHours: Mon-Thu 17:00-23:00, Fri-Sat 17:00-24:00, Sun 17:00-22:00",
       "booking_time",
-      "guests",
+      Guests,
     ),
   )
   |> flow.add_step(
-    "guests",
-    flow.text_step("👥 How many guests? (1-12)", "guest_count", "confirm"),
+    Guests,
+    flow.text_step("👥 How many guests? (1-12)", "guest_count", Confirm),
   )
-  |> flow.add_step("confirm", fn(ctx, instance) {
+  |> flow.add_step(Confirm, fn(ctx, instance) {
     confirm_and_book_step(db, ctx, instance)
   })
   |> flow.on_error(fn(ctx, _, error) {
-    util.log_error("Booking flow error: " <> error)
+    let error_msg = option.unwrap(error, "Unknown error")
+    util.log_error("Booking flow error: " <> error_msg)
     use _ <- result.try(
       reply.with_text(
         ctx,
-        "❌ Booking error: " <> error <> "\nUse /book to try again.",
+        "❌ Booking error: " <> error_msg <> "\nUse /book to try again.",
       )
       |> result.map_error(fn(err) {
         "Error message failed: " <> string.inspect(err)
@@ -71,6 +104,7 @@ pub fn create_booking_flow(
 
     Ok(ctx)
   })
+  |> flow.build(initial: CheckUser)
 }
 
 /// Check if user is registered before allowing booking
@@ -78,10 +112,10 @@ fn check_user_registration(
   db: pog.Connection,
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(BookingStep, Nil, String) {
   case sql.get_user(db, instance.user_id, instance.chat_id) {
     Ok(pog.Returned(count: _, rows: [_user])) ->
-      flow.next(ctx, instance, "welcome")
+      flow.next(ctx, instance, Welcome)
 
     Ok(pog.Returned(count: _, rows: [])) -> {
       let _ =
@@ -106,7 +140,7 @@ fn confirm_and_book_step(
   db: pog.Connection,
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
-) -> flow.StepResult(Nil, String) {
+) -> flow.StepResult(BookingStep, Nil, String) {
   case extract_booking_data(instance) {
     Ok(booking_data) -> {
       let confirmation = "

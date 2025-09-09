@@ -15,7 +15,7 @@
 ////
 //// - **Dialog**: Simple, immediate interactions within one handler session
 //// - **Flow**: Complex, persistent multi-step processes with external storage
-//// 
+////
 //// Use Dialog for quick interactions, use Flow for complex workflows.
 ////
 //// ## Example
@@ -48,7 +48,6 @@
 ////
 //// - Use `dialog` for simple, immediate interactions
 //// - Use `flow` for multi-step processes with navigation
-//// - Use `persistent_flow` when state must survive restarts
 
 import gleam/int
 import gleam/list
