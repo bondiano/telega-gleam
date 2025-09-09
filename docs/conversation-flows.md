@@ -16,14 +16,7 @@ Each flow is a finite state machine where:
 - **Handlers** define behavior at each state
 - **Transitions** move between states based on user input or logic
 - **State** persists automatically between messages
-
-### Type Safety Through ADTs
-
-Flows leverage Gleam's Algebraic Data Types (ADTs) for compile-time safety:
-
-- Each step is a variant in your ADT
-- Invalid transitions become compilation errors
-- Refactoring is safe - the compiler catches all breaking changes
+- **Typesafe** - each step is a variant in your ADT
 
 ### Persistence and Isolation
 
@@ -36,22 +29,36 @@ Flows leverage Gleam's Algebraic Data Types (ADTs) for compile-time safety:
 
 ### Flow Registry Pattern
 
-```
+```text
 FlowRegistry
 ├── Triggered Flows
 │   ├── Command Triggers (/start, /help)
 │   ├── Callback Triggers (button presses)
 │   └── Pattern Triggers (text matching)
-└── Global Flows
-    └── Callable from any handler via call_flow()
+└── Callable Flows
+    └── Registered flows callable via call_flow(ctx, registry, name, data)
 ```
+
+**Note**: There are no global flows. All flow calls require passing the registry explicitly.
 
 ### Integration Pipeline
 
 1. **Registration Phase**: Flows register with triggers in FlowRegistry
 2. **Router Integration**: Registry applies all flows to the router
-3. **Auto-Resume Setup**: Handlers automatically resume interrupted flows
+3. **Auto-Resume Setup**: Registry-aware handlers automatically resume interrupted flows
 4. **Runtime Execution**: Messages route to active flows or trigger new ones
+
+```gleam
+// Example of registry-based integration
+let flow_registry =
+  flow.new_registry()
+  |> flow.register(flow.OnCommand("/start"), registration_flow)
+  |> flow.register_callable(helper_flow)
+
+let router =
+  router.new("MyBot")
+  |> flow.apply_to_router(flow_registry)
+```
 
 ## Flow Lifecycle
 
@@ -62,7 +69,18 @@ Flows start when triggered by:
 - Commands (`/start`, `/checkout`)
 - Callbacks (inline keyboard buttons)
 - Text patterns
-- Programmatic calls from handlers
+- Programmatic calls from handlers (requires registry)
+
+```gleam
+// Calling a flow from a handler
+fn my_handler(ctx, registry, data) {
+  let initial_data = dict.from_list([
+    #("user_id", "123"),
+    #("action", "checkout")
+  ])
+  flow.call_flow(ctx, registry, "checkout_flow", initial_data)
+}
+```
 
 ### Execution
 
@@ -85,19 +103,19 @@ Flows end through:
 
 ### Flow State Types
 
-**Persistent State** (`state.data`)
+#### Persistent State (`state.data`)
 
 - Survives across all steps
 - Stores collected user data
 - Persists to storage backend
 
-**Scene Data** (`scene_data`)
+#### Scene Data (`scene_data`)
 
 - Temporary per-step storage
 - Cleared on step transition
 - Useful for validation state
 
-**Instance Metadata**
+#### Instance Metadata
 
 - User and chat IDs
 - Current step
@@ -169,7 +187,7 @@ Waits for inline keyboard interaction.
 
 ### Auto-Resume
 
-When a flow is waiting, any matching input automatically resumes it without explicit commands.
+When a flow is waiting, any matching input automatically resumes it without explicit commands. The auto-resume handlers are created by the registry during router integration and have access to all registered flows for resumption.
 
 ## Error Handling
 
@@ -202,6 +220,7 @@ Each handler returns `Result` - errors bubble up to flow error handler.
 3. **Validation Early**: Validate input before state changes
 4. **Clear Navigation**: Users should understand their position
 5. **Graceful Degradation**: Handle errors without data loss
+6. **Explicit Dependencies**: Pass registry where needed, avoid hidden state
 
 ### Implementation Guidelines
 
@@ -211,11 +230,5 @@ Each handler returns `Result` - errors bubble up to flow error handler.
 - Provide clear user feedback at each step
 - Implement timeouts for abandoned flows
 - Clean up completed flow instances
-
-### Performance Considerations
-
-- Flows persist after every step - minimize stored data
-- Use scene_data for temporary state
-- Implement cleanup for old instances
-- Consider pagination for listing operations
-- Profile storage backend for bottlenecks
+- Pass registry explicitly to handlers that need to call flows
+- Use `register_callable` for flows that are only called programmatically

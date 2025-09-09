@@ -187,7 +187,7 @@ fn confirm_registration_step(
   instance: flow.FlowInstance,
   db: pog.Connection,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_callback_bool(instance, "confirmation", "reg_confirm") {
+  case flow.is_callback_passed(instance, "confirmation", "reg_confirm") {
     Some(True) -> save_and_complete(ctx, instance, db)
     Some(False) -> restart_registration(ctx, instance)
     None -> handle_text_response(ctx, instance)

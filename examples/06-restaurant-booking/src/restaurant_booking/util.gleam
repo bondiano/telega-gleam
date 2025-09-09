@@ -60,6 +60,8 @@ fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> flow.FlowInstance {
       current_step: row.current_step,
       data: state_data,
       history: [],
+      flow_stack: [],
+      parallel_state: None,
     ),
     scene_data: scene_data,
     wait_token: row.wait_token,
@@ -86,6 +88,8 @@ fn db_rows_to_flow_instances(
         current_step: row.current_step,
         data: state_data,
         history: [],
+        flow_stack: [],
+        parallel_state: None,
       ),
       scene_data: scene_data,
       wait_token: row.wait_token,
@@ -208,4 +212,101 @@ pub fn get_table_for_guests(guests: Int) -> Int {
     // Large tables 11-13
     _ -> int.random(3) + 11
   }
+}
+
+/// Create a new FlowInstance with minimal required fields
+/// Other fields will be set to sensible defaults
+pub fn create_flow_instance(
+  id: String,
+  flow_name: String, 
+  user_id: Int,
+  chat_id: Int,
+  current_step: String,
+) -> flow.FlowInstance {
+  flow.FlowInstance(
+    id: id,
+    flow_name: flow_name,
+    user_id: user_id,
+    chat_id: chat_id,
+    state: flow.FlowState(
+      current_step: current_step,
+      data: dict.new(),
+      history: [current_step],
+      flow_stack: [],
+      parallel_state: None,
+    ),
+    scene_data: dict.new(),
+    wait_token: None,
+    created_at: unix_timestamp(),
+    updated_at: unix_timestamp(),
+  )
+}
+
+/// Create a FlowInstance with initial data
+pub fn create_flow_instance_with_data(
+  id: String,
+  flow_name: String,
+  user_id: Int,
+  chat_id: Int,
+  current_step: String,
+  initial_data: dict.Dict(String, String),
+) -> flow.FlowInstance {
+  flow.FlowInstance(
+    id: id,
+    flow_name: flow_name,
+    user_id: user_id,
+    chat_id: chat_id,
+    state: flow.FlowState(
+      current_step: current_step,
+      data: initial_data,
+      history: [current_step],
+      flow_stack: [],
+      parallel_state: None,
+    ),
+    scene_data: dict.new(),
+    wait_token: None,
+    created_at: unix_timestamp(),
+    updated_at: unix_timestamp(),
+  )
+}
+
+/// Create a FlowInstance with both initial data and scene data
+pub fn create_full_flow_instance(
+  id: String,
+  flow_name: String,
+  user_id: Int,
+  chat_id: Int,
+  current_step: String,
+  initial_data: dict.Dict(String, String),
+  scene_data: dict.Dict(String, String),
+  wait_token: option.Option(String),
+) -> flow.FlowInstance {
+  flow.FlowInstance(
+    id: id,
+    flow_name: flow_name,
+    user_id: user_id,
+    chat_id: chat_id,
+    state: flow.FlowState(
+      current_step: current_step,
+      data: initial_data,
+      history: [current_step],
+      flow_stack: [],
+      parallel_state: None,
+    ),
+    scene_data: scene_data,
+    wait_token: wait_token,
+    created_at: unix_timestamp(),
+    updated_at: unix_timestamp(),
+  )
+}
+
+/// Generate a flow instance ID based on user, chat, and flow name
+pub fn generate_flow_id(user_id: Int, chat_id: Int, flow_name: String) -> String {
+  flow_name <> "_" <> int.to_string(chat_id) <> "_" <> int.to_string(user_id)
+}
+
+/// Get current unix timestamp
+fn unix_timestamp() -> Int {
+  // Simple timestamp - in real implementation you might want to use proper time functions
+  int.random(1_000_000_000) + 1_640_000_000
 }
