@@ -223,37 +223,486 @@ pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
 
 /// Decode a update from the Telegram API to `Update` instance.
 pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
-  use <- try_decode_callback_query(raw_update)
-  use <- try_decode_channel_post(raw_update)
-  use <- try_decode_edited_message(raw_update)
-  use <- try_decode_business_connection(raw_update)
-  use <- try_decode_business_message(raw_update)
-  use <- try_decode_edited_business_message(raw_update)
-  use <- try_decode_deleted_business_message(raw_update)
-  use <- try_decode_message_reaction(raw_update)
-  use <- try_decode_message_reaction_count(raw_update)
-  use <- try_decode_inline_query(raw_update)
-  use <- try_decode_chosen_inline_result(raw_update)
-  use <- try_decode_shipping_query(raw_update)
-  use <- try_decode_pre_checkout_query(raw_update)
-  use <- try_decode_paid_media_purchase(raw_update)
-  use <- try_decode_poll(raw_update)
-  use <- try_decode_poll_answer(raw_update)
-  use <- try_decode_my_chat_member(raw_update)
-  use <- try_decode_chat_member(raw_update)
-  use <- try_decode_chat_join_request(raw_update)
-  use <- try_decode_removed_chat_boost(raw_update)
+  case
+    raw_update.callback_query,
+    raw_update.channel_post,
+    raw_update.edited_message,
+    raw_update.business_connection,
+    raw_update.business_message,
+    raw_update.edited_business_message,
+    raw_update.deleted_business_messages,
+    raw_update.message_reaction,
+    raw_update.message_reaction_count,
+    raw_update.inline_query,
+    raw_update.chosen_inline_result,
+    raw_update.shipping_query,
+    raw_update.pre_checkout_query,
+    raw_update.purchased_paid_media,
+    raw_update.poll,
+    raw_update.poll_answer,
+    raw_update.my_chat_member,
+    raw_update.chat_member,
+    raw_update.chat_join_request,
+    raw_update.removed_chat_boost,
+    raw_update.message
+  {
+    Some(callback_query),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_callback_query_update(raw_update, callback_query)
+    _,
+      Some(channel_post),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_channel_post_update(raw_update, channel_post)
+    _,
+      _,
+      Some(edited_message),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_edited_message_update(raw_update, edited_message)
+    _,
+      _,
+      _,
+      Some(business_connection),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_business_connection_update(raw_update, business_connection)
+    _,
+      _,
+      _,
+      _,
+      Some(business_message),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_business_message_update(raw_update, business_message)
+    _,
+      _,
+      _,
+      _,
+      _,
+      Some(edited_business_message),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_edited_business_message_update(raw_update, edited_business_message)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(deleted_business_messages),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    ->
+      new_deleted_business_message_update(raw_update, deleted_business_messages)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(message_reaction),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_message_reaction_update(raw_update, message_reaction)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(message_reaction_count),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_message_reaction_count_update(raw_update, message_reaction_count)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(inline_query),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_inline_query_update(raw_update, inline_query)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(chosen_inline_result),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_chosen_inline_result_update(raw_update, chosen_inline_result)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(shipping_query),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_shipping_query_update(raw_update, shipping_query)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(pre_checkout_query),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_pre_checkout_query_update(raw_update, pre_checkout_query)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(purchased_paid_media),
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_paid_media_purchase_update(raw_update, purchased_paid_media)
+    _, _, _, _, _, _, _, _, _, _, _, _, _, _, Some(poll), _, _, _, _, _, _ ->
+      new_poll_update(raw_update, poll)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(poll_answer),
+      _,
+      _,
+      _,
+      _,
+      _
+    -> new_poll_answer_update(raw_update, poll_answer)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(my_chat_member),
+      _,
+      _,
+      _,
+      _
+    -> new_my_chat_member_update(raw_update, my_chat_member)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(chat_member),
+      _,
+      _,
+      _
+    -> new_chat_member_update(raw_update, chat_member)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(chat_join_request),
+      _,
+      _
+    -> new_chat_join_request_update(raw_update, chat_join_request)
+    _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      _,
+      Some(removed_chat_boost),
+      _
+    -> new_removed_chat_boost_update(raw_update, removed_chat_boost)
+    _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, Some(message) ->
+      decode_message_update(raw_update, message)
+    _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, None ->
+      panic as { "Unknown update: " <> string.inspect(raw_update) }
+  }
+}
 
-  use <- try_decode_photo_message(raw_update)
-  use <- try_decode_video_message(raw_update)
-  use <- try_decode_audio_message(raw_update)
-  use <- try_decode_voice_message(raw_update)
-  use <- try_decode_web_app_data(raw_update)
+fn decode_message_update(raw_update: ModelUpdate, message: Message) -> Update {
+  case
+    message.photo,
+    message.video,
+    message.audio,
+    message.voice,
+    message.web_app_data,
+    message.text
+  {
+    Some(photos), _, _, _, _, _ -> new_photo_update(raw_update, message, photos)
+    _, Some(video), _, _, _, _ -> new_video_update(raw_update, message, video)
+    _, _, Some(audio), _, _, _ -> new_audio_update(raw_update, message, audio)
+    _, _, _, Some(voice), _, _ -> new_voice_update(raw_update, message, voice)
+    _, _, _, _, Some(web_app_data), _ ->
+      new_web_app_data_update(raw_update, message, web_app_data)
+    _, _, _, _, _, Some(text) -> decode_text_message(raw_update, message, text)
+    _, _, _, _, _, None -> new_message_update(raw_update, message)
+  }
+}
 
-  // Message is the most common update type, so we decode it last
-  use <- try_decode_message(raw_update)
-
-  panic as { "Unknown update: " <> string.inspect(raw_update) }
+fn decode_text_message(
+  raw_update: ModelUpdate,
+  message: Message,
+  text: String,
+) -> Update {
+  case is_command_update(text, raw_update) {
+    True -> new_command_update(raw_update, message, text)
+    False -> new_text_update(raw_update, message, text)
+  }
 }
 
 pub fn to_string(update: Update) -> String {
@@ -379,117 +828,6 @@ pub fn to_string(update: Update) -> String {
       <> shipping_query.id
       <> " from "
       <> int.to_string(from_id)
-  }
-}
-
-fn try_decode_channel_post(raw: ModelUpdate, on_none) {
-  case raw.channel_post {
-    Some(channel_post) -> new_channel_post_update(raw, channel_post)
-    None -> on_none()
-  }
-}
-
-fn try_decode_callback_query(raw: ModelUpdate, on_none) {
-  case raw.callback_query {
-    Some(callback_query) -> new_callback_query_update(raw, callback_query)
-    None -> on_none()
-  }
-}
-
-// When we receive update with message field
-fn try_decode_message(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.text {
-        Some(text) -> try_decode_text_message(raw, message, text)
-        None -> new_message_update(raw, message)
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_text_message(raw, message, text) {
-  case is_command_update(text, raw) {
-    True -> new_command_update(raw, message, text)
-    False -> new_text_update(raw, message, text)
-  }
-}
-
-fn try_decode_photo_message(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.photo {
-        Some(photos) -> new_photo_update(raw, message, photos)
-        None -> on_none()
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_video_message(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.video {
-        Some(video) -> new_video_update(raw, message, video)
-        None -> on_none()
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_audio_message(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.audio {
-        Some(audio) -> new_audio_update(raw, message, audio)
-        None -> on_none()
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_voice_message(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.voice {
-        Some(voice) -> new_voice_update(raw, message, voice)
-        None -> on_none()
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_web_app_data(raw: ModelUpdate, on_none) {
-  case raw.message {
-    Some(message) ->
-      case message.web_app_data {
-        Some(web_app_data) ->
-          new_web_app_data_update(raw, message, web_app_data)
-        None -> on_none()
-      }
-    None -> on_none()
-  }
-}
-
-fn try_decode_edited_message(raw: ModelUpdate, on_none) {
-  case raw.edited_message {
-    Some(edited_message) -> new_edited_message_update(raw, edited_message)
-    None -> on_none()
-  }
-}
-
-fn try_decode_business_connection(raw: ModelUpdate, on_none) {
-  case raw.business_connection {
-    Some(business_connection) ->
-      new_business_connection_update(raw, business_connection)
-    None -> on_none()
-  }
-}
-
-fn try_decode_business_message(raw: ModelUpdate, on_none) {
-  case raw.business_message {
-    Some(business_message) -> new_business_message_update(raw, business_message)
-    None -> on_none()
   }
 }
 
@@ -696,119 +1034,6 @@ fn extract_command(text: String) -> Command {
           |> Some,
       )
     [] -> Command(text:, command: "", payload: None)
-  }
-}
-
-fn try_decode_edited_business_message(raw: ModelUpdate, on_none) {
-  case raw.edited_business_message {
-    Some(edited_business_message) ->
-      new_edited_business_message_update(raw, edited_business_message)
-    None -> on_none()
-  }
-}
-
-fn try_decode_deleted_business_message(raw: ModelUpdate, on_none) {
-  case raw.deleted_business_messages {
-    Some(deleted_business_messages) ->
-      new_deleted_business_message_update(raw, deleted_business_messages)
-    None -> on_none()
-  }
-}
-
-fn try_decode_message_reaction(raw: ModelUpdate, on_none) {
-  case raw.message_reaction {
-    Some(message_reaction) -> new_message_reaction_update(raw, message_reaction)
-    None -> on_none()
-  }
-}
-
-fn try_decode_message_reaction_count(raw: ModelUpdate, on_none) {
-  case raw.message_reaction_count {
-    Some(message_reaction_count) ->
-      new_message_reaction_count_update(raw, message_reaction_count)
-    None -> on_none()
-  }
-}
-
-fn try_decode_inline_query(raw: ModelUpdate, on_none) {
-  case raw.inline_query {
-    Some(inline_query) -> new_inline_query_update(raw, inline_query)
-    None -> on_none()
-  }
-}
-
-fn try_decode_chosen_inline_result(raw: ModelUpdate, on_none) {
-  case raw.chosen_inline_result {
-    Some(chosen_inline_result) ->
-      new_chosen_inline_result_update(raw, chosen_inline_result)
-    None -> on_none()
-  }
-}
-
-fn try_decode_shipping_query(raw: ModelUpdate, on_none) {
-  case raw.shipping_query {
-    Some(shipping_query) -> new_shipping_query_update(raw, shipping_query)
-    None -> on_none()
-  }
-}
-
-fn try_decode_pre_checkout_query(raw: ModelUpdate, on_none) {
-  case raw.pre_checkout_query {
-    Some(pre_checkout_query) ->
-      new_pre_checkout_query_update(raw, pre_checkout_query)
-    None -> on_none()
-  }
-}
-
-fn try_decode_paid_media_purchase(raw: ModelUpdate, on_none) {
-  case raw.purchased_paid_media {
-    Some(purchased_paid_media) ->
-      new_paid_media_purchase_update(raw, purchased_paid_media)
-    None -> on_none()
-  }
-}
-
-fn try_decode_poll(raw: ModelUpdate, on_none) {
-  case raw.poll {
-    Some(poll) -> new_poll_update(raw, poll)
-    None -> on_none()
-  }
-}
-
-fn try_decode_poll_answer(raw: ModelUpdate, on_none) {
-  case raw.poll_answer {
-    Some(poll_answer) -> new_poll_answer_update(raw, poll_answer)
-    None -> on_none()
-  }
-}
-
-fn try_decode_my_chat_member(raw: ModelUpdate, on_none) {
-  case raw.my_chat_member {
-    Some(my_chat_member) -> new_my_chat_member_update(raw, my_chat_member)
-    None -> on_none()
-  }
-}
-
-fn try_decode_chat_member(raw: ModelUpdate, on_none) {
-  case raw.chat_member {
-    Some(chat_member) -> new_chat_member_update(raw, chat_member)
-    None -> on_none()
-  }
-}
-
-fn try_decode_chat_join_request(raw: ModelUpdate, on_none) {
-  case raw.chat_join_request {
-    Some(chat_join_request) ->
-      new_chat_join_request_update(raw, chat_join_request)
-    None -> on_none()
-  }
-}
-
-fn try_decode_removed_chat_boost(raw: ModelUpdate, on_none) {
-  case raw.removed_chat_boost {
-    Some(removed_chat_boost) ->
-      new_removed_chat_boost_update(raw, removed_chat_boost)
-    None -> on_none()
   }
 }
 
