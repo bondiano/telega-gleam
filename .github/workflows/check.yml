@@ -7,12 +7,6 @@ on:
       - main
   pull_request:
 
-env:
-  # Increase inline size limit to avoid compilation hangs with deeply nested functions
-  # Default is 24, we use 5 to handle Gleam's deeply nested use expressions
-  # See: https://github.com/gleam-lang/gleam/issues/4287
-  ERL_COMPILER_OPTIONS: '[{inline_size, 5}]'
-
 jobs:
   test:
     runs-on: ubuntu-latest
