@@ -11,6 +11,7 @@ import restaurant_booking/config
 import restaurant_booking/constants
 import restaurant_booking/database
 import restaurant_booking/flows/booking
+import restaurant_booking/flows/menu
 import restaurant_booking/flows/registration
 import restaurant_booking/handlers
 import restaurant_booking/util
@@ -42,11 +43,13 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
 fn create_router(cfg: config.Config, db: pog.Connection) -> Router(Nil, String) {
   let registration_flow = registration.create_registration_flow(db)
   let booking_flow = booking.create_booking_flow(db)
+  let menu_flow = menu.create_menu_flow(db)
 
   let flow_registry =
     flow.new_registry()
     |> flow.register(flow.OnCommand("/start"), registration_flow)
     |> flow.register(flow.OnCommand("/book"), booking_flow)
+    |> flow.register(flow.OnCommand("/menu"), menu_flow)
 
   router.new(cfg.restaurant_name <> constants.bot_name_suffix)
   |> router.on_command("/help", handlers.help)

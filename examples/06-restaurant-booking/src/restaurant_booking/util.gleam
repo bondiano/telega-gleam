@@ -218,7 +218,7 @@ pub fn get_table_for_guests(guests: Int) -> Int {
 /// Other fields will be set to sensible defaults
 pub fn create_flow_instance(
   id: String,
-  flow_name: String, 
+  flow_name: String,
   user_id: Int,
   chat_id: Int,
   current_step: String,

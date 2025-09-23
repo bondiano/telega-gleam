@@ -19,7 +19,8 @@ pub fn help(
       "🍽️ Restaurant Booking Bot\n\n"
         <> "Available commands:\n"
         <> "/start - Register or update your profile\n"
-        <> "/book - Make a new reservation\n"
+        <> "/menu - Browse our menu and order food\n"
+        <> "/book - Make a new table reservation\n"
         <> "/my_bookings - View your reservations\n"
         <> "/help - Show this message",
     )
