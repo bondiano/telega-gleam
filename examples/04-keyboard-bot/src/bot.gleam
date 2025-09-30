@@ -95,50 +95,27 @@ fn t_language_changed_message(language) {
   |> fmt.to_formatted()
 }
 
-fn t_none_keyboard_message(language) {
-  case language {
-    English ->
-      fmt.build()
-      |> fmt.spoiler_text("⚠️ ")
-      |> fmt.italic_text("Use buttons to change language")
-    Russian ->
-      fmt.build()
-      |> fmt.spoiler_text("⚠️ ")
-      |> fmt.italic_text("Используйте кнопки для смены языка")
-  }
-  |> fmt.to_html()
-}
-
 fn change_languages_keyboard(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "change language with keyboard")
 
   let language = ctx.session.language
-  let keyboard = language_keyboard.new_keyboard(language)
-  use _ <- try(reply.with_formatted_markup(
-    ctx,
-    t_change_language_message(language),
-    telega_keyboard.to_markup(keyboard),
-  ))
 
-  use _, text <- telega.wait_hears(
+  use ctx, selected_language <- telega.wait_choice(
     ctx:,
-    hears: telega_keyboard.hear(keyboard),
-    or: bot.HandleAll(handle_none_keyboard_message) |> Some,
+    options: [
+      #(language_keyboard.t_russian_button_text(language), Russian),
+      #(language_keyboard.t_english_button_text(language), English),
+    ],
+    or: None,
     timeout: None,
   )
-  let language = language_keyboard.option_to_language(text)
-  use _ <- try(reply.with_formatted(ctx, t_language_changed_message(language)))
 
-  bot.next_session(ctx, LanguageBotSession(language))
-}
-
-fn handle_none_keyboard_message(ctx: BotContext, _update) {
-  use ctx <- telega.log_context(ctx, "change language with none keyboard")
-  use _ <- try(reply.with_html(
+  use _ <- try(reply.with_formatted(
     ctx,
-    t_none_keyboard_message(ctx.session.language),
+    t_language_changed_message(selected_language),
   ))
-  bot.next_session(ctx, LanguageBotSession(ctx.session.language))
+
+  bot.next_session(ctx, LanguageBotSession(selected_language))
 }
 
 fn handle_inline_change_language(ctx: BotContext, _command) {

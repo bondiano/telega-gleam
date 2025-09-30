@@ -189,6 +189,134 @@ Waits for inline keyboard interaction.
 
 When a flow is waiting, any matching input automatically resumes it without explicit commands. The auto-resume handlers are created by the registry during router integration and have access to all registered flows for resumption.
 
+## Parallel Steps (Advanced)
+
+Parallel steps allow users to complete independent tasks in any order. When a flow reaches a parallel step trigger, it spawns multiple concurrent steps that can be completed independently. The flow automatically transitions to the join step when all parallel steps are completed.
+
+### Use Cases
+
+- **Multi-factor verification**: Email, phone, and document verification in any order
+- **KYC onboarding**: Collect multiple documents independently
+- **Survey sections**: Users can fill sections in preferred order
+- **Multi-step authentication**: Complete authentication factors independently
+
+### Basic Usage
+
+```gleam
+pub type VerificationStep {
+  Start
+  EmailVerify
+  PhoneVerify
+  DocumentVerify
+  AllComplete
+}
+
+let kyc_flow =
+  flow.new("kyc_verification", storage, step_to_string, string_to_step)
+  |> flow.add_step(Start, start_handler)
+  |> flow.add_step(EmailVerify, email_verify_handler)
+  |> flow.add_step(PhoneVerify, phone_verify_handler)
+  |> flow.add_step(DocumentVerify, document_verify_handler)
+  |> flow.parallel(
+      from: Start,
+      steps: [EmailVerify, PhoneVerify, DocumentVerify],
+      join: AllComplete,
+    )
+  |> flow.add_step(AllComplete, complete_handler)
+  |> flow.build(initial: Start)
+```
+
+### How It Works
+
+1. User reaches `Start` step
+2. Flow automatically creates parallel state with 3 pending steps
+3. User can complete EmailVerify, PhoneVerify, DocumentVerify in ANY order
+4. Bot tracks progress automatically
+5. When ALL steps complete → automatically transition to AllComplete
+
+### Step Handlers
+
+Each parallel step handler should complete its task and return normally:
+
+```gleam
+fn email_verify_handler(ctx, instance) {
+  use ctx <- reply.with_text(ctx, "Enter your email:")
+
+  use ctx, email <- wait_email(
+    ctx,
+    or: Some(bot.HandleText(fn(ctx, _) {
+      reply.with_text(ctx, "Invalid email")
+    })),
+    timeout: None,
+  )
+
+  // Store result in flow data
+  let updated_data = dict.insert(instance.state.data, "email", email)
+  let updated_instance = flow.update_data(instance, updated_data)
+
+  // Mark this step as complete and continue
+  use ctx <- reply.with_text(ctx, "✅ Email verified!")
+  Ok(#(ctx, flow.Next(PhoneVerify), updated_instance))
+}
+```
+
+### Progress Tracking
+
+Users can check their progress at any time:
+
+```gleam
+fn show_progress_handler(ctx, instance) {
+  case instance.state.parallel_state {
+    Some(parallel) -> {
+      let total = list.length(parallel.pending_steps) + list.length(parallel.completed_steps)
+      let completed = list.length(parallel.completed_steps)
+
+      let message =
+        "Verification progress: "
+        <> int.to_string(completed)
+        <> "/"
+        <> int.to_string(total)
+        <> "\n\nCompleted: "
+        <> string.join(parallel.completed_steps, ", ")
+        <> "\n\nPending: "
+        <> string.join(parallel.pending_steps, ", ")
+
+      reply.with_text(ctx, message)
+    }
+    None -> reply.with_text(ctx, "No active verification")
+  }
+}
+```
+
+### Best Practices
+
+1. **Independence**: Ensure parallel steps don't depend on each other's results
+2. **Clear feedback**: Show users which steps are complete and which remain
+3. **Progress indicators**: Provide visual progress (e.g., "2/3 complete")
+4. **Allow any order**: Don't assume completion order
+5. **Idempotency**: Allow users to redo completed steps if needed
+6. **Timeout handling**: Consider timeouts for abandoned parallel flows
+
+### Deprecated API
+
+The old API `add_parallel_steps()` is deprecated. Use `parallel()` instead:
+
+```gleam
+// ❌ Old (deprecated)
+|> flow.add_parallel_steps(
+    trigger_step: Start,
+    parallel_steps: [EmailVerify, PhoneVerify],
+    join_at: Complete,
+  )
+
+// ✅ New (recommended)
+|> flow.parallel(
+    from: Start,
+    steps: [EmailVerify, PhoneVerify],
+    join: Complete,
+  )
+```
+
 ## Error Handling
 
 ### Step-Level Errors

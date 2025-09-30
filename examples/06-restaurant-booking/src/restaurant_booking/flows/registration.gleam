@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/dict
+import gleam/int
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
@@ -94,12 +95,17 @@ fn collect_name_step(
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "name") {
     Some(name) -> {
-      case string.length(name) >= 2 {
-        True -> {
-          let instance = flow.store_scene_data(instance, "collected_name", name)
+      case validate_name(name) {
+        Ok(valid_name) -> {
+          let instance =
+            flow.store_scene_data(instance, "collected_name", valid_name)
           flow.next(ctx, instance, CollectPhone)
         }
-        False -> ask_for_name(ctx, instance)
+        Error(error_msg) -> {
+          let _ =
+            reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
+          flow.wait(ctx, instance, "name_input_" <> instance.id)
+        }
       }
     }
     None -> ask_for_name(ctx, instance)
@@ -122,13 +128,17 @@ fn collect_phone_step(
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "phone") {
     Some(phone) -> {
-      case is_valid_phone(phone) {
-        True -> {
+      case validate_phone(phone) {
+        Ok(valid_phone) -> {
           let instance =
-            flow.store_scene_data(instance, "collected_phone", phone)
+            flow.store_scene_data(instance, "collected_phone", valid_phone)
           flow.next(ctx, instance, CollectEmail)
         }
-        False -> ask_for_phone(ctx, instance)
+        Error(error_msg) -> {
+          let _ =
+            reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
+          flow.wait(ctx, instance, "phone_input_" <> instance.id)
+        }
       }
     }
     None -> ask_for_phone(ctx, instance)
@@ -159,13 +169,34 @@ fn collect_email_step(
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
   case flow.get_scene_data(instance, "email") {
     Some(email) -> {
-      let instance = case email |> string.trim |> string.lowercase {
-        "skip" -> flow.store_scene_data(instance, "collected_email", "")
-        _ -> flow.store_scene_data(instance, "collected_email", email)
+      let trimmed = string.trim(email)
+      let is_skip = string.lowercase(trimmed) == "skip"
+
+      case is_skip {
+        True -> {
+          let instance = flow.store_scene_data(instance, "collected_email", "")
+          flow.next(ctx, instance, ConfirmRegistration)
+        }
+        False -> {
+          case validate_email(trimmed) {
+            Ok(valid_email) -> {
+              let instance =
+                flow.store_scene_data(instance, "collected_email", valid_email)
+              flow.next(ctx, instance, ConfirmRegistration)
+            }
+            Error(_) -> {
+              let _ =
+                reply.with_text(
+                  ctx,
+                  "❌ Invalid email format. Please try again or type 'skip'.",
+                )
+              flow.wait(ctx, instance, "email_input_" <> instance.id)
+            }
+          }
+        }
       }
-      flow.next(ctx, instance, ConfirmRegistration)
     }
-    _ -> {
+    None -> {
       let message =
         "
 📧 Email address (optional):
@@ -420,16 +451,16 @@ pub fn validate_phone(phone: String) -> Result(String, String) {
     |> string.replace(each: "(", with: "")
     |> string.replace(each: ")", with: "")
 
-  case is_valid_phone(cleaned) {
+  let length = string.length(cleaned)
+  case length >= 10 && length <= 15 {
     True -> Ok(cleaned)
-    False -> Error("Invalid phone number format")
+    False ->
+      Error(
+        "Phone number must be between 10 and 15 digits (got "
+        <> int.to_string(length)
+        <> " digits)",
+      )
   }
-}
-
-fn is_valid_phone(phone: String) -> Bool {
-  // Simple phone validation - just check length
-  let length = string.length(phone)
-  length >= 10 && length <= 15
 }
 
 pub fn validate_email(email: String) -> Result(String, String) {
