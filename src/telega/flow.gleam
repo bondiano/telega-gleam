@@ -388,7 +388,40 @@ pub fn add_multi_conditional(
   )
 }
 
-/// Add parallel step execution
+/// Add parallel step execution (simplified API).
+///
+/// This is the recommended way to add parallel steps to a flow.
+/// When the flow reaches `from` step, it will execute all `steps` in parallel,
+/// and automatically transition to `join` step when all parallel steps complete.
+///
+/// ## Example
+///
+/// ```gleam
+/// flow.new("kyc_verification", storage, to_string, from_string)
+/// |> flow.add_step(Start, start_handler)
+/// |> flow.add_step(EmailVerify, email_handler)
+/// |> flow.add_step(PhoneVerify, phone_handler)
+/// |> flow.add_step(DocumentVerify, document_handler)
+/// |> flow.parallel(
+///     from: Start,
+///     steps: [EmailVerify, PhoneVerify, DocumentVerify],
+///     join: AllComplete,
+///   )
+/// |> flow.add_step(AllComplete, complete_handler)
+/// |> flow.build(initial: Start)
+/// ```
+pub fn parallel(
+  builder: FlowBuilder(step_type, session, error),
+  from from: step_type,
+  steps steps: List(step_type),
+  join join: step_type,
+) -> FlowBuilder(step_type, session, error) {
+  add_parallel_steps(builder, from, steps, join)
+}
+
+/// Add parallel step execution.
+///
+/// @deprecated Use `parallel()` instead for cleaner API.
 pub fn add_parallel_steps(
   builder: FlowBuilder(step_type, session, error),
   trigger_step: step_type,

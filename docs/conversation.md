@@ -2,7 +2,7 @@
 
 Low-level conversation API for building interactive message handlers with `wait_*` functions.
 
-> **Looking for structured conversation management?** Check out the [Conversation Flows](./conversation-flows.md) guide for high-level flow modules (`dialog`, `flow`, `persistent_flow`).
+> **Looking for structured conversation management?** Check out the [Conversation Flows](./conversation-flows.md) guide for high-level flow modules with persistent state.
 
 ## Introduction
 
@@ -25,7 +25,7 @@ With conversations, you can create handlers that span multiple messages:
 ```gleam
 handle_command("name", fn(ctx, _) {
   // First message
-  reply.with_text(ctx, "What's your name?")
+  use ctx <- reply.with_text(ctx, "What's your name?")
 
   // Wait for user's text response
   use ctx, name <- wait_text(ctx, or: None, timeout: None)
@@ -37,58 +37,127 @@ handle_command("name", fn(ctx, _) {
 
 Under the hood, Telega uses the BEAM actor model to pause the execution of your handler at each `wait_*` call, resuming it when the expected message type arrives.
 
-## Using Conversations
+## Available Wait Functions
 
-To start a conversation, you just need to call any of the `wait_*` functions within your handler.
+### Basic Wait Functions
 
-### Available Wait Functions
+- **`wait_any`**: Waits for any update
+- **`wait_command`**: Waits for a specific command
+- **`wait_commands`**: Waits for one of multiple commands
+- **`wait_text`**: Waits for a text message
+- **`wait_hears`**: Waits for text matching a pattern
+- **`wait_message`**: Waits for any message
+- **`wait_callback_query`**: Waits for callback query from inline keyboard
+- **`wait_voice`**: Waits for voice message
+- **`wait_audio`**: Waits for audio message
+- **`wait_video`**: Waits for video message
+- **`wait_photos`**: Waits for photo message
+- **`wait_web_app_data`**: Waits for web app data
 
-All wait functions stop the current handler execution and wait for a specific type of update from the user:
+### Enhanced Wait Functions (Forms API)
 
-- `wait_any`: Waits for any update
-- `wait_command`: Waits for a specific command
-- `wait_commands`: Waits for one of multiple commands
-- `wait_text`: Waits for a text message
-- `wait_hears`: Waits for text matching a pattern
-- `wait_message`: Waits for any message
-- `wait_callback_query`: Waits for callback query from inline keyboard
-- `wait_voice`: Waits for voice message
-- `wait_audio`: Waits for audio message
-- `wait_video`: Waits for video message
-- `wait_photos`: Waits for photo message
-- `wait_web_app_data`: Waits for web app data
+These functions provide built-in validation and error handling:
 
-### Common Parameters
+#### `wait_number` - Validated Number Input
+
+Wait for a number with automatic validation:
+
+```gleam
+use ctx, age <- wait_number(
+  ctx,
+  min: Some(0),
+  max: Some(120),
+  or: Some(bot.HandleText(fn(ctx, invalid) {
+    reply.with_text(ctx, "Please enter valid age (0-120)")
+  })),
+  timeout: None,
+)
+```
+
+**Parameters:**
+- `min`: Optional minimum value
+- `max`: Optional maximum value
+- `or`: Handler for invalid input
+- `timeout`: Optional timeout in milliseconds
+
+#### `wait_email` - Email Validation
+
+Wait for email with regex validation:
+
+```gleam
+use ctx, email <- wait_email(
+  ctx,
+  or: Some(bot.HandleText(fn(ctx, invalid) {
+    reply.with_text(ctx, "Invalid email format. Try again.")
+  })),
+  timeout: None,
+)
+```
+
+**Pattern**: `^[^\s@]+@[^\s@]+\.[^\s@]+$`
+
+#### `wait_choice` - Multiple Choice Selection
+
+Create inline keyboard and wait for user selection:
+
+```gleam
+use ctx, color <- wait_choice(
+  ctx,
+  [
+    #("🔴 Red", Red),
+    #("🔵 Blue", Blue),
+    #("🟢 Green", Green),
+  ],
+  or: None,
+  timeout: None,
+)
+```
+
+**Features:**
+- Automatically creates inline keyboard
+- Maps selection back to typed value
+- Handles invalid selections
+
+#### `wait_for` - Custom Filter
+
+Wait for update matching custom filter:
+
+```gleam
+use ctx, photo_update <- wait_for(
+  ctx,
+  filter: fn(upd) {
+    case upd {
+      update.PhotoUpdate(..) -> True
+      _ -> False
+    }
+  },
+  or: Some(bot.HandleAll(fn(ctx, wrong_update) {
+    reply.with_text(ctx, "Please send a photo")
+  })),
+  timeout: Some(60_000),
+)
+```
+
+## Common Parameters
 
 Each wait function accepts these common parameters:
 
-- `ctx`: The current context
-- `continue`: A function to handle the expected update (e.g., text message, command)
-- `or`: Optional handler for other types of updates (use `Some(handler)` to specify one)
-- `timeout`: Optional timeout in seconds (use `Some(seconds)` to set a timeout)
-
-### Syntax Pattern
-
-Each wait function follows this pattern:
-
-```gleam
-use ctx, data <- wait_*(ctx, or: handler_option, timeout: timeout_option)
-// Continue with the conversation using updated ctx and data
-```
+- **`ctx`**: The current context
+- **`or`**: Optional handler for other types of updates (use `Some(handler)` to specify one)
+- **`timeout`**: Optional timeout in milliseconds (use `Some(ms)` to set a timeout)
+- **`continue`**: A function to handle the expected update
 
 ## Examples
 
-### Basic Usage
-
-Here's a simple name-setting bot:
+### Basic Name Collection
 
 ```gleam
 fn set_name_command_handler(ctx, _) {
   // Ask for a name
-  use _ <- try(reply.with_text(ctx, "What's your name?"))
+  use ctx <- reply.with_text(ctx, "What's your name?")
 
-  // Wait for text response and capture name
-  use ctx, name <- telega.wait_text(ctx, or: None, timeout: None)
+  // Wait for text response
+  use ctx, name <- wait_text(ctx, or: None, timeout: None)
 
   // Confirm and store the name
   use _ <- try(reply.with_text(ctx, "Your name is: " <> name <> " set!"))
@@ -96,35 +165,80 @@ fn set_name_command_handler(ctx, _) {
 }
 ```
 
-### With Fallback Handler
-
-Example with fallback for handling other message types:
+### Registration Form with Validation
 
 ```gleam
-use ctx, text <- telega.wait_hears(
+fn registration_handler(ctx, _cmd) {
+  // Collect age with validation
+  use ctx <- reply.with_text(ctx, "Let's register! What's your age?")
+
+  use ctx, age <- wait_number(
+    ctx,
+    min: Some(13),
+    max: Some(120),
+    or: Some(bot.HandleText(fn(ctx, invalid) {
+      reply.with_text(ctx, "Invalid age. Please enter 13-120")
+    })),
+    timeout: None,
+  )
+
+  // Collect email with validation
+  use ctx <- reply.with_text(ctx, "What's your email?")
+
+  use ctx, email <- wait_email(
+    ctx,
+    or: Some(bot.HandleText(fn(ctx, invalid) {
+      reply.with_text(ctx, "Invalid email. Try again.")
+    })),
+    timeout: None,
+  )
+
+  // Select plan
+  use ctx <- reply.with_text(ctx, "Choose your plan:")
+
+  use ctx, plan <- wait_choice(
+    ctx,
+    [
+      #("🆓 Free", Free),
+      #("💎 Premium", Premium),
+      #("🚀 Enterprise", Enterprise),
+    ],
+    or: None,
+    timeout: None,
+  )
+
+  // Complete
+  reply.with_text(ctx, "Registration complete! Age: "
+    <> int.to_string(age)
+    <> ", Email: " <> email)
+}
+```
+
+### With Fallback Handler
+
+```gleam
+use ctx, text <- wait_hears(
   ctx,
   telega_keyboard.hear(keyboard),
-  or: bot.HandleAll(handle_other_message) |> Some,
+  or: Some(bot.HandleAll(fn(ctx, other_update) {
+    reply.with_text(ctx, "Please use the keyboard buttons")
+  })),
   timeout: None,
 )
 ```
 
-It will wait for a text message or a callback query from the inline keyboard. If the user sends any other message type, it will call `handle_other_message`.
-
 ### With Timeout
 
-Example with a timeout that will cancel the conversation after 1000 seconds:
-
 ```gleam
-use ctx, payload, callback_query_id <- telega.wait_callback_query(
+use ctx, payload, callback_query_id <- wait_callback_query(
   ctx,
-  telega_keyboard.filter_inline_keyboard_query(keyboard),
+  filter: telega_keyboard.filter_inline_keyboard_query(keyboard),
   or: None,
-  timeout: Some(1000),
+  timeout: Some(30_000),  // 30 seconds
 )
 ```
 
-Conversation will be stopped after 1000 seconds of waiting for a callback query. And normal handler execution will continue.
+Conversation will be stopped after 30 seconds of waiting for a callback query, and normal handler execution will continue.
 
 ## Advanced Features
 
@@ -139,5 +253,11 @@ Conversation will be stopped after 1000 seconds of waiting for a callback query.
 1. **Keep conversations focused**: Design conversations for specific tasks with clear endpoints
 2. **Handle timeouts**: Consider what happens if a user doesn't respond by setting appropriate timeouts
 3. **Provide fallback handlers**: Use the `or` parameter to handle unexpected message types
-4. **Provide exit commands**: Allow users to exit conversations gracefully
+4. **Provide exit commands**: Allow users to exit conversations gracefully (e.g., `/cancel`)
 5. **Use session storage**: Store conversation state in the session
+6. **Use validation**: Take advantage of `wait_number`, `wait_email`, `wait_choice` for better UX
+7. **Clear error messages**: Provide helpful feedback when validation fails
+
+## Migration from dialog module
+
+The `dialog` module has been removed. See [migration guide](./migration-from-dialog.md) for details.

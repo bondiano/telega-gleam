@@ -29,30 +29,6 @@ pub fn new_inline_keyboard(lang, callback_data) {
   keyboard_result
 }
 
-pub fn new_keyboard(lang) {
-  let keyboard_result = case lang {
-    Russian ->
-      keyboard.builder()
-      |> keyboard.text(t_english_button_text(lang))
-      |> keyboard.build()
-    English ->
-      keyboard.builder()
-      |> keyboard.text(t_russian_button_text(lang))
-      |> keyboard.build()
-  }
-
-  keyboard_result
-  |> keyboard.one_time()
-}
-
-pub fn option_to_language(option) {
-  case option {
-    "🇷🇺 Russian" -> Russian
-    "🇬🇧 Английский" -> English
-    _ -> panic as "Unknown keyboard language"
-  }
-}
-
 pub fn build_keyboard_callback_data() {
   keyboard.new_callback_data(
     id: keyboard_id,
@@ -72,14 +48,14 @@ pub fn build_keyboard_callback_data() {
   )
 }
 
-fn t_russian_button_text(lang) {
+pub fn t_russian_button_text(lang) {
   case lang {
     Russian -> "✅ 🇷🇺 Русский"
     English -> "🇷🇺 Russian"
   }
 }
 
-fn t_english_button_text(lang) {
+pub fn t_english_button_text(lang) {
   case lang {
     Russian -> "🇬🇧 Английский"
     English -> "✅ 🇬🇧 English"
