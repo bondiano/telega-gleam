@@ -265,6 +265,128 @@ pub fn command_routing_integration_test() {
   |> should.equal("initial")
 }
 
+pub fn decode_command_with_args_test() {
+  // Build a message with text "/help foo bar" and a bot_command entity for "/help"
+  let base = test_message()
+  let text = "/help foo bar"
+  let entity =
+    types.MessageEntity(
+      type_: "bot_command",
+      offset: 0,
+      length: 5,
+      // length of "/help"
+      url: None,
+      user: None,
+      language: None,
+      custom_emoji_id: None,
+    )
+
+  let message =
+    types.Message(..base, text: Some(text), entities: Some([entity]))
+
+  let raw =
+    types.Update(
+      update_id: 1,
+      message: Some(message),
+      edited_message: None,
+      channel_post: None,
+      edited_channel_post: None,
+      business_connection: None,
+      business_message: None,
+      edited_business_message: None,
+      deleted_business_messages: None,
+      message_reaction: None,
+      message_reaction_count: None,
+      inline_query: None,
+      chosen_inline_result: None,
+      callback_query: None,
+      shipping_query: None,
+      pre_checkout_query: None,
+      purchased_paid_media: None,
+      poll: None,
+      poll_answer: None,
+      my_chat_member: None,
+      chat_member: None,
+      chat_join_request: None,
+      chat_boost: None,
+      removed_chat_boost: None,
+    )
+
+  let upd = update.raw_to_update(raw)
+
+  case upd {
+    update.CommandUpdate(command: cmd, ..) -> {
+      cmd.command |> should.equal("help")
+      cmd.payload |> should.equal(Some("foo bar"))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn router_command_with_args_test() {
+  let handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+    Ok(Context(..ctx, session: option.unwrap(cmd.payload, "no_payload")))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_command("help", handler)
+
+  // Build same update as above
+  let base = test_message()
+  let text = "/help payload here"
+  let entity =
+    types.MessageEntity(
+      type_: "bot_command",
+      offset: 0,
+      length: 5,
+      url: None,
+      user: None,
+      language: None,
+      custom_emoji_id: None,
+    )
+
+  let message =
+    types.Message(..base, text: Some(text), entities: Some([entity]))
+
+  let raw =
+    types.Update(
+      update_id: 1,
+      message: Some(message),
+      edited_message: None,
+      channel_post: None,
+      edited_channel_post: None,
+      business_connection: None,
+      business_message: None,
+      edited_business_message: None,
+      deleted_business_messages: None,
+      message_reaction: None,
+      message_reaction_count: None,
+      inline_query: None,
+      chosen_inline_result: None,
+      callback_query: None,
+      shipping_query: None,
+      pre_checkout_query: None,
+      purchased_paid_media: None,
+      poll: None,
+      poll_answer: None,
+      my_chat_member: None,
+      chat_member: None,
+      chat_join_request: None,
+      chat_boost: None,
+      removed_chat_boost: None,
+    )
+
+  let upd = update.raw_to_update(raw)
+  let ctx = test_context("initial")
+  let result = router.handle(r, ctx, upd)
+
+  result
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("payload here")
+}
+
 pub fn text_pattern_matching_integration_test() {
   let exact_handler = fn(ctx: Context(String, TelegaError), _text: String) {
     Ok(Context(..ctx, session: "exact_matched"))
