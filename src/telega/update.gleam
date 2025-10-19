@@ -1004,10 +1004,8 @@ fn new_business_message_update(raw: ModelUpdate, business_message: Message) {
   )
 }
 
-fn is_command_entity(text, entity: MessageEntity) {
-  entity.type_ == "bot_command"
-  && entity.offset == 0
-  && entity.length == string.length(text)
+fn is_command_entity(entity: MessageEntity) {
+  entity.type_ == "bot_command" && entity.offset == 0
 }
 
 fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
@@ -1016,7 +1014,7 @@ fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
   case raw_update.message {
     Some(message) ->
       case message.entities {
-        Some(entities) -> list.any(entities, is_command_entity(text, _))
+        Some(entities) -> list.any(entities, is_command_entity)
         None -> False
       }
     None -> False
