@@ -257,7 +257,3 @@ Conversation will be stopped after 30 seconds of waiting for a callback query, a
 5. **Use session storage**: Store conversation state in the session
 6. **Use validation**: Take advantage of `wait_number`, `wait_email`, `wait_choice` for better UX
 7. **Clear error messages**: Provide helpful feedback when validation fails
-
-## Migration from dialog module
-
-The `dialog` module has been removed. See [migration guide](./migration-from-dialog.md) for details.
