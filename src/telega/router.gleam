@@ -282,7 +282,10 @@ import telega/bot.{type Context}
 
 import telega/internal/log
 import telega/model/types.{
-  type Audio, type Message, type PhotoSize, type Video, type Voice,
+  type Audio, type ChatJoinRequest, type ChatMemberUpdated,
+  type ChosenInlineResult, type InlineQuery, type Message,
+  type MessageReactionUpdated, type PhotoSize, type Poll, type PollAnswer,
+  type PreCheckoutQuery, type ShippingQuery, type Video, type Voice,
 }
 import telega/update.{type Command, type Update}
 
@@ -334,6 +337,41 @@ pub type MediaGroupHandler(session, error) =
 pub type MessageHandler(session, error) =
   fn(Context(session, error), Message) -> Result(Context(session, error), error)
 
+pub type InlineQueryHandler(session, error) =
+  fn(Context(session, error), InlineQuery) ->
+    Result(Context(session, error), error)
+
+pub type ChosenInlineResultHandler(session, error) =
+  fn(Context(session, error), ChosenInlineResult) ->
+    Result(Context(session, error), error)
+
+pub type ShippingQueryHandler(session, error) =
+  fn(Context(session, error), ShippingQuery) ->
+    Result(Context(session, error), error)
+
+pub type PreCheckoutQueryHandler(session, error) =
+  fn(Context(session, error), PreCheckoutQuery) ->
+    Result(Context(session, error), error)
+
+pub type PollHandler(session, error) =
+  fn(Context(session, error), Poll) -> Result(Context(session, error), error)
+
+pub type PollAnswerHandler(session, error) =
+  fn(Context(session, error), PollAnswer) ->
+    Result(Context(session, error), error)
+
+pub type MessageReactionHandler(session, error) =
+  fn(Context(session, error), MessageReactionUpdated) ->
+    Result(Context(session, error), error)
+
+pub type ChatMemberUpdatedHandler(session, error) =
+  fn(Context(session, error), ChatMemberUpdated) ->
+    Result(Context(session, error), error)
+
+pub type ChatJoinRequestHandler(session, error) =
+  fn(Context(session, error), ChatJoinRequest) ->
+    Result(Context(session, error), error)
+
 /// Middleware wraps a handler with additional functionality
 pub type Middleware(session, error) =
   fn(Handler(session, error)) -> Handler(session, error)
@@ -362,6 +400,15 @@ pub type Route(session, error) {
   VoiceRoute(handler: VoiceHandler(session, error))
   AudioRoute(handler: AudioHandler(session, error))
   MediaGroupRoute(handler: MediaGroupHandler(session, error))
+  InlineQueryRoute(handler: InlineQueryHandler(session, error))
+  ChosenInlineResultRoute(handler: ChosenInlineResultHandler(session, error))
+  ShippingQueryRoute(handler: ShippingQueryHandler(session, error))
+  PreCheckoutQueryRoute(handler: PreCheckoutQueryHandler(session, error))
+  PollRoute(handler: PollHandler(session, error))
+  PollAnswerRoute(handler: PollAnswerHandler(session, error))
+  MessageReactionRoute(handler: MessageReactionHandler(session, error))
+  ChatMemberUpdatedRoute(handler: ChatMemberUpdatedHandler(session, error))
+  ChatJoinRequestRoute(handler: ChatJoinRequestHandler(session, error))
   CustomRoute(matcher: fn(Update) -> Bool, handler: Handler(session, error))
   FilteredRoute(filter: Filter, handler: Handler(session, error))
 }
@@ -521,6 +568,114 @@ pub fn on_media_group(
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MediaGroupRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for inline queries
+pub fn on_inline_query(
+  router: Router(session, error),
+  handler: InlineQueryHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [InlineQueryRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for chosen inline results
+pub fn on_chosen_inline_result(
+  router: Router(session, error),
+  handler: ChosenInlineResultHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [ChosenInlineResultRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for shipping queries (payments)
+pub fn on_shipping_query(
+  router: Router(session, error),
+  handler: ShippingQueryHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [ShippingQueryRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for pre-checkout queries (payments)
+pub fn on_pre_checkout_query(
+  router: Router(session, error),
+  handler: PreCheckoutQueryHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [PreCheckoutQueryRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for poll updates
+pub fn on_poll(
+  router: Router(session, error),
+  handler: PollHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [PollRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for poll answer updates
+pub fn on_poll_answer(
+  router: Router(session, error),
+  handler: PollAnswerHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [PollAnswerRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for message reactions
+pub fn on_reaction(
+  router: Router(session, error),
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MessageReactionRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for chat member updates
+pub fn on_chat_member_updated(
+  router: Router(session, error),
+  handler: ChatMemberUpdatedHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [ChatMemberUpdatedRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for chat join requests
+pub fn on_chat_join_request(
+  router: Router(session, error),
+  handler: ChatJoinRequestHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [ChatJoinRequestRoute(handler:), ..routes])
     ComposedRouter(..) as composed -> composed
   }
 }
@@ -1273,6 +1428,69 @@ pub fn scope(
                 False -> Ok(ctx)
               }
             })
+          InlineQueryRoute(handler:) ->
+            InlineQueryRoute(handler: fn(ctx, inline_query) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, inline_query)
+                False -> Ok(ctx)
+              }
+            })
+          ChosenInlineResultRoute(handler:) ->
+            ChosenInlineResultRoute(handler: fn(ctx, chosen_inline_result) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, chosen_inline_result)
+                False -> Ok(ctx)
+              }
+            })
+          ShippingQueryRoute(handler:) ->
+            ShippingQueryRoute(handler: fn(ctx, shipping_query) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, shipping_query)
+                False -> Ok(ctx)
+              }
+            })
+          PreCheckoutQueryRoute(handler:) ->
+            PreCheckoutQueryRoute(handler: fn(ctx, pre_checkout_query) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, pre_checkout_query)
+                False -> Ok(ctx)
+              }
+            })
+          PollRoute(handler:) ->
+            PollRoute(handler: fn(ctx, poll) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, poll)
+                False -> Ok(ctx)
+              }
+            })
+          PollAnswerRoute(handler:) ->
+            PollAnswerRoute(handler: fn(ctx, poll_answer) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, poll_answer)
+                False -> Ok(ctx)
+              }
+            })
+          MessageReactionRoute(handler:) ->
+            MessageReactionRoute(handler: fn(ctx, message_reaction) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, message_reaction)
+                False -> Ok(ctx)
+              }
+            })
+          ChatMemberUpdatedRoute(handler:) ->
+            ChatMemberUpdatedRoute(handler: fn(ctx, chat_member_updated) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, chat_member_updated)
+                False -> Ok(ctx)
+              }
+            })
+          ChatJoinRequestRoute(handler:) ->
+            ChatJoinRequestRoute(handler: fn(ctx, chat_join_request) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, chat_join_request)
+                False -> Ok(ctx)
+              }
+            })
           CustomRoute(matcher:, handler:) ->
             CustomRoute(
               matcher: fn(update) { predicate(update) && matcher(update) },
@@ -1482,6 +1700,32 @@ fn find_matching_route(
             MediaGroupRoute(handler:),
               update.MediaGroupUpdate(media_group_id:, messages:, ..)
             -> fn(ctx, _) { handler(ctx, media_group_id, messages) }
+            InlineQueryRoute(handler:),
+              update.InlineQueryUpdate(inline_query:, ..)
+            -> fn(ctx, _) { handler(ctx, inline_query) }
+            ChosenInlineResultRoute(handler:),
+              update.ChosenInlineResultUpdate(chosen_inline_result:, ..)
+            -> fn(ctx, _) { handler(ctx, chosen_inline_result) }
+            ShippingQueryRoute(handler:),
+              update.ShippingQueryUpdate(shipping_query:, ..)
+            -> fn(ctx, _) { handler(ctx, shipping_query) }
+            PreCheckoutQueryRoute(handler:),
+              update.PreCheckoutQueryUpdate(pre_checkout_query:, ..)
+            -> fn(ctx, _) { handler(ctx, pre_checkout_query) }
+            PollRoute(handler:), update.PollUpdate(poll:, ..) -> fn(ctx, _) {
+              handler(ctx, poll)
+            }
+            PollAnswerRoute(handler:), update.PollAnswerUpdate(poll_answer:, ..)
+            -> fn(ctx, _) { handler(ctx, poll_answer) }
+            MessageReactionRoute(handler:),
+              update.MessageReactionUpdate(message_reaction_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            ChatMemberUpdatedRoute(handler:),
+              update.ChatMemberUpdate(chat_member_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, chat_member_updated) }
+            ChatJoinRequestRoute(handler:),
+              update.ChatJoinRequestUpdate(chat_join_request:, ..)
+            -> fn(ctx, _) { handler(ctx, chat_join_request) }
             CustomRoute(handler:, ..), _ -> handler
             FilteredRoute(handler:, ..), _ -> handler
             _, _ -> fn(ctx, _) { Ok(ctx) }
@@ -1503,6 +1747,15 @@ fn route_matches(route: Route(session, error), update: Update) -> Bool {
     VoiceRoute(..), update.VoiceUpdate(..) -> True
     AudioRoute(..), update.AudioUpdate(..) -> True
     MediaGroupRoute(..), update.MediaGroupUpdate(..) -> True
+    InlineQueryRoute(..), update.InlineQueryUpdate(..) -> True
+    ChosenInlineResultRoute(..), update.ChosenInlineResultUpdate(..) -> True
+    ShippingQueryRoute(..), update.ShippingQueryUpdate(..) -> True
+    PreCheckoutQueryRoute(..), update.PreCheckoutQueryUpdate(..) -> True
+    PollRoute(..), update.PollUpdate(..) -> True
+    PollAnswerRoute(..), update.PollAnswerUpdate(..) -> True
+    MessageReactionRoute(..), update.MessageReactionUpdate(..) -> True
+    ChatMemberUpdatedRoute(..), update.ChatMemberUpdate(..) -> True
+    ChatJoinRequestRoute(..), update.ChatJoinRequestUpdate(..) -> True
     CustomRoute(matcher:, ..), _ -> matcher(update)
     FilteredRoute(filter:, ..), _ -> evaluate_filter(filter, update)
     _, _ -> False

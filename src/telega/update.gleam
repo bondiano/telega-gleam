@@ -8,6 +8,7 @@ import gleam/result
 import gleam/string
 
 import telega/error
+import telega/internal/log
 import telega/model/decoder.{update_decoder}
 import telega/model/types.{
   type Audio, type BusinessConnection, type BusinessMessagesDeleted,
@@ -1144,31 +1145,42 @@ fn new_paid_media_purchase_update(
 }
 
 fn new_poll_update(raw: ModelUpdate, poll: Poll) {
-  PollUpdate(
-    raw:,
-    poll:,
-    // TODO: Polls don't have a direct from_id, we should use the user id from the poll_answer
-    from_id: 0,
-    // TODO: Polls don't have a direct chat_id, we should use the chat id from the poll_answer
-    chat_id: 0,
-  )
+  // Poll objects don't contain chat_id or from_id information.
+  // Poll updates are sent only for polls created by the bot itself.
+  // We use -1 to indicate a system update without specific user/chat context.
+  PollUpdate(raw:, poll:, from_id: -1, chat_id: -1)
 }
 
 fn new_poll_answer_update(raw: ModelUpdate, poll_answer: PollAnswer) {
-  PollAnswerUpdate(
-    raw:,
-    poll_answer:,
-    from_id: case poll_answer.user {
-      Some(user) -> user.id
-      // TODO: check this case
-      None -> 0
-    },
-    chat_id: case poll_answer.voter_chat {
-      Some(chat) -> chat.id
-      // TODO: check this case
-      None -> 0
-    },
-  )
+  // According to Telegram Bot API, either 'user' or 'voter_chat' is always present.
+  // The fallback to 0 should theoretically never happen, but we keep it for safety.
+  let from_id = case poll_answer.user {
+    Some(user) -> user.id
+    None -> {
+      log.warning(
+        "PollAnswer received with neither user nor voter_chat. Poll ID: "
+        <> poll_answer.poll_id,
+      )
+      0
+    }
+  }
+
+  let chat_id = case poll_answer.voter_chat {
+    Some(chat) -> chat.id
+    None ->
+      case poll_answer.user {
+        Some(user) -> user.id
+        None -> {
+          log.warning(
+            "PollAnswer received with neither user nor voter_chat. Poll ID: "
+            <> poll_answer.poll_id,
+          )
+          0
+        }
+      }
+  }
+
+  PollAnswerUpdate(raw:, poll_answer:, from_id:, chat_id:)
 }
 
 fn new_my_chat_member_update(

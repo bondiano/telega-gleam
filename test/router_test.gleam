@@ -1662,3 +1662,498 @@ pub fn complex_filter_composition_test() {
   |> fn(ctx) { ctx.session }
   |> should.equal("initial")
 }
+
+pub fn inline_query_handler_test() {
+  let handler = fn(ctx: Context(String, TelegaError), query: types.InlineQuery) {
+    Ok(Context(..ctx, session: "inline_query:" <> query.query))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_inline_query(handler)
+
+  let inline_query_update =
+    update.InlineQueryUpdate(
+      from_id: 123,
+      chat_id: 123,
+      inline_query: types.InlineQuery(
+        id: "query123",
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        query: "search text",
+        offset: "0",
+        chat_type: None,
+        location: None,
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, inline_query_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("inline_query:search text")
+}
+
+pub fn chosen_inline_result_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    result: types.ChosenInlineResult,
+  ) {
+    Ok(Context(..ctx, session: "chosen:" <> result.result_id))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_chosen_inline_result(handler)
+
+  let chosen_result_update =
+    update.ChosenInlineResultUpdate(
+      from_id: 123,
+      chat_id: 123,
+      chosen_inline_result: types.ChosenInlineResult(
+        result_id: "result456",
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        location: None,
+        inline_message_id: None,
+        query: "test query",
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, chosen_result_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("chosen:result456")
+}
+
+pub fn poll_handler_test() {
+  let handler = fn(ctx: Context(String, TelegaError), poll: types.Poll) {
+    Ok(Context(..ctx, session: "poll:" <> poll.question))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_poll(handler)
+
+  let poll_update =
+    update.PollUpdate(
+      from_id: -1,
+      chat_id: -1,
+      poll: types.Poll(
+        id: "poll123",
+        question: "Do you like Gleam?",
+        question_entities: None,
+        options: [
+          types.PollOption(text: "Yes", text_entities: None, voter_count: 10),
+          types.PollOption(text: "No", text_entities: None, voter_count: 2),
+        ],
+        total_voter_count: 12,
+        is_closed: False,
+        is_anonymous: True,
+        type_: "regular",
+        allows_multiple_answers: False,
+        correct_option_id: None,
+        explanation: None,
+        explanation_entities: None,
+        open_period: None,
+        close_date: None,
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, poll_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("poll:Do you like Gleam?")
+}
+
+pub fn poll_answer_handler_test() {
+  let handler = fn(ctx: Context(String, TelegaError), answer: types.PollAnswer) {
+    Ok(Context(..ctx, session: "poll_answer:" <> answer.poll_id))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_poll_answer(handler)
+
+  let poll_answer_update =
+    update.PollAnswerUpdate(
+      from_id: 123,
+      chat_id: 123,
+      poll_answer: types.PollAnswer(
+        poll_id: "poll123",
+        voter_chat: None,
+        user: Some(types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        )),
+        option_ids: [0],
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, poll_answer_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("poll_answer:poll123")
+}
+
+pub fn shipping_query_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    query: types.ShippingQuery,
+  ) {
+    Ok(Context(..ctx, session: "shipping:" <> query.id))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_shipping_query(handler)
+
+  let shipping_query_update =
+    update.ShippingQueryUpdate(
+      from_id: 123,
+      chat_id: 123,
+      shipping_query: types.ShippingQuery(
+        id: "shipping123",
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        invoice_payload: "test_payload",
+        shipping_address: types.ShippingAddress(
+          country_code: "US",
+          state: "CA",
+          city: "San Francisco",
+          street_line1: "123 Main St",
+          street_line2: "",
+          post_code: "94102",
+        ),
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, shipping_query_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("shipping:shipping123")
+}
+
+pub fn pre_checkout_query_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    query: types.PreCheckoutQuery,
+  ) {
+    Ok(Context(..ctx, session: "checkout:" <> query.id))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_pre_checkout_query(handler)
+
+  let pre_checkout_query_update =
+    update.PreCheckoutQueryUpdate(
+      from_id: 123,
+      chat_id: 123,
+      pre_checkout_query: types.PreCheckoutQuery(
+        id: "checkout123",
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        currency: "USD",
+        total_amount: 1000,
+        invoice_payload: "test_payload",
+        shipping_option_id: None,
+        order_info: None,
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, pre_checkout_query_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("checkout:checkout123")
+}
+
+pub fn message_reaction_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    reaction: types.MessageReactionUpdated,
+  ) {
+    Ok(Context(..ctx, session: "reaction:" <> string.inspect(reaction.chat.id)))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_reaction(handler)
+
+  let reaction_update =
+    update.MessageReactionUpdate(
+      from_id: 123,
+      chat_id: 456,
+      message_reaction_updated: types.MessageReactionUpdated(
+        chat: types.Chat(
+          id: 456,
+          type_: Some("private"),
+          title: None,
+          username: None,
+          first_name: Some("Test"),
+          last_name: None,
+          is_forum: None,
+        ),
+        message_id: 789,
+        user: Some(types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Test",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        )),
+        actor_chat: None,
+        date: 1_234_567_890,
+        old_reaction: [],
+        new_reaction: [],
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, reaction_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("reaction:456")
+}
+
+pub fn chat_member_updated_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    member: types.ChatMemberUpdated,
+  ) {
+    Ok(
+      Context(
+        ..ctx,
+        session: "member_updated:" <> string.inspect(member.chat.id),
+      ),
+    )
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_chat_member_updated(handler)
+
+  let member_updated_update =
+    update.ChatMemberUpdate(
+      from_id: 123,
+      chat_id: 456,
+      chat_member_updated: types.ChatMemberUpdated(
+        chat: types.Chat(
+          id: 456,
+          type_: Some("group"),
+          title: Some("Test Group"),
+          username: None,
+          first_name: None,
+          last_name: None,
+          is_forum: None,
+        ),
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "Admin",
+          last_name: None,
+          username: None,
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        date: 1_234_567_890,
+        old_chat_member: types.ChatMemberMemberChatMember(
+          types.ChatMemberMember(
+            status: "member",
+            user: types.User(
+              id: 789,
+              is_bot: False,
+              first_name: "Member",
+              last_name: None,
+              username: None,
+              language_code: None,
+              is_premium: None,
+              added_to_attachment_menu: None,
+              can_join_groups: None,
+              can_read_all_group_messages: None,
+              supports_inline_queries: None,
+              can_connect_to_business: None,
+              has_main_web_app: None,
+            ),
+            until_date: None,
+          ),
+        ),
+        new_chat_member: types.ChatMemberMemberChatMember(
+          types.ChatMemberMember(
+            status: "member",
+            user: types.User(
+              id: 789,
+              is_bot: False,
+              first_name: "Member",
+              last_name: None,
+              username: None,
+              language_code: None,
+              is_premium: None,
+              added_to_attachment_menu: None,
+              can_join_groups: None,
+              can_read_all_group_messages: None,
+              supports_inline_queries: None,
+              can_connect_to_business: None,
+              has_main_web_app: None,
+            ),
+            until_date: None,
+          ),
+        ),
+        invite_link: None,
+        via_join_request: None,
+        via_chat_folder_invite_link: None,
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, member_updated_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("member_updated:456")
+}
+
+pub fn chat_join_request_handler_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError),
+    request: types.ChatJoinRequest,
+  ) {
+    Ok(Context(..ctx, session: "join_request:" <> request.from.first_name))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_chat_join_request(handler)
+
+  let join_request_update =
+    update.ChatJoinRequestUpdate(
+      from_id: 123,
+      chat_id: 456,
+      chat_join_request: types.ChatJoinRequest(
+        chat: types.Chat(
+          id: 456,
+          type_: Some("group"),
+          title: Some("Private Group"),
+          username: None,
+          first_name: None,
+          last_name: None,
+          is_forum: None,
+        ),
+        from: types.User(
+          id: 123,
+          is_bot: False,
+          first_name: "NewUser",
+          last_name: None,
+          username: Some("newuser"),
+          language_code: None,
+          is_premium: None,
+          added_to_attachment_menu: None,
+          can_join_groups: None,
+          can_read_all_group_messages: None,
+          supports_inline_queries: None,
+          can_connect_to_business: None,
+          has_main_web_app: None,
+        ),
+        user_chat_id: 123,
+        date: 1_234_567_890,
+        bio: None,
+        invite_link: None,
+      ),
+      raw: test_update(),
+    )
+
+  let ctx = test_context("initial")
+  router.handle(r, ctx, join_request_update)
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal("join_request:NewUser")
+}

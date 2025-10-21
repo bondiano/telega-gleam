@@ -307,7 +307,7 @@ pub fn new_with_default_converters(
     flow_name:,
     storage:,
     steps: dict.new(),
-    step_to_string: step_to_string_default,
+    step_to_string: string.inspect,
     string_to_step: create_string_to_step(steps),
     on_complete: None,
     on_error: None,
@@ -1111,18 +1111,12 @@ fn generate_flow_id(user_id: Int, chat_id: Int, flow_name: String) -> String {
 
 /// Create in-memory storage (for testing)
 pub fn create_memory_storage() -> FlowStorage(error) {
-  // Note: This is a simplified version. Real implementation would use an actor
   FlowStorage(
     save: fn(_instance) { Ok(Nil) },
     load: fn(_id) { Ok(None) },
     delete: fn(_id) { Ok(Nil) },
     list_by_user: fn(_user_id, _chat_id) { Ok([]) },
   )
-}
-
-/// Convert a step type to string using the type's string representation
-fn step_to_string_default(step: a) -> String {
-  string.inspect(step)
 }
 
 /// Helper to create a string_to_step function for a list of steps
@@ -1133,7 +1127,7 @@ fn create_string_to_step(
   fn(name) { dict.get(step_dict, name) }
 }
 
-/// Generate a unique wait token (internal)
+/// Generate a unique wait token
 fn generate_wait_token(instance: FlowInstance) -> String {
   instance.id <> "_" <> int.to_string(utils.current_time_ms())
 }
@@ -1355,12 +1349,12 @@ fn resume_handler_with_keyboard(
 // Type coercion for dynamic flows
 // This is unsafe but necessary for the flow registry to work with different step types
 @external(erlang, "erlang", "term_to_binary")
-fn to_binary(a: a) -> BitArray
+fn to_binary(value: a) -> BitArray
 
 @external(erlang, "erlang", "binary_to_term")
-fn from_binary(bin: BitArray) -> b
+fn from_binary(binary: BitArray) -> b
 
-fn unsafe_coerce(value: a) -> b {
+fn unsafe_coerce(value: value_type) -> result_type {
   value |> to_binary |> from_binary
 }
 
@@ -1428,7 +1422,7 @@ pub fn apply_to_router(
   }
 }
 
-/// Internal: Add a flow route to router
+/// Add a flow route to router
 fn add_flow_route(
   router: router.Router(session, error),
   trigger: FlowTrigger,
@@ -1790,23 +1784,23 @@ fn composed_step_to_string(step: ComposedStep) -> String {
   }
 }
 
-fn string_to_composed_step(s: String) -> Result(ComposedStep, Nil) {
-  case s {
+fn string_to_composed_step(string: String) -> Result(ComposedStep, Nil) {
+  case string {
     "select_flow" -> Ok(ComposedSelectFlow)
     "start_parallel" -> Ok(ComposedStartParallel)
     "merge_results" -> Ok(ComposedMergeResults)
     _ -> {
-      case string.starts_with(s, "flow_") {
+      case string.starts_with(string, "flow_") {
         True -> {
-          string.drop_start(s, 5)
+          string.drop_start(string, 5)
           |> int.parse
           |> result.map(ComposedFlowStep)
           |> result.replace_error(Nil)
         }
         False -> {
-          case string.starts_with(s, "parallel_") {
+          case string.starts_with(string, "parallel_") {
             True -> {
-              string.drop_start(s, 9)
+              string.drop_start(string, 9)
               |> int.parse
               |> result.map(ComposedParallelFlow)
               |> result.replace_error(Nil)
@@ -1836,7 +1830,6 @@ fn create_composed_handler(
   }
 }
 
-/// Validation middleware
 pub fn validation_middleware(
   validator: fn(FlowInstance) -> Result(Nil, String),
 ) -> StepMiddleware(step_type, session, error) {
