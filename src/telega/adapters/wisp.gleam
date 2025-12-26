@@ -1,14 +1,10 @@
 import gleam/bool
 import gleam/erlang/process
 import gleam/http/request
-import gleam/http/response.{Response as HttpResponse}
 import gleam/result
 import telega/internal/log
 
-import wisp.{
-  type Request as WispRequest, type Response as WispResponse,
-  Empty as WispEmptyBody,
-}
+import wisp.{type Request as WispRequest, type Response as WispResponse}
 
 import telega.{type Telega}
 import telega/update
@@ -37,7 +33,7 @@ pub fn handle_bot(
   use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
   use json <- wisp.require_json(req)
   use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
-    HttpResponse(401, [], WispEmptyBody)
+    wisp.response(401)
   })
 
   // Telegram will wait response from the server, before sending the next update
