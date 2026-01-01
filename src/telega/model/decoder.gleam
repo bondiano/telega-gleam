@@ -7640,7 +7640,7 @@ pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
       use value <- decode.then(chat_member_left_decoder())
       decode.success(ChatMemberLeftChatMember(value))
     }
-    "banned" -> {
+    "kicked" -> {
       use value <- decode.then(chat_member_banned_decoder())
       decode.success(ChatMemberBannedChatMember(value))
     }
