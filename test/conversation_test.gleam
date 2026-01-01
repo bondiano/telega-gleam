@@ -48,6 +48,7 @@ fn create_test_user() -> types.User {
     supports_inline_queries: None,
     can_connect_to_business: None,
     has_main_web_app: None,
+    has_topics_enabled: None,
   )
 }
 
@@ -81,6 +82,7 @@ fn build_test_user() -> types.User {
     supports_inline_queries: None,
     can_connect_to_business: None,
     has_main_web_app: None,
+    has_topics_enabled: None,
   )
 }
 
@@ -93,6 +95,7 @@ fn build_test_chat() -> types.Chat {
     first_name: Some("TestUser"),
     last_name: None,
     is_forum: None,
+    is_direct_messages: None,
   )
 }
 
@@ -102,6 +105,7 @@ fn build_minimal_message(text: String) -> types.Message {
     message_thread_id: None,
     from: Some(build_test_user()),
     sender_chat: None,
+    direct_messages_topic: None,
     sender_boost_count: None,
     sender_business_bot: None,
     date: 1_640_995_200,
@@ -114,16 +118,19 @@ fn build_minimal_message(text: String) -> types.Message {
     external_reply: None,
     quote: None,
     reply_to_story: None,
+    reply_to_checklist_task_id: None,
     via_bot: None,
     edit_date: None,
     has_protected_content: None,
     is_from_offline: None,
+    is_paid_post: None,
     media_group_id: None,
     author_signature: None,
     text: Some(text),
     entities: None,
     link_preview_options: None,
     effect_id: None,
+    suggested_post_info: None,
     animation: None,
     audio: None,
     document: None,
@@ -191,6 +198,12 @@ fn build_minimal_message(text: String) -> types.Message {
     paid_message_price_changed: None,
     paid_star_count: None,
     unique_gift: None,
+    gift_upgrade_sent: None,
+    suggested_post_approved: None,
+    suggested_post_approval_failed: None,
+    suggested_post_declined: None,
+    suggested_post_paid: None,
+    suggested_post_refunded: None,
   )
 }
 

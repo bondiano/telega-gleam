@@ -292,6 +292,8 @@ pub type User {
     can_connect_to_business: Option(Bool),
     /// Optional. True, if the bot has a main Web App. Returned only in getMe.
     has_main_web_app: Option(Bool),
+    /// Optional. True, if the bot has forum topic mode enabled in private chats. Returned only in getMe.
+    has_topics_enabled: Option(Bool),
   )
 }
 
@@ -312,6 +314,8 @@ pub type Chat {
     last_name: Option(String),
     /// Optional. True, if the supergroup chat is a forum (has topics enabled)
     is_forum: Option(Bool),
+    /// Optional. True, if the chat is the direct messages chat of a channel
+    is_direct_messages: Option(Bool),
   )
 }
 
@@ -332,6 +336,8 @@ pub type ChatFullInfo {
     last_name: Option(String),
     /// Optional. True, if the supergroup chat is a forum (has topics enabled)
     is_forum: Option(Bool),
+    /// Optional. True, if the chat is the direct messages chat of a channel
+    is_direct_messages: Option(Bool),
     /// Identifier of the accent color for the chat name and backgrounds of the chat photo, reply header, and link preview. See accent colors for more details.
     accent_color_id: Int,
     /// The maximum number of reactions that can be set on a message in the chat
@@ -350,6 +356,8 @@ pub type ChatFullInfo {
     business_opening_hours: Option(BusinessOpeningHours),
     /// Optional. For private chats, the personal channel of the user
     personal_chat: Option(Chat),
+    /// Optional. Information about the corresponding channel chat; for direct messages chats only
+    parent_chat: Option(Chat),
     /// Optional. List of available reactions allowed in the chat. If omitted, then all emoji reactions are allowed.
     available_reactions: Option(List(ReactionType)),
     /// Optional. Custom emoji identifier of the emoji chosen by the chat for the reply header and link preview background
@@ -408,6 +416,12 @@ pub type ChatFullInfo {
     linked_chat_id: Option(Int),
     /// Optional. For supergroups, the location to which the supergroup is connected
     location: Option(ChatLocation),
+    /// Optional. For private chats, the rating of the user if any
+    rating: Option(UserRating),
+    /// Optional. The color scheme based on a unique gift that must be used for the chat's name, message replies and link previews
+    unique_gift_colors: Option(UniqueGiftColors),
+    /// Optional. The number of Telegram Stars a general user have to pay to send a message to the chat
+    paid_message_star_count: Option(Int),
   )
 }
 
@@ -416,8 +430,10 @@ pub type Message {
   Message(
     /// Unique message identifier inside this chat. In specific instances (e.g., message containing a video sent to a big chat), the server might automatically schedule a message instead of sending it immediately. In such cases, this field will be 0 and the relevant message will be unusable until it is actually sent
     message_id: Int,
-    /// Optional. Unique identifier of a message thread to which the message belongs; for supergroups only
+    /// Optional. Unique identifier of a message thread or forum topic to which the message belongs; for supergroups and private chats only
     message_thread_id: Option(Int),
+    /// Optional. Information about the direct messages chat topic that contains the message
+    direct_messages_topic: Option(DirectMessagesTopic),
     /// Optional. Sender of the message; may be empty for messages sent to channels. For backward compatibility, if the message was sent on behalf of a chat, the field contains a fake sender user in non-channel chats
     from: Option(User),
     /// Optional. Sender of the message when sent on behalf of a chat. For example, the supergroup itself for messages sent by its anonymous administrators or a linked channel for messages automatically forwarded to the channel's discussion group. For backward compatibility, if the message was sent on behalf of a chat, the field from contains a fake sender user in non-channel chats.
@@ -434,7 +450,7 @@ pub type Message {
     chat: Chat,
     /// Optional. Information about the original message for forwarded messages
     forward_origin: Option(MessageOrigin),
-    /// Optional. True, if the message is sent to a forum topic
+    /// Optional. True, if the message is sent to a topic in a forum supergroup or a private chat with the bot
     is_topic_message: Option(Bool),
     /// Optional. True, if the message is a channel post that was automatically forwarded to the connected discussion group
     is_automatic_forward: Option(Bool),
@@ -446,6 +462,8 @@ pub type Message {
     quote: Option(TextQuote),
     /// Optional. For replies to a story, the original story
     reply_to_story: Option(Story),
+    /// Optional. Identifier of the specific checklist task that is being replied to
+    reply_to_checklist_task_id: Option(Int),
     /// Optional. Bot through which the message was sent
     via_bot: Option(User),
     /// Optional. Date the message was last edited in Unix time
@@ -454,6 +472,8 @@ pub type Message {
     has_protected_content: Option(Bool),
     /// Optional. True, if the message was sent by an implicit action, for example, as an away or a greeting business message, or as a scheduled message
     is_from_offline: Option(Bool),
+    /// Optional. True, if the message is a paid post. Note that such posts must not be deleted for 24 hours to receive the payment and can't be edited.
+    is_paid_post: Option(Bool),
     /// Optional. The unique identifier of a media message group this message belongs to
     media_group_id: Option(String),
     /// Optional. Signature of the post author for messages in channels, or the custom title of an anonymous group administrator
@@ -466,6 +486,8 @@ pub type Message {
     entities: Option(List(MessageEntity)),
     /// Optional. Options used for link preview generation for the message, if it is a text message and link preview options were changed
     link_preview_options: Option(LinkPreviewOptions),
+    /// Optional. Information about suggested post parameters if the message is a suggested post in a channel direct messages chat. If the message is an approved or declined suggested post, then it can't be edited.
+    suggested_post_info: Option(SuggestedPostInfo),
     /// Optional. Unique identifier of the message effect added to the message
     effect_id: Option(String),
     /// Optional. Message is an animation, information about the animation. For backward compatibility, when this field is set, the document field will also be set
@@ -548,6 +570,8 @@ pub type Message {
     gift: Option(GiftInfo),
     /// Optional. Service message: a unique gift was sent or received
     unique_gift: Option(UniqueGiftInfo),
+    /// Optional. Service message: upgrade of a gift was purchased after the gift was sent
+    gift_upgrade_sent: Option(GiftInfo),
     /// Optional. The domain name of the website on which the user has logged in. More about Telegram Login »
     connected_website: Option(String),
     /// Optional. Service message: the user allowed the bot to write messages after adding it to the attachment or side menu, launching a Web App from a link, or accepting an explicit request from a Web App sent by the method requestWriteAccess
@@ -588,6 +612,16 @@ pub type Message {
     giveaway_completed: Option(GiveawayCompleted),
     /// Optional. Service message: the price for paid messages has changed in the chat
     paid_message_price_changed: Option(PaidMessagePriceChanged),
+    /// Optional. Service message: a suggested post was approved
+    suggested_post_approved: Option(SuggestedPostApproved),
+    /// Optional. Service message: approval of a suggested post has failed
+    suggested_post_approval_failed: Option(SuggestedPostApprovalFailed),
+    /// Optional. Service message: a suggested post was declined
+    suggested_post_declined: Option(SuggestedPostDeclined),
+    /// Optional. Service message: payment for a suggested post was received
+    suggested_post_paid: Option(SuggestedPostPaid),
+    /// Optional. Service message: payment for a suggested post was refunded
+    suggested_post_refunded: Option(SuggestedPostRefunded),
     /// Optional. Service message: video chat scheduled
     video_chat_scheduled: Option(VideoChatScheduled),
     /// Optional. Service message: video chat started
@@ -720,6 +754,8 @@ pub type ReplyParameters {
     message_id: Int,
     /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the channel (in the format @channelusername). Not supported for messages sent on behalf of a business account.
     chat_id: Option(IntOrString),
+    /// Optional. Identifier of the checklist task to be replied to; for checklists only
+    checklist_task_id: Option(Int),
     /// Optional. Pass True if the message should be sent even if the specified message to be replied to is not found. Always False for replies in another chat or forum topic. Always True for messages sent on behalf of a business account.
     allow_sending_without_reply: Option(Bool),
     /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, and custom_emoji entities. The message will fail to send if the quote isn't found in the original message.
@@ -1092,8 +1128,10 @@ pub type ChecklistTask {
     text: String,
     /// Optional. Special entities that appear in the task text
     text_entities: Option(List(MessageEntity)),
-    /// Optional. User that completed the task; omitted if the task wasn't completed
+    /// Optional. User that completed the task; omitted if the task wasn't completed by a user
     completed_by_user: Option(User),
+    /// Optional. Chat that completed the task; omitted if the task wasn't completed by a chat
+    completed_by_chat: Option(Chat),
     /// Optional. Point in time (Unix timestamp) when the task was completed; 0 if the task wasn't completed
     completion_date: Option(Int),
   )
@@ -1352,6 +1390,8 @@ pub type ForumTopicCreated {
     icon_color: Int,
     /// Optional. Unique identifier of the custom emoji shown as the topic icon
     icon_custom_emoji_id: Option(String),
+    /// Optional. True, if the name of the topic wasn't specified explicitly by its creator and likely needs to be changed by the bot
+    is_name_implicit: Option(Bool),
   )
 }
 
@@ -1481,6 +1521,62 @@ pub type DirectMessagePriceChanged {
   )
 }
 
+/// **Official reference:** Describes a service message about the approval of a suggested post.
+pub type SuggestedPostApproved {
+  SuggestedPostApproved(
+    /// Optional. Message containing the suggested post. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    suggested_post_message: Option(Message),
+    /// Optional. Amount paid for the post
+    price: Option(SuggestedPostPrice),
+    /// Date when the post will be published
+    send_date: Int,
+  )
+}
+
+/// **Official reference:** Describes a service message about the failed approval of a suggested post. Currently, only caused by insufficient user funds at the time of approval.
+pub type SuggestedPostApprovalFailed {
+  SuggestedPostApprovalFailed(
+    /// Optional. Message containing the suggested post whose approval has failed. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    suggested_post_message: Option(Message),
+    /// Expected price of the post
+    price: SuggestedPostPrice,
+  )
+}
+
+/// **Official reference:** Describes a service message about the rejection of a suggested post.
+pub type SuggestedPostDeclined {
+  SuggestedPostDeclined(
+    /// Optional. Message containing the suggested post. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    suggested_post_message: Option(Message),
+    /// Optional. Comment with which the post was declined
+    comment: Option(String),
+  )
+}
+
+/// **Official reference:** Describes a service message about a successful payment for a suggested post.
+pub type SuggestedPostPaid {
+  SuggestedPostPaid(
+    /// Optional. Message containing the suggested post. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    suggested_post_message: Option(Message),
+    /// Currency in which the payment was made. Currently, one of "XTR" for Telegram Stars or "TON" for toncoins
+    currency: String,
+    /// Optional. The amount of the currency that was received by the channel in nanotoncoins; for payments in toncoins only
+    amount: Option(Int),
+    /// Optional. The amount of Telegram Stars that was received by the channel; for payments in Telegram Stars only
+    star_amount: Option(StarAmount),
+  )
+}
+
+/// **Official reference:** Describes a service message about a payment refund for a suggested post.
+pub type SuggestedPostRefunded {
+  SuggestedPostRefunded(
+    /// Optional. Message containing the suggested post. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    suggested_post_message: Option(Message),
+    /// Reason for the refund. Currently, one of "post_deleted" if the post was deleted within 24 hours of being posted or removed from scheduled messages without being posted, or "payment_refunded" if the payer refunded their payment.
+    reason: String,
+  )
+}
+
 /// **Official reference:** This object represents a service message about the creation of a scheduled giveaway.
 pub type GiveawayCreated {
   GiveawayCreated(
@@ -1570,6 +1666,48 @@ pub type LinkPreviewOptions {
     prefer_large_media: Option(Bool),
     /// Optional. True, if the link preview must be shown above the message text; otherwise, the link preview will be shown below the message text
     show_above_text: Option(Bool),
+  )
+}
+
+/// **Official reference:** Describes the price of a suggested post.
+pub type SuggestedPostPrice {
+  SuggestedPostPrice(
+    /// Currency in which the post will be paid. Currently, must be one of "XTR" for Telegram Stars or "TON" for toncoins
+    currency: String,
+    /// The amount of the currency that will be paid for the post in the smallest units of the currency, i.e. Telegram Stars or nanotoncoins. Currently, price in Telegram Stars must be between 5 and 100000, and price in nanotoncoins must be between 10000000 and 10000000000000.
+    amount: Int,
+  )
+}
+
+/// **Official reference:** Contains information about a suggested post.
+pub type SuggestedPostInfo {
+  SuggestedPostInfo(
+    /// State of the suggested post. Currently, it can be one of "pending", "approved", "declined".
+    state: String,
+    /// Optional. Proposed price of the post. If the field is omitted, then the post is unpaid.
+    price: Option(SuggestedPostPrice),
+    /// Optional. Proposed send date of the post. If the field is omitted, then the post can be published at any time within 30 days at the sole discretion of the user or administrator who approves it.
+    send_date: Option(Int),
+  )
+}
+
+/// **Official reference:** Contains parameters of a post that is being suggested by the bot.
+pub type SuggestedPostParameters {
+  SuggestedPostParameters(
+    /// Optional. Proposed price for the post. If the field is omitted, then the post is unpaid.
+    price: Option(SuggestedPostPrice),
+    /// Optional. Proposed send date of the post. If specified, then the date must be between 300 second and 2678400 seconds (30 days) in the future. If the field is omitted, then the post can be published at any time within 30 days at the sole discretion of the user who approves it.
+    send_date: Option(Int),
+  )
+}
+
+/// **Official reference:** Describes a topic of a direct messages chat.
+pub type DirectMessagesTopic {
+  DirectMessagesTopic(
+    /// Unique identifier of the topic. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or double-precision float type are safe for storing this identifier.
+    topic_id: Int,
+    /// Optional. Information about the user that created the topic. Currently, it is always present
+    user: Option(User),
   )
 }
 
@@ -1902,6 +2040,8 @@ pub type ChatAdministratorRights {
     can_pin_messages: Option(Bool),
     /// Optional. True, if the user is allowed to create, rename, close, and reopen forum topics; for supergroups only
     can_manage_topics: Option(Bool),
+    /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
+    can_manage_direct_messages: Option(Bool),
   )
 }
 
@@ -1980,6 +2120,8 @@ pub type ChatMemberAdministrator {
     can_pin_messages: Option(Bool),
     /// Optional. True, if the user is allowed to create, rename, close, and reopen forum topics; for supergroups only
     can_manage_topics: Option(Bool),
+    /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
+    can_manage_direct_messages: Option(Bool),
     /// Optional. Custom title for this user
     custom_title: Option(String),
   )
@@ -2378,6 +2520,22 @@ pub type ForumTopic {
     icon_color: Int,
     /// Optional. Unique identifier of the custom emoji shown as the topic icon
     icon_custom_emoji_id: Option(String),
+    /// Optional. True, if the name of the topic wasn't specified explicitly by its creator and likely needs to be changed by the bot
+    is_name_implicit: Option(Bool),
+  )
+}
+
+/// **Official reference:** This object describes the rating of a user.
+pub type UserRating {
+  UserRating(
+    /// Current level of the user, indicating their reliability when purchasing digital goods and services. A higher level suggests a more trustworthy customer; a negative level is likely reason for concern.
+    level: Int,
+    /// Numerical value of the user's rating; the higher the rating, the better
+    rating: Int,
+    /// The rating value required to get the current level
+    current_level_rating: Int,
+    /// Optional. The rating value required to get to the next level; omitted if the maximum level was reached
+    next_level_rating: Option(Int),
   )
 }
 
@@ -2431,9 +2589,29 @@ pub type UniqueGiftBackdrop {
   )
 }
 
+/// **Official reference:** This object describes the color scheme for a user's name, replies to messages and link previews based on a unique gift.
+pub type UniqueGiftColors {
+  UniqueGiftColors(
+    /// Custom emoji identifier of the unique gift's model
+    model_custom_emoji_id: String,
+    /// Custom emoji identifier of the unique gift's symbol
+    symbol_custom_emoji_id: String,
+    /// Main color used in light themes; RGB format
+    light_theme_main_color: Int,
+    /// List of 1-3 additional colors used in light themes; RGB format
+    light_theme_other_colors: List(Int),
+    /// Main color used in dark themes; RGB format
+    dark_theme_main_color: Int,
+    /// List of 1-3 additional colors used in dark themes; RGB format
+    dark_theme_other_colors: List(Int),
+  )
+}
+
 /// **Official reference:** This object describes a unique gift that was upgraded from a regular gift.
 pub type UniqueGift {
   UniqueGift(
+    /// Identifier of the regular gift from which the gift was upgraded
+    gift_id: String,
     /// Human-readable name of the regular gift from which this unique gift was upgraded
     base_name: String,
     /// Unique name of the gift. This name can be used in https://t.me/nft/... links and story areas
@@ -2446,6 +2624,14 @@ pub type UniqueGift {
     symbol: UniqueGiftSymbol,
     /// Backdrop of the gift
     backdrop: UniqueGiftBackdrop,
+    /// Optional. True, if the original regular gift was exclusively purchaseable by Telegram Premium subscribers
+    is_premium: Option(Bool),
+    /// Optional. True, if the gift is assigned from the TON blockchain and can't be resold or transferred in Telegram
+    is_from_blockchain: Option(Bool),
+    /// Optional. The color scheme that can be used by the gift's owner for the chat's name, replies to messages and link previews; for business account gifts and gifts that are currently on sale only
+    colors: Option(UniqueGiftColors),
+    /// Optional. Information about the chat that published the gift
+    publisher_chat: Option(Chat),
   )
 }
 
@@ -2458,8 +2644,10 @@ pub type GiftInfo {
     owned_gift_id: Option(String),
     /// Optional. Number of Telegram Stars that can be claimed by the receiver by converting the gift; omitted if conversion to Telegram Stars is impossible
     convert_star_count: Option(Int),
-    /// Optional. Number of Telegram Stars that were prepaid by the sender for the ability to upgrade the gift
+    /// Optional. Number of Telegram Stars that were prepaid for the ability to upgrade the gift
     prepaid_upgrade_star_count: Option(Int),
+    /// Optional. True, if the gift's upgrade was purchased after the gift was sent
+    is_upgrade_separate: Option(Bool),
     /// Optional. True, if the gift can be upgraded to a unique gift
     can_be_upgraded: Option(Bool),
     /// Optional. Text of the message that was added to the gift
@@ -2468,6 +2656,8 @@ pub type GiftInfo {
     entities: Option(List(MessageEntity)),
     /// Optional. True, if the sender and gift text are shown only to the gift receiver; otherwise, everyone will be able to see them
     is_private: Option(Bool),
+    /// Optional. Unique number reserved for this gift when upgraded. See the number field in UniqueGift
+    unique_gift_number: Option(Int),
   )
 }
 
@@ -2476,10 +2666,12 @@ pub type UniqueGiftInfo {
   UniqueGiftInfo(
     /// Information about the gift
     gift: UniqueGift,
-    /// Origin of the gift. Currently, either “upgrade” for gifts upgraded from regular gifts, “transfer” for gifts transferred from other users or channels, or “resale” for gifts bought from other users
+    /// Origin of the gift. Currently, either "upgrade" for gifts upgraded from regular gifts, "transfer" for gifts transferred from other users or channels, "resale" for gifts bought from other users, "gifted_upgrade" for upgrades purchased after the gift was sent, or "offer" for gifts bought or sold through gift purchase offers
     origin: String,
-    /// Optional. For gifts bought from other users, the price paid for the gift
-    last_resale_star_count: Option(Int),
+    /// Optional. For gifts bought from other users, the currency in which the payment for the gift was done. Currently, one of "XTR" for Telegram Stars or "TON" for toncoins.
+    last_resale_currency: Option(String),
+    /// Optional. For gifts bought from other users, the price paid for the gift in either Telegram Stars or nanotoncoins
+    last_resale_amount: Option(Int),
     /// Optional. Unique identifier of the received gift for the bot; only present for gifts received on behalf of business accounts
     owned_gift_id: Option(String),
     /// Optional. Number of Telegram Stars that must be paid to transfer the gift; omitted if the bot cannot transfer the gift
@@ -2524,7 +2716,7 @@ pub type OwnedGift {
 /// **Official reference:** Describes a regular gift owned by a user or a chat.
 pub type OwnedGiftRegular {
   OwnedGiftRegular(
-    /// Type of the gift, always “regular”
+    /// Type of the gift, always "regular"
     type_: String,
     /// Information about the regular gift
     gift: Gift,
@@ -2546,10 +2738,14 @@ pub type OwnedGiftRegular {
     can_be_upgraded: Option(Bool),
     /// Optional. True, if the gift was refunded and isn't available anymore
     was_refunded: Option(Bool),
-    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars
+    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars; for gifts received on behalf of business accounts only
     convert_star_count: Option(Int),
-    /// Optional. Number of Telegram Stars that were paid by the sender for the ability to upgrade the gift
+    /// Optional. Number of Telegram Stars that were paid for the ability to upgrade the gift
     prepaid_upgrade_star_count: Option(Int),
+    /// Optional. True, if the gift's upgrade was purchased after the gift was sent; for gifts received on behalf of business accounts only
+    is_upgrade_separate: Option(Bool),
+    /// Optional. Unique number reserved for this gift when upgraded. See the number field in UniqueGift
+    unique_gift_number: Option(Int),
   )
 }
 
@@ -2600,6 +2796,8 @@ pub type AcceptedGiftTypes {
     unique_gifts: Bool,
     /// True, if a Telegram Premium subscription is accepted
     premium_subscription: Bool,
+    /// True, if transfers of unique gifts from channels are accepted
+    gifts_from_channels: Bool,
   )
 }
 
@@ -3195,6 +3393,18 @@ pub type InputSticker {
   )
 }
 
+/// **Official reference:** This object describes the background of a gift.
+pub type GiftBackground {
+  GiftBackground(
+    /// Center color of the background in RGB format
+    center_color: Int,
+    /// Edge color of the background in RGB format
+    edge_color: Int,
+    /// Text color of the background in RGB format
+    text_color: Int,
+  )
+}
+
 /// **Official reference:** This object represents a gift that can be sent by the bot.
 pub type Gift {
   Gift(
@@ -3206,10 +3416,24 @@ pub type Gift {
     star_count: Int,
     /// Optional. The number of Telegram Stars that must be paid to upgrade the gift to a unique one
     upgrade_star_count: Option(Int),
-    /// Optional. The total number of the gifts of this type that can be sent; for limited gifts only
+    /// Optional. True, if the gift can only be purchased by Telegram Premium subscribers
+    is_premium: Option(Bool),
+    /// Optional. True, if the gift can be used (after being upgraded) to customize a user's appearance
+    has_colors: Option(Bool),
+    /// Optional. The total number of gifts of this type that can be sent by all users; for limited gifts only
     total_count: Option(Int),
-    /// Optional. The number of remaining gifts of this type that can be sent; for limited gifts only
+    /// Optional. The number of remaining gifts of this type that can be sent by all users; for limited gifts only
     remaining_count: Option(Int),
+    /// Optional. The total number of gifts of this type that can be sent by the bot; for limited gifts only
+    personal_total_count: Option(Int),
+    /// Optional. The number of remaining gifts of this type that can be sent by the bot; for limited gifts only
+    personal_remaining_count: Option(Int),
+    /// Optional. Background of the gift
+    background: Option(GiftBackground),
+    /// Optional. The total number of different unique gifts that can be obtained by upgrading the gift
+    unique_gift_variant_count: Option(Int),
+    /// Optional. Information about the chat that published the gift
+    publisher_chat: Option(Chat),
   )
 }
 
@@ -6213,6 +6437,98 @@ pub type GiftPremiumSubscriptionParameters {
     text_parse_mode: Option(String),
     /// A JSON-serialized list of special entities that appear in the gift text. It can be specified instead of text_parse_mode.
     text_entities: Option(List(MessageEntity)),
+  )
+}
+
+// SendMessageDraftParameters ------------------------------------------------------------
+/// Parameters for the sendMessageDraft method
+pub type SendMessageDraftParameters {
+  SendMessageDraftParameters(
+    /// Identifier for the target private chat
+    chat_id: Int,
+    /// Unique identifier of the message draft; must be non-zero. Changes of drafts with the same identifier are animated
+    draft_id: Int,
+    /// Text of the message to be sent, 1-4096 characters after entities parsing
+    text: String,
+    /// Optional. Identifier for the target message thread
+    message_thread_id: Option(Int),
+    /// Optional. Mode for parsing entities in the message text
+    parse_mode: Option(String),
+    /// Optional. A JSON-serialized list of special entities that appear in message text
+    entities: Option(List(MessageEntity)),
+  )
+}
+
+// GetUserGiftsParameters ------------------------------------------------------------
+/// Parameters for the getUserGifts method
+pub type GetUserGiftsParameters {
+  GetUserGiftsParameters(
+    /// Unique identifier of the user
+    user_id: Int,
+    /// Optional. Pass True to exclude gifts that can be purchased an unlimited number of times
+    exclude_unlimited: Option(Bool),
+    /// Optional. Pass True to exclude gifts that can be purchased a limited number of times and can be upgraded to unique
+    exclude_limited_upgradable: Option(Bool),
+    /// Optional. Pass True to exclude gifts that can be purchased a limited number of times and can't be upgraded to unique
+    exclude_limited_non_upgradable: Option(Bool),
+    /// Optional. Pass True to exclude gifts that were assigned from the TON blockchain
+    exclude_from_blockchain: Option(Bool),
+    /// Optional. Pass True to exclude unique gifts
+    exclude_unique: Option(Bool),
+    /// Optional. Pass True to sort results by gift price instead of send date
+    sort_by_price: Option(Bool),
+    /// Optional. Offset of the first entry to return
+    offset: Option(String),
+    /// Optional. The maximum number of gifts to be returned; 1-100. Defaults to 100
+    limit: Option(Int),
+  )
+}
+
+// GetChatGiftsParameters ------------------------------------------------------------
+/// Parameters for the getChatGifts method
+pub type GetChatGiftsParameters {
+  GetChatGiftsParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Optional. Pass True to exclude gifts that aren't saved to the chat's profile page
+    exclude_unsaved: Option(Bool),
+    /// Optional. Pass True to exclude gifts that are saved to the chat's profile page
+    exclude_saved: Option(Bool),
+    /// Optional. Pass True to exclude gifts that can be purchased an unlimited number of times
+    exclude_unlimited: Option(Bool),
+    /// Optional. Pass True to exclude gifts that can be purchased a limited number of times and can be upgraded to unique
+    exclude_limited_upgradable: Option(Bool),
+    /// Optional. Pass True to exclude gifts that can be purchased a limited number of times and can't be upgraded to unique
+    exclude_limited_non_upgradable: Option(Bool),
+    /// Optional. Pass True to exclude gifts that were assigned from the TON blockchain
+    exclude_from_blockchain: Option(Bool),
+    /// Optional. Pass True to exclude unique gifts
+    exclude_unique: Option(Bool),
+    /// Optional. Pass True to sort results by gift price instead of send date
+    sort_by_price: Option(Bool),
+    /// Optional. Offset of the first entry to return
+    offset: Option(String),
+    /// Optional. The maximum number of gifts to be returned; 1-100. Defaults to 100
+    limit: Option(Int),
+  )
+}
+
+// RepostStoryParameters ------------------------------------------------------------
+/// Parameters for the repostStory method
+pub type RepostStoryParameters {
+  RepostStoryParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: String,
+    /// Unique identifier of the chat which posted the story that should be reposted
+    from_chat_id: Int,
+    /// Unique identifier of the story that should be reposted
+    from_story_id: Int,
+    /// Period after which the story is moved to the archive, in seconds
+    active_period: Int,
+    /// Optional. Pass True to keep the story accessible after it expires
+    post_to_chat_page: Option(Bool),
+    /// Optional. Pass True if the content of the story must be protected from forwarding and screenshotting
+    protect_content: Option(Bool),
   )
 }
 

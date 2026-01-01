@@ -61,19 +61,20 @@ import telega/model/types.{
   type GeneralForumTopicUnhidden, type GetBusinessAccountGiftsParameters,
   type GetBusinessAccountStarBalanceParameters,
   type GetBusinessConnectionParameters, type GetChatAdministratorsParameters,
-  type GetChatMemberCountParameters, type GetChatMemberParameters,
-  type GetChatMenuButtonParameters, type GetCustomEmojiStickersParameters,
-  type GetGameHighScoresParameters,
+  type GetChatGiftsParameters, type GetChatMemberCountParameters,
+  type GetChatMemberParameters, type GetChatMenuButtonParameters,
+  type GetCustomEmojiStickersParameters, type GetGameHighScoresParameters,
   type GetMyDefaultAdministratorRightsParameters,
   type GetMyDescriptionParameters, type GetMyNameParameters,
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
-  type GetUserChatBoostsParameters, type GetUserProfilePhotosParameters,
-  type Gift, type GiftInfo, type GiftPremiumSubscriptionParameters, type Gifts,
-  type Giveaway, type GiveawayCompleted, type GiveawayCreated,
-  type GiveawayWinners, type HideGeneralForumTopicParameters,
-  type InaccessibleMessage, type InlineKeyboardButton, type InlineKeyboardMarkup,
-  type InlineQuery, type InlineQueryResult, type InlineQueryResultArticle,
+  type GetUserChatBoostsParameters, type GetUserGiftsParameters,
+  type GetUserProfilePhotosParameters, type Gift, type GiftInfo,
+  type GiftPremiumSubscriptionParameters, type Gifts, type Giveaway,
+  type GiveawayCompleted, type GiveawayCreated, type GiveawayWinners,
+  type HideGeneralForumTopicParameters, type InaccessibleMessage,
+  type InlineKeyboardButton, type InlineKeyboardMarkup, type InlineQuery,
+  type InlineQueryResult, type InlineQueryResultArticle,
   type InlineQueryResultAudio, type InlineQueryResultCachedAudio,
   type InlineQueryResultCachedDocument, type InlineQueryResultCachedGif,
   type InlineQueryResultCachedMpeg4Gif, type InlineQueryResultCachedPhoto,
@@ -124,15 +125,16 @@ import telega/model/types.{
   type RemoveChatVerificationParameters, type RemoveUserVerificationParameters,
   type ReopenForumTopicParameters, type ReopenGeneralForumTopicParameters,
   type ReplaceStickerInSetParameters, type ReplyKeyboardMarkup,
-  type ReplyKeyboardRemove, type ReplyParameters, type ResponseParameters,
-  type RestrictChatMemberParameters, type RevenueWithdrawalState,
-  type RevenueWithdrawalStateFailed, type RevenueWithdrawalStatePending,
-  type RevenueWithdrawalStateSucceeded, type RevokeChatInviteLinkParameters,
-  type SendAnimationParameters, type SendAudioParameters,
-  type SendChatActionParameters, type SendContactParameters,
-  type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
-  type SendGiftParameters, type SendInvoiceParameters,
-  type SendLocationParameters, type SendMediaGroupParameters,
+  type ReplyKeyboardRemove, type ReplyParameters, type RepostStoryParameters,
+  type ResponseParameters, type RestrictChatMemberParameters,
+  type RevenueWithdrawalState, type RevenueWithdrawalStateFailed,
+  type RevenueWithdrawalStatePending, type RevenueWithdrawalStateSucceeded,
+  type RevokeChatInviteLinkParameters, type SendAnimationParameters,
+  type SendAudioParameters, type SendChatActionParameters,
+  type SendContactParameters, type SendDiceParameters,
+  type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
+  type SendInvoiceParameters, type SendLocationParameters,
+  type SendMediaGroupParameters, type SendMessageDraftParameters,
   type SendMessageParameters, type SendMessageReplyMarkupParameters,
   type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
   type SendVenueParameters, type SendVideoNoteParameters,
@@ -390,6 +392,7 @@ pub fn encode_user(user: User) -> Json {
       json.nullable(user.can_connect_to_business, json.bool),
     ),
     #("has_main_web_app", json.nullable(user.has_main_web_app, json.bool)),
+    #("has_topics_enabled", json.nullable(user.has_topics_enabled, json.bool)),
   ])
 }
 
@@ -402,6 +405,7 @@ pub fn encode_chat(chat: Chat) -> Json {
     #("first_name", json.nullable(chat.first_name, json.string)),
     #("last_name", json.nullable(chat.last_name, json.string)),
     #("is_forum", json.nullable(chat.is_forum, json.bool)),
+    #("is_direct_messages", json.nullable(chat.is_direct_messages, json.bool)),
   ])
 }
 
@@ -2734,8 +2738,12 @@ pub fn encode_unique_gift_info(unique_gift_info: UniqueGiftInfo) -> Json {
     #("gift", encode_unique_gift(unique_gift_info.gift)),
     #("origin", json.string(unique_gift_info.origin)),
     #(
-      "last_resale_star_count",
-      json.nullable(unique_gift_info.last_resale_star_count, json.int),
+      "last_resale_currency",
+      json.nullable(unique_gift_info.last_resale_currency, json.string),
+    ),
+    #(
+      "last_resale_amount",
+      json.nullable(unique_gift_info.last_resale_amount, json.int),
     ),
     #(
       "owned_gift_id",
@@ -7553,6 +7561,89 @@ pub fn encode_gift_premium_subscription_parameters(
       "text_entities",
       json.nullable(params.text_entities, json.array(_, encode_message_entity)),
     ),
+  ])
+}
+
+// SendMessageDraftParameters ------------------------------------------------------------
+
+pub fn encode_send_message_draft_parameters(
+  params: SendMessageDraftParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", json.int(params.chat_id)),
+    #("draft_id", json.int(params.draft_id)),
+    #("text", json.string(params.text)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "entities",
+      json.nullable(params.entities, json.array(_, encode_message_entity)),
+    ),
+  ])
+}
+
+// GetUserGiftsParameters ------------------------------------------------------------
+
+pub fn encode_get_user_gifts_parameters(params: GetUserGiftsParameters) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("exclude_unlimited", json.nullable(params.exclude_unlimited, json.bool)),
+    #(
+      "exclude_limited_upgradable",
+      json.nullable(params.exclude_limited_upgradable, json.bool),
+    ),
+    #(
+      "exclude_limited_non_upgradable",
+      json.nullable(params.exclude_limited_non_upgradable, json.bool),
+    ),
+    #(
+      "exclude_from_blockchain",
+      json.nullable(params.exclude_from_blockchain, json.bool),
+    ),
+    #("exclude_unique", json.nullable(params.exclude_unique, json.bool)),
+    #("sort_by_price", json.nullable(params.sort_by_price, json.bool)),
+    #("offset", json.nullable(params.offset, json.string)),
+    #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// GetChatGiftsParameters ------------------------------------------------------------
+
+pub fn encode_get_chat_gifts_parameters(params: GetChatGiftsParameters) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("exclude_unsaved", json.nullable(params.exclude_unsaved, json.bool)),
+    #("exclude_saved", json.nullable(params.exclude_saved, json.bool)),
+    #("exclude_unlimited", json.nullable(params.exclude_unlimited, json.bool)),
+    #(
+      "exclude_limited_upgradable",
+      json.nullable(params.exclude_limited_upgradable, json.bool),
+    ),
+    #(
+      "exclude_limited_non_upgradable",
+      json.nullable(params.exclude_limited_non_upgradable, json.bool),
+    ),
+    #(
+      "exclude_from_blockchain",
+      json.nullable(params.exclude_from_blockchain, json.bool),
+    ),
+    #("exclude_unique", json.nullable(params.exclude_unique, json.bool)),
+    #("sort_by_price", json.nullable(params.sort_by_price, json.bool)),
+    #("offset", json.nullable(params.offset, json.string)),
+    #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// RepostStoryParameters ------------------------------------------------------------
+
+pub fn encode_repost_story_parameters(params: RepostStoryParameters) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("from_chat_id", json.int(params.from_chat_id)),
+    #("from_story_id", json.int(params.from_story_id)),
+    #("active_period", json.int(params.active_period)),
+    #("post_to_chat_page", json.nullable(params.post_to_chat_page, json.bool)),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
   ])
 }
 

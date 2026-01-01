@@ -28,41 +28,42 @@ import telega/model/types.{
   type ChatMemberUpdated, type ChatPermissions, type ChatPhoto, type ChatShared,
   type Checklist, type ChecklistTask, type ChecklistTasksAdded,
   type ChecklistTasksDone, type ChosenInlineResult, type Contact,
-  type CopyTextButton, type Dice, type DirectMessagePriceChanged, type Document,
-  type EncryptedCredentials, type EncryptedPassportElement,
-  type ExternalReplyInfo, type File, type FileOrString, type ForceReply,
-  type ForumTopic, type ForumTopicClosed, type ForumTopicCreated,
-  type ForumTopicEdited, type ForumTopicReopened, type Game, type GameHighScore,
-  type GeneralForumTopicHidden, type GeneralForumTopicUnhidden, type Gift,
-  type GiftInfo, type Gifts, type Giveaway, type GiveawayCompleted,
-  type GiveawayCreated, type GiveawayWinners, type InaccessibleMessage,
-  type InlineKeyboardButton, type InlineKeyboardMarkup, type InlineQuery,
-  type InlineQueryResult, type InlineQueryResultArticle,
-  type InlineQueryResultAudio, type InlineQueryResultCachedAudio,
-  type InlineQueryResultCachedDocument, type InlineQueryResultCachedGif,
-  type InlineQueryResultCachedMpeg4Gif, type InlineQueryResultCachedPhoto,
-  type InlineQueryResultCachedSticker, type InlineQueryResultCachedVideo,
-  type InlineQueryResultCachedVoice, type InlineQueryResultContact,
-  type InlineQueryResultDocument, type InlineQueryResultGame,
-  type InlineQueryResultGif, type InlineQueryResultLocation,
-  type InlineQueryResultMpeg4Gif, type InlineQueryResultPhoto,
-  type InlineQueryResultVenue, type InlineQueryResultVideo,
-  type InlineQueryResultVoice, type InlineQueryResultsButton,
-  type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
-  type InputInvoiceMessageContent, type InputLocationMessageContent,
-  type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaPhoto, type InputMediaVideo,
-  type InputMessageContent, type InputPaidMedia, type InputPaidMediaPhoto,
-  type InputPaidMediaVideo, type InputPollOption, type InputSticker,
-  type InputTextMessageContent, type InputVenueMessageContent, type IntOrString,
-  type Invoice, type KeyboardButton, type KeyboardButtonPollType,
-  type KeyboardButtonRequestChat, type KeyboardButtonRequestUsers,
-  type LabeledPrice, type LinkPreviewOptions, type Location, type LoginUrl,
-  type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
-  type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
-  type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
-  type MessageId, type MessageOrigin, type MessageOriginChannel,
-  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
+  type CopyTextButton, type Dice, type DirectMessagePriceChanged,
+  type DirectMessagesTopic, type Document, type EncryptedCredentials,
+  type EncryptedPassportElement, type ExternalReplyInfo, type File,
+  type FileOrString, type ForceReply, type ForumTopic, type ForumTopicClosed,
+  type ForumTopicCreated, type ForumTopicEdited, type ForumTopicReopened,
+  type Game, type GameHighScore, type GeneralForumTopicHidden,
+  type GeneralForumTopicUnhidden, type Gift, type GiftBackground, type GiftInfo,
+  type Gifts, type Giveaway, type GiveawayCompleted, type GiveawayCreated,
+  type GiveawayWinners, type InaccessibleMessage, type InlineKeyboardButton,
+  type InlineKeyboardMarkup, type InlineQuery, type InlineQueryResult,
+  type InlineQueryResultArticle, type InlineQueryResultAudio,
+  type InlineQueryResultCachedAudio, type InlineQueryResultCachedDocument,
+  type InlineQueryResultCachedGif, type InlineQueryResultCachedMpeg4Gif,
+  type InlineQueryResultCachedPhoto, type InlineQueryResultCachedSticker,
+  type InlineQueryResultCachedVideo, type InlineQueryResultCachedVoice,
+  type InlineQueryResultContact, type InlineQueryResultDocument,
+  type InlineQueryResultGame, type InlineQueryResultGif,
+  type InlineQueryResultLocation, type InlineQueryResultMpeg4Gif,
+  type InlineQueryResultPhoto, type InlineQueryResultVenue,
+  type InlineQueryResultVideo, type InlineQueryResultVoice,
+  type InlineQueryResultsButton, type InputChecklist, type InputChecklistTask,
+  type InputContactMessageContent, type InputInvoiceMessageContent,
+  type InputLocationMessageContent, type InputMedia, type InputMediaAnimation,
+  type InputMediaAudio, type InputMediaDocument, type InputMediaPhoto,
+  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
+  type InputPaidMediaPhoto, type InputPaidMediaVideo, type InputPollOption,
+  type InputSticker, type InputTextMessageContent, type InputVenueMessageContent,
+  type IntOrString, type Invoice, type KeyboardButton,
+  type KeyboardButtonPollType, type KeyboardButtonRequestChat,
+  type KeyboardButtonRequestUsers, type LabeledPrice, type LinkPreviewOptions,
+  type Location, type LoginUrl, type MaskPosition, type MaybeInaccessibleMessage,
+  type MenuButton, type MenuButtonCommands, type MenuButtonDefault,
+  type MenuButtonWebApp, type Message, type MessageAutoDeleteTimerChanged,
+  type MessageEntity, type MessageId, type MessageOrigin,
+  type MessageOriginChannel, type MessageOriginChat,
+  type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
   type PaidMedia, type PaidMediaInfo, type PaidMediaPhoto, type PaidMediaPreview,
@@ -84,14 +85,17 @@ import telega/model/types.{
   type SentWebAppMessage, type SharedUser, type ShippingAddress,
   type ShippingOption, type ShippingQuery, type StarAmount, type StarTransaction,
   type StarTransactions, type Sticker, type StickerSet, type Story,
-  type SuccessfulPayment, type SwitchInlineQueryChosenChat, type TextQuote,
-  type TransactionPartner, type TransactionPartnerAffiliateProgram,
-  type TransactionPartnerChat, type TransactionPartnerFragment,
-  type TransactionPartnerOther, type TransactionPartnerTelegramAds,
-  type TransactionPartnerTelegramApi, type TransactionPartnerUser,
-  type UniqueGift, type UniqueGiftBackdrop, type UniqueGiftBackdropColors,
-  type UniqueGiftInfo, type UniqueGiftModel, type UniqueGiftSymbol, type Update,
-  type User, type UserChatBoosts, type UserProfilePhotos, type UsersShared,
+  type SuccessfulPayment, type SuggestedPostApprovalFailed,
+  type SuggestedPostApproved, type SuggestedPostDeclined, type SuggestedPostInfo,
+  type SuggestedPostPaid, type SuggestedPostPrice, type SuggestedPostRefunded,
+  type SwitchInlineQueryChosenChat, type TextQuote, type TransactionPartner,
+  type TransactionPartnerAffiliateProgram, type TransactionPartnerChat,
+  type TransactionPartnerFragment, type TransactionPartnerOther,
+  type TransactionPartnerTelegramAds, type TransactionPartnerTelegramApi,
+  type TransactionPartnerUser, type UniqueGift, type UniqueGiftBackdrop,
+  type UniqueGiftBackdropColors, type UniqueGiftColors, type UniqueGiftInfo,
+  type UniqueGiftModel, type UniqueGiftSymbol, type Update, type User,
+  type UserChatBoosts, type UserProfilePhotos, type UserRating, type UsersShared,
   type Venue, type Video, type VideoChatEnded, type VideoChatParticipantsInvited,
   type VideoChatScheduled, type VideoChatStarted, type VideoNote, type Voice,
   type WebAppData, type WebAppInfo, type WebhookInfo, type WriteAccessAllowed,
@@ -128,11 +132,11 @@ import telega/model/types.{
   ChatMemberRestrictedChatMember, ChatMemberUpdated, ChatPermissions, ChatPhoto,
   ChatShared, Checklist, ChecklistTask, ChecklistTasksAdded, ChecklistTasksDone,
   ChosenInlineResult, Contact, CopyTextButton, Dice, DirectMessagePriceChanged,
-  Document, EncryptedCredentials, EncryptedPassportElement, ExternalReplyInfo,
-  File, FileV, ForceReply, ForumTopic, ForumTopicClosed, ForumTopicCreated,
-  ForumTopicEdited, ForumTopicReopened, Game, GameHighScore,
-  GeneralForumTopicHidden, GeneralForumTopicUnhidden, Gift, GiftInfo, Gifts,
-  Giveaway, GiveawayCompleted, GiveawayCreated, GiveawayWinners,
+  DirectMessagesTopic, Document, EncryptedCredentials, EncryptedPassportElement,
+  ExternalReplyInfo, File, FileV, ForceReply, ForumTopic, ForumTopicClosed,
+  ForumTopicCreated, ForumTopicEdited, ForumTopicReopened, Game, GameHighScore,
+  GeneralForumTopicHidden, GeneralForumTopicUnhidden, Gift, GiftBackground,
+  GiftInfo, Gifts, Giveaway, GiveawayCompleted, GiveawayCreated, GiveawayWinners,
   InaccessibleMessage, InaccessibleMessageMaybeInaccessibleMessage,
   InlineKeyboardButton, InlineKeyboardMarkup, InlineQuery,
   InlineQueryResultArticle, InlineQueryResultArticleInlineQueryResult,
@@ -207,8 +211,10 @@ import telega/model/types.{
   RevenueWithdrawalStateSucceededRevenueWithdrawalState, SentWebAppMessage,
   SharedUser, ShippingAddress, ShippingOption, ShippingQuery, StarAmount,
   StarTransaction, StarTransactions, Sticker, StickerSet, Story, Str, StringV,
-  SuccessfulPayment, SwitchInlineQueryChosenChat, TextQuote,
-  TransactionPartnerAffiliateProgram,
+  SuccessfulPayment, SuggestedPostApprovalFailed, SuggestedPostApproved,
+  SuggestedPostDeclined, SuggestedPostInfo, SuggestedPostPaid,
+  SuggestedPostPrice, SuggestedPostRefunded, SwitchInlineQueryChosenChat,
+  TextQuote, TransactionPartnerAffiliateProgram,
   TransactionPartnerAffiliateProgramTransactionPartner, TransactionPartnerChat,
   TransactionPartnerChatTransactionPartner, TransactionPartnerFragment,
   TransactionPartnerFragmentTransactionPartner, TransactionPartnerOther,
@@ -216,11 +222,11 @@ import telega/model/types.{
   TransactionPartnerTelegramAdsTransactionPartner, TransactionPartnerTelegramApi,
   TransactionPartnerTelegramApiTransactionPartner, TransactionPartnerUser,
   TransactionPartnerUserTransactionPartner, UniqueGift, UniqueGiftBackdrop,
-  UniqueGiftBackdropColors, UniqueGiftInfo, UniqueGiftModel, UniqueGiftSymbol,
-  Update, User, UserChatBoosts, UserProfilePhotos, UsersShared, Venue, Video,
-  VideoChatEnded, VideoChatParticipantsInvited, VideoChatScheduled,
-  VideoChatStarted, VideoNote, Voice, WebAppData, WebAppInfo, WebhookInfo,
-  WriteAccessAllowed,
+  UniqueGiftBackdropColors, UniqueGiftColors, UniqueGiftInfo, UniqueGiftModel,
+  UniqueGiftSymbol, Update, User, UserChatBoosts, UserProfilePhotos, UserRating,
+  UsersShared, Venue, Video, VideoChatEnded, VideoChatParticipantsInvited,
+  VideoChatScheduled, VideoChatStarted, VideoNote, Voice, WebAppData, WebAppInfo,
+  WebhookInfo, WriteAccessAllowed,
 }
 
 pub fn update_decoder() -> decode.Decoder(Update) {
@@ -472,6 +478,11 @@ pub fn user_decoder() -> decode.Decoder(User) {
     None,
     decode.optional(decode.bool),
   )
+  use has_topics_enabled <- decode.optional_field(
+    "has_topics_enabled",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(User(
     id: id,
     is_bot: is_bot,
@@ -486,6 +497,7 @@ pub fn user_decoder() -> decode.Decoder(User) {
     supports_inline_queries: supports_inline_queries,
     can_connect_to_business: can_connect_to_business,
     has_main_web_app: has_main_web_app,
+    has_topics_enabled: has_topics_enabled,
   ))
 }
 
@@ -521,6 +533,11 @@ pub fn chat_decoder() -> decode.Decoder(Chat) {
     None,
     decode.optional(decode.bool),
   )
+  use is_direct_messages <- decode.optional_field(
+    "is_direct_messages",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(Chat(
     id: id,
     type_: type_,
@@ -529,6 +546,7 @@ pub fn chat_decoder() -> decode.Decoder(Chat) {
     first_name: first_name,
     last_name: last_name,
     is_forum: is_forum,
+    is_direct_messages: is_direct_messages,
   ))
 }
 
@@ -557,6 +575,11 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
   )
   use is_forum <- decode.optional_field(
     "is_forum",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_direct_messages <- decode.optional_field(
+    "is_direct_messages",
     None,
     decode.optional(decode.bool),
   )
@@ -594,6 +617,11 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
   )
   use personal_chat <- decode.optional_field(
     "personal_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  use parent_chat <- decode.optional_field(
+    "parent_chat",
     None,
     decode.optional(chat_decoder()),
   )
@@ -738,6 +766,21 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     None,
     decode.optional(chat_location_decoder()),
   )
+  use rating <- decode.optional_field(
+    "rating",
+    None,
+    decode.optional(user_rating_decoder()),
+  )
+  use unique_gift_colors <- decode.optional_field(
+    "unique_gift_colors",
+    None,
+    decode.optional(unique_gift_colors_decoder()),
+  )
+  use paid_message_star_count <- decode.optional_field(
+    "paid_message_star_count",
+    None,
+    decode.optional(decode.int),
+  )
   decode.success(ChatFullInfo(
     id: id,
     type_: type_,
@@ -746,6 +789,7 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     first_name: first_name,
     last_name: last_name,
     is_forum: is_forum,
+    is_direct_messages: is_direct_messages,
     accent_color_id: accent_color_id,
     max_reaction_count: max_reaction_count,
     photo: photo,
@@ -755,6 +799,7 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     business_location: business_location,
     business_opening_hours: business_opening_hours,
     personal_chat: personal_chat,
+    parent_chat: parent_chat,
     available_reactions: available_reactions,
     background_custom_emoji_id: background_custom_emoji_id,
     profile_accent_color_id: profile_accent_color_id,
@@ -784,6 +829,9 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     custom_emoji_sticker_set_name: custom_emoji_sticker_set_name,
     linked_chat_id: linked_chat_id,
     location: location,
+    rating: rating,
+    unique_gift_colors: unique_gift_colors,
+    paid_message_star_count: paid_message_star_count,
   ))
 }
 
@@ -808,6 +856,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "sender_chat",
     None,
     decode.optional(chat_decoder()),
+  )
+  use direct_messages_topic <- decode.optional_field(
+    "direct_messages_topic",
+    None,
+    decode.optional(direct_messages_topic_decoder()),
   )
   use sender_boost_count <- decode.optional_field(
     "sender_boost_count",
@@ -861,6 +914,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(story_decoder()),
   )
+  use reply_to_checklist_task_id <- decode.optional_field(
+    "reply_to_checklist_task_id",
+    None,
+    decode.optional(decode.int),
+  )
   use via_bot <- decode.optional_field(
     "via_bot",
     None,
@@ -878,6 +936,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
   )
   use is_from_offline <- decode.optional_field(
     "is_from_offline",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_paid_post <- decode.optional_field(
+    "is_paid_post",
     None,
     decode.optional(decode.bool),
   )
@@ -915,6 +978,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "effect_id",
     None,
     decode.optional(decode.string),
+  )
+  use suggested_post_info <- decode.optional_field(
+    "suggested_post_info",
+    None,
+    decode.optional(suggested_post_info_decoder()),
   )
   use animation <- decode.optional_field(
     "animation",
@@ -1121,6 +1189,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(unique_gift_info_decoder()),
   )
+  use gift_upgrade_sent <- decode.optional_field(
+    "gift_upgrade_sent",
+    None,
+    decode.optional(gift_info_decoder()),
+  )
   use write_access_allowed <- decode.optional_field(
     "write_access_allowed",
     None,
@@ -1216,6 +1289,31 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(paid_message_price_changed_decoder()),
   )
+  use suggested_post_approved <- decode.optional_field(
+    "suggested_post_approved",
+    None,
+    decode.optional(suggested_post_approved_decoder()),
+  )
+  use suggested_post_approval_failed <- decode.optional_field(
+    "suggested_post_approval_failed",
+    None,
+    decode.optional(suggested_post_approval_failed_decoder()),
+  )
+  use suggested_post_declined <- decode.optional_field(
+    "suggested_post_declined",
+    None,
+    decode.optional(suggested_post_declined_decoder()),
+  )
+  use suggested_post_paid <- decode.optional_field(
+    "suggested_post_paid",
+    None,
+    decode.optional(suggested_post_paid_decoder()),
+  )
+  use suggested_post_refunded <- decode.optional_field(
+    "suggested_post_refunded",
+    None,
+    decode.optional(suggested_post_refunded_decoder()),
+  )
   use video_chat_scheduled <- decode.optional_field(
     "video_chat_scheduled",
     None,
@@ -1251,6 +1349,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     message_thread_id: message_thread_id,
     from: from,
     sender_chat: sender_chat,
+    direct_messages_topic: direct_messages_topic,
     sender_boost_count: sender_boost_count,
     sender_business_bot: sender_business_bot,
     date: date,
@@ -1263,10 +1362,12 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     external_reply: external_reply,
     quote: quote,
     reply_to_story: reply_to_story,
+    reply_to_checklist_task_id: reply_to_checklist_task_id,
     via_bot: via_bot,
     edit_date: edit_date,
     has_protected_content: has_protected_content,
     is_from_offline: is_from_offline,
+    is_paid_post: is_paid_post,
     media_group_id: media_group_id,
     author_signature: author_signature,
     paid_star_count: paid_star_count,
@@ -1274,6 +1375,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     entities: entities,
     link_preview_options: link_preview_options,
     effect_id: effect_id,
+    suggested_post_info: suggested_post_info,
     animation: animation,
     audio: audio,
     document: document,
@@ -1314,6 +1416,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     chat_shared: chat_shared,
     gift: gift,
     unique_gift: unique_gift,
+    gift_upgrade_sent: gift_upgrade_sent,
     connected_website: connected_website,
     write_access_allowed: write_access_allowed,
     passport_data: passport_data,
@@ -1334,6 +1437,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     giveaway_winners: giveaway_winners,
     giveaway_completed: giveaway_completed,
     paid_message_price_changed: paid_message_price_changed,
+    suggested_post_approved: suggested_post_approved,
+    suggested_post_approval_failed: suggested_post_approval_failed,
+    suggested_post_declined: suggested_post_declined,
+    suggested_post_paid: suggested_post_paid,
+    suggested_post_refunded: suggested_post_refunded,
     video_chat_scheduled: video_chat_scheduled,
     video_chat_started: video_chat_started,
     video_chat_ended: video_chat_ended,
@@ -1594,6 +1702,11 @@ pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
     None,
     decode.optional(decode.int),
   )
+  use checklist_task_id <- decode.optional_field(
+    "checklist_task_id",
+    None,
+    decode.optional(decode.int),
+  )
   decode.success(ReplyParameters(
     message_id: message_id,
     chat_id: chat_id,
@@ -1602,6 +1715,7 @@ pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
     quote_parse_mode: quote_parse_mode,
     quote_entities: quote_entities,
     quote_position: quote_position,
+    checklist_task_id: checklist_task_id,
   ))
 }
 
@@ -2113,12 +2227,18 @@ pub fn checklist_task_decoder() -> decode.Decoder(ChecklistTask) {
     "completion_date",
     decode.optional(decode.int),
   )
+  use completed_by_chat <- decode.optional_field(
+    "completed_by_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
   decode.success(ChecklistTask(
     id: id,
     text: text,
     text_entities: text_entities,
     completed_by_user: completed_by_user,
     completion_date: completion_date,
+    completed_by_chat: completed_by_chat,
   ))
 }
 
@@ -2440,10 +2560,16 @@ pub fn forum_topic_created_decoder() -> decode.Decoder(ForumTopicCreated) {
     None,
     decode.optional(decode.string),
   )
+  use is_name_implicit <- decode.optional_field(
+    "is_name_implicit",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ForumTopicCreated(
     name: name,
     icon_color: icon_color,
     icon_custom_emoji_id: icon_custom_emoji_id,
+    is_name_implicit: is_name_implicit,
   ))
 }
 
@@ -3340,6 +3466,11 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.bool),
   )
+  use can_manage_direct_messages <- decode.optional_field(
+    "can_manage_direct_messages",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ChatAdministratorRights(
     is_anonymous: is_anonymous,
     can_manage_chat: can_manage_chat,
@@ -3356,6 +3487,7 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     can_edit_messages: can_edit_messages,
     can_pin_messages: can_pin_messages,
     can_manage_topics: can_manage_topics,
+    can_manage_direct_messages: can_manage_direct_messages,
   ))
 }
 
@@ -3454,6 +3586,11 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.string),
   )
+  use can_manage_direct_messages <- decode.optional_field(
+    "can_manage_direct_messages",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ChatMemberAdministrator(
     status: status,
     user: user,
@@ -3474,6 +3611,7 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     can_pin_messages: can_pin_messages,
     can_manage_topics: can_manage_topics,
     custom_title: custom_title,
+    can_manage_direct_messages: can_manage_direct_messages,
   ))
 }
 
@@ -3821,11 +3959,207 @@ pub fn forum_topic_decoder() -> decode.Decoder(ForumTopic) {
     None,
     decode.optional(decode.string),
   )
+  use is_name_implicit <- decode.optional_field(
+    "is_name_implicit",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ForumTopic(
     message_thread_id: message_thread_id,
     name: name,
     icon_color: icon_color,
     icon_custom_emoji_id: icon_custom_emoji_id,
+    is_name_implicit: is_name_implicit,
+  ))
+}
+
+pub fn user_rating_decoder() -> decode.Decoder(UserRating) {
+  use level <- decode.field("level", decode.int)
+  use rating <- decode.field("rating", decode.int)
+  use current_level_rating <- decode.field("current_level_rating", decode.int)
+  use next_level_rating <- decode.optional_field(
+    "next_level_rating",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(UserRating(
+    level: level,
+    rating: rating,
+    current_level_rating: current_level_rating,
+    next_level_rating: next_level_rating,
+  ))
+}
+
+pub fn unique_gift_colors_decoder() -> decode.Decoder(UniqueGiftColors) {
+  use model_custom_emoji_id <- decode.field(
+    "model_custom_emoji_id",
+    decode.string,
+  )
+  use symbol_custom_emoji_id <- decode.field(
+    "symbol_custom_emoji_id",
+    decode.string,
+  )
+  use light_theme_main_color <- decode.field(
+    "light_theme_main_color",
+    decode.int,
+  )
+  use light_theme_other_colors <- decode.field(
+    "light_theme_other_colors",
+    decode.list(decode.int),
+  )
+  use dark_theme_main_color <- decode.field("dark_theme_main_color", decode.int)
+  use dark_theme_other_colors <- decode.field(
+    "dark_theme_other_colors",
+    decode.list(decode.int),
+  )
+  decode.success(UniqueGiftColors(
+    model_custom_emoji_id: model_custom_emoji_id,
+    symbol_custom_emoji_id: symbol_custom_emoji_id,
+    light_theme_main_color: light_theme_main_color,
+    light_theme_other_colors: light_theme_other_colors,
+    dark_theme_main_color: dark_theme_main_color,
+    dark_theme_other_colors: dark_theme_other_colors,
+  ))
+}
+
+pub fn gift_background_decoder() -> decode.Decoder(GiftBackground) {
+  use center_color <- decode.field("center_color", decode.int)
+  use edge_color <- decode.field("edge_color", decode.int)
+  use text_color <- decode.field("text_color", decode.int)
+  decode.success(GiftBackground(
+    center_color: center_color,
+    edge_color: edge_color,
+    text_color: text_color,
+  ))
+}
+
+pub fn direct_messages_topic_decoder() -> decode.Decoder(DirectMessagesTopic) {
+  use topic_id <- decode.field("topic_id", decode.int)
+  use user <- decode.optional_field(
+    "user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  decode.success(DirectMessagesTopic(topic_id: topic_id, user: user))
+}
+
+pub fn suggested_post_price_decoder() -> decode.Decoder(SuggestedPostPrice) {
+  use currency <- decode.field("currency", decode.string)
+  use amount <- decode.field("amount", decode.int)
+  decode.success(SuggestedPostPrice(currency: currency, amount: amount))
+}
+
+pub fn suggested_post_info_decoder() -> decode.Decoder(SuggestedPostInfo) {
+  use state <- decode.field("state", decode.string)
+  use price <- decode.optional_field(
+    "price",
+    None,
+    decode.optional(suggested_post_price_decoder()),
+  )
+  use send_date <- decode.optional_field(
+    "send_date",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(SuggestedPostInfo(
+    state: state,
+    price: price,
+    send_date: send_date,
+  ))
+}
+
+pub fn suggested_post_approved_decoder() -> decode.Decoder(
+  SuggestedPostApproved,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use price <- decode.optional_field(
+    "price",
+    None,
+    decode.optional(suggested_post_price_decoder()),
+  )
+  use send_date <- decode.field("send_date", decode.int)
+  decode.success(SuggestedPostApproved(
+    suggested_post_message: suggested_post_message,
+    price: price,
+    send_date: send_date,
+  ))
+}
+
+pub fn suggested_post_approval_failed_decoder() -> decode.Decoder(
+  SuggestedPostApprovalFailed,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use price <- decode.field("price", suggested_post_price_decoder())
+  decode.success(SuggestedPostApprovalFailed(
+    suggested_post_message: suggested_post_message,
+    price: price,
+  ))
+}
+
+pub fn suggested_post_declined_decoder() -> decode.Decoder(
+  SuggestedPostDeclined,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use comment <- decode.optional_field(
+    "comment",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(SuggestedPostDeclined(
+    suggested_post_message: suggested_post_message,
+    comment: comment,
+  ))
+}
+
+pub fn suggested_post_paid_decoder() -> decode.Decoder(SuggestedPostPaid) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use currency <- decode.field("currency", decode.string)
+  use amount <- decode.optional_field(
+    "amount",
+    None,
+    decode.optional(decode.int),
+  )
+  use star_amount <- decode.optional_field(
+    "star_amount",
+    None,
+    decode.optional(star_amount_decoder()),
+  )
+  decode.success(SuggestedPostPaid(
+    suggested_post_message: suggested_post_message,
+    currency: currency,
+    amount: amount,
+    star_amount: star_amount,
+  ))
+}
+
+pub fn suggested_post_refunded_decoder() -> decode.Decoder(
+  SuggestedPostRefunded,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use reason <- decode.field("reason", decode.string)
+  decode.success(SuggestedPostRefunded(
+    suggested_post_message: suggested_post_message,
+    reason: reason,
   ))
 }
 
@@ -3837,18 +4171,60 @@ pub fn gift_decoder() -> decode.Decoder(Gift) {
     "upgrade_star_count",
     decode.optional(decode.int),
   )
+  use is_premium <- decode.optional_field(
+    "is_premium",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_colors <- decode.optional_field(
+    "has_colors",
+    None,
+    decode.optional(decode.bool),
+  )
   use total_count <- decode.field("total_count", decode.optional(decode.int))
   use remaining_count <- decode.field(
     "remaining_count",
     decode.optional(decode.int),
+  )
+  use personal_total_count <- decode.optional_field(
+    "personal_total_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use personal_remaining_count <- decode.optional_field(
+    "personal_remaining_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use background <- decode.optional_field(
+    "background",
+    None,
+    decode.optional(gift_background_decoder()),
+  )
+  use unique_gift_variant_count <- decode.optional_field(
+    "unique_gift_variant_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use publisher_chat <- decode.optional_field(
+    "publisher_chat",
+    None,
+    decode.optional(chat_decoder()),
   )
   decode.success(Gift(
     id: id,
     sticker: sticker,
     star_count: star_count,
     upgrade_star_count: upgrade_star_count,
+    is_premium: is_premium,
+    has_colors: has_colors,
     total_count: total_count,
     remaining_count: remaining_count,
+    personal_total_count: personal_total_count,
+    personal_remaining_count: personal_remaining_count,
+    background: background,
+    unique_gift_variant_count: unique_gift_variant_count,
+    publisher_chat: publisher_chat,
   ))
 }
 
@@ -3906,19 +4282,45 @@ pub fn unique_gift_backdrop_decoder() -> decode.Decoder(UniqueGiftBackdrop) {
 }
 
 pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
+  use gift_id <- decode.field("gift_id", decode.string)
   use base_name <- decode.field("base_name", decode.string)
   use name <- decode.field("name", decode.string)
   use number <- decode.field("number", decode.int)
   use model <- decode.field("model", unique_gift_model_decoder())
   use symbol <- decode.field("symbol", unique_gift_symbol_decoder())
   use backdrop <- decode.field("backdrop", unique_gift_backdrop_decoder())
+  use is_premium <- decode.optional_field(
+    "is_premium",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_from_blockchain <- decode.optional_field(
+    "is_from_blockchain",
+    None,
+    decode.optional(decode.bool),
+  )
+  use colors <- decode.optional_field(
+    "colors",
+    None,
+    decode.optional(unique_gift_colors_decoder()),
+  )
+  use publisher_chat <- decode.optional_field(
+    "publisher_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
   decode.success(UniqueGift(
+    gift_id: gift_id,
     base_name: base_name,
     name: name,
     number: number,
     model: model,
     symbol: symbol,
     backdrop: backdrop,
+    is_premium: is_premium,
+    is_from_blockchain: is_from_blockchain,
+    colors: colors,
+    publisher_chat: publisher_chat,
   ))
 }
 
@@ -3946,23 +4348,41 @@ pub fn gift_info_decoder() -> decode.Decoder(GiftInfo) {
     decode.optional(decode.list(message_entity_decoder())),
   )
   use is_private <- decode.field("is_private", decode.optional(decode.bool))
+  use is_upgrade_separate <- decode.optional_field(
+    "is_upgrade_separate",
+    None,
+    decode.optional(decode.bool),
+  )
+  use unique_gift_number <- decode.optional_field(
+    "unique_gift_number",
+    None,
+    decode.optional(decode.int),
+  )
   decode.success(GiftInfo(
     gift: gift,
     owned_gift_id: owned_gift_id,
     convert_star_count: convert_star_count,
     prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+    is_upgrade_separate: is_upgrade_separate,
     can_be_upgraded: can_be_upgraded,
     text: text,
     entities: entities,
     is_private: is_private,
+    unique_gift_number: unique_gift_number,
   ))
 }
 
 pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
   use gift <- decode.field("gift", unique_gift_decoder())
   use origin <- decode.field("origin", decode.string)
-  use last_resale_star_count <- decode.field(
-    "last_resale_star_count",
+  use last_resale_currency <- decode.optional_field(
+    "last_resale_currency",
+    None,
+    decode.optional(decode.string),
+  )
+  use last_resale_amount <- decode.optional_field(
+    "last_resale_amount",
+    None,
     decode.optional(decode.int),
   )
   use owned_gift_id <- decode.field(
@@ -3981,7 +4401,8 @@ pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
   decode.success(UniqueGiftInfo(
     gift: gift,
     origin: origin,
-    last_resale_star_count: last_resale_star_count,
+    last_resale_currency: last_resale_currency,
+    last_resale_amount: last_resale_amount,
     owned_gift_id: owned_gift_id,
     transfer_star_count: transfer_star_count,
     next_transfer_date: next_transfer_date,
@@ -4069,6 +4490,16 @@ pub fn owned_gift_regular_decoder() -> decode.Decoder(OwnedGiftRegular) {
     "prepaid_upgrade_star_count",
     decode.optional(decode.int),
   )
+  use is_upgrade_separate <- decode.optional_field(
+    "is_upgrade_separate",
+    None,
+    decode.optional(decode.bool),
+  )
+  use unique_gift_number <- decode.optional_field(
+    "unique_gift_number",
+    None,
+    decode.optional(decode.int),
+  )
   decode.success(OwnedGiftRegular(
     type_: type_,
     gift: gift,
@@ -4083,6 +4514,8 @@ pub fn owned_gift_regular_decoder() -> decode.Decoder(OwnedGiftRegular) {
     was_refunded: was_refunded,
     convert_star_count: convert_star_count,
     prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+    is_upgrade_separate: is_upgrade_separate,
+    unique_gift_number: unique_gift_number,
   ))
 }
 
@@ -4141,11 +4574,13 @@ pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
   use limited_gifts <- decode.field("limited_gifts", decode.bool)
   use unique_gifts <- decode.field("unique_gifts", decode.bool)
   use premium_subscription <- decode.field("premium_subscription", decode.bool)
+  use gifts_from_channels <- decode.field("gifts_from_channels", decode.bool)
   decode.success(AcceptedGiftTypes(
     unlimited_gifts: unlimited_gifts,
     limited_gifts: limited_gifts,
     unique_gifts: unique_gifts,
     premium_subscription: premium_subscription,
+    gifts_from_channels: gifts_from_channels,
   ))
 }
 

@@ -42,29 +42,30 @@ import telega/model/types.{
   type GameHighScore, type GetBusinessAccountGiftsParameters,
   type GetBusinessAccountStarBalanceParameters,
   type GetBusinessConnectionParameters, type GetChatAdministratorsParameters,
-  type GetChatMemberCountParameters, type GetChatMemberParameters,
-  type GetChatMenuButtonParameters, type GetCustomEmojiStickersParameters,
-  type GetGameHighScoresParameters,
+  type GetChatGiftsParameters, type GetChatMemberCountParameters,
+  type GetChatMemberParameters, type GetChatMenuButtonParameters,
+  type GetCustomEmojiStickersParameters, type GetGameHighScoresParameters,
   type GetMyDefaultAdministratorRightsParameters,
   type GetMyDescriptionParameters, type GetMyNameParameters,
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
-  type GetUserChatBoostsParameters, type GetUserProfilePhotosParameters,
-  type GiftPremiumSubscriptionParameters, type Gifts,
-  type HideGeneralForumTopicParameters, type LeaveChatParameters,
+  type GetUserChatBoostsParameters, type GetUserGiftsParameters,
+  type GetUserProfilePhotosParameters, type GiftPremiumSubscriptionParameters,
+  type Gifts, type HideGeneralForumTopicParameters, type LeaveChatParameters,
   type MenuButton, type Message, type OwnedGifts, type PinChatMessageParameters,
   type Poll, type PostStoryParameters, type PromoteChatMemberParameters,
   type ReadBusinessMessageParameters, type RefundStarPaymentParameters,
   type RemoveBusinessAccountProfilePhotoParameters,
   type RemoveChatVerificationParameters, type RemoveUserVerificationParameters,
   type ReopenForumTopicParameters, type ReopenGeneralForumTopicParameters,
-  type ReplaceStickerInSetParameters, type RestrictChatMemberParameters,
-  type RevokeChatInviteLinkParameters, type SendAnimationParameters,
-  type SendAudioParameters, type SendChatActionParameters,
-  type SendContactParameters, type SendDiceParameters,
-  type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
-  type SendInvoiceParameters, type SendLocationParameters,
-  type SendMediaGroupParameters, type SendMessageParameters,
+  type ReplaceStickerInSetParameters, type RepostStoryParameters,
+  type RestrictChatMemberParameters, type RevokeChatInviteLinkParameters,
+  type SendAnimationParameters, type SendAudioParameters,
+  type SendChatActionParameters, type SendContactParameters,
+  type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
+  type SendGiftParameters, type SendInvoiceParameters,
+  type SendLocationParameters, type SendMediaGroupParameters,
+  type SendMessageDraftParameters, type SendMessageParameters,
   type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
   type SendVenueParameters, type SendVideoNoteParameters,
   type SendVideoParameters, type SendVoiceParameters,
@@ -2731,6 +2732,78 @@ pub fn get_game_high_scores(
   )
   |> fetch(client)
   |> map_response(decoder.game_high_score_decoder())
+}
+
+/// Use this method to send a draft message created by the user in a chat managed by the bot. Requires the `can_post_messages` administrator right. Returns `MessageId` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessagedraft
+pub fn send_message_draft(
+  client client: client.TelegramClient,
+  parameters parameters: SendMessageDraftParameters,
+) -> Result(types.MessageId, error.TelegaError) {
+  let body_json = encoder.encode_send_message_draft_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendMessageDraft",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_id_decoder())
+}
+
+/// Use this method to get the list of gifts owned by a user. Requires no authorization if the user's gift list is public. Returns an [OwnedGifts](https://core.telegram.org/bots/api#ownedgifts) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getusergifts
+pub fn get_user_gifts(
+  client client: client.TelegramClient,
+  parameters parameters: GetUserGiftsParameters,
+) -> Result(OwnedGifts, error.TelegaError) {
+  let body_json = encoder.encode_get_user_gifts_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getUserGifts",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.owned_gifts_decoder())
+}
+
+/// Use this method to get the list of gifts received by a channel chat or a business account managed by the bot. Requires the `can_view_gifts_and_stars` administrator right if the chat is a channel. Returns an [OwnedGifts](https://core.telegram.org/bots/api#ownedgifts) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getchatgifts
+pub fn get_chat_gifts(
+  client client: client.TelegramClient,
+  parameters parameters: GetChatGiftsParameters,
+) -> Result(OwnedGifts, error.TelegaError) {
+  let body_json = encoder.encode_get_chat_gifts_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getChatGifts",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.owned_gifts_decoder())
+}
+
+/// Use this method to repost a story to another chat. The story must have been originally posted by the bot or must be a repostable chat story. Returns [Story](https://core.telegram.org/bots/api#story) on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#repoststory
+pub fn repost_story(
+  client client: client.TelegramClient,
+  parameters parameters: RepostStoryParameters,
+) -> Result(Story, error.TelegaError) {
+  let body_json = encoder.encode_repost_story_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "repostStory",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.story_decoder())
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
