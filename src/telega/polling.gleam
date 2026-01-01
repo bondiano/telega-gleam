@@ -32,6 +32,7 @@ type PollingConfig {
     limit: Int,
     allowed_updates: List(String),
     poll_interval: Int,
+    on_stop: Option(fn(TelegaError) -> Nil),
   )
 }
 
@@ -60,6 +61,7 @@ fn create_config(
   limit: Int,
   allowed_updates: List(String),
   poll_interval: Int,
+  on_stop: Option(fn(TelegaError) -> Nil),
 ) -> PollingConfig {
   PollingConfig(
     client:,
@@ -68,6 +70,7 @@ fn create_config(
     limit:,
     allowed_updates:,
     poll_interval:,
+    on_stop:,
   )
 }
 
@@ -221,6 +224,10 @@ fn handle_polling_message(
             <> error.to_string(error)
             <> " - stopping polling",
           )
+          case state.config.on_stop {
+            Some(callback) -> callback(error)
+            None -> Nil
+          }
           actor.stop()
         }
         False -> {
@@ -382,6 +389,7 @@ pub fn start_polling(
       limit,
       allowed_updates,
       poll_interval,
+      None,
     )
 
   start_polling_internal(config, None)
@@ -417,9 +425,34 @@ pub fn start_polling_with_offset(
       limit,
       allowed_updates,
       poll_interval,
+      None,
     )
 
   start_polling_internal(config, Some(offset))
+}
+
+/// Start polling with a notification callback for when polling stops due to errors.
+/// The callback will be invoked with the error that caused polling to stop.
+pub fn start_polling_with_notify(
+  telega: telega.Telega(session, error),
+  timeout timeout: Int,
+  limit limit: Int,
+  allowed_updates allowed_updates: List(String),
+  poll_interval poll_interval: Int,
+  on_stop on_stop: fn(TelegaError) -> Nil,
+) -> Result(Poller, TelegaError) {
+  let config =
+    create_config(
+      telega.get_client_internal(telega),
+      telega.get_bot_subject_internal(telega),
+      timeout,
+      limit,
+      allowed_updates,
+      poll_interval,
+      Some(on_stop),
+    )
+
+  start_polling_internal(config, None)
 }
 
 /// Stop polling
