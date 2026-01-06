@@ -49,7 +49,7 @@ fn parse_json_to_dict(json_str: String) -> dict.Dict(String, String) {
 
 fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> flow.FlowInstance {
   let state_data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
-  let scene_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
+  let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
 
   flow.FlowInstance(
     id: row.id,
@@ -63,7 +63,7 @@ fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> flow.FlowInstance {
       flow_stack: [],
       parallel_state: None,
     ),
-    scene_data: scene_data,
+    step_data: step_data,
     wait_token: row.wait_token,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -77,7 +77,7 @@ fn db_rows_to_flow_instances(
   rows
   |> list.map(fn(row) {
     let state_data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
-    let scene_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
+    let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
 
     flow.FlowInstance(
       id: row.id,
@@ -91,7 +91,7 @@ fn db_rows_to_flow_instances(
         flow_stack: [],
         parallel_state: None,
       ),
-      scene_data: scene_data,
+      step_data: step_data,
       wait_token: row.wait_token,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -111,12 +111,12 @@ pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage(String) {
           |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
         )
 
-      // Convert scene data to JSON (if exists)
-      let scene_data_json = case dict.size(instance.scene_data) {
+      // Convert step data to JSON (if exists)
+      let step_data_json = case dict.size(instance.step_data) {
         0 -> json.null()
         _ ->
           json.object(
-            instance.scene_data
+            instance.step_data
             |> dict.to_list
             |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
           )
@@ -131,7 +131,7 @@ pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage(String) {
           instance.chat_id,
           instance.state.current_step,
           state_data_json,
-          scene_data_json,
+          step_data_json,
           option.unwrap(instance.wait_token, ""),
         )
       {
@@ -235,7 +235,7 @@ pub fn create_flow_instance(
       flow_stack: [],
       parallel_state: None,
     ),
-    scene_data: dict.new(),
+    step_data: dict.new(),
     wait_token: None,
     created_at: unix_timestamp(),
     updated_at: unix_timestamp(),
@@ -263,14 +263,14 @@ pub fn create_flow_instance_with_data(
       flow_stack: [],
       parallel_state: None,
     ),
-    scene_data: dict.new(),
+    step_data: dict.new(),
     wait_token: None,
     created_at: unix_timestamp(),
     updated_at: unix_timestamp(),
   )
 }
 
-/// Create a FlowInstance with both initial data and scene data
+/// Create a FlowInstance with both initial data and step data
 pub fn create_full_flow_instance(
   id: String,
   flow_name: String,
@@ -278,7 +278,7 @@ pub fn create_full_flow_instance(
   chat_id: Int,
   current_step: String,
   initial_data: dict.Dict(String, String),
-  scene_data: dict.Dict(String, String),
+  step_data: dict.Dict(String, String),
   wait_token: option.Option(String),
 ) -> flow.FlowInstance {
   flow.FlowInstance(
@@ -293,7 +293,7 @@ pub fn create_full_flow_instance(
       flow_stack: [],
       parallel_state: None,
     ),
-    scene_data: scene_data,
+    step_data: step_data,
     wait_token: wait_token,
     created_at: unix_timestamp(),
     updated_at: unix_timestamp(),

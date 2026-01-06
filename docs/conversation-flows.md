@@ -1,362 +1,391 @@
-# Conversation Flows
+# Flows
 
-A comprehensive guide to Telega's type-safe, persistent flow system for building multi-step bot interactions.
+Flows let you build multi-step conversations. Think of them as isolated rooms where users interact with your bot through a sequence of steps.
 
-## Overview
+## Terminology
 
-Flows represent structured, multi-step conversations between users and your bot. Unlike simple command-response interactions, flows maintain state across messages, guide users through complex processes, and handle interruptions gracefully.
+| Term | Description |
+|------|-------------|
+| **Flow** | A finite state machine representing a multi-step conversation |
+| **Step** | A state in the flow where the bot waits for user input |
+| **Instance** | A user's active session within a flow |
+| **Transition** | Moving from one step to another |
+| **Subflow** | A flow called from within another flow |
 
-## Core Concepts
+## Quick Start
 
-### Flow as State Machine
+### 1. Define Steps
 
-Each flow is a finite state machine where:
-
-- **Steps** are states in the machine
-- **Handlers** define behavior at each state
-- **Transitions** move between states based on user input or logic
-- **State** persists automatically between messages
-- **Typesafe** - each step is a variant in your ADT
-
-### Persistence and Isolation
-
-- **Per-User Isolation**: Each user has their own flow instance
-- **Automatic Persistence**: State saves after each step
-- **Resilient to Restarts**: Flows resume exactly where they left off
-- **Concurrent Execution**: Multiple users can be in the same flow simultaneously
-
-## Architecture
-
-### Flow Registry Pattern
-
-```text
-FlowRegistry
-├── Triggered Flows
-│   ├── Command Triggers (/start, /help)
-│   ├── Callback Triggers (button presses)
-│   └── Pattern Triggers (text matching)
-└── Callable Flows
-    └── Registered flows callable via call_flow(ctx, registry, name, data)
-```
-
-**Note**: There are no global flows. All flow calls require passing the registry explicitly.
-
-### Integration Pipeline
-
-1. **Registration Phase**: Flows register with triggers in FlowRegistry
-2. **Router Integration**: Registry applies all flows to the router
-3. **Auto-Resume Setup**: Registry-aware handlers automatically resume interrupted flows
-4. **Runtime Execution**: Messages route to active flows or trigger new ones
+Steps are defined as an algebraic data type:
 
 ```gleam
-// Example of registry-based integration
-let flow_registry =
-  flow.new_registry()
-  |> flow.register(flow.OnCommand("/start"), registration_flow)
-  |> flow.register_callable(helper_flow)
-
-let router =
-  router.new("MyBot")
-  |> flow.apply_to_router(flow_registry)
-```
-
-## Flow Lifecycle
-
-### Creation
-
-Flows start when triggered by:
-
-- Commands (`/start`, `/checkout`)
-- Callbacks (inline keyboard buttons)
-- Text patterns
-- Programmatic calls from handlers (requires registry)
-
-```gleam
-// Calling a flow from a handler
-fn my_handler(ctx, registry, data) {
-  let initial_data = dict.from_list([
-    #("user_id", "123"),
-    #("action", "checkout")
-  ])
-  flow.call_flow(ctx, registry, "checkout_flow", initial_data)
-}
-```
-
-### Execution
-
-1. User triggers flow
-2. System creates isolated instance
-3. Initial step handler executes
-4. Flow waits for user input
-5. Input resumes flow at next step
-6. Process repeats until completion or cancellation
-
-### Termination
-
-Flows end through:
-
-- **Completion**: Reaching a terminal step
-- **Cancellation**: User cancels or timeout occurs
-- **Error**: Unrecoverable error in handler
-
-## State Management
-
-### Flow State Types
-
-#### Persistent State (`state.data`)
-
-- Survives across all steps
-- Stores collected user data
-- Persists to storage backend
-
-#### Scene Data (`scene_data`)
-
-- Temporary per-step storage
-- Cleared on step transition
-- Useful for validation state
-
-#### Instance Metadata
-
-- User and chat IDs
-- Current step
-- Creation timestamp
-- Wait tokens for resumption
-
-### Storage Abstraction
-
-The storage layer is pluggable via the `FlowStorage` type:
-
-- **Database**: PostgreSQL, MySQL, SQLite
-- **Memory**: For development/testing
-- **Redis**: For distributed systems
-- **Custom**: Implement your own backend
-
-## Navigation Patterns
-
-### Linear Progression
-
-```gleam
-flow.next(ctx, instance, NextStep)
-```
-
-### Conditional Branching
-
-```gleam
-case user_input {
-  "yes" -> flow.next(ctx, instance, Confirmed)
-  "no" -> flow.next(ctx, instance, Cancelled)
-  _ -> flow.repeat(ctx, instance)
-}
-```
-
-Branch based on user input or business logic.
-
-### Backward Navigation
-
-```gleam
-flow.back(ctx, instance)
-```
-
-Returns to previous step, useful for corrections.
-
-### Dynamic Navigation
-
-```gleam
-flow.goto(ctx, instance, TargetStep)
-```
-
-Jump to any step, enabling complex workflows.
-
-## Wait Mechanisms
-
-### Text Input
-
-```gleam
-flow.wait(ctx, instance, "unique_token")
-```
-
-Pauses flow until user sends any text message.
-
-### Callback Input
-
-```gleam
-flow.wait_callback(ctx, instance, "callback_token")
-```
-
-Waits for inline keyboard interaction.
-
-### Auto-Resume
-
-When a flow is waiting, any matching input automatically resumes it without explicit commands. The auto-resume handlers are created by the registry during router integration and have access to all registered flows for resumption.
-
-## Parallel Steps (Advanced)
-
-Parallel steps allow users to complete independent tasks in any order. When a flow reaches a parallel step trigger, it spawns multiple concurrent steps that can be completed independently. The flow automatically transitions to the join step when all parallel steps are completed.
-
-### Use Cases
-
-- **Multi-factor verification**: Email, phone, and document verification in any order
-- **KYC onboarding**: Collect multiple documents independently
-- **Survey sections**: Users can fill sections in preferred order
-- **Multi-step authentication**: Complete authentication factors independently
-
-### Basic Usage
-
-```gleam
-pub type VerificationStep {
-  Start
-  EmailVerify
-  PhoneVerify
-  DocumentVerify
-  AllComplete
+pub type RegistrationStep {
+  AskName
+  AskEmail
+  Confirm
 }
 
-let kyc_flow =
-  flow.new("kyc_verification", storage, step_to_string, string_to_step)
-  |> flow.add_step(Start, start_handler)
-  |> flow.add_step(EmailVerify, email_verify_handler)
-  |> flow.add_step(PhoneVerify, phone_verify_handler)
-  |> flow.add_step(DocumentVerify, document_verify_handler)
-  |> flow.parallel(
-      from: Start,
-      steps: [EmailVerify, PhoneVerify, DocumentVerify],
-      join: AllComplete,
-    )
-  |> flow.add_step(AllComplete, complete_handler)
-  |> flow.build(initial: Start)
-```
-
-### How It Works
-
-1. User reaches `Start` step
-2. Flow automatically creates parallel state with 3 pending steps
-3. User can complete EmailVerify, PhoneVerify, DocumentVerify in ANY order
-4. Bot tracks progress automatically
-5. When ALL steps complete → automatically transition to AllComplete
-
-### Step Handlers
-
-Each parallel step handler should complete its task and return normally:
-
-```gleam
-fn email_verify_handler(ctx, instance) {
-  use ctx <- reply.with_text(ctx, "Enter your email:")
-
-  use ctx, email <- wait_email(
-    ctx,
-    or: Some(bot.HandleText(fn(ctx, _) {
-      reply.with_text(ctx, "Invalid email")
-    })),
-    timeout: None,
-  )
-
-  // Store result in flow data
-  let updated_data = dict.insert(instance.state.data, "email", email)
-  let updated_instance = flow.update_data(instance, updated_data)
-
-  // Mark this step as complete and continue
-  use ctx <- reply.with_text(ctx, "✅ Email verified!")
-  Ok(#(ctx, flow.Next(PhoneVerify), updated_instance))
+fn step_to_string(step: RegistrationStep) -> String {
+  case step {
+    AskName -> "ask_name"
+    AskEmail -> "ask_email"
+    Confirm -> "confirm"
+  }
 }
-```
 
-### Progress Tracking
-
-Users can check their progress at any time:
-
-```gleam
-fn show_progress_handler(ctx, instance) {
-  case instance.state.parallel_state {
-    Some(parallel) -> {
-      let total = list.length(parallel.pending_steps) + list.length(parallel.completed_steps)
-      let completed = list.length(parallel.completed_steps)
-
-      let message =
-        "Verification progress: "
-        <> int.to_string(completed)
-        <> "/"
-        <> int.to_string(total)
-        <> "\n\nCompleted: "
-        <> string.join(parallel.completed_steps, ", ")
-        <> "\n\nPending: "
-        <> string.join(parallel.pending_steps, ", ")
-
-      reply.with_text(ctx, message)
-    }
-    None -> reply.with_text(ctx, "No active verification")
+fn string_to_step(s: String) -> Result(RegistrationStep, Nil) {
+  case s {
+    "ask_name" -> Ok(AskName)
+    "ask_email" -> Ok(AskEmail)
+    "confirm" -> Ok(Confirm)
+    _ -> Error(Nil)
   }
 }
 ```
 
-### Best Practices
-
-1. **Independence**: Ensure parallel steps don't depend on each other's results
-2. **Clear feedback**: Show users which steps are complete and which remain
-3. **Progress indicators**: Provide visual progress (e.g., "2/3 complete")
-4. **Allow any order**: Don't assume completion order
-5. **Idempotency**: Allow users to redo completed steps if needed
-6. **Timeout handling**: Consider timeouts for abandoned parallel flows
-
-### Deprecated API
-
-The old API `add_parallel_steps()` is deprecated. Use `parallel()` instead:
+### 2. Build the Flow
 
 ```gleam
-// ❌ Old (deprecated)
-|> flow.add_parallel_steps(
-    trigger_step: Start,
-    parallel_steps: [EmailVerify, PhoneVerify],
-    join_at: Complete,
-  )
+let registration_flow =
+  flow.new("registration", storage, step_to_string, string_to_step)
+  |> flow.add_step(AskName, ask_name_handler)
+  |> flow.add_step(AskEmail, ask_email_handler)
+  |> flow.add_step(Confirm, confirm_handler)
+  |> flow.build(initial: AskName)
+```
 
-// ✅ New (recommended)
-|> flow.parallel(
-    from: Start,
-    steps: [EmailVerify, PhoneVerify],
-    join: Complete,
-  )
+### 3. Write Step Handlers
+
+Each step handler receives context and instance, returns an action:
+
+```gleam
+fn ask_name_handler(ctx, instance) {
+  // Check if we already have input
+  case flow.get_step_data(instance, "input") {
+    Some(name) -> {
+      // Store and move to next step
+      let instance = flow.store_data(instance, "name", name)
+      flow.next(ctx, instance, AskEmail)
+    }
+    None -> {
+      // Ask user and wait
+      let _ = reply.with_text(ctx, "What's your name?")
+      flow.wait(ctx, instance, "name_input")
+    }
+  }
+}
+```
+
+### 4. Register and Apply
+
+```gleam
+let registry =
+  flow.new_registry()
+  |> flow.register(flow.OnCommand("/register"), registration_flow)
+
+let router =
+  router.new("MyBot")
+  |> flow.apply_to_router(registry)
+```
+
+## Navigation
+
+### Basic Transitions
+
+```gleam
+// Move to next step
+flow.next(ctx, instance, NextStep)
+
+// Go back to previous step
+flow.back(ctx, instance)
+
+// Jump to any step
+flow.goto(ctx, instance, TargetStep)
+
+// Complete the flow
+flow.complete(ctx, instance)
+
+// Cancel the flow
+flow.cancel(ctx, instance)
+```
+
+### Waiting for Input
+
+```gleam
+// Wait for text message
+flow.wait(ctx, instance, "unique_token")
+
+// Wait for callback button press
+flow.wait_callback(ctx, instance, "callback_token")
+```
+
+## State Management
+
+Flows have two types of data storage:
+
+### Flow Data (Persistent)
+
+Survives across all steps. Use for collected user data:
+
+```gleam
+// Store
+let instance = flow.store_data(instance, "email", "user@example.com")
+
+// Retrieve
+case flow.get_data(instance, "email") {
+  Some(email) -> // use email
+  None -> // not set
+}
+```
+
+### Step Data (Temporary)
+
+Cleared on each step transition. Use for validation state:
+
+```gleam
+// Store temporary data
+let instance = flow.store_step_data(instance, "attempts", "2")
+
+// Retrieve
+flow.get_step_data(instance, "attempts")
+
+// Clear
+flow.clear_step_data(instance)
+```
+
+## Callbacks and Buttons
+
+Handle inline keyboard buttons using `wait_callback` and `is_callback_passed`:
+
+```gleam
+fn confirm_handler(ctx, instance) {
+  case flow.is_callback_passed(instance, "input", "confirm") {
+    Some(True) -> flow.complete(ctx, instance)
+    Some(False) -> flow.cancel(ctx, instance)
+    None -> {
+      // Create callback data type
+      let callback_data = keyboard.string_callback_data("confirm")
+
+      // Build inline keyboard with callbacks
+      let assert Ok(yes_btn) = keyboard.inline_button(
+        "✅ Yes",
+        keyboard.pack_callback(callback_data, "yes"),
+      )
+      let assert Ok(no_btn) = keyboard.inline_button(
+        "❌ No",
+        keyboard.pack_callback(callback_data, "no"),
+      )
+      let kb = keyboard.new_inline([[yes_btn, no_btn]])
+
+      let _ = reply.with_markup(ctx, "Confirm?", kb)
+      flow.wait_callback(ctx, instance, "input")
+    }
+  }
+}
 ```
 
 ## Error Handling
 
-### Step-Level Errors
+```gleam
+flow.new("checkout", storage, step_to_string, string_to_step)
+|> flow.add_step(Payment, payment_handler)
+|> flow.on_error(fn(ctx, instance, error) {
+  let _ = reply.with_text(ctx, "Something went wrong. Please try again.")
+  Ok(ctx)
+})
+|> flow.on_complete(fn(ctx, instance) {
+  let _ = reply.with_text(ctx, "Thank you!")
+  Ok(ctx)
+})
+|> flow.build(initial: Payment)
+```
 
-Each handler returns `Result` - errors bubble up to flow error handler.
+## Subflows
 
-### Flow-Level Error Handler
+Subflows let you reuse flow logic. When a subflow completes, control returns to the parent.
+
+### Defining a Reusable Subflow
 
 ```gleam
-|> flow.on_error(fn(ctx, instance, error) {
-  // Log error, notify user, clean up
+let address_flow =
+  flow.new("address", storage, addr_to_string, string_to_addr)
+  |> flow.add_step(Street, street_handler)
+  |> flow.add_step(City, city_handler)
+  |> flow.add_step(Done, fn(ctx, instance) {
+    // Return collected data to parent
+    let result = dict.from_list([
+      #("street", flow.get_data(instance, "street") |> option.unwrap("")),
+      #("city", flow.get_data(instance, "city") |> option.unwrap("")),
+    ])
+    flow.return_from_subflow(ctx, instance, result)
+  })
+  |> flow.build(initial: Street)
+```
+
+### Using a Subflow
+
+```gleam
+let checkout_flow =
+  flow.new("checkout", storage, step_to_string, string_to_step)
+  |> flow.add_step(Cart, cart_handler)
+  |> flow.add_subflow(
+      trigger: CollectAddress,
+      subflow: address_flow,
+      return_to: Payment,
+      map_args: fn(instance) { dict.new() },
+      map_result: fn(result, instance) {
+        FlowInstance(..instance, state: FlowState(
+          ..instance.state,
+          data: dict.merge(instance.state.data, result)
+        ))
+      },
+    )
+  |> flow.add_step(Payment, payment_handler)
+  |> flow.build(initial: Cart)
+```
+
+### Manual Subflow Entry
+
+```gleam
+fn some_handler(ctx, instance) {
+  // Enter subflow with initial data
+  flow.enter_subflow(ctx, instance, "address", dict.new())
+}
+```
+
+## Lifecycle Hooks
+
+### Flow Hooks
+
+Called when entering, leaving (to subflow), or exiting a flow:
+
+```gleam
+flow.new("onboarding", storage, step_to_string, string_to_step)
+|> flow.set_on_flow_enter(fn(ctx, instance) {
+  let _ = reply.with_text(ctx, "Welcome!")
+  Ok(#(ctx, instance))
+})
+|> flow.set_on_flow_exit(fn(ctx, instance) {
+  let _ = reply.with_text(ctx, "Goodbye!")
   Ok(ctx)
 })
 ```
 
-### Recovery Strategies
+### Step Hooks
 
-- **Retry**: Repeat current step
-- **Fallback**: Move to error recovery step
-- **Cancel**: Terminate flow gracefully
-- **Escalate**: Transfer to human operator
+Called before and after individual steps:
 
-## Best Practices
+```gleam
+flow.add_step_with_hooks(
+  step: Payment,
+  handler: payment_handler,
+  on_enter: Some(fn(ctx, instance) {
+    let _ = reply.with_text(ctx, "💳 Payment section")
+    Ok(#(ctx, instance))
+  }),
+  on_leave: None,
+)
+```
 
-### Design Principles
+## Storage
 
-1. **Single Responsibility**: Each flow handles one business process
-2. **Idempotency**: Steps should be safe to repeat
-3. **Validation Early**: Validate input before state changes
-4. **Clear Navigation**: Users should understand their position
-5. **Graceful Degradation**: Handle errors without data loss
-6. **Explicit Dependencies**: Pass registry where needed, avoid hidden state
+Flows require a storage backend for persistence. Use the built-in memory storage for development:
 
-### Implementation Guidelines
+```gleam
+let storage = flow.create_memory_storage()
+```
 
-- Use ADTs for type-safe step definitions
-- Keep handlers focused and testable
-- Store minimal state - only what's needed
-- Provide clear user feedback at each step
-- Implement timeouts for abandoned flows
-- Clean up completed flow instances
-- Pass registry explicitly to handlers that need to call flows
-- Use `register_callable` for flows that are only called programmatically
+For production, implement `FlowStorage`:
+
+```gleam
+pub type FlowStorage(error) {
+  FlowStorage(
+    save: fn(FlowInstance) -> Result(Nil, error),
+    load: fn(String) -> Result(Option(FlowInstance), error),
+    delete: fn(String) -> Result(Nil, error),
+    list_by_user: fn(Int, Int) -> Result(List(FlowInstance), error),
+  )
+}
+```
+
+## Complete Example
+
+A simple registration bot:
+
+```gleam
+import gleam/dict
+import gleam/option.{None, Some}
+import telega/flow
+import telega/reply
+
+pub type Step {
+  Name
+  Email
+  Done
+}
+
+pub fn create_flow(storage) {
+  flow.new("register", storage, step_to_string, string_to_step)
+  |> flow.add_step(Name, name_step)
+  |> flow.add_step(Email, email_step)
+  |> flow.add_step(Done, done_step)
+  |> flow.on_complete(fn(ctx, _) {
+    let _ = reply.with_text(ctx, "✅ Registration complete!")
+    Ok(ctx)
+  })
+  |> flow.build(initial: Name)
+}
+
+fn name_step(ctx, instance) {
+  case flow.get_step_data(instance, "input") {
+    Some(name) -> {
+      let instance = flow.store_data(instance, "name", name)
+      flow.next(ctx, instance, Email)
+    }
+    None -> {
+      let _ = reply.with_text(ctx, "What's your name?")
+      flow.wait(ctx, instance, "name")
+    }
+  }
+}
+
+fn email_step(ctx, instance) {
+  case flow.get_step_data(instance, "input") {
+    Some(email) -> {
+      let instance = flow.store_data(instance, "email", email)
+      flow.next(ctx, instance, Done)
+    }
+    None -> {
+      let _ = reply.with_text(ctx, "What's your email?")
+      flow.wait(ctx, instance, "email")
+    }
+  }
+}
+
+fn done_step(ctx, instance) {
+  let name = flow.get_data(instance, "name") |> option.unwrap("Unknown")
+  let email = flow.get_data(instance, "email") |> option.unwrap("Unknown")
+
+  let _ = reply.with_text(ctx,
+    "Name: " <> name <> "\nEmail: " <> email
+  )
+  flow.complete(ctx, instance)
+}
+
+fn step_to_string(step) {
+  case step {
+    Name -> "name"
+    Email -> "email"
+    Done -> "done"
+  }
+}
+
+fn string_to_step(s) {
+  case s {
+    "name" -> Ok(Name)
+    "email" -> Ok(Email)
+    "done" -> Ok(Done)
+    _ -> Error(Nil)
+  }
+}
+```

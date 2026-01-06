@@ -120,8 +120,8 @@ pub type FlowInstance {
     user_id: Int,
     chat_id: Int,
     state: FlowState,
-    // Scene-local data
-    scene_data: Dict(String, String),
+    // Step-local data (cleared on step transitions)
+    step_data: Dict(String, String),
     // Token for external resume
     wait_token: Option(String),
     created_at: Int,
@@ -138,6 +138,21 @@ pub type FlowStorage(error) {
     list_by_user: fn(Int, Int) -> Result(List(FlowInstance), error),
   )
 }
+
+/// Hook called when entering a flow (from trigger or from parent flow)
+pub type FlowEnterHook(session, error) =
+  fn(Context(session, error), FlowInstance) ->
+    Result(#(Context(session, error), FlowInstance), error)
+
+/// Hook called when leaving a flow to enter a subflow
+pub type FlowLeaveHook(session, error) =
+  fn(Context(session, error), FlowInstance) ->
+    Result(#(Context(session, error), FlowInstance), error)
+
+/// Hook called when completely exiting the flow (cancel or complete)
+pub type FlowExitHook(session, error) =
+  fn(Context(session, error), FlowInstance) ->
+    Result(Context(session, error), error)
 
 pub opaque type FlowBuilder(step_type, session, error) {
   FlowBuilder(
@@ -158,6 +173,10 @@ pub opaque type FlowBuilder(step_type, session, error) {
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
     subflows: List(SubflowConfig(step_type, session, error)),
+    // Flow lifecycle hooks
+    on_flow_enter: Option(FlowEnterHook(session, error)),
+    on_flow_leave: Option(FlowLeaveHook(session, error)),
+    on_flow_exit: Option(FlowExitHook(session, error)),
   )
 }
 
@@ -181,6 +200,10 @@ pub opaque type Flow(step_type, session, error) {
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
     subflows: List(SubflowConfig(step_type, session, error)),
+    // Flow lifecycle hooks
+    on_flow_enter: Option(FlowEnterHook(session, error)),
+    on_flow_leave: Option(FlowLeaveHook(session, error)),
+    on_flow_exit: Option(FlowExitHook(session, error)),
   )
 }
 
@@ -206,10 +229,22 @@ pub type StepMiddleware(step_type, session, error) =
   ) ->
     StepResult(step_type, session, error)
 
+/// Hook called when entering a step (before the handler)
+pub type StepEnterHook(session, error) =
+  fn(Context(session, error), FlowInstance) ->
+    Result(#(Context(session, error), FlowInstance), error)
+
+/// Hook called when leaving a step (after the handler, before transition)
+pub type StepLeaveHook(session, error) =
+  fn(Context(session, error), FlowInstance) ->
+    Result(#(Context(session, error), FlowInstance), error)
+
 pub type StepConfig(step_type, session, error) {
   StepConfig(
     handler: StepHandler(step_type, session, error),
     middlewares: List(StepMiddleware(step_type, session, error)),
+    on_enter: Option(StepEnterHook(session, error)),
+    on_leave: Option(StepLeaveHook(session, error)),
   )
 }
 
@@ -259,7 +294,7 @@ pub type FlowAction(step_type) {
   Wait(String)
   /// Wait for callback query
   WaitCallback(String)
-  /// Jump to any step (clears scene data)
+  /// Jump to any step (clears step data)
   GoTo(step_type)
   /// Exit flow with result
   Exit(Option(Dict(String, String)))
@@ -269,6 +304,8 @@ pub type FlowAction(step_type) {
   StartParallel(steps: List(step_type), join_at: step_type)
   /// Complete a parallel step
   CompleteParallelStep(step: step_type, result: Dict(String, String))
+  /// Enter a subflow (pushes current state to stack)
+  EnterSubflow(subflow_name: String, data: Dict(String, String))
 }
 
 // ============================================================================
@@ -294,6 +331,9 @@ pub fn new(
     conditionals: [],
     parallel_configs: [],
     subflows: [],
+    on_flow_enter: None,
+    on_flow_leave: None,
+    on_flow_exit: None,
   )
 }
 
@@ -315,6 +355,9 @@ pub fn new_with_default_converters(
     conditionals: [],
     parallel_configs: [],
     subflows: [],
+    on_flow_enter: None,
+    on_flow_leave: None,
+    on_flow_exit: None,
   )
 }
 
@@ -325,7 +368,8 @@ pub fn add_step(
   handler: StepHandler(step_type, session, error),
 ) -> FlowBuilder(step_type, session, error) {
   let step_name = builder.step_to_string(step)
-  let config = StepConfig(handler:, middlewares: [])
+  let config =
+    StepConfig(handler:, middlewares: [], on_enter: None, on_leave: None)
   FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
 }
 
@@ -337,7 +381,54 @@ pub fn add_step_with_middleware(
   handler: StepHandler(step_type, session, error),
 ) -> FlowBuilder(step_type, session, error) {
   let step_name = builder.step_to_string(step)
-  let config = StepConfig(handler:, middlewares:)
+  let config =
+    StepConfig(handler:, middlewares:, on_enter: None, on_leave: None)
+  FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
+}
+
+/// Add a step with lifecycle hooks
+///
+/// ## Example
+///
+/// ```gleam
+/// flow.new("checkout", storage, step_to_string, string_to_step)
+/// |> flow.add_step_with_hooks(
+///     Payment,
+///     handler: payment_handler,
+///     on_enter: Some(fn(ctx, instance) {
+///       // Log payment step entry
+///       use _ <- result.try(reply.with_text(ctx, "Entering payment..."))
+///       Ok(#(ctx, instance))
+///     }),
+///     on_leave: Some(fn(ctx, instance) {
+///       // Cleanup or log
+///       Ok(#(ctx, instance))
+///     }),
+///   )
+/// ```
+pub fn add_step_with_hooks(
+  builder: FlowBuilder(step_type, session, error),
+  step: step_type,
+  handler handler: StepHandler(step_type, session, error),
+  on_enter on_enter: Option(StepEnterHook(session, error)),
+  on_leave on_leave: Option(StepLeaveHook(session, error)),
+) -> FlowBuilder(step_type, session, error) {
+  let step_name = builder.step_to_string(step)
+  let config = StepConfig(handler:, middlewares: [], on_enter:, on_leave:)
+  FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
+}
+
+/// Add a step with hooks and middleware
+pub fn add_step_with_hooks_and_middleware(
+  builder: FlowBuilder(step_type, session, error),
+  step: step_type,
+  handler handler: StepHandler(step_type, session, error),
+  middlewares middlewares: List(StepMiddleware(step_type, session, error)),
+  on_enter on_enter: Option(StepEnterHook(session, error)),
+  on_leave on_leave: Option(StepLeaveHook(session, error)),
+) -> FlowBuilder(step_type, session, error) {
+  let step_name = builder.step_to_string(step)
+  let config = StepConfig(handler:, middlewares:, on_enter:, on_leave:)
   FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
 }
 
@@ -442,6 +533,32 @@ pub fn add_parallel_steps(
 }
 
 /// Add sub-flow
+///
+/// ## Example
+///
+/// ```gleam
+/// let address_flow =
+///   flow.new("address", storage, step_to_string, string_to_step)
+///   |> flow.add_step(Street, street_handler)
+///   |> flow.build(initial: Street)
+///
+/// let checkout_flow =
+///   flow.new("checkout", storage, step_to_string, string_to_step)
+///   |> flow.add_step(Cart, cart_handler)
+///   |> flow.add_subflow(
+///       trigger_step: CollectAddress,
+///       subflow: address_flow,
+///       return_to: Payment,
+///       map_args: fn(instance) { instance.state.data },
+///       map_result: fn(result, instance) {
+///         FlowInstance(..instance, state: FlowState(
+///           ..instance.state,
+///           data: dict.merge(instance.state.data, result)
+///         ))
+///       },
+///     )
+///   |> flow.build(initial: Cart)
+/// ```
 pub fn add_subflow(
   builder: FlowBuilder(step_type, session, error),
   trigger_step: step_type,
@@ -462,6 +579,163 @@ pub fn add_subflow(
   FlowBuilder(..builder, subflows: list.append(builder.subflows, [config]))
 }
 
+/// Inline subflow step type (uses strings internally)
+pub type InlineStep {
+  InlineStep(name: String)
+}
+
+/// Add an inline subflow defined within the parent flow
+///
+/// This creates a subflow inline without needing to define a separate flow.
+/// Steps are identified by string names.
+///
+/// ## Example
+///
+/// ```gleam
+/// let checkout_flow =
+///   flow.new("checkout", storage, step_to_string, string_to_step)
+///   |> flow.add_step(Cart, cart_handler)
+///   |> flow.with_inline_subflow(
+///       name: "address_collection",
+///       trigger: CollectAddress,
+///       return_to: Payment,
+///       initial: "street",
+///       steps: [
+///         #("street", fn(ctx, instance) {
+///           // Ask for street
+///           flow.wait(ctx, instance, "street_input")
+///         }),
+///         #("city", fn(ctx, instance) {
+///           // Ask for city
+///           flow.wait(ctx, instance, "city_input")
+///         }),
+///         #("done", fn(ctx, instance) {
+///           flow.return_from_subflow(ctx, instance, instance.state.data)
+///         }),
+///       ],
+///     )
+///   |> flow.add_step(Payment, payment_handler)
+///   |> flow.build(initial: Cart)
+/// ```
+pub fn with_inline_subflow(
+  builder: FlowBuilder(step_type, session, error),
+  name name: String,
+  trigger trigger: step_type,
+  return_to return_to: step_type,
+  initial initial: String,
+  steps steps: List(
+    #(
+      String,
+      fn(Context(session, error), FlowInstance) ->
+        StepResult(InlineStep, session, error),
+    ),
+  ),
+) -> FlowBuilder(step_type, session, error) {
+  // Create the inline flow with string-based steps
+  let inline_flow_name = builder.flow_name <> "::" <> name
+  let inline_storage = builder.storage
+
+  let inline_builder =
+    new(
+      inline_flow_name,
+      inline_storage,
+      inline_step_to_string,
+      string_to_inline_step,
+    )
+
+  // Add all steps
+  let inline_builder =
+    list.fold(steps, inline_builder, fn(b, step_tuple) {
+      let #(step_name, handler) = step_tuple
+      add_step(b, InlineStep(step_name), handler)
+    })
+
+  // Build the inline flow
+  let inline_flow = build(inline_builder, initial: InlineStep(initial))
+
+  // Coerce to Dynamic and add as subflow
+  let coerced_flow: Flow(Dynamic, session, error) = unsafe_coerce(inline_flow)
+
+  add_subflow(
+    builder,
+    trigger,
+    coerced_flow,
+    return_to,
+    fn(instance) { instance.state.data },
+    fn(result, instance) {
+      FlowInstance(
+        ..instance,
+        state: FlowState(
+          ..instance.state,
+          data: dict.merge(instance.state.data, result),
+        ),
+      )
+    },
+  )
+}
+
+/// Add an inline subflow with custom argument and result mapping
+pub fn with_inline_subflow_mapped(
+  builder: FlowBuilder(step_type, session, error),
+  name name: String,
+  trigger trigger: step_type,
+  return_to return_to: step_type,
+  initial initial: String,
+  steps steps: List(
+    #(
+      String,
+      fn(Context(session, error), FlowInstance) ->
+        StepResult(InlineStep, session, error),
+    ),
+  ),
+  map_args map_args: fn(FlowInstance) -> Dict(String, String),
+  map_result map_result: fn(Dict(String, String), FlowInstance) -> FlowInstance,
+) -> FlowBuilder(step_type, session, error) {
+  // Create the inline flow with string-based steps
+  let inline_flow_name = builder.flow_name <> "::" <> name
+  let inline_storage = builder.storage
+
+  let inline_builder =
+    new(
+      inline_flow_name,
+      inline_storage,
+      inline_step_to_string,
+      string_to_inline_step,
+    )
+
+  // Add all steps
+  let inline_builder =
+    list.fold(steps, inline_builder, fn(b, step_tuple) {
+      let #(step_name, handler) = step_tuple
+      add_step(b, InlineStep(step_name), handler)
+    })
+
+  // Build the inline flow
+  let inline_flow = build(inline_builder, initial: InlineStep(initial))
+
+  // Coerce to Dynamic and add as subflow
+  let coerced_flow: Flow(Dynamic, session, error) = unsafe_coerce(inline_flow)
+
+  add_subflow(builder, trigger, coerced_flow, return_to, map_args, map_result)
+}
+
+fn inline_step_to_string(step: InlineStep) -> String {
+  step.name
+}
+
+fn string_to_inline_step(s: String) -> Result(InlineStep, Nil) {
+  Ok(InlineStep(s))
+}
+
+/// Navigate to next inline step by name
+pub fn inline_next(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  step_name step_name: String,
+) -> StepResult(InlineStep, session, error) {
+  Ok(#(ctx, Next(InlineStep(step_name)), instance))
+}
+
 /// Set completion handler
 pub fn on_complete(
   builder: FlowBuilder(step_type, session, error),
@@ -478,6 +752,72 @@ pub fn on_error(
     Result(Context(session, error), error),
 ) -> FlowBuilder(step_type, session, error) {
   FlowBuilder(..builder, on_error: Some(handler))
+}
+
+/// Set flow enter hook
+///
+/// Called when the flow is first started or resumed from a parent flow.
+///
+/// ## Example
+///
+/// ```gleam
+/// flow.new("checkout", storage, step_to_string, string_to_step)
+/// |> flow.set_on_flow_enter(fn(ctx, instance) {
+///   use ctx <- result.try(
+///     reply.with_text(ctx, "Welcome to checkout!")
+///     |> result.map_error(fn(e) { e })
+///   )
+///   Ok(#(ctx, instance))
+/// })
+/// ```
+pub fn set_on_flow_enter(
+  builder: FlowBuilder(step_type, session, error),
+  hook: FlowEnterHook(session, error),
+) -> FlowBuilder(step_type, session, error) {
+  FlowBuilder(..builder, on_flow_enter: Some(hook))
+}
+
+/// Set flow leave hook
+///
+/// Called when transitioning to a subflow.
+///
+/// ## Example
+///
+/// ```gleam
+/// flow.new("checkout", storage, step_to_string, string_to_step)
+/// |> flow.set_on_flow_leave(fn(ctx, instance) {
+///   // Save state before entering subflow
+///   Ok(#(ctx, instance))
+/// })
+/// ```
+pub fn set_on_flow_leave(
+  builder: FlowBuilder(step_type, session, error),
+  hook: FlowLeaveHook(session, error),
+) -> FlowBuilder(step_type, session, error) {
+  FlowBuilder(..builder, on_flow_leave: Some(hook))
+}
+
+/// Set flow exit hook
+///
+/// Called when the flow completes or is cancelled.
+///
+/// ## Example
+///
+/// ```gleam
+/// flow.new("checkout", storage, step_to_string, string_to_step)
+/// |> flow.set_on_flow_exit(fn(ctx, instance) {
+///   use _ <- result.try(
+///     reply.with_text(ctx, "Checkout complete!")
+///     |> result.map_error(fn(e) { e })
+///   )
+///   Ok(ctx)
+/// })
+/// ```
+pub fn set_on_flow_exit(
+  builder: FlowBuilder(step_type, session, error),
+  hook: FlowExitHook(session, error),
+) -> FlowBuilder(step_type, session, error) {
+  FlowBuilder(..builder, on_flow_exit: Some(hook))
 }
 
 /// Build the flow
@@ -498,6 +838,9 @@ pub fn build(
     conditionals: builder.conditionals,
     parallel_configs: builder.parallel_configs,
     subflows: builder.subflows,
+    on_flow_enter: builder.on_flow_enter,
+    on_flow_leave: builder.on_flow_leave,
+    on_flow_exit: builder.on_flow_exit,
   )
 }
 
@@ -519,7 +862,7 @@ pub fn unsafe_next(
   Ok(#(ctx, NextString(step), instance))
 }
 
-/// Type-safe goto navigation (clears scene data)
+/// Type-safe goto navigation (clears step data)
 pub fn goto(
   ctx: Context(session, error),
   instance: FlowInstance,
@@ -579,6 +922,51 @@ pub fn exit(
   Ok(#(ctx, Exit(result), instance))
 }
 
+/// Enter a subflow by name
+///
+/// This pushes the current flow state onto the stack and starts the subflow.
+/// When the subflow completes with `return_from_subflow`, execution returns
+/// to the parent flow at the step specified in `add_subflow`.
+///
+/// ## Example
+/// ```gleam
+/// fn my_handler(ctx, instance) {
+///   // Enter address collection subflow
+///   flow.enter_subflow(ctx, instance, "address_collection", dict.new())
+/// }
+/// ```
+pub fn enter_subflow(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  subflow_name subflow_name: String,
+  data data: Dict(String, String),
+) -> StepResult(step_type, session, error) {
+  Ok(#(ctx, EnterSubflow(subflow_name, data), instance))
+}
+
+/// Return from a subflow with result data
+///
+/// This pops the parent flow from the stack and merges the result data
+/// into the parent's state, then continues at the return step.
+///
+/// ## Example
+/// ```gleam
+/// fn final_step_handler(ctx, instance) {
+///   let result = dict.from_list([
+///     #("street", flow.get_data(instance, "street") |> option.unwrap("")),
+///     #("city", flow.get_data(instance, "city") |> option.unwrap("")),
+///   ])
+///   flow.return_from_subflow(ctx, instance, result)
+/// }
+/// ```
+pub fn return_from_subflow(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  result result: Dict(String, String),
+) -> StepResult(step_type, session, error) {
+  Ok(#(ctx, ReturnFromSubflow(result), instance))
+}
+
 fn start_or_resume(
   flow flow: Flow(step_type, session, error),
   ctx ctx: Context(session, error),
@@ -605,14 +993,21 @@ fn start_or_resume(
             flow_stack: [],
             parallel_state: None,
           ),
-          scene_data: dict.new(),
+          step_data: dict.new(),
           wait_token: None,
           created_at: utils.current_time_ms(),
           updated_at: utils.current_time_ms(),
         )
 
       case flow.storage.save(new_instance) {
-        Ok(_) -> execute_step(flow, ctx, new_instance)
+        Ok(_) -> {
+          // Call on_flow_enter hook for new flows
+          case run_flow_enter_hook(flow.on_flow_enter, ctx, new_instance) {
+            Ok(#(ctx_after_enter, instance_after_enter)) ->
+              execute_step(flow, ctx_after_enter, instance_after_enter)
+            Error(err) -> handle_error(flow, ctx, new_instance, Some(err))
+          }
+        }
         Error(err) -> handle_error(flow, ctx, new_instance, Some(err))
       }
     }
@@ -630,7 +1025,7 @@ fn start_or_resume(
             flow_stack: [],
             parallel_state: None,
           ),
-          scene_data: dict.new(),
+          step_data: dict.new(),
           wait_token: None,
           created_at: 0,
           updated_at: 0,
@@ -652,7 +1047,7 @@ fn resume_with_token(
         Some(d) ->
           FlowInstance(
             ..instance,
-            scene_data: dict.merge(instance.scene_data, d),
+            step_data: dict.merge(instance.step_data, d),
             wait_token: None,
           )
         None -> FlowInstance(..instance, wait_token: None)
@@ -671,35 +1066,35 @@ pub fn get_current_step(
   flow.string_to_step(instance.state.current_step)
 }
 
-/// Store scene data
-pub fn store_scene_data(
+/// Store step data
+pub fn store_step_data(
   instance: FlowInstance,
   key key: String,
   value value: String,
 ) -> FlowInstance {
   FlowInstance(
     ..instance,
-    scene_data: dict.insert(instance.scene_data, key, value),
+    step_data: dict.insert(instance.step_data, key, value),
   )
 }
 
-/// Get scene data
-pub fn get_scene_data(instance: FlowInstance, key key: String) -> Option(String) {
-  dict.get(instance.scene_data, key)
+/// Get step data
+pub fn get_step_data(instance: FlowInstance, key key: String) -> Option(String) {
+  dict.get(instance.step_data, key)
   |> option.from_result()
 }
 
-/// Clear all scene data
-pub fn clear_scene_data(instance: FlowInstance) -> FlowInstance {
-  FlowInstance(..instance, scene_data: dict.new())
+/// Clear all step data
+pub fn clear_step_data(instance: FlowInstance) -> FlowInstance {
+  FlowInstance(..instance, step_data: dict.new())
 }
 
-/// Clear specific scene data key
-pub fn clear_scene_data_key(
+/// Clear specific step data key
+pub fn clear_step_data_key(
   instance: FlowInstance,
   key key: String,
 ) -> FlowInstance {
-  FlowInstance(..instance, scene_data: dict.delete(instance.scene_data, key))
+  FlowInstance(..instance, step_data: dict.delete(instance.step_data, key))
 }
 
 pub fn is_callback_passed(
@@ -707,7 +1102,7 @@ pub fn is_callback_passed(
   key key: String,
   callback_id callback_id: String,
 ) -> Option(Bool) {
-  case get_scene_data(instance, key) {
+  case get_step_data(instance, key) {
     Some(data) -> {
       let callback_data = keyboard.bool_callback_data(callback_id)
       case keyboard.unpack_callback(data, callback_data) {
@@ -790,26 +1185,133 @@ fn execute_step(
       case check_parallel_trigger(flow, instance) {
         Some(config) -> start_parallel_execution(flow, ctx, instance, config)
         None -> {
-          // Normal step execution with middleware
-          case dict.get(flow.steps, instance.state.current_step) {
-            Ok(config) -> {
-              let handler_fn = fn() { config.handler(ctx, instance) }
-              let result =
-                apply_middlewares(
-                  ctx,
-                  instance,
-                  handler_fn,
-                  list.append(flow.global_middlewares, config.middlewares),
-                )
-              case result {
-                Ok(#(new_ctx, action, new_instance)) ->
-                  process_action(flow, new_ctx, action, new_instance)
-                Error(err) -> handle_error(flow, ctx, instance, Some(err))
+          // Check for subflow trigger
+          case check_subflow_trigger(flow, instance) {
+            Some(subflow_config) ->
+              start_subflow_execution(flow, ctx, instance, subflow_config)
+            None -> {
+              // Normal step execution with middleware
+              case dict.get(flow.steps, instance.state.current_step) {
+                Ok(config) -> {
+                  // Call on_enter hook if present
+                  case run_enter_hook(config.on_enter, ctx, instance) {
+                    Ok(#(ctx_after_enter, instance_after_enter)) -> {
+                      let handler_fn = fn() {
+                        config.handler(ctx_after_enter, instance_after_enter)
+                      }
+                      let result =
+                        apply_middlewares(
+                          ctx_after_enter,
+                          instance_after_enter,
+                          handler_fn,
+                          list.append(
+                            flow.global_middlewares,
+                            config.middlewares,
+                          ),
+                        )
+                      case result {
+                        Ok(#(new_ctx, action, new_instance)) ->
+                          process_action_with_leave_hook(
+                            flow,
+                            new_ctx,
+                            action,
+                            new_instance,
+                            config.on_leave,
+                          )
+                        Error(err) ->
+                          handle_error(flow, ctx, instance, Some(err))
+                      }
+                    }
+                    Error(err) -> handle_error(flow, ctx, instance, Some(err))
+                  }
+                }
+                Error(_) -> handle_error(flow, ctx, instance, None)
               }
             }
-            Error(_) -> handle_error(flow, ctx, instance, None)
           }
         }
+      }
+    }
+  }
+}
+
+/// Run the enter hook if present
+fn run_enter_hook(
+  hook: Option(StepEnterHook(session, error)),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+) -> Result(#(Context(session, error), FlowInstance), error) {
+  case hook {
+    Some(enter_fn) -> enter_fn(ctx, instance)
+    None -> Ok(#(ctx, instance))
+  }
+}
+
+/// Run the leave hook if present
+fn run_leave_hook(
+  hook: Option(StepLeaveHook(session, error)),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+) -> Result(#(Context(session, error), FlowInstance), error) {
+  case hook {
+    Some(leave_fn) -> leave_fn(ctx, instance)
+    None -> Ok(#(ctx, instance))
+  }
+}
+
+/// Run the flow enter hook if present
+fn run_flow_enter_hook(
+  hook: Option(FlowEnterHook(session, error)),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+) -> Result(#(Context(session, error), FlowInstance), error) {
+  case hook {
+    Some(enter_fn) -> enter_fn(ctx, instance)
+    None -> Ok(#(ctx, instance))
+  }
+}
+
+/// Run the flow leave hook if present
+fn run_flow_leave_hook(
+  hook: Option(FlowLeaveHook(session, error)),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+) -> Result(#(Context(session, error), FlowInstance), error) {
+  case hook {
+    Some(leave_fn) -> leave_fn(ctx, instance)
+    None -> Ok(#(ctx, instance))
+  }
+}
+
+/// Run the flow exit hook if present
+fn run_flow_exit_hook(
+  hook: Option(FlowExitHook(session, error)),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+) -> Result(Context(session, error), error) {
+  case hook {
+    Some(exit_fn) -> exit_fn(ctx, instance)
+    None -> Ok(ctx)
+  }
+}
+
+/// Process action with leave hook support
+fn process_action_with_leave_hook(
+  flow: Flow(step_type, session, error),
+  ctx: Context(session, error),
+  action: FlowAction(step_type),
+  instance: FlowInstance,
+  leave_hook: Option(StepLeaveHook(session, error)),
+) -> Result(Context(session, error), error) {
+  // For Wait actions, don't run leave hook (we're not actually leaving)
+  case action {
+    Wait(_) | WaitCallback(_) -> process_action(flow, ctx, action, instance)
+    _ -> {
+      // Run leave hook before processing the action
+      case run_leave_hook(leave_hook, ctx, instance) {
+        Ok(#(ctx_after_leave, instance_after_leave)) ->
+          process_action(flow, ctx_after_leave, action, instance_after_leave)
+        Error(err) -> handle_error(flow, ctx, instance, Some(err))
       }
     }
   }
@@ -992,7 +1494,7 @@ fn process_action(
             flow_stack: [],
             parallel_state: None,
           ),
-          scene_data: dict.new(),
+          step_data: dict.new(),
           updated_at: utils.current_time_ms(),
         )
 
@@ -1026,31 +1528,53 @@ fn process_action(
     }
 
     Complete(data) -> {
+      let completed_instance =
+        FlowInstance(..instance, state: FlowState(..instance.state, data: data))
+      // Run on_complete handler first
       case flow.on_complete {
         Some(handler) -> {
-          let completed_instance =
-            FlowInstance(
-              ..instance,
-              state: FlowState(..instance.state, data: data),
-            )
           case handler(ctx, completed_instance) {
             Ok(new_ctx) -> {
-              let _ = flow.storage.delete(instance.id)
-              Ok(new_ctx)
+              // Then run flow exit hook
+              case
+                run_flow_exit_hook(
+                  flow.on_flow_exit,
+                  new_ctx,
+                  completed_instance,
+                )
+              {
+                Ok(final_ctx) -> {
+                  let _ = flow.storage.delete(instance.id)
+                  Ok(final_ctx)
+                }
+                Error(err) -> handle_error(flow, ctx, instance, Some(err))
+              }
             }
             Error(err) -> handle_error(flow, ctx, instance, Some(err))
           }
         }
         None -> {
-          let _ = flow.storage.delete(instance.id)
-          Ok(ctx)
+          // Just run flow exit hook
+          case run_flow_exit_hook(flow.on_flow_exit, ctx, completed_instance) {
+            Ok(final_ctx) -> {
+              let _ = flow.storage.delete(instance.id)
+              Ok(final_ctx)
+            }
+            Error(err) -> handle_error(flow, ctx, instance, Some(err))
+          }
         }
       }
     }
 
     Cancel -> {
-      let _ = flow.storage.delete(instance.id)
-      Ok(ctx)
+      // Run flow exit hook before canceling
+      case run_flow_exit_hook(flow.on_flow_exit, ctx, instance) {
+        Ok(final_ctx) -> {
+          let _ = flow.storage.delete(instance.id)
+          Ok(final_ctx)
+        }
+        Error(err) -> handle_error(flow, ctx, instance, Some(err))
+      }
     }
 
     Wait(token) -> {
@@ -1084,6 +1608,59 @@ fn process_action(
     Exit(_) -> {
       let _ = flow.storage.delete(instance.id)
       Ok(ctx)
+    }
+
+    EnterSubflow(subflow_name, data) -> {
+      // Find the subflow config by name
+      case
+        list.find(flow.subflows, fn(config) { config.flow.name == subflow_name })
+      {
+        Ok(subflow_config) -> {
+          // Create stack frame for the parent flow
+          let return_step = flow.step_to_string(subflow_config.return_step)
+          let stack_frame =
+            FlowStackFrame(
+              flow_name: flow.name,
+              return_step: return_step,
+              saved_data: instance.state.data,
+            )
+
+          // Get subflow initial step
+          let subflow_initial_step =
+            subflow_config.flow.step_to_string(subflow_config.flow.initial_step)
+
+          // Update instance with stack frame and switch to subflow
+          let updated_instance =
+            FlowInstance(
+              ..instance,
+              flow_name: subflow_config.flow.name,
+              state: FlowState(
+                current_step: subflow_initial_step,
+                data: dict.merge(instance.state.data, data),
+                history: [subflow_initial_step],
+                flow_stack: [stack_frame, ..instance.state.flow_stack],
+                parallel_state: None,
+              ),
+              step_data: dict.new(),
+              updated_at: utils.current_time_ms(),
+            )
+
+          case flow.storage.save(updated_instance) {
+            Ok(_) ->
+              execute_subflow_step(
+                subflow_config.flow,
+                ctx,
+                updated_instance,
+                subflow_config,
+              )
+            Error(err) -> handle_error(flow, ctx, instance, Some(err))
+          }
+        }
+        Error(_) -> {
+          // Subflow not found, continue without error
+          Ok(ctx)
+        }
+      }
     }
   }
 }
@@ -1139,12 +1716,12 @@ pub fn text_step(
   next_step: step_type,
 ) -> StepHandler(step_type, session, error) {
   fn(ctx: Context(session, error), instance: FlowInstance) {
-    case get_scene_data(instance, "user_input") {
+    case get_step_data(instance, "user_input") {
       Some(value) -> {
         let instance =
           instance
           |> store_data(data_key, value)
-          |> clear_scene_data_key("user_input")
+          |> clear_step_data_key("user_input")
         Ok(#(ctx, Next(next_step), instance))
       }
       None -> {
@@ -1603,6 +2180,306 @@ fn check_parallel_trigger(
     config.trigger_step == instance.state.current_step
   })
   |> option.from_result()
+}
+
+/// Check if current step triggers a subflow
+fn check_subflow_trigger(
+  flow: Flow(step_type, session, error),
+  instance: FlowInstance,
+) -> Option(SubflowConfig(step_type, session, error)) {
+  list.find(flow.subflows, fn(config) {
+    config.trigger_step == instance.state.current_step
+  })
+  |> option.from_result()
+}
+
+/// Start subflow execution
+fn start_subflow_execution(
+  parent_flow: Flow(step_type, session, error),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  config: SubflowConfig(step_type, session, error),
+) -> Result(Context(session, error), error) {
+  // Run flow leave hook on parent flow before entering subflow
+  case run_flow_leave_hook(parent_flow.on_flow_leave, ctx, instance) {
+    Ok(#(ctx_after_leave, instance_after_leave)) -> {
+      // Create stack frame for the parent flow
+      let return_step = parent_flow.step_to_string(config.return_step)
+      let stack_frame =
+        FlowStackFrame(
+          flow_name: parent_flow.name,
+          return_step: return_step,
+          saved_data: instance_after_leave.state.data,
+        )
+
+      // Map arguments for the subflow
+      let subflow_data = config.map_args(instance_after_leave)
+
+      // Get subflow initial step
+      let subflow_initial_step =
+        config.flow.step_to_string(config.flow.initial_step)
+
+      // Update instance with stack frame and switch to subflow
+      let updated_instance =
+        FlowInstance(
+          ..instance_after_leave,
+          flow_name: config.flow.name,
+          state: FlowState(
+            current_step: subflow_initial_step,
+            data: subflow_data,
+            history: [subflow_initial_step],
+            flow_stack: [stack_frame, ..instance_after_leave.state.flow_stack],
+            parallel_state: None,
+          ),
+          step_data: dict.new(),
+          updated_at: utils.current_time_ms(),
+        )
+
+      case parent_flow.storage.save(updated_instance) {
+        Ok(_) ->
+          execute_subflow_step(
+            config.flow,
+            ctx_after_leave,
+            updated_instance,
+            config,
+          )
+        Error(err) -> handle_error(parent_flow, ctx, instance, Some(err))
+      }
+    }
+    Error(err) -> handle_error(parent_flow, ctx, instance, Some(err))
+  }
+}
+
+/// Execute a step within a subflow context
+fn execute_subflow_step(
+  flow: Flow(Dynamic, session, error),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  config: SubflowConfig(step_type, session, error),
+) -> Result(Context(session, error), error) {
+  case dict.get(flow.steps, instance.state.current_step) {
+    Ok(step_config) -> {
+      let handler_fn = fn() { step_config.handler(ctx, instance) }
+      let result =
+        apply_middlewares(
+          ctx,
+          instance,
+          handler_fn,
+          list.append(flow.global_middlewares, step_config.middlewares),
+        )
+      case result {
+        Ok(#(new_ctx, action, new_instance)) ->
+          process_subflow_action(flow, new_ctx, action, new_instance, config)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+    Error(_) -> handle_subflow_error(flow, ctx, instance, None, config)
+  }
+}
+
+/// Process action within a subflow
+fn process_subflow_action(
+  flow: Flow(Dynamic, session, error),
+  ctx: Context(session, error),
+  action: FlowAction(Dynamic),
+  instance: FlowInstance,
+  config: SubflowConfig(step_type, session, error),
+) -> Result(Context(session, error), error) {
+  case action {
+    // Handle subflow completion - return to parent
+    Complete(data) | Exit(Some(data)) -> {
+      return_to_parent_flow(ctx, instance, data, config)
+    }
+
+    Exit(None) -> {
+      return_to_parent_flow(ctx, instance, instance.state.data, config)
+    }
+
+    ReturnFromSubflow(result) -> {
+      return_to_parent_flow(ctx, instance, result, config)
+    }
+
+    // Cancel propagates up - cancel both subflow and parent
+    Cancel -> {
+      let _ = flow.storage.delete(instance.id)
+      Ok(ctx)
+    }
+
+    // Navigation within subflow
+    Next(step) -> {
+      let step_name = flow.step_to_string(step)
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(..instance.state, current_step: step_name, history: [
+            instance.state.current_step,
+            ..instance.state.history
+          ]),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
+    NextString(step_name) -> {
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(..instance.state, current_step: step_name, history: [
+            instance.state.current_step,
+            ..instance.state.history
+          ]),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
+    GoTo(step) -> {
+      let step_name = flow.step_to_string(step)
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(
+            current_step: step_name,
+            data: instance.state.data,
+            history: [step_name],
+            flow_stack: instance.state.flow_stack,
+            parallel_state: None,
+          ),
+          step_data: dict.new(),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
+    Back -> {
+      case instance.state.history {
+        [previous_step, ..rest] -> {
+          let updated_instance =
+            FlowInstance(
+              ..instance,
+              state: FlowState(
+                ..instance.state,
+                current_step: previous_step,
+                history: rest,
+              ),
+              updated_at: utils.current_time_ms(),
+            )
+          case flow.storage.save(updated_instance) {
+            Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+            Error(err) ->
+              handle_subflow_error(flow, ctx, instance, Some(err), config)
+          }
+        }
+        [] -> Ok(ctx)
+      }
+    }
+
+    Wait(token) -> {
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          wait_token: Some(token),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> Ok(ctx)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
+    WaitCallback(token) -> {
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          wait_token: Some(token),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> Ok(ctx)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
+    // These shouldn't happen in a simple subflow but handle gracefully
+    StartParallel(_, _) | CompleteParallelStep(_, _) | EnterSubflow(_, _) -> {
+      Ok(ctx)
+    }
+  }
+}
+
+/// Return from subflow to parent flow
+fn return_to_parent_flow(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  result: Dict(String, String),
+  config: SubflowConfig(step_type, session, error),
+) -> Result(Context(session, error), error) {
+  case instance.state.flow_stack {
+    [frame, ..rest_stack] -> {
+      // Apply result mapping
+      let temp_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(..instance.state, data: frame.saved_data),
+        )
+      let mapped_instance = config.map_result(result, temp_instance)
+
+      // Restore parent flow state
+      let updated_instance =
+        FlowInstance(
+          ..mapped_instance,
+          flow_name: frame.flow_name,
+          state: FlowState(
+            ..mapped_instance.state,
+            current_step: frame.return_step,
+            history: [frame.return_step, ..mapped_instance.state.history],
+            flow_stack: rest_stack,
+          ),
+          step_data: dict.new(),
+          updated_at: utils.current_time_ms(),
+        )
+
+      case config.flow.storage.save(updated_instance) {
+        Ok(_) -> Ok(ctx)
+        Error(_) -> Ok(ctx)
+      }
+    }
+    [] -> Ok(ctx)
+  }
+}
+
+/// Handle error within a subflow
+fn handle_subflow_error(
+  flow: Flow(Dynamic, session, error),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  error: Option(error),
+  _config: SubflowConfig(step_type, session, error),
+) -> Result(Context(session, error), error) {
+  case flow.on_error {
+    Some(handler) -> {
+      case handler(ctx, instance, error) {
+        Ok(new_ctx) -> Ok(new_ctx)
+        Error(_) -> Ok(ctx)
+      }
+    }
+    None -> Ok(ctx)
+  }
 }
 
 /// Start parallel execution

@@ -93,12 +93,12 @@ fn collect_name_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_scene_data(instance, "name") {
+  case flow.get_step_data(instance, "name") {
     Some(name) -> {
       case validate_name(name) {
         Ok(valid_name) -> {
           let instance =
-            flow.store_scene_data(instance, "collected_name", valid_name)
+            flow.store_step_data(instance, "collected_name", valid_name)
           flow.next(ctx, instance, CollectPhone)
         }
         Error(error_msg) -> {
@@ -126,12 +126,12 @@ fn collect_phone_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_scene_data(instance, "phone") {
+  case flow.get_step_data(instance, "phone") {
     Some(phone) -> {
       case validate_phone(phone) {
         Ok(valid_phone) -> {
           let instance =
-            flow.store_scene_data(instance, "collected_phone", valid_phone)
+            flow.store_step_data(instance, "collected_phone", valid_phone)
           flow.next(ctx, instance, CollectEmail)
         }
         Error(error_msg) -> {
@@ -167,21 +167,21 @@ fn collect_email_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_scene_data(instance, "email") {
+  case flow.get_step_data(instance, "email") {
     Some(email) -> {
       let trimmed = string.trim(email)
       let is_skip = string.lowercase(trimmed) == "skip"
 
       case is_skip {
         True -> {
-          let instance = flow.store_scene_data(instance, "collected_email", "")
+          let instance = flow.store_step_data(instance, "collected_email", "")
           flow.next(ctx, instance, ConfirmRegistration)
         }
         False -> {
           case validate_email(trimmed) {
             Ok(valid_email) -> {
               let instance =
-                flow.store_scene_data(instance, "collected_email", valid_email)
+                flow.store_step_data(instance, "collected_email", valid_email)
               flow.next(ctx, instance, ConfirmRegistration)
             }
             Error(_) -> {
@@ -262,14 +262,14 @@ fn restart_registration(
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
   let _ = reply.with_text(ctx, "Starting over. Please enter your full name:")
-  flow.goto(ctx, flow.clear_scene_data(instance), CollectName)
+  flow.goto(ctx, flow.clear_step_data(instance), CollectName)
 }
 
 fn handle_text_response(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_scene_data(instance, "confirmation") {
+  case flow.get_step_data(instance, "confirmation") {
     None -> ask_for_confirmation(ctx, instance)
     Some(text) -> {
       case parse_edit_command(text) {
@@ -278,7 +278,7 @@ fn handle_text_response(
           let cleared =
             flow.FlowInstance(
               ..instance,
-              scene_data: dict.delete(instance.scene_data, "confirmation"),
+              step_data: dict.delete(instance.step_data, "confirmation"),
             )
           flow.goto(ctx, cleared, step)
         }
@@ -287,7 +287,7 @@ fn handle_text_response(
             ctx,
             flow.FlowInstance(
               ..instance,
-              scene_data: dict.delete(instance.scene_data, "confirmation"),
+              step_data: dict.delete(instance.step_data, "confirmation"),
             ),
           )
       }
@@ -398,16 +398,16 @@ fn extract_registration_data(
   instance: flow.FlowInstance,
 ) -> Result(RegistrationData, String) {
   use name <- result.try(
-    flow.get_scene_data(instance, "collected_name")
+    flow.get_step_data(instance, "collected_name")
     |> option.to_result("Missing name"),
   )
 
   use phone <- result.try(
-    flow.get_scene_data(instance, "collected_phone")
+    flow.get_step_data(instance, "collected_phone")
     |> option.to_result("Missing phone"),
   )
 
-  let email = flow.get_scene_data(instance, "collected_email")
+  let email = flow.get_step_data(instance, "collected_email")
 
   use validated_name <- result.try(validate_name(name))
   use validated_phone <- result.try(validate_phone(phone))
