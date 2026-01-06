@@ -284,8 +284,10 @@ import telega/internal/log
 import telega/model/types.{
   type Audio, type ChatJoinRequest, type ChatMemberUpdated,
   type ChosenInlineResult, type InlineQuery, type Message,
-  type MessageReactionUpdated, type PhotoSize, type Poll, type PollAnswer,
-  type PreCheckoutQuery, type ShippingQuery, type Video, type Voice,
+  type MessageReactionCountUpdated, type MessageReactionUpdated, type PhotoSize,
+  type Poll, type PollAnswer, type PreCheckoutQuery, type ReactionType,
+  type ShippingQuery, type Video, type Voice, ReactionTypeEmojiReactionType,
+  ReactionTypePaidReactionType,
 }
 import telega/update.{type Command, type Update}
 
@@ -364,6 +366,10 @@ pub type MessageReactionHandler(session, error) =
   fn(Context(session, error), MessageReactionUpdated) ->
     Result(Context(session, error), error)
 
+pub type MessageReactionCountHandler(session, error) =
+  fn(Context(session, error), MessageReactionCountUpdated) ->
+    Result(Context(session, error), error)
+
 pub type ChatMemberUpdatedHandler(session, error) =
   fn(Context(session, error), ChatMemberUpdated) ->
     Result(Context(session, error), error)
@@ -407,6 +413,16 @@ pub type Route(session, error) {
   PollRoute(handler: PollHandler(session, error))
   PollAnswerRoute(handler: PollAnswerHandler(session, error))
   MessageReactionRoute(handler: MessageReactionHandler(session, error))
+  MessageReactionEmojiRoute(
+    emojis: List(String),
+    handler: MessageReactionHandler(session, error),
+  )
+  MessageReactionPaidRoute(handler: MessageReactionHandler(session, error))
+  MessageReactionAddedRoute(handler: MessageReactionHandler(session, error))
+  MessageReactionRemovedRoute(handler: MessageReactionHandler(session, error))
+  MessageReactionCountRoute(
+    handler: MessageReactionCountHandler(session, error),
+  )
   ChatMemberUpdatedRoute(handler: ChatMemberUpdatedHandler(session, error))
   ChatJoinRequestRoute(handler: ChatJoinRequestHandler(session, error))
   CustomRoute(matcher: fn(Update) -> Bool, handler: Handler(session, error))
@@ -652,6 +668,122 @@ pub fn on_reaction(
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for a specific emoji reaction
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_reaction_emoji("👍", handle_like)
+/// ```
+pub fn on_reaction_emoji(
+  router: Router(session, error),
+  emoji: String,
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [
+        MessageReactionEmojiRoute(emojis: [emoji], handler:),
+        ..routes
+      ])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for multiple emoji reactions
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_reaction_emojis(["👍", "❤", "🔥"], handle_positive_reactions)
+/// ```
+pub fn on_reaction_emojis(
+  router: Router(session, error),
+  emojis: List(String),
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [
+        MessageReactionEmojiRoute(emojis:, handler:),
+        ..routes
+      ])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for paid reactions (stars)
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_paid_reaction(handle_star_reaction)
+/// ```
+pub fn on_paid_reaction(
+  router: Router(session, error),
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MessageReactionPaidRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for added reactions only (filters out removed reactions)
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_reaction_added(handle_new_reaction)
+/// ```
+pub fn on_reaction_added(
+  router: Router(session, error),
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MessageReactionAddedRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for removed reactions only (filters out added reactions)
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_reaction_removed(handle_removed_reaction)
+/// ```
+pub fn on_reaction_removed(
+  router: Router(session, error),
+  handler: MessageReactionHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MessageReactionRemovedRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for message reaction count updates (anonymous reactions in channels)
+///
+/// ## Example
+/// ```gleam
+/// router
+/// |> router.on_reaction_count(handle_reaction_counts)
+/// ```
+pub fn on_reaction_count(
+  router: Router(session, error),
+  handler: MessageReactionCountHandler(session, error),
+) -> Router(session, error) {
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MessageReactionCountRoute(handler:), ..routes])
     ComposedRouter(..) as composed -> composed
   }
 }
@@ -1477,6 +1609,44 @@ pub fn scope(
                 False -> Ok(ctx)
               }
             })
+          MessageReactionEmojiRoute(emojis:, handler:) ->
+            MessageReactionEmojiRoute(
+              emojis:,
+              handler: fn(ctx, message_reaction) {
+                case predicate(ctx.update) {
+                  True -> handler(ctx, message_reaction)
+                  False -> Ok(ctx)
+                }
+              },
+            )
+          MessageReactionPaidRoute(handler:) ->
+            MessageReactionPaidRoute(handler: fn(ctx, message_reaction) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, message_reaction)
+                False -> Ok(ctx)
+              }
+            })
+          MessageReactionAddedRoute(handler:) ->
+            MessageReactionAddedRoute(handler: fn(ctx, message_reaction) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, message_reaction)
+                False -> Ok(ctx)
+              }
+            })
+          MessageReactionRemovedRoute(handler:) ->
+            MessageReactionRemovedRoute(handler: fn(ctx, message_reaction) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, message_reaction)
+                False -> Ok(ctx)
+              }
+            })
+          MessageReactionCountRoute(handler:) ->
+            MessageReactionCountRoute(handler: fn(ctx, message_reaction_count) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, message_reaction_count)
+                False -> Ok(ctx)
+              }
+            })
           ChatMemberUpdatedRoute(handler:) ->
             ChatMemberUpdatedRoute(handler: fn(ctx, chat_member_updated) {
               case predicate(ctx.update) {
@@ -1720,6 +1890,24 @@ fn find_matching_route(
             MessageReactionRoute(handler:),
               update.MessageReactionUpdate(message_reaction_updated:, ..)
             -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            MessageReactionEmojiRoute(handler:, ..),
+              update.MessageReactionUpdate(message_reaction_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            MessageReactionPaidRoute(handler:),
+              update.MessageReactionUpdate(message_reaction_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            MessageReactionAddedRoute(handler:),
+              update.MessageReactionUpdate(message_reaction_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            MessageReactionRemovedRoute(handler:),
+              update.MessageReactionUpdate(message_reaction_updated:, ..)
+            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+            MessageReactionCountRoute(handler:),
+              update.MessageReactionCountUpdate(
+                message_reaction_count_updated:,
+                ..,
+              )
+            -> fn(ctx, _) { handler(ctx, message_reaction_count_updated) }
             ChatMemberUpdatedRoute(handler:),
               update.ChatMemberUpdate(chat_member_updated:, ..)
             -> fn(ctx, _) { handler(ctx, chat_member_updated) }
@@ -1754,6 +1942,19 @@ fn route_matches(route: Route(session, error), update: Update) -> Bool {
     PollRoute(..), update.PollUpdate(..) -> True
     PollAnswerRoute(..), update.PollAnswerUpdate(..) -> True
     MessageReactionRoute(..), update.MessageReactionUpdate(..) -> True
+    MessageReactionEmojiRoute(emojis:, ..),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> matches_reaction_emojis(message_reaction_updated.new_reaction, emojis)
+    MessageReactionPaidRoute(..),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> has_paid_reaction(message_reaction_updated.new_reaction)
+    MessageReactionAddedRoute(..),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> has_added_reactions(message_reaction_updated)
+    MessageReactionRemovedRoute(..),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> has_removed_reactions(message_reaction_updated)
+    MessageReactionCountRoute(..), update.MessageReactionCountUpdate(..) -> True
     ChatMemberUpdatedRoute(..), update.ChatMemberUpdate(..) -> True
     ChatJoinRequestRoute(..), update.ChatJoinRequestUpdate(..) -> True
     CustomRoute(matcher:, ..), _ -> matcher(update)
@@ -1769,6 +1970,61 @@ fn matches_pattern(pattern: Pattern, text: String) -> Bool {
     Prefix(p) -> string.starts_with(text, p)
     Contains(p) -> string.contains(text, p)
     Suffix(p) -> string.ends_with(text, p)
+  }
+}
+
+/// Check if any reaction matches the specified emojis
+fn matches_reaction_emojis(
+  reactions: List(ReactionType),
+  emojis: List(String),
+) -> Bool {
+  list.any(reactions, fn(reaction) {
+    case reaction {
+      ReactionTypeEmojiReactionType(inner) -> list.contains(emojis, inner.emoji)
+      _ -> False
+    }
+  })
+}
+
+/// Check if any reaction is a paid reaction
+fn has_paid_reaction(reactions: List(ReactionType)) -> Bool {
+  list.any(reactions, fn(reaction) {
+    case reaction {
+      ReactionTypePaidReactionType(_) -> True
+      _ -> False
+    }
+  })
+}
+
+/// Check if there are added reactions (new_reaction has items not in old_reaction)
+fn has_added_reactions(update: MessageReactionUpdated) -> Bool {
+  list.any(update.new_reaction, fn(new_r) {
+    !list.any(update.old_reaction, fn(old_r) {
+      reaction_type_equals(new_r, old_r)
+    })
+  })
+}
+
+/// Check if there are removed reactions (old_reaction has items not in new_reaction)
+fn has_removed_reactions(update: MessageReactionUpdated) -> Bool {
+  list.any(update.old_reaction, fn(old_r) {
+    !list.any(update.new_reaction, fn(new_r) {
+      reaction_type_equals(old_r, new_r)
+    })
+  })
+}
+
+/// Check if two reaction types are equal
+fn reaction_type_equals(a: ReactionType, b: ReactionType) -> Bool {
+  case a, b {
+    ReactionTypeEmojiReactionType(a_inner),
+      ReactionTypeEmojiReactionType(b_inner)
+    -> a_inner.emoji == b_inner.emoji
+    types.ReactionTypeCustomEmojiReactionType(a_inner),
+      types.ReactionTypeCustomEmojiReactionType(b_inner)
+    -> a_inner.custom_emoji_id == b_inner.custom_emoji_id
+    ReactionTypePaidReactionType(_), ReactionTypePaidReactionType(_) -> True
+    _, _ -> False
   }
 }
 
