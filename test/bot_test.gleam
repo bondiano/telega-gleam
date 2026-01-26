@@ -27,7 +27,7 @@ fn create_test_config() -> config.Config {
   )
 }
 
-fn create_test_user() -> types.User {
+pub fn create_test_user() -> types.User {
   types.User(
     id: 123_456_789,
     is_bot: True,
@@ -310,6 +310,7 @@ pub fn context_next_session_test() {
       chat_subject:,
       start_time: None,
       log_prefix: None,
+      bot_info: create_test_user(),
     )
 
   let new_session = TestSession(counter: 10)
@@ -340,6 +341,7 @@ pub fn handler_types_test() {
       chat_subject: process.new_subject(),
       start_time: None,
       log_prefix: None,
+      bot_info: create_test_user(),
     )
 
   let handle_all = bot.HandleAll(fn(ctx, _update) { Ok(ctx) })
@@ -363,6 +365,7 @@ pub fn wait_handler_test() {
       chat_subject: process.new_subject(),
       start_time: None,
       log_prefix: None,
+      bot_info: create_test_user(),
     )
 
   let handler = bot.HandleText(fn(ctx, _text) { Ok(ctx) })

@@ -129,6 +129,7 @@ fn handle_update_bot_message(
         session_settings: bot.session_settings,
         catch_handler: bot.catch_handler,
         router_handler: bot.router_handler,
+        bot_info: bot.bot_info,
       ))
       registry.register(bot.registry, key:, subject:)
 
@@ -170,6 +171,7 @@ type ChatInstance(session, error) {
     continuation: Option(Continuation(session, error)),
     router_handler: RouterHandler(session, error),
     catch_handler: CatchHandler(session, error),
+    bot_info: User,
   )
 }
 
@@ -181,6 +183,7 @@ fn start_chat_instance(
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
   router_handler router_handler: RouterHandler(session, error),
+  bot_info bot_info: User,
 ) {
   let session = case session_settings.get_session(key) {
     Ok(Some(session)) -> session
@@ -201,6 +204,7 @@ fn start_chat_instance(
           self: subject,
           continuation: None,
           router_handler:,
+          bot_info:,
         )
       actor.initialised(chat_instance)
       |> actor.returning(subject)
@@ -430,6 +434,7 @@ pub type Context(session, error) {
     /// Used to calculate the duration of the conversation in logs
     start_time: Option(Timestamp),
     log_prefix: Option(String),
+    bot_info: User,
   )
 }
 
@@ -445,6 +450,7 @@ fn new_context(
     chat_subject: chat.self,
     start_time: None,
     log_prefix: None,
+    bot_info: chat.bot_info,
   )
 }
 

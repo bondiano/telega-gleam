@@ -1146,7 +1146,7 @@ pub fn handle(
 ) -> Result(Context(session, error), error) {
   case router {
     Router(middleware:, catch_handler:, ..) -> {
-      let handler = find_handler(router, update)
+      let handler = find_handler(router, update, ctx)
 
       let wrapped_handler = apply_middleware(handler, middleware)
 
@@ -1692,10 +1692,12 @@ pub fn scope(
 fn find_handler(
   router: Router(session, error),
   update: Update,
+  context: Context(session, error),
 ) -> Handler(session, error) {
   case router {
-    Router(..) -> find_handler_in_router(router, update)
-    ComposedRouter(composes:, ..) -> find_handler_in_composed(composes, update)
+    Router(..) -> find_handler_in_router(router, update, context)
+    ComposedRouter(composes:, ..) ->
+      find_handler_in_composed(composes, update, context)
   }
 }
 
@@ -1703,14 +1705,15 @@ fn find_handler(
 fn find_handler_in_composed(
   routers: List(Router(session, error)),
   update: Update,
+  context: Context(session, error),
 ) -> Handler(session, error) {
   case routers {
     [] -> fn(ctx, _) { Ok(ctx) }
     // No handler found
     [router, ..rest] -> {
       case can_handle_update(router, update) {
-        True -> find_handler(router, update)
-        False -> find_handler_in_composed(rest, update)
+        True -> find_handler(router, update, context)
+        False -> find_handler_in_composed(rest, update, context)
       }
     }
   }
@@ -1720,10 +1723,11 @@ fn find_handler_in_composed(
 fn find_handler_in_router(
   router: Router(session, error),
   update: Update,
+  context: Context(session, error),
 ) -> Handler(session, error) {
   case update {
     update.CommandUpdate(..) ->
-      find_command_handler(router, update)
+      find_command_handler(router, update, context)
       |> option.unwrap(find_route_or_fallback(router, update))
 
     update.CallbackQueryUpdate(..) ->
@@ -1738,11 +1742,23 @@ fn find_handler_in_router(
 fn find_command_handler(
   router: Router(session, error),
   update: Update,
+  context: Context(session, error),
 ) -> Option(Handler(session, error)) {
   case router, update {
-    Router(commands:, ..), update.CommandUpdate(command:, ..) ->
-      dict.get(commands, command.command)
+    Router(commands:, ..), update.CommandUpdate(command:, ..) -> {
+      //if command /help@yourbot has @ in the text,
+      //try split suffix after @ and match with current bot's username
+      let try_split = command.command |> string.split_once("@")
+      let command_key = case context.bot_info.username, try_split {
+        Some(bot_username), Ok(#(cmd_text, bot_suffix))
+          if bot_username == bot_suffix && bot_username != ""
+        -> cmd_text
+        _, _ -> command.command
+      }
+
+      dict.get(commands, command_key)
       |> option.from_result
+    }
     _, _ -> None
   }
 }
