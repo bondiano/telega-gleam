@@ -1,3 +1,4 @@
+import bot_test.{create_test_user}
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{None, Some}
@@ -198,6 +199,7 @@ fn test_context(session: String) -> Context(String, TelegaError) {
       message: test_message(),
       raw: test_update(),
     ),
+    bot_info: create_test_user(),
   )
 }
 
@@ -397,6 +399,79 @@ pub fn router_command_with_args_test() {
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("payload here")
+}
+
+pub fn router_command_with_matching_suffix_test() {
+  router_command_with_suffix_test("/help@testbot", "help@testbot")
+  router_command_with_suffix_test("/start@testbot", "start@testbot")
+}
+
+pub fn router_command_with_non_matching_suffix_test() {
+  router_command_with_suffix_test("/help@someotherbot", "initial")
+  router_command_with_suffix_test("/start@", "initial")
+}
+
+fn router_command_with_suffix_test(text: String, session_val: String) {
+  let handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+    Ok(Context(..ctx, session: cmd.command))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_commands(["help", "start"], handler)
+
+  // Build same update as above
+  let base = test_message()
+  let entity =
+    types.MessageEntity(
+      type_: "bot_command",
+      offset: 0,
+      length: text |> string.length,
+      url: None,
+      user: None,
+      language: None,
+      custom_emoji_id: None,
+    )
+
+  let message =
+    types.Message(..base, text: Some(text), entities: Some([entity]))
+
+  let raw =
+    types.Update(
+      update_id: 1,
+      message: Some(message),
+      edited_message: None,
+      channel_post: None,
+      edited_channel_post: None,
+      business_connection: None,
+      business_message: None,
+      edited_business_message: None,
+      deleted_business_messages: None,
+      message_reaction: None,
+      message_reaction_count: None,
+      inline_query: None,
+      chosen_inline_result: None,
+      callback_query: None,
+      shipping_query: None,
+      pre_checkout_query: None,
+      purchased_paid_media: None,
+      poll: None,
+      poll_answer: None,
+      my_chat_member: None,
+      chat_member: None,
+      chat_join_request: None,
+      chat_boost: None,
+      removed_chat_boost: None,
+    )
+
+  let upd = update.raw_to_update(raw)
+  let ctx = test_context("initial")
+  let result = router.handle(r, ctx, upd)
+
+  result
+  |> should.be_ok()
+  |> fn(ctx) { ctx.session }
+  |> should.equal(session_val)
 }
 
 pub fn text_pattern_matching_integration_test() {
