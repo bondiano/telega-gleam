@@ -31,11 +31,12 @@ import telega/model/types.{
   type ChatInviteLink, type ChatJoinRequest, type ChatLocation, type ChatMember,
   type ChatMemberAdministrator, type ChatMemberBanned, type ChatMemberLeft,
   type ChatMemberMember, type ChatMemberOwner, type ChatMemberRestricted,
-  type ChatMemberUpdated, type ChatPermissions, type ChatPhoto, type ChatShared,
-  type Checklist, type ChecklistTask, type ChecklistTasksAdded,
-  type ChecklistTasksDone, type ChosenInlineResult,
-  type CloseForumTopicParameters, type CloseGeneralForumTopicParameters,
-  type Contact, type ConvertGiftToStarsParameters, type CopyMessageParameters,
+  type ChatMemberUpdated, type ChatOwnerChanged, type ChatOwnerLeft,
+  type ChatPermissions, type ChatPhoto, type ChatShared, type Checklist,
+  type ChecklistTask, type ChecklistTasksAdded, type ChecklistTasksDone,
+  type ChosenInlineResult, type CloseForumTopicParameters,
+  type CloseGeneralForumTopicParameters, type Contact,
+  type ConvertGiftToStarsParameters, type CopyMessageParameters,
   type CopyMessagesParameters, type CopyTextButton,
   type CreateChatInviteLinkParameters,
   type CreateChatSubscriptionInviteLinkParameters,
@@ -69,12 +70,12 @@ import telega/model/types.{
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
   type GetUserChatBoostsParameters, type GetUserGiftsParameters,
-  type GetUserProfilePhotosParameters, type Gift, type GiftInfo,
-  type GiftPremiumSubscriptionParameters, type Gifts, type Giveaway,
-  type GiveawayCompleted, type GiveawayCreated, type GiveawayWinners,
-  type HideGeneralForumTopicParameters, type InaccessibleMessage,
-  type InlineKeyboardButton, type InlineKeyboardMarkup, type InlineQuery,
-  type InlineQueryResult, type InlineQueryResultArticle,
+  type GetUserProfileAudiosParameters, type GetUserProfilePhotosParameters,
+  type Gift, type GiftInfo, type GiftPremiumSubscriptionParameters, type Gifts,
+  type Giveaway, type GiveawayCompleted, type GiveawayCreated,
+  type GiveawayWinners, type HideGeneralForumTopicParameters,
+  type InaccessibleMessage, type InlineKeyboardButton, type InlineKeyboardMarkup,
+  type InlineQuery, type InlineQueryResult, type InlineQueryResultArticle,
   type InlineQueryResultAudio, type InlineQueryResultCachedAudio,
   type InlineQueryResultCachedDocument, type InlineQueryResultCachedGif,
   type InlineQueryResultCachedMpeg4Gif, type InlineQueryResultCachedPhoto,
@@ -152,12 +153,13 @@ import telega/model/types.{
   type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
-  type SetMyShortDescriptionParameters, type SetStickerEmojiListParameters,
-  type SetStickerKeywordsParameters, type SetStickerMaskPositionParameters,
-  type SetStickerPositionInSetParameters, type SetStickerSetThumbnailParameters,
-  type SetStickerSetTitleParameters, type SetWebhookParameters, type SharedUser,
-  type ShippingAddress, type ShippingOption, type ShippingQuery, type StarAmount,
-  type StarTransaction, type StarTransactions, type Sticker, type StickerSet,
+  type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
+  type SetStickerEmojiListParameters, type SetStickerKeywordsParameters,
+  type SetStickerMaskPositionParameters, type SetStickerPositionInSetParameters,
+  type SetStickerSetThumbnailParameters, type SetStickerSetTitleParameters,
+  type SetWebhookParameters, type SharedUser, type ShippingAddress,
+  type ShippingOption, type ShippingQuery, type StarAmount, type StarTransaction,
+  type StarTransactions, type Sticker, type StickerSet,
   type StopMessageLiveLocationParameters, type StopPollParameters, type Story,
   type StoryArea, type StoryAreaPosition, type StoryAreaType,
   type StoryAreaTypeLink, type StoryAreaTypeLocation,
@@ -177,11 +179,12 @@ import telega/model/types.{
   type UnpinAllGeneralForumTopicPinnedMessagesParameters,
   type UnpinChatMessageParameters, type Update, type UpgradeGiftParameters,
   type UploadStickerFileParameters, type User, type UserChatBoosts,
-  type UserProfilePhotos, type UsersShared, type Venue,
+  type UserProfileAudios, type UserProfilePhotos, type UsersShared, type Venue,
   type VerifyChatParameters, type VerifyUserParameters, type Video,
   type VideoChatEnded, type VideoChatParticipantsInvited,
-  type VideoChatScheduled, type VideoChatStarted, type VideoNote, type Voice,
-  type WebAppData, type WebAppInfo, type WebhookInfo, type WriteAccessAllowed,
+  type VideoChatScheduled, type VideoChatStarted, type VideoNote,
+  type VideoQuality, type Voice, type WebAppData, type WebAppInfo,
+  type WebhookInfo, type WriteAccessAllowed,
   BackgroundFillFreeformGradientBackgroundFill,
   BackgroundFillGradientBackgroundFill, BackgroundFillSolidBackgroundFill,
   BackgroundTypeChatThemeBackgroundType, BackgroundTypeFillBackgroundType,
@@ -393,6 +396,10 @@ pub fn encode_user(user: User) -> Json {
     ),
     #("has_main_web_app", json.nullable(user.has_main_web_app, json.bool)),
     #("has_topics_enabled", json.nullable(user.has_topics_enabled, json.bool)),
+    #(
+      "allows_users_to_create_topics",
+      json.nullable(user.allows_users_to_create_topics, json.bool),
+    ),
   ])
 }
 
@@ -549,6 +556,10 @@ pub fn encode_chat_full_info(chat_full_info: ChatFullInfo) -> Json {
     ),
     #("linked_chat_id", json.nullable(chat_full_info.linked_chat_id, json.int)),
     #("location", json.nullable(chat_full_info.location, encode_chat_location)),
+    #(
+      "first_profile_audio",
+      json.nullable(chat_full_info.first_profile_audio, encode_audio),
+    ),
   ])
 }
 
@@ -712,6 +723,14 @@ pub fn encode_message(message: Message) -> Json {
     #(
       "chat_background_set",
       json.nullable(message.chat_background_set, encode_chat_background),
+    ),
+    #(
+      "chat_owner_left",
+      json.nullable(message.chat_owner_left, encode_chat_owner_left),
+    ),
+    #(
+      "chat_owner_changed",
+      json.nullable(message.chat_owner_changed, encode_chat_owner_changed),
     ),
     #(
       "checklist_tasks_done",
@@ -1045,6 +1064,21 @@ pub fn encode_video(video: Video) -> Json {
     #("file_name", json.nullable(video.file_name, json.string)),
     #("mime_type", json.nullable(video.mime_type, json.string)),
     #("file_size", json.nullable(video.file_size, json.int)),
+    #(
+      "qualities",
+      json.nullable(video.qualities, json.array(_, encode_video_quality)),
+    ),
+  ])
+}
+
+pub fn encode_video_quality(video_quality: VideoQuality) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(video_quality.file_id)),
+    #("file_unique_id", json.string(video_quality.file_unique_id)),
+    #("width", json.int(video_quality.width)),
+    #("height", json.int(video_quality.height)),
+    #("codec", json.string(video_quality.codec)),
+    #("file_size", json.nullable(video_quality.file_size, json.int)),
   ])
 }
 
@@ -1471,6 +1505,18 @@ pub fn encode_chat_background(chat_background: ChatBackground) -> Json {
   ])
 }
 
+pub fn encode_chat_owner_left(chat_owner_left: ChatOwnerLeft) -> Json {
+  json_object_filter_nulls([
+    #("new_owner", json.nullable(chat_owner_left.new_owner, encode_user)),
+  ])
+}
+
+pub fn encode_chat_owner_changed(chat_owner_changed: ChatOwnerChanged) -> Json {
+  json_object_filter_nulls([
+    #("new_owner", encode_user(chat_owner_changed.new_owner)),
+  ])
+}
+
 pub fn encode_forum_topic_created(
   forum_topic_created: ForumTopicCreated,
 ) -> Json {
@@ -1752,6 +1798,15 @@ pub fn encode_user_profile_photos(
   ])
 }
 
+pub fn encode_user_profile_audios(
+  user_profile_audios: UserProfileAudios,
+) -> Json {
+  json_object_filter_nulls([
+    #("total_count", json.int(user_profile_audios.total_count)),
+    #("audios", json.array(user_profile_audios.audios, encode_audio)),
+  ])
+}
+
 pub fn encode_file(file: File) -> Json {
   json_object_filter_nulls([
     #("file_id", json.string(file.file_id)),
@@ -1800,6 +1855,11 @@ pub fn encode_reply_keyboard_markup(
 pub fn encode_keyboard_button(keyboard_button: KeyboardButton) -> Json {
   json_object_filter_nulls([
     #("text", json.string(keyboard_button.text)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(keyboard_button.icon_custom_emoji_id, json.string),
+    ),
+    #("style", json.nullable(keyboard_button.style, json.string)),
     #(
       "request_users",
       json.nullable(
@@ -1956,6 +2016,11 @@ pub fn encode_inline_keyboard_button(
 ) -> Json {
   json_object_filter_nulls([
     #("text", json.string(inline_keyboard_button.text)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(inline_keyboard_button.icon_custom_emoji_id, json.string),
+    ),
+    #("style", json.nullable(inline_keyboard_button.style, json.string)),
     #("url", json.nullable(inline_keyboard_button.url, json.string)),
     #(
       "callback_data",
@@ -2668,6 +2733,7 @@ pub fn encode_unique_gift_model(unique_gift_model: UniqueGiftModel) -> Json {
     #("name", json.string(unique_gift_model.name)),
     #("sticker", encode_sticker(unique_gift_model.sticker)),
     #("rarity_per_mille", json.int(unique_gift_model.rarity_per_mille)),
+    #("rarity", json.nullable(unique_gift_model.rarity, json.string)),
   ])
 }
 
@@ -2702,12 +2768,19 @@ pub fn encode_unique_gift_backdrop(
 
 pub fn encode_unique_gift(unique_gift: UniqueGift) -> Json {
   json_object_filter_nulls([
+    #("gift_id", json.string(unique_gift.gift_id)),
     #("base_name", json.string(unique_gift.base_name)),
     #("name", json.string(unique_gift.name)),
     #("number", json.int(unique_gift.number)),
     #("model", encode_unique_gift_model(unique_gift.model)),
     #("symbol", encode_unique_gift_symbol(unique_gift.symbol)),
     #("backdrop", encode_unique_gift_backdrop(unique_gift.backdrop)),
+    #("is_premium", json.nullable(unique_gift.is_premium, json.bool)),
+    #("is_burned", json.nullable(unique_gift.is_burned, json.bool)),
+    #(
+      "is_from_blockchain",
+      json.nullable(unique_gift.is_from_blockchain, json.bool),
+    ),
   ])
 }
 
@@ -6760,6 +6833,28 @@ pub fn encode_get_user_profile_photos_parameters(
     #("user_id", json.int(params.user_id)),
     #("offset", json.nullable(params.offset, json.int)),
     #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// GetUserProfileAudiosParameters --------------------------------------------------------------------------------------
+
+pub fn encode_get_user_profile_audios_parameters(
+  params: GetUserProfileAudiosParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("offset", json.nullable(params.offset, json.int)),
+    #("limit", json.nullable(params.limit, json.int)),
+  ])
+}
+
+// SetMyProfilePhotoParameters --------------------------------------------------------------------------------------
+
+pub fn encode_set_my_profile_photo_parameters(
+  params: SetMyProfilePhotoParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("photo", encode_input_profile_photo(params.photo)),
   ])
 }
 

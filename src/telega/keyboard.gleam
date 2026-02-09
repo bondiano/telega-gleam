@@ -570,6 +570,8 @@ pub fn inline_to_markup(
 pub fn button(text: String) -> KeyboardButton {
   KeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     request_users: None,
     request_chat: None,
     request_contact: None,
@@ -738,6 +740,8 @@ pub fn inline_button(
     Ok(_) ->
       Ok(InlineKeyboardButton(
         text:,
+        icon_custom_emoji_id: None,
+        style: None,
         callback_data: Some(callback_data.payload),
         url: None,
         login_url: None,
@@ -760,6 +764,8 @@ pub fn inline_url_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     url: Some(url),
     callback_data: None,
     login_url: None,
@@ -780,6 +786,8 @@ pub fn inline_web_app_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     web_app: Some(WebAppInfo(url:)),
     callback_data: None,
     url: None,
@@ -800,6 +808,8 @@ pub fn inline_switch_query_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     switch_inline_query: Some(query),
     callback_data: None,
     url: None,
@@ -820,6 +830,8 @@ pub fn inline_switch_query_current_chat_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     switch_inline_query_current_chat: Some(query),
     callback_data: None,
     url: None,
@@ -840,6 +852,8 @@ pub fn inline_copy_text_button(
 ) -> InlineKeyboardButton {
   InlineKeyboardButton(
     text:,
+    icon_custom_emoji_id: None,
+    style: None,
     copy_text: Some(CopyTextButton(text: copy_text)),
     callback_data: None,
     url: None,

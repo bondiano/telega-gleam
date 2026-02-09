@@ -294,6 +294,8 @@ pub type User {
     has_main_web_app: Option(Bool),
     /// Optional. True, if the bot has forum topic mode enabled in private chats. Returned only in getMe.
     has_topics_enabled: Option(Bool),
+    /// Optional. True, if the bot allows users to create and delete topics in private chats. Returned only in getMe.
+    allows_users_to_create_topics: Option(Bool),
   )
 }
 
@@ -422,6 +424,8 @@ pub type ChatFullInfo {
     unique_gift_colors: Option(UniqueGiftColors),
     /// Optional. The number of Telegram Stars a general user have to pay to send a message to the chat
     paid_message_star_count: Option(Int),
+    /// Optional. For private chats, the first audio added to the profile of the user
+    first_profile_audio: Option(Audio),
   )
 }
 
@@ -584,6 +588,10 @@ pub type Message {
     boost_added: Option(ChatBoostAdded),
     /// Optional. Service message: chat background set
     chat_background_set: Option(ChatBackground),
+    /// Optional. Service message: chat owner has left
+    chat_owner_left: Option(ChatOwnerLeft),
+    /// Optional. Service message: chat owner has changed
+    chat_owner_changed: Option(ChatOwnerChanged),
     /// Optional. Service message: some tasks in a checklist were marked as done or not done
     checklist_tasks_done: Option(ChecklistTasksDone),
     /// Optional. Service message: tasks were added to a checklist
@@ -938,6 +946,26 @@ pub type Video {
     file_name: Option(String),
     /// Optional. MIME type of the file as defined by the sender
     mime_type: Option(String),
+    /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
+    file_size: Option(Int),
+    /// Optional. List of available qualities of the video
+    qualities: Option(List(VideoQuality)),
+  )
+}
+
+/// **Official reference:** This object represents a video file of a specific quality.
+pub type VideoQuality {
+  VideoQuality(
+    /// Identifier for this file, which can be used to download or reuse the file
+    file_id: String,
+    /// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
+    file_unique_id: String,
+    /// Video width
+    width: Int,
+    /// Video height
+    height: Int,
+    /// Codec that was used to encode the video, for example, "h264", "h265", or "av01"
+    codec: String,
     /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
     file_size: Option(Int),
   )
@@ -1381,6 +1409,22 @@ pub type ChatBackground {
   )
 }
 
+/// **Official reference:** Describes a service message about the chat owner leaving the chat.
+pub type ChatOwnerLeft {
+  ChatOwnerLeft(
+    /// Optional. The user which will be the new owner of the chat if the previous owner does not return to the chat
+    new_owner: Option(User),
+  )
+}
+
+/// **Official reference:** Describes a service message about an ownership change in the chat.
+pub type ChatOwnerChanged {
+  ChatOwnerChanged(
+    /// The new owner of the chat
+    new_owner: User,
+  )
+}
+
 /// **Official reference:** This object represents a service message about a new forum topic created in the chat.
 pub type ForumTopicCreated {
   ForumTopicCreated(
@@ -1721,6 +1765,16 @@ pub type UserProfilePhotos {
   )
 }
 
+/// **Official reference:** This object represents the audios displayed on a user's profile.
+pub type UserProfileAudios {
+  UserProfileAudios(
+    /// Total number of profile audios for the target user
+    total_count: Int,
+    /// Requested profile audios
+    audios: List(Audio),
+  )
+}
+
 /// **Official reference:** This object represents a file ready to be downloaded. The file can be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile.
 pub type File {
   File(
@@ -1768,6 +1822,10 @@ pub type KeyboardButton {
   KeyboardButton(
     /// Text of the button. If none of the optional fields are used, it will be sent as a message when the button is pressed
     text: String,
+    /// Optional. Unique identifier of the custom emoji shown before the text of the button.
+    icon_custom_emoji_id: Option(String),
+    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue).
+    style: Option(String),
     /// Optional. If specified, pressing the button will open a list of suitable users. Identifiers of selected users will be sent to the bot in a “users_shared” service message. Available in private chats only.
     request_users: Option(KeyboardButtonRequestUsers),
     /// Optional. If specified, pressing the button will open a list of suitable chats. Tapping on a chat will send its identifier to the bot in a “chat_shared” service message. Available in private chats only.
@@ -1864,6 +1922,10 @@ pub type InlineKeyboardButton {
   InlineKeyboardButton(
     /// Label text on the button
     text: String,
+    /// Optional. Unique identifier of the custom emoji shown before the text of the button.
+    icon_custom_emoji_id: Option(String),
+    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue).
+    style: Option(String),
     /// Optional. HTTP or tg:// URL to be opened when the button is pressed. Links tg://user?id=<user_id> can be used to mention a user by their identifier without using a username, if this is allowed by their privacy settings.
     url: Option(String),
     /// Optional. Data to be sent in a callback query to the bot when the button is pressed, 1-64 bytes
@@ -2548,6 +2610,8 @@ pub type UniqueGiftModel {
     sticker: Sticker,
     /// The number of unique gifts that receive this model for every 1000 gifts upgraded
     rarity_per_mille: Int,
+    /// Optional. Rarity of the model if it is a crafted model. Currently, can be "uncommon", "rare", "epic", or "legendary".
+    rarity: Option(String),
   )
 }
 
@@ -2626,6 +2690,8 @@ pub type UniqueGift {
     backdrop: UniqueGiftBackdrop,
     /// Optional. True, if the original regular gift was exclusively purchaseable by Telegram Premium subscribers
     is_premium: Option(Bool),
+    /// Optional. True, if the gift was used to craft another gift and isn't available anymore
+    is_burned: Option(Bool),
     /// Optional. True, if the gift is assigned from the TON blockchain and can't be resold or transferred in Telegram
     is_from_blockchain: Option(Bool),
     /// Optional. The color scheme that can be used by the gift's owner for the chat's name, replies to messages and link previews; for business account gifts and gifts that are currently on sale only
@@ -5689,6 +5755,26 @@ pub type GetUserProfilePhotosParameters {
     offset: Option(Int),
     /// Limits the number of photos to be retrieved (1-100)
     limit: Option(Int),
+  )
+}
+
+// GetUserProfileAudiosParameters --------------------------------------------------------------------------------------
+pub type GetUserProfileAudiosParameters {
+  GetUserProfileAudiosParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Sequential number of the first audio to be returned (0-based)
+    offset: Option(Int),
+    /// Limits the number of audios to be retrieved (1-100)
+    limit: Option(Int),
+  )
+}
+
+// SetMyProfilePhotoParameters --------------------------------------------------------------------------------------
+pub type SetMyProfilePhotoParameters {
+  SetMyProfilePhotoParameters(
+    /// The new profile photo to set
+    photo: InputProfilePhoto,
   )
 }
 

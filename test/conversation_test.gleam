@@ -49,6 +49,7 @@ fn create_test_user() -> types.User {
     can_connect_to_business: None,
     has_main_web_app: None,
     has_topics_enabled: None,
+    allows_users_to_create_topics: None,
   )
 }
 
@@ -83,6 +84,7 @@ fn build_test_user() -> types.User {
     can_connect_to_business: None,
     has_main_web_app: None,
     has_topics_enabled: None,
+    allows_users_to_create_topics: None,
   )
 }
 
@@ -174,6 +176,8 @@ fn build_minimal_message(text: String) -> types.Message {
     proximity_alert_triggered: None,
     boost_added: None,
     chat_background_set: None,
+    chat_owner_left: None,
+    chat_owner_changed: None,
     forum_topic_created: None,
     forum_topic_edited: None,
     forum_topic_closed: None,

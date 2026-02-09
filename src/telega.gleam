@@ -734,6 +734,8 @@ pub fn wait_choice(
       let callback_data = int.to_string(idx)
       types.InlineKeyboardButton(
         text: label,
+        icon_custom_emoji_id: None,
+        style: None,
         url: None,
         callback_data: Some(callback_data),
         web_app: None,

@@ -43,6 +43,7 @@ pub fn create_test_user() -> types.User {
     can_connect_to_business: None,
     has_main_web_app: None,
     has_topics_enabled: None,
+    allows_users_to_create_topics: None,
   )
 }
 
@@ -78,6 +79,7 @@ fn create_test_update() -> update.Update {
         can_connect_to_business: None,
         has_main_web_app: None,
         has_topics_enabled: None,
+        allows_users_to_create_topics: None,
       )),
       sender_chat: None,
       direct_messages_topic: None,
@@ -158,6 +160,8 @@ fn create_test_update() -> update.Update {
       proximity_alert_triggered: None,
       boost_added: None,
       chat_background_set: None,
+      chat_owner_left: None,
+      chat_owner_changed: None,
       forum_topic_created: None,
       forum_topic_edited: None,
       forum_topic_closed: None,

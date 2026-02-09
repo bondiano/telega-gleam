@@ -25,45 +25,45 @@ import telega/model/types.{
   type ChatJoinRequest, type ChatLocation, type ChatMember,
   type ChatMemberAdministrator, type ChatMemberBanned, type ChatMemberLeft,
   type ChatMemberMember, type ChatMemberOwner, type ChatMemberRestricted,
-  type ChatMemberUpdated, type ChatPermissions, type ChatPhoto, type ChatShared,
-  type Checklist, type ChecklistTask, type ChecklistTasksAdded,
-  type ChecklistTasksDone, type ChosenInlineResult, type Contact,
-  type CopyTextButton, type Dice, type DirectMessagePriceChanged,
-  type DirectMessagesTopic, type Document, type EncryptedCredentials,
-  type EncryptedPassportElement, type ExternalReplyInfo, type File,
-  type FileOrString, type ForceReply, type ForumTopic, type ForumTopicClosed,
-  type ForumTopicCreated, type ForumTopicEdited, type ForumTopicReopened,
-  type Game, type GameHighScore, type GeneralForumTopicHidden,
-  type GeneralForumTopicUnhidden, type Gift, type GiftBackground, type GiftInfo,
-  type Gifts, type Giveaway, type GiveawayCompleted, type GiveawayCreated,
-  type GiveawayWinners, type InaccessibleMessage, type InlineKeyboardButton,
-  type InlineKeyboardMarkup, type InlineQuery, type InlineQueryResult,
-  type InlineQueryResultArticle, type InlineQueryResultAudio,
-  type InlineQueryResultCachedAudio, type InlineQueryResultCachedDocument,
-  type InlineQueryResultCachedGif, type InlineQueryResultCachedMpeg4Gif,
-  type InlineQueryResultCachedPhoto, type InlineQueryResultCachedSticker,
-  type InlineQueryResultCachedVideo, type InlineQueryResultCachedVoice,
-  type InlineQueryResultContact, type InlineQueryResultDocument,
-  type InlineQueryResultGame, type InlineQueryResultGif,
-  type InlineQueryResultLocation, type InlineQueryResultMpeg4Gif,
-  type InlineQueryResultPhoto, type InlineQueryResultVenue,
-  type InlineQueryResultVideo, type InlineQueryResultVoice,
-  type InlineQueryResultsButton, type InputChecklist, type InputChecklistTask,
-  type InputContactMessageContent, type InputInvoiceMessageContent,
-  type InputLocationMessageContent, type InputMedia, type InputMediaAnimation,
-  type InputMediaAudio, type InputMediaDocument, type InputMediaPhoto,
-  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
-  type InputPaidMediaPhoto, type InputPaidMediaVideo, type InputPollOption,
-  type InputSticker, type InputTextMessageContent, type InputVenueMessageContent,
-  type IntOrString, type Invoice, type KeyboardButton,
-  type KeyboardButtonPollType, type KeyboardButtonRequestChat,
-  type KeyboardButtonRequestUsers, type LabeledPrice, type LinkPreviewOptions,
-  type Location, type LoginUrl, type MaskPosition, type MaybeInaccessibleMessage,
-  type MenuButton, type MenuButtonCommands, type MenuButtonDefault,
-  type MenuButtonWebApp, type Message, type MessageAutoDeleteTimerChanged,
-  type MessageEntity, type MessageId, type MessageOrigin,
-  type MessageOriginChannel, type MessageOriginChat,
-  type MessageOriginHiddenUser, type MessageOriginUser,
+  type ChatMemberUpdated, type ChatOwnerChanged, type ChatOwnerLeft,
+  type ChatPermissions, type ChatPhoto, type ChatShared, type Checklist,
+  type ChecklistTask, type ChecklistTasksAdded, type ChecklistTasksDone,
+  type ChosenInlineResult, type Contact, type CopyTextButton, type Dice,
+  type DirectMessagePriceChanged, type DirectMessagesTopic, type Document,
+  type EncryptedCredentials, type EncryptedPassportElement,
+  type ExternalReplyInfo, type File, type FileOrString, type ForceReply,
+  type ForumTopic, type ForumTopicClosed, type ForumTopicCreated,
+  type ForumTopicEdited, type ForumTopicReopened, type Game, type GameHighScore,
+  type GeneralForumTopicHidden, type GeneralForumTopicUnhidden, type Gift,
+  type GiftBackground, type GiftInfo, type Gifts, type Giveaway,
+  type GiveawayCompleted, type GiveawayCreated, type GiveawayWinners,
+  type InaccessibleMessage, type InlineKeyboardButton, type InlineKeyboardMarkup,
+  type InlineQuery, type InlineQueryResult, type InlineQueryResultArticle,
+  type InlineQueryResultAudio, type InlineQueryResultCachedAudio,
+  type InlineQueryResultCachedDocument, type InlineQueryResultCachedGif,
+  type InlineQueryResultCachedMpeg4Gif, type InlineQueryResultCachedPhoto,
+  type InlineQueryResultCachedSticker, type InlineQueryResultCachedVideo,
+  type InlineQueryResultCachedVoice, type InlineQueryResultContact,
+  type InlineQueryResultDocument, type InlineQueryResultGame,
+  type InlineQueryResultGif, type InlineQueryResultLocation,
+  type InlineQueryResultMpeg4Gif, type InlineQueryResultPhoto,
+  type InlineQueryResultVenue, type InlineQueryResultVideo,
+  type InlineQueryResultVoice, type InlineQueryResultsButton,
+  type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
+  type InputInvoiceMessageContent, type InputLocationMessageContent,
+  type InputMedia, type InputMediaAnimation, type InputMediaAudio,
+  type InputMediaDocument, type InputMediaPhoto, type InputMediaVideo,
+  type InputMessageContent, type InputPaidMedia, type InputPaidMediaPhoto,
+  type InputPaidMediaVideo, type InputPollOption, type InputSticker,
+  type InputTextMessageContent, type InputVenueMessageContent, type IntOrString,
+  type Invoice, type KeyboardButton, type KeyboardButtonPollType,
+  type KeyboardButtonRequestChat, type KeyboardButtonRequestUsers,
+  type LabeledPrice, type LinkPreviewOptions, type Location, type LoginUrl,
+  type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
+  type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
+  type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
+  type MessageId, type MessageOrigin, type MessageOriginChannel,
+  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
   type PaidMedia, type PaidMediaInfo, type PaidMediaPhoto, type PaidMediaPreview,
@@ -95,9 +95,10 @@ import telega/model/types.{
   type TransactionPartnerUser, type UniqueGift, type UniqueGiftBackdrop,
   type UniqueGiftBackdropColors, type UniqueGiftColors, type UniqueGiftInfo,
   type UniqueGiftModel, type UniqueGiftSymbol, type Update, type User,
-  type UserChatBoosts, type UserProfilePhotos, type UserRating, type UsersShared,
-  type Venue, type Video, type VideoChatEnded, type VideoChatParticipantsInvited,
-  type VideoChatScheduled, type VideoChatStarted, type VideoNote, type Voice,
+  type UserChatBoosts, type UserProfileAudios, type UserProfilePhotos,
+  type UserRating, type UsersShared, type Venue, type Video, type VideoChatEnded,
+  type VideoChatParticipantsInvited, type VideoChatScheduled,
+  type VideoChatStarted, type VideoNote, type VideoQuality, type Voice,
   type WebAppData, type WebAppInfo, type WebhookInfo, type WriteAccessAllowed,
   AcceptedGiftTypes, AffiliateInfo, Animation, Audio,
   BackgroundFillFreeformGradient, BackgroundFillFreeformGradientBackgroundFill,
@@ -129,12 +130,13 @@ import telega/model/types.{
   ChatMemberBannedChatMember, ChatMemberLeft, ChatMemberLeftChatMember,
   ChatMemberMember, ChatMemberMemberChatMember, ChatMemberOwner,
   ChatMemberOwnerChatMember, ChatMemberRestricted,
-  ChatMemberRestrictedChatMember, ChatMemberUpdated, ChatPermissions, ChatPhoto,
-  ChatShared, Checklist, ChecklistTask, ChecklistTasksAdded, ChecklistTasksDone,
-  ChosenInlineResult, Contact, CopyTextButton, Dice, DirectMessagePriceChanged,
-  DirectMessagesTopic, Document, EncryptedCredentials, EncryptedPassportElement,
-  ExternalReplyInfo, File, FileV, ForceReply, ForumTopic, ForumTopicClosed,
-  ForumTopicCreated, ForumTopicEdited, ForumTopicReopened, Game, GameHighScore,
+  ChatMemberRestrictedChatMember, ChatMemberUpdated, ChatOwnerChanged,
+  ChatOwnerLeft, ChatPermissions, ChatPhoto, ChatShared, Checklist,
+  ChecklistTask, ChecklistTasksAdded, ChecklistTasksDone, ChosenInlineResult,
+  Contact, CopyTextButton, Dice, DirectMessagePriceChanged, DirectMessagesTopic,
+  Document, EncryptedCredentials, EncryptedPassportElement, ExternalReplyInfo,
+  File, FileV, ForceReply, ForumTopic, ForumTopicClosed, ForumTopicCreated,
+  ForumTopicEdited, ForumTopicReopened, Game, GameHighScore,
   GeneralForumTopicHidden, GeneralForumTopicUnhidden, Gift, GiftBackground,
   GiftInfo, Gifts, Giveaway, GiveawayCompleted, GiveawayCreated, GiveawayWinners,
   InaccessibleMessage, InaccessibleMessageMaybeInaccessibleMessage,
@@ -223,10 +225,10 @@ import telega/model/types.{
   TransactionPartnerTelegramApiTransactionPartner, TransactionPartnerUser,
   TransactionPartnerUserTransactionPartner, UniqueGift, UniqueGiftBackdrop,
   UniqueGiftBackdropColors, UniqueGiftColors, UniqueGiftInfo, UniqueGiftModel,
-  UniqueGiftSymbol, Update, User, UserChatBoosts, UserProfilePhotos, UserRating,
-  UsersShared, Venue, Video, VideoChatEnded, VideoChatParticipantsInvited,
-  VideoChatScheduled, VideoChatStarted, VideoNote, Voice, WebAppData, WebAppInfo,
-  WebhookInfo, WriteAccessAllowed,
+  UniqueGiftSymbol, Update, User, UserChatBoosts, UserProfileAudios,
+  UserProfilePhotos, UserRating, UsersShared, Venue, Video, VideoChatEnded,
+  VideoChatParticipantsInvited, VideoChatScheduled, VideoChatStarted, VideoNote,
+  VideoQuality, Voice, WebAppData, WebAppInfo, WebhookInfo, WriteAccessAllowed,
 }
 
 pub fn update_decoder() -> decode.Decoder(Update) {
@@ -483,6 +485,11 @@ pub fn user_decoder() -> decode.Decoder(User) {
     None,
     decode.optional(decode.bool),
   )
+  use allows_users_to_create_topics <- decode.optional_field(
+    "allows_users_to_create_topics",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(User(
     id: id,
     is_bot: is_bot,
@@ -498,6 +505,7 @@ pub fn user_decoder() -> decode.Decoder(User) {
     can_connect_to_business: can_connect_to_business,
     has_main_web_app: has_main_web_app,
     has_topics_enabled: has_topics_enabled,
+    allows_users_to_create_topics: allows_users_to_create_topics,
   ))
 }
 
@@ -781,6 +789,11 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     None,
     decode.optional(decode.int),
   )
+  use first_profile_audio <- decode.optional_field(
+    "first_profile_audio",
+    None,
+    decode.optional(audio_decoder()),
+  )
   decode.success(ChatFullInfo(
     id: id,
     type_: type_,
@@ -832,6 +845,7 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     rating: rating,
     unique_gift_colors: unique_gift_colors,
     paid_message_star_count: paid_message_star_count,
+    first_profile_audio: first_profile_audio,
   ))
 }
 
@@ -1219,6 +1233,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(chat_background_decoder()),
   )
+  use chat_owner_left <- decode.optional_field(
+    "chat_owner_left",
+    None,
+    decode.optional(chat_owner_left_decoder()),
+  )
+  use chat_owner_changed <- decode.optional_field(
+    "chat_owner_changed",
+    None,
+    decode.optional(chat_owner_changed_decoder()),
+  )
   use checklist_tasks_done <- decode.optional_field(
     "checklist_tasks_done",
     None,
@@ -1423,6 +1447,8 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     proximity_alert_triggered: proximity_alert_triggered,
     boost_added: boost_added,
     chat_background_set: chat_background_set,
+    chat_owner_left: chat_owner_left,
+    chat_owner_changed: chat_owner_changed,
     checklist_tasks_done: checklist_tasks_done,
     checklist_tasks_added: checklist_tasks_added,
     direct_message_price_changed: direct_message_price_changed,
@@ -1959,6 +1985,11 @@ pub fn video_decoder() -> decode.Decoder(Video) {
     None,
     decode.optional(decode.int),
   )
+  use qualities <- decode.optional_field(
+    "qualities",
+    None,
+    decode.optional(decode.list(video_quality_decoder())),
+  )
   decode.success(Video(
     file_id: file_id,
     file_unique_id: file_unique_id,
@@ -1970,6 +2001,28 @@ pub fn video_decoder() -> decode.Decoder(Video) {
     start_timestamp: start_timestamp,
     file_name: file_name,
     mime_type: mime_type,
+    file_size: file_size,
+    qualities: qualities,
+  ))
+}
+
+pub fn video_quality_decoder() -> decode.Decoder(VideoQuality) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use codec <- decode.field("codec", decode.string)
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(VideoQuality(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    codec: codec,
     file_size: file_size,
   ))
 }
@@ -2552,6 +2605,20 @@ pub fn chat_background_decoder() -> decode.Decoder(ChatBackground) {
   decode.success(ChatBackground(type_: type_))
 }
 
+pub fn chat_owner_left_decoder() -> decode.Decoder(ChatOwnerLeft) {
+  use new_owner <- decode.optional_field(
+    "new_owner",
+    None,
+    decode.optional(user_decoder()),
+  )
+  decode.success(ChatOwnerLeft(new_owner: new_owner))
+}
+
+pub fn chat_owner_changed_decoder() -> decode.Decoder(ChatOwnerChanged) {
+  use new_owner <- decode.field("new_owner", user_decoder())
+  decode.success(ChatOwnerChanged(new_owner: new_owner))
+}
+
 pub fn forum_topic_created_decoder() -> decode.Decoder(ForumTopicCreated) {
   use name <- decode.field("name", decode.string)
   use icon_color <- decode.field("icon_color", decode.int)
@@ -2931,6 +2998,12 @@ pub fn user_profile_photos_decoder() -> decode.Decoder(UserProfilePhotos) {
   decode.success(UserProfilePhotos(total_count: total_count, photos: photos))
 }
 
+pub fn user_profile_audios_decoder() -> decode.Decoder(UserProfileAudios) {
+  use total_count <- decode.field("total_count", decode.int)
+  use audios <- decode.field("audios", decode.list(audio_decoder()))
+  decode.success(UserProfileAudios(total_count: total_count, audios: audios))
+}
+
 pub fn file_decoder() -> decode.Decoder(File) {
   use file_id <- decode.field("file_id", decode.string)
   use file_unique_id <- decode.field("file_unique_id", decode.string)
@@ -2999,6 +3072,16 @@ pub fn reply_keyboard_markup_decoder() -> decode.Decoder(ReplyKeyboardMarkup) {
 
 pub fn keyboard_button_decoder() -> decode.Decoder(KeyboardButton) {
   use text <- decode.field("text", decode.string)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use style <- decode.optional_field(
+    "style",
+    None,
+    decode.optional(decode.string),
+  )
   use request_users <- decode.optional_field(
     "request_users",
     None,
@@ -3031,6 +3114,8 @@ pub fn keyboard_button_decoder() -> decode.Decoder(KeyboardButton) {
   )
   decode.success(KeyboardButton(
     text: text,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    style: style,
     request_users: request_users,
     request_chat: request_chat,
     request_contact: request_contact,
@@ -3184,6 +3269,16 @@ pub fn inline_keyboard_markup_decoder() -> decode.Decoder(InlineKeyboardMarkup) 
 
 pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) {
   use text <- decode.field("text", decode.string)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use style <- decode.optional_field(
+    "style",
+    None,
+    decode.optional(decode.string),
+  )
   use url <- decode.optional_field("url", None, decode.optional(decode.string))
   use callback_data <- decode.optional_field(
     "callback_data",
@@ -3228,6 +3323,8 @@ pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) 
   use pay <- decode.optional_field("pay", None, decode.optional(decode.bool))
   decode.success(InlineKeyboardButton(
     text: text,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    style: style,
     url: url,
     callback_data: callback_data,
     web_app: web_app,
@@ -4237,10 +4334,16 @@ pub fn unique_gift_model_decoder() -> decode.Decoder(UniqueGiftModel) {
   use name <- decode.field("name", decode.string)
   use sticker <- decode.field("sticker", sticker_decoder())
   use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  use rarity <- decode.optional_field(
+    "rarity",
+    None,
+    decode.optional(decode.string),
+  )
   decode.success(UniqueGiftModel(
     name: name,
     sticker: sticker,
     rarity_per_mille: rarity_per_mille,
+    rarity: rarity,
   ))
 }
 
@@ -4294,6 +4397,11 @@ pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
     None,
     decode.optional(decode.bool),
   )
+  use is_burned <- decode.optional_field(
+    "is_burned",
+    None,
+    decode.optional(decode.bool),
+  )
   use is_from_blockchain <- decode.optional_field(
     "is_from_blockchain",
     None,
@@ -4318,6 +4426,7 @@ pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
     symbol: symbol,
     backdrop: backdrop,
     is_premium: is_premium,
+    is_burned: is_burned,
     is_from_blockchain: is_from_blockchain,
     colors: colors,
     publisher_chat: publisher_chat,

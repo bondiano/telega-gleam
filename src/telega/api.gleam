@@ -50,8 +50,9 @@ import telega/model/types.{
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
   type GetUserChatBoostsParameters, type GetUserGiftsParameters,
-  type GetUserProfilePhotosParameters, type GiftPremiumSubscriptionParameters,
-  type Gifts, type HideGeneralForumTopicParameters, type LeaveChatParameters,
+  type GetUserProfileAudiosParameters, type GetUserProfilePhotosParameters,
+  type GiftPremiumSubscriptionParameters, type Gifts,
+  type HideGeneralForumTopicParameters, type LeaveChatParameters,
   type MenuButton, type Message, type OwnedGifts, type PinChatMessageParameters,
   type Poll, type PostStoryParameters, type PromoteChatMemberParameters,
   type ReadBusinessMessageParameters, type RefundStarPaymentParameters,
@@ -82,12 +83,13 @@ import telega/model/types.{
   type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
-  type SetMyShortDescriptionParameters, type SetStickerEmojiListParameters,
-  type SetStickerKeywordsParameters, type SetStickerMaskPositionParameters,
-  type SetStickerPositionInSetParameters, type SetStickerSetThumbnailParameters,
-  type SetStickerSetTitleParameters, type SetWebhookParameters, type StarAmount,
-  type StarTransactions, type Sticker, type StickerSet,
-  type StopMessageLiveLocationParameters, type StopPollParameters, type Story,
+  type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
+  type SetStickerEmojiListParameters, type SetStickerKeywordsParameters,
+  type SetStickerMaskPositionParameters, type SetStickerPositionInSetParameters,
+  type SetStickerSetThumbnailParameters, type SetStickerSetTitleParameters,
+  type SetWebhookParameters, type StarAmount, type StarTransactions,
+  type Sticker, type StickerSet, type StopMessageLiveLocationParameters,
+  type StopPollParameters, type Story,
   type TransferBusinessAccountStarsParameters, type TransferGiftParameters,
   type UnbanChatMemberParameters, type UnbanChatSenderChatParameters,
   type UnhideGeneralForumTopicParameters, type UnpinAllChatMessagesParameters,
@@ -95,8 +97,8 @@ import telega/model/types.{
   type UnpinAllGeneralForumTopicPinnedMessagesParameters,
   type UnpinChatMessageParameters, type Update, type UpgradeGiftParameters,
   type UploadStickerFileParameters, type User, type UserChatBoosts,
-  type UserProfilePhotos, type VerifyChatParameters, type VerifyUserParameters,
-  type WebhookInfo,
+  type UserProfileAudios, type UserProfilePhotos, type VerifyChatParameters,
+  type VerifyUserParameters, type WebhookInfo,
 }
 
 type ApiResponse(result) {
@@ -584,6 +586,53 @@ pub fn get_user_profile_photos(
   )
   |> fetch(client)
   |> map_response(decoder.user_profile_photos_decoder())
+}
+
+/// Use this method to get a list of profile audios of a user.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getuserprofileaudios
+pub fn get_user_profile_audios(
+  client client: client.TelegramClient,
+  parameters parameters: GetUserProfileAudiosParameters,
+) -> Result(UserProfileAudios, error.TelegaError) {
+  let body_json = encoder.encode_get_user_profile_audios_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getUserProfileAudios",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.user_profile_audios_decoder())
+}
+
+/// Use this method to set the bot's profile photo. Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmyprofilephoto
+pub fn set_my_profile_photo(
+  client client: client.TelegramClient,
+  parameters parameters: SetMyProfilePhotoParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_set_my_profile_photo_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setMyProfilePhoto",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to remove the bot's profile photo. Returns True on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#removemyprofilephoto
+pub fn remove_my_profile_photo(
+  client client: client.TelegramClient,
+) -> Result(Bool, error.TelegaError) {
+  new_post_request(client:, path: "removeMyProfilePhoto", body: "{}")
+  |> fetch(client)
+  |> map_response(decode.bool)
 }
 
 /// Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited [Message](https://core.telegram.org/bots/api#message) is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
