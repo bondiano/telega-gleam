@@ -988,41 +988,15 @@ pub fn in_chat(chat_id: Int) -> Filter {
 }
 
 /// Filter for private chats
+/// https://core.telegram.org/api/bots%2Fids#user-ids
 pub fn is_private_chat() -> Filter {
-  filter("is_private_chat", fn(update) {
-    case update {
-      update.TextUpdate(message:, ..)
-      | update.CommandUpdate(message:, ..)
-      | update.PhotoUpdate(message:, ..)
-      | update.VideoUpdate(message:, ..)
-      | update.VoiceUpdate(message:, ..)
-      | update.AudioUpdate(message:, ..) ->
-        case message.chat.type_ {
-          Some("private") -> True
-          _ -> False
-        }
-      _ -> False
-    }
-  })
+  filter("is_private_chat", fn(update) { update.chat_id > 0 })
 }
 
 /// Filter for group chats
+/// https://core.telegram.org/api/bots%2Fids#supergroup-channel-ids
 pub fn is_group_chat() -> Filter {
-  filter("is_group_chat", fn(update) {
-    case update {
-      update.TextUpdate(message:, ..)
-      | update.CommandUpdate(message:, ..)
-      | update.PhotoUpdate(message:, ..)
-      | update.VideoUpdate(message:, ..)
-      | update.VoiceUpdate(message:, ..)
-      | update.AudioUpdate(message:, ..) ->
-        case message.chat.type_ {
-          Some("group") | Some("supergroup") -> True
-          _ -> False
-        }
-      _ -> False
-    }
-  })
+  filter("is_group_chat", fn(update) { update.chat_id < 0 })
 }
 
 /// Filter for photo messages

@@ -1619,7 +1619,7 @@ pub fn filter_chat_type_test() {
     types.Message(
       ..test_message(),
       chat: types.Chat(
-        id: 789,
+        id: -789,
         type_: Some("group"),
         title: Some("Test Group"),
         username: None,
@@ -1633,7 +1633,7 @@ pub fn filter_chat_type_test() {
   let group_update =
     update.TextUpdate(
       from_id: 123,
-      chat_id: 789,
+      chat_id: -789,
       text: "Hello",
       message: group_msg,
       raw: test_update(),
@@ -1715,7 +1715,7 @@ pub fn complex_filter_composition_test() {
     types.Message(
       ..test_message(),
       chat: types.Chat(
-        id: 789,
+        id: -789,
         type_: Some("group"),
         title: Some("Test Group"),
         username: None,
@@ -1729,7 +1729,7 @@ pub fn complex_filter_composition_test() {
   let admin_update =
     update.TextUpdate(
       from_id: 200,
-      chat_id: 789,
+      chat_id: -789,
       text: "!ban user123",
       message: group_msg,
       raw: test_update(),
