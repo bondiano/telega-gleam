@@ -855,10 +855,7 @@ fn new_text_update(raw: ModelUpdate, message: Message, text: String) {
     raw:,
     text:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -867,10 +864,7 @@ fn new_command_update(raw: ModelUpdate, message: Message, text: String) {
   CommandUpdate(
     raw:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
     command: extract_command(text),
   )
@@ -881,10 +875,7 @@ fn new_photo_update(raw: ModelUpdate, message: Message, photos: List(PhotoSize))
     raw:,
     photos:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -894,10 +885,7 @@ fn new_video_update(raw: ModelUpdate, message: Message, video: Video) {
     raw:,
     video:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -907,10 +895,7 @@ fn new_audio_update(raw: ModelUpdate, message: Message, audio: Audio) {
     raw:,
     audio:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -920,10 +905,7 @@ fn new_voice_update(raw: ModelUpdate, message: Message, voice: Voice) {
     raw:,
     voice:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -937,10 +919,7 @@ fn new_web_app_data_update(
     raw:,
     web_app_data:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -949,10 +928,7 @@ fn new_channel_post_update(raw: ModelUpdate, channel_post: Message) {
   ChannelPostUpdate(
     raw:,
     post: channel_post,
-    from_id: case channel_post.from {
-      Some(user) -> user.id
-      None -> channel_post.chat.id
-    },
+    from_id: get_sender_id(channel_post),
     chat_id: channel_post.chat.id,
   )
 }
@@ -961,10 +937,7 @@ fn new_message_update(raw: ModelUpdate, message: Message) {
   MessageUpdate(
     raw:,
     message:,
-    from_id: case message.from {
-      Some(user) -> user.id
-      None -> message.chat.id
-    },
+    from_id: get_sender_id(message),
     chat_id: message.chat.id,
   )
 }
@@ -973,10 +946,7 @@ fn new_edited_message_update(raw: ModelUpdate, edited_message: Message) {
   EditedMessageUpdate(
     raw:,
     message: edited_message,
-    from_id: case edited_message.from {
-      Some(user) -> user.id
-      None -> edited_message.chat.id
-    },
+    from_id: get_sender_id(edited_message),
     chat_id: edited_message.chat.id,
   )
 }
@@ -1003,6 +973,14 @@ fn new_business_message_update(raw: ModelUpdate, business_message: Message) {
     },
     chat_id: business_message.chat.id,
   )
+}
+
+fn get_sender_id(message: Message) {
+  case message.from, message.sender_chat {
+    _, Some(sender_chat) -> sender_chat.id
+    Some(user), _ -> user.id
+    _, _ -> message.chat.id
+  }
 }
 
 fn is_command_entity(entity: MessageEntity) {

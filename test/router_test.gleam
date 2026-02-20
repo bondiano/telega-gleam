@@ -181,6 +181,20 @@ fn test_update() -> types.Update {
   )
 }
 
+fn test_sender_chat() {
+  types.Chat(
+    //chats always have negative id
+    id: -69_420,
+    type_: Some("channel"),
+    title: Some("testchat"),
+    username: None,
+    first_name: None,
+    last_name: None,
+    is_forum: None,
+    is_direct_messages: None,
+  )
+}
+
 fn test_context(session: String) -> Context(String, TelegaError) {
   let subject = process.new_subject()
   Context(
@@ -2273,4 +2287,23 @@ pub fn chat_join_request_handler_test() {
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("join_request:NewUser")
+}
+
+pub fn user_id_and_chat_id_parsing_test() {
+  let msg_from_user = types.Message(..test_message(), sender_chat: None)
+  let msg_from_chat =
+    types.Message(..test_message(), sender_chat: Some(test_sender_chat()))
+
+  let raw_from_user =
+    types.Update(..test_update(), message: Some(msg_from_user))
+  let raw_from_chat =
+    types.Update(..test_update(), message: Some(msg_from_chat))
+
+  let upd_from_user = update.raw_to_update(raw_from_user)
+  let upd_from_chat = update.raw_to_update(raw_from_chat)
+
+  should.equal(upd_from_user.from_id, 123)
+  should.equal(upd_from_user.chat_id, 456)
+  should.equal(upd_from_chat.from_id, -69_420)
+  should.equal(upd_from_user.chat_id, 456)
 }
