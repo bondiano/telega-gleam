@@ -1048,9 +1048,10 @@ fn new_message_reaction_update(
   MessageReactionUpdate(
     raw:,
     message_reaction_updated: message_reaction,
-    from_id: case message_reaction.user {
-      Some(user) -> user.id
-      None -> message_reaction.chat.id
+    from_id: case message_reaction.user, message_reaction.actor_chat {
+      _, Some(actor_chat) -> actor_chat.id
+      Some(user), _ -> user.id
+      _, _ -> message_reaction.chat.id
     },
     chat_id: message_reaction.chat.id,
   )
