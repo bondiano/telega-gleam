@@ -181,6 +181,20 @@ fn test_update() -> types.Update {
   )
 }
 
+fn test_sender_chat() {
+  types.Chat(
+    //chats always have negative id
+    id: -69_420,
+    type_: Some("channel"),
+    title: Some("testchat"),
+    username: None,
+    first_name: None,
+    last_name: None,
+    is_forum: None,
+    is_direct_messages: None,
+  )
+}
+
 fn test_context(session: String) -> Context(String, TelegaError) {
   let subject = process.new_subject()
   Context(
@@ -1619,7 +1633,7 @@ pub fn filter_chat_type_test() {
     types.Message(
       ..test_message(),
       chat: types.Chat(
-        id: 789,
+        id: -789,
         type_: Some("group"),
         title: Some("Test Group"),
         username: None,
@@ -1633,7 +1647,7 @@ pub fn filter_chat_type_test() {
   let group_update =
     update.TextUpdate(
       from_id: 123,
-      chat_id: 789,
+      chat_id: -789,
       text: "Hello",
       message: group_msg,
       raw: test_update(),
@@ -1715,7 +1729,7 @@ pub fn complex_filter_composition_test() {
     types.Message(
       ..test_message(),
       chat: types.Chat(
-        id: 789,
+        id: -789,
         type_: Some("group"),
         title: Some("Test Group"),
         username: None,
@@ -1729,7 +1743,7 @@ pub fn complex_filter_composition_test() {
   let admin_update =
     update.TextUpdate(
       from_id: 200,
-      chat_id: 789,
+      chat_id: -789,
       text: "!ban user123",
       message: group_msg,
       raw: test_update(),
@@ -2273,4 +2287,23 @@ pub fn chat_join_request_handler_test() {
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("join_request:NewUser")
+}
+
+pub fn user_id_and_chat_id_parsing_test() {
+  let msg_from_user = types.Message(..test_message(), sender_chat: None)
+  let msg_from_chat =
+    types.Message(..test_message(), sender_chat: Some(test_sender_chat()))
+
+  let raw_from_user =
+    types.Update(..test_update(), message: Some(msg_from_user))
+  let raw_from_chat =
+    types.Update(..test_update(), message: Some(msg_from_chat))
+
+  let upd_from_user = update.raw_to_update(raw_from_user)
+  let upd_from_chat = update.raw_to_update(raw_from_chat)
+
+  should.equal(upd_from_user.from_id, 123)
+  should.equal(upd_from_user.chat_id, 456)
+  should.equal(upd_from_chat.from_id, -69_420)
+  should.equal(upd_from_user.chat_id, 456)
 }
