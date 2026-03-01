@@ -305,7 +305,7 @@ pub type Chat {
     /// Unique identifier for this chat. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
     id: Int,
     /// Type of the chat, can be either “private”, “group”, “supergroup” or “channel”
-    type_: Option(String),
+    type_: String,
     /// Optional. Title, for supergroups, channels and group chats
     title: Option(String),
     /// Optional. Username, for private chats, supergroups and channels if available
@@ -390,8 +390,8 @@ pub type ChatFullInfo {
     pinned_message: Option(Message),
     /// Optional. Default chat member permissions, for groups and supergroups
     permissions: Option(ChatPermissions),
-    /// Optional. True, if gifts can be sent to the chat
-    can_send_gift: Option(Bool),
+    /// Information about types of gifts that are accepted by the chat or by the corresponding user for private chats
+    accepted_gift_types: AcceptedGiftTypes,
     /// Optional. True, if paid media messages can be sent or forwarded to the channel chat. The field is available only for channel chats.
     can_send_paid_media: Option(Bool),
     /// Optional. For supergroups, the minimum allowed delay between consecutive messages sent by each unprivileged user; in seconds
@@ -446,6 +446,8 @@ pub type Message {
     sender_boost_count: Option(Int),
     /// Optional. The bot that actually sent the message on behalf of the business account. Available only for outgoing messages sent on behalf of the connected business account.
     sender_business_bot: Option(User),
+    /// Optional. Tag or custom title of the sender of the message; for supergroups only
+    sender_tag: Option(String),
     /// Date the message was sent in Unix time. It is always a positive number, representing a valid date.
     date: Int,
     /// Optional. Unique identifier of the business connection from which the message was received. If non-empty, the message belongs to a chat of the corresponding business account that is independent from any potential bot chat which might share the same identifier.
@@ -668,7 +670,7 @@ pub type InaccessibleMessage {
 /// **Official reference:** This object represents one special entity in a text message. For example, hashtags, usernames, URLs, etc.
 pub type MessageEntity {
   MessageEntity(
-    /// Type of the entity. Currently, can be “mention” (@username), “hashtag” (#hashtag or #hashtag@chatusername), “cashtag” ($USD or $USD@chatusername), “bot_command” (/start@jobs_bot), “url” (https://telegram.org), “email” (do-not-reply@telegram.org), “phone_number” (+1-212-555-0123), “bold” (bold text), “italic” (italic text), “underline” (underlined text), “strikethrough” (strikethrough text), “spoiler” (spoiler message), “blockquote” (block quotation), “expandable_blockquote” (collapsed-by-default block quotation), “code” (monowidth string), “pre” (monowidth block), “text_link” (for clickable text URLs), “text_mention” (for users without usernames), “custom_emoji” (for inline custom emoji stickers)
+    /// Type of the entity. Currently, can be “mention” (@username), “hashtag” (#hashtag or #hashtag@chatusername), “cashtag” ($USD or $USD@chatusername), “bot_command” (/start@jobs_bot), “url” (https://telegram.org), “email” (do-not-reply@telegram.org), “phone_number” (+1-212-555-0123), “bold” (bold text), “italic” (italic text), “underline” (underlined text), “strikethrough” (strikethrough text), “spoiler” (spoiler message), “blockquote” (block quotation), “expandable_blockquote” (collapsed-by-default block quotation), “code” (monowidth string), “pre” (monowidth block), “text_link” (for clickable text URLs), “text_mention” (for users without usernames), “custom_emoji” (for inline custom emoji stickers), or “date_time” (for formatted date and time)
     type_: String,
     /// Offset in UTF-16 code units to the start of the entity
     offset: Int,
@@ -682,6 +684,10 @@ pub type MessageEntity {
     language: Option(String),
     /// Optional. For “custom_emoji” only, unique identifier of the custom emoji. Use getCustomEmojiStickers to get full information about the sticker
     custom_emoji_id: Option(String),
+    /// Optional. For “date_time” only, the Unix time associated with the entity
+    unix_time: Option(Int),
+    /// Optional. For “date_time” only, the string that defines the formatting of the date and time. See date-time entity formatting for more details.
+    date_time_format: Option(String),
   )
 }
 
@@ -1189,7 +1195,7 @@ pub type InputChecklistTask {
     /// Text of the task; 1-100 characters after entities parsing
     text: String,
     /// Optional. Mode for parsing entities in the text. See formatting options for more details.
-    parse_mode: String,
+    parse_mode: Option(String),
     /// Optional. List of special entities that appear in the text, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
     text_entities: Option(List(MessageEntity)),
   )
@@ -1201,7 +1207,7 @@ pub type InputChecklist {
     /// Title of the checklist; 1-255 characters after entities parsing
     title: String,
     /// Optional. Mode for parsing entities in the title. See formatting options for more details.
-    parse_mode: String,
+    parse_mode: Option(String),
     /// Optional. List of special entities that appear in the title, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
     title_entities: Option(List(MessageEntity)),
     /// List of 1-30 tasks in the checklist
@@ -2104,6 +2110,8 @@ pub type ChatAdministratorRights {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted defaults to the value of can_pin_messages.
+    can_manage_tags: Option(Bool),
   )
 }
 
@@ -2184,6 +2192,8 @@ pub type ChatMemberAdministrator {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted defaults to the value of can_pin_messages.
+    can_manage_tags: Option(Bool),
     /// Optional. Custom title for this user
     custom_title: Option(String),
   )
@@ -2194,6 +2204,8 @@ pub type ChatMemberMember {
   ChatMemberMember(
     /// The member's status in the chat, always “member”
     status: String,
+    /// Optional. Tag of the member
+    tag: Option(String),
     /// Information about the user
     user: User,
     /// Optional. Date when the user's subscription will expire; Unix time
@@ -2206,6 +2218,8 @@ pub type ChatMemberRestricted {
   ChatMemberRestricted(
     /// The member's status in the chat, always “restricted”
     status: String,
+    /// Optional. Tag of the member
+    tag: Option(String),
     /// Information about the user
     user: User,
     /// True, if the user is a member of the chat at the moment of the request
@@ -2224,12 +2238,14 @@ pub type ChatMemberRestricted {
     can_send_video_notes: Bool,
     /// True, if the user is allowed to send voice notes
     can_send_voice_notes: Bool,
-    /// True, if the user is allowed to send polls
+    /// True, if the user is allowed to send polls and checklists
     can_send_polls: Bool,
     /// True, if the user is allowed to send animations, games, stickers and use inline bots
     can_send_other_messages: Bool,
     /// True, if the user is allowed to add web page previews to their messages
     can_add_web_page_previews: Bool,
+    /// True, if the user is allowed to edit their own tag
+    can_edit_tag: Bool,
     /// True, if the user is allowed to change the chat title, photo and other settings
     can_change_info: Bool,
     /// True, if the user is allowed to invite new users to the chat
@@ -2300,12 +2316,14 @@ pub type ChatPermissions {
     can_send_video_notes: Option(Bool),
     /// Optional. True, if the user is allowed to send voice notes
     can_send_voice_notes: Option(Bool),
-    /// Optional. True, if the user is allowed to send polls
+    /// Optional. True, if the user is allowed to send polls and checklists
     can_send_polls: Option(Bool),
     /// Optional. True, if the user is allowed to send animations, games, stickers and use inline bots
     can_send_other_messages: Option(Bool),
     /// Optional. True, if the user is allowed to add web page previews to their messages
     can_add_web_page_previews: Option(Bool),
+    /// Optional. True, if the user is allowed to edit their own tag
+    can_edit_tag: Option(Bool),
     /// Optional. True, if the user is allowed to change the chat title, photo and other settings. Ignored in public supergroups
     can_change_info: Option(Bool),
     /// Optional. True, if the user is allowed to invite new users to the chat
@@ -2774,8 +2792,12 @@ pub type OwnedGift {
     was_refunded: Option(Bool),
     /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars
     convert_star_count: Option(Int),
-    /// Optional. Number of Telegram Stars that were paid by the sender for the ability to upgrade the gift
+    /// Optional. Number of Telegram Stars that were paid for the ability to upgrade the gift
     prepaid_upgrade_star_count: Option(Int),
+    /// Optional. True, if the gift's upgrade was purchased after the gift was sent; for gifts received on behalf of business accounts only
+    is_upgrade_separate: Option(Bool),
+    /// Optional. Unique number reserved for this gift when upgraded. See the number field in UniqueGift
+    unique_gift_number: Option(Int),
   )
 }
 
@@ -4462,20 +4484,24 @@ pub type TransactionPartnerUser {
   TransactionPartnerUser(
     /// Type of the transaction partner, always “user”
     type_: String,
+    /// Type of the transaction, currently one of “invoice_payment” for payments via invoices, “paid_media_payment” for payments for paid media, “gift_purchase” for gifts sent by the bot, “premium_purchase” for Telegram Premium subscriptions gifted by the bot, “business_account_transfer” for direct transfers from managed business accounts
+    transaction_type: String,
     /// Information about the user
     user: User,
-    /// Optional. Information about the affiliate that received a commission via this transaction
+    /// Optional. Information about the affiliate that received a commission via this transaction. Can be available only for “invoice_payment” and “paid_media_payment” transactions.
     affiliate: Option(AffiliateInfo),
-    /// Optional. Bot-specified invoice payload
+    /// Optional. Bot-specified invoice payload. Can be available only for “invoice_payment” transactions.
     invoice_payload: Option(String),
-    /// Optional. The duration of the paid subscription
+    /// Optional. The duration of the paid subscription. Can be available only for “invoice_payment” transactions.
     subscription_period: Option(Int),
-    /// Optional. Information about the paid media bought by the user
+    /// Optional. Information about the paid media bought by the user; for “paid_media_payment” transactions only
     paid_media: Option(List(PaidMedia)),
-    /// Optional. Bot-specified paid media payload
+    /// Optional. Bot-specified paid media payload. Can be available only for “paid_media_payment” transactions.
     paid_media_payload: Option(String),
-    /// Optional. The gift sent to the user by the bot
+    /// Optional. The gift sent to the user by the bot; for “gift_purchase” transactions only
     gift: Option(Gift),
+    /// Optional. Number of months the gifted Telegram Premium subscription will be active for; for “premium_purchase” transactions only
+    premium_subscription_duration: Option(Int),
   )
 }
 

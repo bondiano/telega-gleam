@@ -195,7 +195,7 @@ pub fn matches_emoji_returns_false_for_non_emoji_reaction_test() {
 fn test_chat() -> types.Chat {
   types.Chat(
     id: 123,
-    type_: Some("private"),
+    type_: "private",
     title: None,
     username: None,
     first_name: Some("Test"),

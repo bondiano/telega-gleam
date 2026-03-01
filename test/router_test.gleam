@@ -42,11 +42,12 @@ fn test_message() -> types.Message {
     direct_messages_topic: None,
     sender_boost_count: None,
     sender_business_bot: None,
+    sender_tag: None,
     date: 1_234_567_890,
     business_connection_id: None,
     chat: types.Chat(
       id: 456,
-      type_: Some("private"),
+      type_: "private",
       title: None,
       username: None,
       first_name: Some("Test"),
@@ -185,7 +186,7 @@ fn test_sender_chat() {
   types.Chat(
     //chats always have negative id
     id: -69_420,
-    type_: Some("channel"),
+    type_: "channel",
     title: Some("testchat"),
     username: None,
     first_name: None,
@@ -310,6 +311,8 @@ pub fn decode_command_with_args_test() {
       user: None,
       language: None,
       custom_emoji_id: None,
+      unix_time: None,
+      date_time_format: None,
     )
 
   let message =
@@ -375,6 +378,8 @@ pub fn router_command_with_args_test() {
       user: None,
       language: None,
       custom_emoji_id: None,
+      unix_time: None,
+      date_time_format: None,
     )
 
   let message =
@@ -448,6 +453,8 @@ fn router_command_with_suffix_test(text: String, session_val: String) {
       user: None,
       language: None,
       custom_emoji_id: None,
+      unix_time: None,
+      date_time_format: None,
     )
 
   let message =
@@ -1604,7 +1611,7 @@ pub fn filter_chat_type_test() {
       ..test_message(),
       chat: types.Chat(
         id: 456,
-        type_: Some("private"),
+        type_: "private",
         title: None,
         username: None,
         first_name: Some("Test"),
@@ -1634,7 +1641,7 @@ pub fn filter_chat_type_test() {
       ..test_message(),
       chat: types.Chat(
         id: -789,
-        type_: Some("group"),
+        type_: "group",
         title: Some("Test Group"),
         username: None,
         first_name: None,
@@ -1730,7 +1737,7 @@ pub fn complex_filter_composition_test() {
       ..test_message(),
       chat: types.Chat(
         id: -789,
-        type_: Some("group"),
+        type_: "group",
         title: Some("Test Group"),
         username: None,
         first_name: None,
@@ -2079,7 +2086,7 @@ pub fn message_reaction_handler_test() {
       message_reaction_updated: types.MessageReactionUpdated(
         chat: types.Chat(
           id: 456,
-          type_: Some("private"),
+          type_: "private",
           title: None,
           username: None,
           first_name: Some("Test"),
@@ -2144,7 +2151,7 @@ pub fn chat_member_updated_handler_test() {
       chat_member_updated: types.ChatMemberUpdated(
         chat: types.Chat(
           id: 456,
-          type_: Some("group"),
+          type_: "group",
           title: Some("Test Group"),
           username: None,
           first_name: None,
@@ -2173,6 +2180,7 @@ pub fn chat_member_updated_handler_test() {
         old_chat_member: types.ChatMemberMemberChatMember(
           types.ChatMemberMember(
             status: "member",
+            tag: None,
             user: types.User(
               id: 789,
               is_bot: False,
@@ -2196,6 +2204,7 @@ pub fn chat_member_updated_handler_test() {
         new_chat_member: types.ChatMemberMemberChatMember(
           types.ChatMemberMember(
             status: "member",
+            tag: None,
             user: types.User(
               id: 789,
               is_bot: False,
@@ -2249,7 +2258,7 @@ pub fn chat_join_request_handler_test() {
       chat_join_request: types.ChatJoinRequest(
         chat: types.Chat(
           id: 456,
-          type_: Some("group"),
+          type_: "group",
           title: Some("Private Group"),
           username: None,
           first_name: None,

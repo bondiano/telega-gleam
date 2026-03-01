@@ -511,11 +511,7 @@ pub fn user_decoder() -> decode.Decoder(User) {
 
 pub fn chat_decoder() -> decode.Decoder(Chat) {
   use id <- decode.field("id", decode.int)
-  use type_ <- decode.optional_field(
-    "type",
-    None,
-    decode.optional(decode.string),
-  )
+  use type_ <- decode.field("type", decode.string)
   use title <- decode.optional_field(
     "title",
     None,
@@ -704,10 +700,9 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     None,
     decode.optional(chat_permissions_decoder()),
   )
-  use can_send_gift <- decode.optional_field(
-    "can_send_gift",
-    None,
-    decode.optional(decode.bool),
+  use accepted_gift_types <- decode.field(
+    "accepted_gift_types",
+    accepted_gift_types_decoder(),
   )
   use can_send_paid_media <- decode.optional_field(
     "can_send_paid_media",
@@ -828,7 +823,7 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     invite_link: invite_link,
     pinned_message: pinned_message,
     permissions: permissions,
-    can_send_gift: can_send_gift,
+    accepted_gift_types: accepted_gift_types,
     can_send_paid_media: can_send_paid_media,
     slow_mode_delay: slow_mode_delay,
     unrestrict_boost_count: unrestrict_boost_count,
@@ -885,6 +880,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "sender_business_bot",
     None,
     decode.optional(user_decoder()),
+  )
+  use sender_tag <- decode.optional_field(
+    "sender_tag",
+    None,
+    decode.optional(decode.string),
   )
   use date <- decode.field("date", decode.int)
   use business_connection_id <- decode.optional_field(
@@ -1376,6 +1376,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     direct_messages_topic: direct_messages_topic,
     sender_boost_count: sender_boost_count,
     sender_business_bot: sender_business_bot,
+    sender_tag: sender_tag,
     date: date,
     business_connection_id: business_connection_id,
     chat: chat,
@@ -1513,6 +1514,16 @@ pub fn message_entity_decoder() -> decode.Decoder(MessageEntity) {
     None,
     decode.optional(decode.string),
   )
+  use unix_time <- decode.optional_field(
+    "unix_time",
+    None,
+    decode.optional(decode.int),
+  )
+  use date_time_format <- decode.optional_field(
+    "date_time_format",
+    None,
+    decode.optional(decode.string),
+  )
   decode.success(MessageEntity(
     type_: type_,
     offset: offset,
@@ -1521,6 +1532,8 @@ pub fn message_entity_decoder() -> decode.Decoder(MessageEntity) {
     user: user,
     language: language,
     custom_emoji_id: custom_emoji_id,
+    unix_time: unix_time,
+    date_time_format: date_time_format,
   ))
 }
 
@@ -2322,7 +2335,11 @@ pub fn checklist_decoder() -> decode.Decoder(Checklist) {
 pub fn input_checklist_task_decoder() -> decode.Decoder(InputChecklistTask) {
   use id <- decode.field("id", decode.int)
   use text <- decode.field("text", decode.string)
-  use parse_mode <- decode.field("parse_mode", decode.string)
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
   use text_entities <- decode.field(
     "text_entities",
     decode.optional(decode.list(message_entity_decoder())),
@@ -2337,7 +2354,11 @@ pub fn input_checklist_task_decoder() -> decode.Decoder(InputChecklistTask) {
 
 pub fn input_checklist_decoder() -> decode.Decoder(InputChecklist) {
   use title <- decode.field("title", decode.string)
-  use parse_mode <- decode.field("parse_mode", decode.string)
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
   use title_entities <- decode.field(
     "title_entities",
     decode.optional(decode.list(message_entity_decoder())),
@@ -3568,6 +3589,11 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.bool),
   )
+  use can_manage_tags <- decode.optional_field(
+    "can_manage_tags",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ChatAdministratorRights(
     is_anonymous: is_anonymous,
     can_manage_chat: can_manage_chat,
@@ -3585,6 +3611,7 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     can_pin_messages: can_pin_messages,
     can_manage_topics: can_manage_topics,
     can_manage_direct_messages: can_manage_direct_messages,
+    can_manage_tags: can_manage_tags,
   ))
 }
 
@@ -3688,6 +3715,11 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.bool),
   )
+  use can_manage_tags <- decode.optional_field(
+    "can_manage_tags",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ChatMemberAdministrator(
     status: status,
     user: user,
@@ -3707,13 +3739,15 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     can_edit_messages: can_edit_messages,
     can_pin_messages: can_pin_messages,
     can_manage_topics: can_manage_topics,
-    custom_title: custom_title,
     can_manage_direct_messages: can_manage_direct_messages,
+    can_manage_tags: can_manage_tags,
+    custom_title: custom_title,
   ))
 }
 
 pub fn chat_member_member_decoder() -> decode.Decoder(ChatMemberMember) {
   use status <- decode.field("status", decode.string)
+  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
   use user <- decode.field("user", user_decoder())
   use until_date <- decode.optional_field(
     "until_date",
@@ -3722,6 +3756,7 @@ pub fn chat_member_member_decoder() -> decode.Decoder(ChatMemberMember) {
   )
   decode.success(ChatMemberMember(
     status: status,
+    tag: tag,
     user: user,
     until_date: until_date,
   ))
@@ -3729,6 +3764,7 @@ pub fn chat_member_member_decoder() -> decode.Decoder(ChatMemberMember) {
 
 pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) {
   use status <- decode.field("status", decode.string)
+  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
   use user <- decode.field("user", user_decoder())
   use is_member <- decode.field("is_member", decode.bool)
   use can_send_messages <- decode.field("can_send_messages", decode.bool)
@@ -3747,6 +3783,7 @@ pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) 
     "can_add_web_page_previews",
     decode.bool,
   )
+  use can_edit_tag <- decode.field("can_edit_tag", decode.bool)
   use can_change_info <- decode.field("can_change_info", decode.bool)
   use can_invite_users <- decode.field("can_invite_users", decode.bool)
   use can_pin_messages <- decode.field("can_pin_messages", decode.bool)
@@ -3754,6 +3791,7 @@ pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) 
   use until_date <- decode.field("until_date", decode.int)
   decode.success(ChatMemberRestricted(
     status: status,
+    tag: tag,
     user: user,
     is_member: is_member,
     can_send_messages: can_send_messages,
@@ -3766,6 +3804,7 @@ pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) 
     can_send_polls: can_send_polls,
     can_send_other_messages: can_send_other_messages,
     can_add_web_page_previews: can_add_web_page_previews,
+    can_edit_tag: can_edit_tag,
     can_change_info: can_change_info,
     can_invite_users: can_invite_users,
     can_pin_messages: can_pin_messages,
@@ -3863,6 +3902,11 @@ pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
     None,
     decode.optional(decode.bool),
   )
+  use can_edit_tag <- decode.optional_field(
+    "can_edit_tag",
+    None,
+    decode.optional(decode.bool),
+  )
   use can_change_info <- decode.optional_field(
     "can_change_info",
     None,
@@ -3894,6 +3938,7 @@ pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
     can_send_polls: can_send_polls,
     can_send_other_messages: can_send_other_messages,
     can_add_web_page_previews: can_add_web_page_previews,
+    can_edit_tag: can_edit_tag,
     can_change_info: can_change_info,
     can_invite_users: can_invite_users,
     can_pin_messages: can_pin_messages,
@@ -4550,6 +4595,14 @@ pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
     "prepaid_upgrade_star_count",
     decode.optional(decode.int),
   )
+  use is_upgrade_separate <- decode.field(
+    "is_upgrade_separate",
+    decode.optional(decode.bool),
+  )
+  use unique_gift_number <- decode.field(
+    "unique_gift_number",
+    decode.optional(decode.int),
+  )
   decode.success(OwnedGift(
     type_: type_,
     gift: gift,
@@ -4564,6 +4617,8 @@ pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
     was_refunded: was_refunded,
     convert_star_count: convert_star_count,
     prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+    is_upgrade_separate: is_upgrade_separate,
+    unique_gift_number: unique_gift_number,
   ))
 }
 
@@ -7171,6 +7226,7 @@ pub fn transaction_partner_user_decoder() -> decode.Decoder(
   TransactionPartnerUser,
 ) {
   use type_ <- decode.field("type", decode.string)
+  use transaction_type <- decode.field("transaction_type", decode.string)
   use user <- decode.field("user", user_decoder())
   use affiliate <- decode.optional_field(
     "affiliate",
@@ -7202,8 +7258,14 @@ pub fn transaction_partner_user_decoder() -> decode.Decoder(
     None,
     decode.optional(gift_decoder()),
   )
+  use premium_subscription_duration <- decode.optional_field(
+    "premium_subscription_duration",
+    None,
+    decode.optional(decode.int),
+  )
   decode.success(TransactionPartnerUser(
     type_: type_,
+    transaction_type: transaction_type,
     user: user,
     affiliate: affiliate,
     invoice_payload: invoice_payload,
@@ -7211,6 +7273,7 @@ pub fn transaction_partner_user_decoder() -> decode.Decoder(
     paid_media: paid_media,
     paid_media_payload: paid_media_payload,
     gift: gift,
+    premium_subscription_duration: premium_subscription_duration,
   ))
 }
 

@@ -91,7 +91,7 @@ fn build_test_user() -> types.User {
 fn build_test_chat() -> types.Chat {
   types.Chat(
     id: test_chat_id,
-    type_: Some("private"),
+    type_: "private",
     title: None,
     username: None,
     first_name: Some("TestUser"),
@@ -110,6 +110,7 @@ fn build_minimal_message(text: String) -> types.Message {
     direct_messages_topic: None,
     sender_boost_count: None,
     sender_business_bot: None,
+    sender_tag: None,
     date: 1_640_995_200,
     business_connection_id: None,
     chat: build_test_chat(),

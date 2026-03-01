@@ -85,11 +85,12 @@ fn create_test_update() -> update.Update {
       direct_messages_topic: None,
       sender_boost_count: None,
       sender_business_bot: None,
+      sender_tag: None,
       date: 1_640_995_200,
       business_connection_id: None,
       chat: types.Chat(
         id: 123_456_789,
-        type_: Some("private"),
+        type_: "private",
         title: None,
         username: None,
         first_name: Some("TestUser"),

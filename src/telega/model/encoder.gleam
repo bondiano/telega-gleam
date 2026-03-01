@@ -406,7 +406,7 @@ pub fn encode_user(user: User) -> Json {
 pub fn encode_chat(chat: Chat) -> Json {
   json_object_filter_nulls([
     #("id", json.int(chat.id)),
-    #("type", json.nullable(chat.type_, json.string)),
+    #("type", json.string(chat.type_)),
     #("title", json.nullable(chat.title, json.string)),
     #("username", json.nullable(chat.username, json.string)),
     #("first_name", json.nullable(chat.first_name, json.string)),
@@ -509,7 +509,10 @@ pub fn encode_chat_full_info(chat_full_info: ChatFullInfo) -> Json {
       "permissions",
       json.nullable(chat_full_info.permissions, encode_chat_permissions),
     ),
-    #("can_send_gift", json.nullable(chat_full_info.can_send_gift, json.bool)),
+    #(
+      "accepted_gift_types",
+      encode_accepted_gift_types(chat_full_info.accepted_gift_types),
+    ),
     #(
       "can_send_paid_media",
       json.nullable(chat_full_info.can_send_paid_media, json.bool),
@@ -574,6 +577,7 @@ pub fn encode_message(message: Message) -> Json {
       "sender_business_bot",
       json.nullable(message.sender_business_bot, encode_user),
     ),
+    #("sender_tag", json.nullable(message.sender_tag, json.string)),
     #("date", json.int(message.date)),
     #(
       "business_connection_id",
@@ -842,6 +846,11 @@ pub fn encode_message_entity(message_entity: MessageEntity) -> Json {
     #(
       "custom_emoji_id",
       json.nullable(message_entity.custom_emoji_id, json.string),
+    ),
+    #("unix_time", json.nullable(message_entity.unix_time, json.int)),
+    #(
+      "date_time_format",
+      json.nullable(message_entity.date_time_format, json.string),
     ),
   ])
 }
@@ -1271,7 +1280,7 @@ pub fn encode_input_checklist_task(
   json_object_filter_nulls([
     #("id", json.int(input_checklist_task.id)),
     #("text", json.string(input_checklist_task.text)),
-    #("parse_mode", json.string(input_checklist_task.parse_mode)),
+    #("parse_mode", json.nullable(input_checklist_task.parse_mode, json.string)),
     #(
       "text_entities",
       json.nullable(input_checklist_task.text_entities, json.array(
@@ -1285,7 +1294,7 @@ pub fn encode_input_checklist_task(
 pub fn encode_input_checklist(input_checklist: InputChecklist) -> Json {
   json_object_filter_nulls([
     #("title", json.string(input_checklist.title)),
-    #("parse_mode", json.string(input_checklist.parse_mode)),
+    #("parse_mode", json.nullable(input_checklist.parse_mode, json.string)),
     #(
       "title_entities",
       json.nullable(input_checklist.title_entities, json.array(
@@ -2225,6 +2234,17 @@ pub fn encode_chat_administrator_rights(
       "can_manage_topics",
       json.nullable(chat_administrator_rights.can_manage_topics, json.bool),
     ),
+    #(
+      "can_manage_direct_messages",
+      json.nullable(
+        chat_administrator_rights.can_manage_direct_messages,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_manage_tags",
+      json.nullable(chat_administrator_rights.can_manage_tags, json.bool),
+    ),
   ])
 }
 
@@ -2320,6 +2340,17 @@ pub fn encode_chat_member_administrator(
       json.nullable(chat_member_administrator.can_manage_topics, json.bool),
     ),
     #(
+      "can_manage_direct_messages",
+      json.nullable(
+        chat_member_administrator.can_manage_direct_messages,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_manage_tags",
+      json.nullable(chat_member_administrator.can_manage_tags, json.bool),
+    ),
+    #(
       "custom_title",
       json.nullable(chat_member_administrator.custom_title, json.string),
     ),
@@ -2329,6 +2360,7 @@ pub fn encode_chat_member_administrator(
 pub fn encode_chat_member_member(chat_member_member: ChatMemberMember) -> Json {
   json_object_filter_nulls([
     #("status", json.string(chat_member_member.status)),
+    #("tag", json.nullable(chat_member_member.tag, json.string)),
     #("user", encode_user(chat_member_member.user)),
     #("until_date", json.nullable(chat_member_member.until_date, json.int)),
   ])
@@ -2339,6 +2371,7 @@ pub fn encode_chat_member_restricted(
 ) -> Json {
   json_object_filter_nulls([
     #("status", json.string(chat_member_restricted.status)),
+    #("tag", json.nullable(chat_member_restricted.tag, json.string)),
     #("user", encode_user(chat_member_restricted.user)),
     #("is_member", json.bool(chat_member_restricted.is_member)),
     #("can_send_messages", json.bool(chat_member_restricted.can_send_messages)),
@@ -2366,6 +2399,7 @@ pub fn encode_chat_member_restricted(
       "can_add_web_page_previews",
       json.bool(chat_member_restricted.can_add_web_page_previews),
     ),
+    #("can_edit_tag", json.bool(chat_member_restricted.can_edit_tag)),
     #("can_change_info", json.bool(chat_member_restricted.can_change_info)),
     #("can_invite_users", json.bool(chat_member_restricted.can_invite_users)),
     #("can_pin_messages", json.bool(chat_member_restricted.can_pin_messages)),
@@ -2445,6 +2479,7 @@ pub fn encode_chat_permissions(chat_permissions: ChatPermissions) -> Json {
       "can_add_web_page_previews",
       json.nullable(chat_permissions.can_add_web_page_previews, json.bool),
     ),
+    #("can_edit_tag", json.nullable(chat_permissions.can_edit_tag, json.bool)),
     #(
       "can_change_info",
       json.nullable(chat_permissions.can_change_info, json.bool),
@@ -2856,6 +2891,14 @@ pub fn encode_owned_gift(owned_gift: OwnedGift) -> Json {
     #(
       "prepaid_upgrade_star_count",
       json.nullable(owned_gift.prepaid_upgrade_star_count, json.int),
+    ),
+    #(
+      "is_upgrade_separate",
+      json.nullable(owned_gift.is_upgrade_separate, json.bool),
+    ),
+    #(
+      "unique_gift_number",
+      json.nullable(owned_gift.unique_gift_number, json.int),
     ),
   ])
 }
@@ -4927,6 +4970,10 @@ pub fn encode_transaction_partner_user(
 ) -> Json {
   json_object_filter_nulls([
     #("type", json.string(transaction_partner_user.type_)),
+    #(
+      "transaction_type",
+      json.string(transaction_partner_user.transaction_type),
+    ),
     #("user", encode_user(transaction_partner_user.user)),
     #(
       "affiliate",
@@ -4952,6 +4999,13 @@ pub fn encode_transaction_partner_user(
       json.nullable(transaction_partner_user.paid_media_payload, json.string),
     ),
     #("gift", json.nullable(transaction_partner_user.gift, encode_gift)),
+    #(
+      "premium_subscription_duration",
+      json.nullable(
+        transaction_partner_user.premium_subscription_duration,
+        json.int,
+      ),
+    ),
   ])
 }
 
