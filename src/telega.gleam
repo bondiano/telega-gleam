@@ -386,7 +386,8 @@ pub fn log_error(ctx: Context(session, error), message: String) {
   }
 }
 
-/// Stops bot message handling from current chat and waits for any update.
+/// Pauses the current chat actor's handler and waits for any update.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_any(
@@ -404,7 +405,8 @@ pub fn wait_any(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a specific command.
+/// Pauses the current chat actor's handler and waits for a specific command.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_command(
@@ -423,7 +425,8 @@ pub fn wait_command(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a specific command.
+/// Pauses the current chat actor's handler and waits for one of the specified commands.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_commands(
@@ -442,7 +445,8 @@ pub fn wait_commands(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a text message.
+/// Pauses the current chat actor's handler and waits for a text message.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_text(
@@ -460,7 +464,8 @@ pub fn wait_text(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a message that matches the given `Hears`.
+/// Pauses the current chat actor's handler and waits for a message that matches the given `Hears`.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_hears(
@@ -479,7 +484,8 @@ pub fn wait_hears(
   )
 }
 
-/// Stops bot message handling from current chat and waits for any message.
+/// Pauses the current chat actor's handler and waits for any message.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_message(
@@ -497,7 +503,8 @@ pub fn wait_message(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a callback query.
+/// Pauses the current chat actor's handler and waits for a callback query.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_callback_query(
@@ -519,7 +526,8 @@ pub fn wait_callback_query(
   )
 }
 
-/// Stops bot message handling from current chat and waits for an audio.
+/// Pauses the current chat actor's handler and waits for an audio message.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_audio(
@@ -537,7 +545,8 @@ pub fn wait_audio(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a video.
+/// Pauses the current chat actor's handler and waits for a video message.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_video(
@@ -555,7 +564,8 @@ pub fn wait_video(
   )
 }
 
-/// Stops bot message handling from current chat and waits for a voice.
+/// Pauses the current chat actor's handler and waits for a voice message.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_voice(
@@ -573,7 +583,8 @@ pub fn wait_voice(
   )
 }
 
-/// Stops bot message handling from current chat and waits for photos.
+/// Pauses the current chat actor's handler and waits for photos.
+/// Other chats and users continue to be handled concurrently.
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_photos(

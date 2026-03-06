@@ -37,6 +37,8 @@ handle_command("name", fn(ctx, _) {
 
 Under the hood, Telega uses the BEAM actor model to pause the execution of your handler at each `wait_*` call, resuming it when the expected message type arrives.
 
+> **Important:** Each `wait_*` call only pauses the current chat actor (identified by `{chat_id}:{from_id}`). Other users and chats continue to be handled concurrently. Think of it like `await` in async code — it yields the current "coroutine" (actor) but doesn't block the event loop or other conversations.
+
 ## Available Wait Functions
 
 ### Basic Wait Functions
@@ -52,7 +54,6 @@ Under the hood, Telega uses the BEAM actor model to pause the execution of your 
 - **`wait_audio`**: Waits for audio message
 - **`wait_video`**: Waits for video message
 - **`wait_photos`**: Waits for photo message
-- **`wait_web_app_data`**: Waits for web app data
 
 ### Enhanced Wait Functions (Forms API)
 
