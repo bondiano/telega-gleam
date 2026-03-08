@@ -4,6 +4,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/regexp
 import gleam/result
+import gleam/string
 
 import telega/internal/config.{type Config}
 import telega/internal/log
@@ -57,6 +58,11 @@ pub fn get_client_internal(
 ///
 /// Useful if you plan to implement own adapter.
 pub fn is_webhook_path(telega: Telega(session, error), path: String) {
+  let path = case string.starts_with(path, "/") {
+    True -> path
+    _ -> "/" <> path
+  }
+
   telega.config.webhook_path == path
 }
 
