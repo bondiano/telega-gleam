@@ -60,15 +60,10 @@ fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
   telega.is_secret_token_valid(telega, secret_header_value)
 }
 
-fn is_bot_request(telega: Telega(session, error), req) -> Bool {
-  case wisp.path_segments(req) {
-    [segment] -> {
-      let segment = case string.starts_with(segment, "/") {
-        True -> string.drop_start(segment, 1)
-        _ -> segment
-      }
-      telega.is_webhook_path(telega, segment)
-    }
-    _ -> False
+fn is_bot_request(telega: Telega(session, error), req: WispRequest) -> Bool {
+  let path = case string.starts_with(req.path, "/") {
+    True -> string.drop_start(req.path, 1)
+    _ -> req.path
   }
+  telega.is_webhook_path(telega, path)
 }
