@@ -57,8 +57,6 @@ pub fn get_client_internal(
 ///
 /// Useful if you plan to implement own adapter.
 pub fn is_webhook_path(telega: Telega(session, error), path: String) {
-  echo telega.config.webhook_path
-  echo path
   telega.config.webhook_path == path
 }
 
