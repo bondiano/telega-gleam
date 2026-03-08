@@ -2,6 +2,7 @@ import gleam/bool
 import gleam/erlang/process
 import gleam/http/request
 import gleam/result
+import gleam/string
 import telega/internal/log
 
 import wisp.{type Request as WispRequest, type Response as WispResponse}
@@ -61,7 +62,13 @@ fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
 
 fn is_bot_request(telega: Telega(session, error), req) -> Bool {
   case wisp.path_segments(req) {
-    [segment] -> telega.is_webhook_path(telega, segment)
+    [segment] -> {
+      let segment = case string.starts_with(segment, "/") {
+        True -> string.drop_start(segment, 1)
+        _ -> segment
+      }
+      telega.is_webhook_path(telega, segment)
+    }
     _ -> False
   }
 }
