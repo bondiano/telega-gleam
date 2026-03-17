@@ -1,11 +1,13 @@
-import gleam/dict
 import gleam/int
 import gleam/option.{None, Some}
 import gleam/string
 import pog
 
 import telega/bot.{type Context}
-import telega/flow
+import telega/flow/action
+import telega/flow/builder
+import telega/flow/instance
+import telega/flow/types
 import telega/keyboard
 import telega/menu_builder
 import telega/reply
@@ -46,30 +48,30 @@ fn string_to_step(name: String) -> Result(MenuStep, Nil) {
   }
 }
 
-pub fn create_menu_flow(db: pog.Connection) -> flow.Flow(MenuStep, Nil, String) {
+pub fn create_menu_flow(db: pog.Connection) -> types.Flow(MenuStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
-  flow.new("menu", storage, step_to_string, string_to_step)
-  |> flow.add_step(ShowCategories, fn(ctx, instance) {
-    show_categories_step(db, ctx, instance)
+  builder.new("menu", storage, step_to_string, string_to_step)
+  |> builder.add_step(ShowCategories, fn(ctx, inst) {
+    show_categories_step(db, ctx, inst)
   })
-  |> flow.add_step(ShowItems, fn(ctx, instance) {
-    show_items_step(db, ctx, instance)
+  |> builder.add_step(ShowItems, fn(ctx, inst) {
+    show_items_step(db, ctx, inst)
   })
-  |> flow.on_error(fn(ctx, _, error) {
+  |> builder.on_error(fn(ctx, _, error) {
     let error_msg = option.unwrap(error, "Unknown error")
     util.log_error("Menu flow error: " <> error_msg)
     let _ = reply.with_text(ctx, "❌ Menu error: " <> error_msg)
     Ok(ctx)
   })
-  |> flow.build(initial: ShowCategories)
+  |> builder.build(initial: ShowCategories)
 }
 
 fn show_categories_step(
   _db: pog.Connection,
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(MenuStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(MenuStep, Nil, String) {
   let categories = get_menu_categories()
 
   let menu =
@@ -97,7 +99,7 @@ fn show_categories_step(
     Ok(keyboard) -> {
       let markup = keyboard.to_inline_markup(keyboard)
       case reply.with_markup(ctx, menu_builder.get_title(menu), markup) {
-        Ok(_) -> flow.wait_callback(ctx, instance, "menu_nav")
+        Ok(_) -> action.wait_callback(ctx, instance)
         Error(_) -> Error("Failed to send menu")
       }
     }
@@ -109,11 +111,11 @@ fn show_categories_step(
 fn show_items_step(
   _db: pog.Connection,
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(MenuStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(MenuStep, Nil, String) {
   // Get category from flow data
-  case dict.get(instance.state.data, "selected_category") {
-    Ok(category) -> {
+  case instance.get_data(instance, "selected_category") {
+    Some(category) -> {
       let items = get_menu_items(category)
 
       let menu =
@@ -140,14 +142,14 @@ fn show_items_step(
         Ok(keyboard) -> {
           let markup = keyboard.to_inline_markup(keyboard)
           case reply.with_markup(ctx, menu_builder.get_title(menu), markup) {
-            Ok(_) -> flow.wait_callback(ctx, instance, "item_nav")
+            Ok(_) -> action.wait_callback(ctx, instance)
             Error(_) -> Error("Failed to send items menu")
           }
         }
         Error(msg) -> Error("Failed to create items menu: " <> msg)
       }
     }
-    Error(_) -> Error("No category selected")
+    None -> Error("No category selected")
   }
 }
 
@@ -299,21 +301,16 @@ fn get_menu_items(category: String) -> List(MenuItem) {
 /// Handle menu navigation callbacks
 pub fn handle_menu_callback(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
   callback_data: String,
-) -> flow.StepResult(MenuStep, Nil, String) {
+) -> types.StepResult(MenuStep, Nil, String) {
   case string.starts_with(callback_data, "category:") {
     True -> {
       let category = string.drop_start(callback_data, 9)
       // Store selected category in flow data
-      let updated_data =
-        dict.insert(instance.state.data, "selected_category", category)
       let updated_instance =
-        flow.FlowInstance(
-          ..instance,
-          state: flow.FlowState(..instance.state, data: updated_data),
-        )
-      flow.next(ctx, updated_instance, ShowItems)
+        instance.store_data(instance, "selected_category", category)
+      action.next(ctx, updated_instance, ShowItems)
     }
     False -> {
       case string.starts_with(callback_data, "item:") {
@@ -326,18 +323,18 @@ pub fn handle_menu_callback(
                 <> int.to_string(item_id)
                 <> "\n\n🍽️ Use /book to reserve a table and enjoy our food!"
               let _ = reply.with_text(ctx, item_info)
-              flow.complete(ctx, instance)
+              action.complete(ctx, instance)
             }
             Error(_) -> Error("Invalid item ID")
           }
         }
         False -> {
           case callback_data {
-            "back_to_categories" -> flow.next(ctx, instance, ShowCategories)
+            "back_to_categories" -> action.next(ctx, instance, ShowCategories)
             "book_table" -> {
               let _ =
                 reply.with_text(ctx, "📋 Use /book to make a table reservation!")
-              flow.complete(ctx, instance)
+              action.complete(ctx, instance)
             }
             "my_bookings" -> {
               let _ =
@@ -345,7 +342,7 @@ pub fn handle_menu_callback(
                   ctx,
                   "📋 Use /my_bookings to view your reservations!",
                 )
-              flow.complete(ctx, instance)
+              action.complete(ctx, instance)
             }
             _ -> Error("Unknown menu action: " <> callback_data)
           }

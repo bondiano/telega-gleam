@@ -10,7 +10,8 @@ import gleam/string
 import logging
 import pog
 import restaurant_booking/sql
-import telega/flow
+import telega/flow/instance
+import telega/flow/types
 import telega/keyboard
 
 /// Log an info message
@@ -47,76 +48,70 @@ fn parse_json_to_dict(json_str: String) -> dict.Dict(String, String) {
   }
 }
 
-fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> flow.FlowInstance {
-  let state_data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
+fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> types.FlowInstance {
+  let data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
   let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
 
-  flow.FlowInstance(
+  instance.instance_from_row(types.FlowInstanceRow(
     id: row.id,
     flow_name: row.flow_name,
     user_id: row.user_id,
     chat_id: row.chat_id,
-    state: flow.FlowState(
-      current_step: row.current_step,
-      data: state_data,
-      history: [],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: step_data,
+    current_step: row.current_step,
+    data:,
+    step_data:,
     wait_token: row.wait_token,
+    wait_timeout_at: None,
     created_at: row.created_at,
     updated_at: row.updated_at,
-  )
+  ))
 }
 
 /// Convert list database rows to FlowInstance list
 fn db_rows_to_flow_instances(
   rows: List(sql.ListUserInstancesRow),
-) -> List(flow.FlowInstance) {
+) -> List(types.FlowInstance) {
   rows
   |> list.map(fn(row) {
-    let state_data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
+    let data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
     let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
 
-    flow.FlowInstance(
+    instance.instance_from_row(types.FlowInstanceRow(
       id: row.id,
       flow_name: row.flow_name,
       user_id: row.user_id,
       chat_id: row.chat_id,
-      state: flow.FlowState(
-        current_step: row.current_step,
-        data: state_data,
-        history: [],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: step_data,
+      current_step: row.current_step,
+      data:,
+      step_data:,
       wait_token: row.wait_token,
+      wait_timeout_at: None,
       created_at: row.created_at,
       updated_at: row.updated_at,
-    )
+    ))
   })
 }
 
 /// Create real database storage for flow persistence
-pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage(String) {
-  flow.FlowStorage(
-    save: fn(instance) {
+pub fn create_database_storage(db: pog.Connection) -> types.FlowStorage(String) {
+  types.FlowStorage(
+    save: fn(inst) {
+      let row = instance.instance_to_row(inst)
+
       // Convert flow state data to JSON
       let state_data_json =
         json.object(
-          instance.state.data
+          row.data
           |> dict.to_list
           |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
         )
 
       // Convert step data to JSON (if exists)
-      let step_data_json = case dict.size(instance.step_data) {
+      let step_data_json = case dict.size(row.step_data) {
         0 -> json.null()
         _ ->
           json.object(
-            instance.step_data
+            row.step_data
             |> dict.to_list
             |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
           )
@@ -125,14 +120,14 @@ pub fn create_database_storage(db: pog.Connection) -> flow.FlowStorage(String) {
       case
         sql.save_flow_instance(
           db,
-          instance.id,
-          instance.flow_name,
-          instance.user_id,
-          instance.chat_id,
-          instance.state.current_step,
+          row.id,
+          row.flow_name,
+          row.user_id,
+          row.chat_id,
+          row.current_step,
           state_data_json,
           step_data_json,
-          option.unwrap(instance.wait_token, ""),
+          option.unwrap(row.wait_token, ""),
         )
       {
         Ok(_) -> Ok(Nil)
@@ -212,101 +207,4 @@ pub fn get_table_for_guests(guests: Int) -> Int {
     // Large tables 11-13
     _ -> int.random(3) + 11
   }
-}
-
-/// Create a new FlowInstance with minimal required fields
-/// Other fields will be set to sensible defaults
-pub fn create_flow_instance(
-  id: String,
-  flow_name: String,
-  user_id: Int,
-  chat_id: Int,
-  current_step: String,
-) -> flow.FlowInstance {
-  flow.FlowInstance(
-    id: id,
-    flow_name: flow_name,
-    user_id: user_id,
-    chat_id: chat_id,
-    state: flow.FlowState(
-      current_step: current_step,
-      data: dict.new(),
-      history: [current_step],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: dict.new(),
-    wait_token: None,
-    created_at: unix_timestamp(),
-    updated_at: unix_timestamp(),
-  )
-}
-
-/// Create a FlowInstance with initial data
-pub fn create_flow_instance_with_data(
-  id: String,
-  flow_name: String,
-  user_id: Int,
-  chat_id: Int,
-  current_step: String,
-  initial_data: dict.Dict(String, String),
-) -> flow.FlowInstance {
-  flow.FlowInstance(
-    id: id,
-    flow_name: flow_name,
-    user_id: user_id,
-    chat_id: chat_id,
-    state: flow.FlowState(
-      current_step: current_step,
-      data: initial_data,
-      history: [current_step],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: dict.new(),
-    wait_token: None,
-    created_at: unix_timestamp(),
-    updated_at: unix_timestamp(),
-  )
-}
-
-/// Create a FlowInstance with both initial data and step data
-pub fn create_full_flow_instance(
-  id: String,
-  flow_name: String,
-  user_id: Int,
-  chat_id: Int,
-  current_step: String,
-  initial_data: dict.Dict(String, String),
-  step_data: dict.Dict(String, String),
-  wait_token: option.Option(String),
-) -> flow.FlowInstance {
-  flow.FlowInstance(
-    id: id,
-    flow_name: flow_name,
-    user_id: user_id,
-    chat_id: chat_id,
-    state: flow.FlowState(
-      current_step: current_step,
-      data: initial_data,
-      history: [current_step],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: step_data,
-    wait_token: wait_token,
-    created_at: unix_timestamp(),
-    updated_at: unix_timestamp(),
-  )
-}
-
-/// Generate a flow instance ID based on user, chat, and flow name
-pub fn generate_flow_id(user_id: Int, chat_id: Int, flow_name: String) -> String {
-  flow_name <> "_" <> int.to_string(chat_id) <> "_" <> int.to_string(user_id)
-}
-
-/// Get current unix timestamp
-fn unix_timestamp() -> Int {
-  // Simple timestamp - in real implementation you might want to use proper time functions
-  int.random(1_000_000_000) + 1_640_000_000
 }

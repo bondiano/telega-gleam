@@ -1,4 +1,3 @@
-import gleam/dict
 import gleam/int
 import gleam/option
 import gleam/result
@@ -7,7 +6,11 @@ import gleam/time/calendar
 import pog
 
 import telega/bot.{type Context}
-import telega/flow
+import telega/flow/action
+import telega/flow/builder
+import telega/flow/handler
+import telega/flow/instance
+import telega/flow/types
 import telega/reply
 
 import restaurant_booking/sql
@@ -48,16 +51,16 @@ fn string_to_step(name: String) -> Result(BookingStep, Nil) {
 /// Create simplified booking flow using built-in helpers
 pub fn create_booking_flow(
   db: pog.Connection,
-) -> flow.Flow(BookingStep, Nil, String) {
+) -> types.Flow(BookingStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
-  flow.new("booking", storage, step_to_string, string_to_step)
-  |> flow.add_step(CheckUser, fn(ctx, instance) {
-    check_user_registration(db, ctx, instance)
+  builder.new("booking", storage, step_to_string, string_to_step)
+  |> builder.add_step(CheckUser, fn(ctx, inst) {
+    check_user_registration(db, ctx, inst)
   })
-  |> flow.add_step(
+  |> builder.add_step(
     Welcome,
-    flow.message_step(
+    handler.message_step(
       fn(_) {
         "🍽️ Let's make your reservation at "
         <> util.get_restaurant_name()
@@ -66,30 +69,30 @@ pub fn create_booking_flow(
       option.Some(Date),
     ),
   )
-  |> flow.add_step(
+  |> builder.add_step(
     Date,
-    flow.text_step(
+    handler.text_step(
       "📅 Enter date (YYYY-MM-DD):\nExample: 2024-12-25",
       "booking_date",
       Time,
     ),
   )
-  |> flow.add_step(
+  |> builder.add_step(
     Time,
-    flow.text_step(
+    handler.text_step(
       "🕐 Enter time (HH:MM):\nExample: 19:30\n\nHours: Mon-Thu 17:00-23:00, Fri-Sat 17:00-24:00, Sun 17:00-22:00",
       "booking_time",
       Guests,
     ),
   )
-  |> flow.add_step(
+  |> builder.add_step(
     Guests,
-    flow.text_step("👥 How many guests? (1-12)", "guest_count", Confirm),
+    handler.text_step("👥 How many guests? (1-12)", "guest_count", Confirm),
   )
-  |> flow.add_step(Confirm, fn(ctx, instance) {
-    confirm_and_book_step(db, ctx, instance)
+  |> builder.add_step(Confirm, fn(ctx, inst) {
+    confirm_and_book_step(db, ctx, inst)
   })
-  |> flow.on_error(fn(ctx, _, error) {
+  |> builder.on_error(fn(ctx, _, error) {
     let error_msg = option.unwrap(error, "Unknown error")
     util.log_error("Booking flow error: " <> error_msg)
     use _ <- result.try(
@@ -104,18 +107,24 @@ pub fn create_booking_flow(
 
     Ok(ctx)
   })
-  |> flow.build(initial: CheckUser)
+  |> builder.build(initial: CheckUser)
 }
 
 /// Check if user is registered before allowing booking
 fn check_user_registration(
   db: pog.Connection,
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(BookingStep, Nil, String) {
-  case sql.get_user(db, instance.user_id, instance.chat_id) {
+  instance: types.FlowInstance,
+) -> types.StepResult(BookingStep, Nil, String) {
+  case
+    sql.get_user(
+      db,
+      instance.instance_user_id(instance),
+      instance.instance_chat_id(instance),
+    )
+  {
     Ok(pog.Returned(count: _, rows: [_user])) ->
-      flow.next(ctx, instance, Welcome)
+      action.next(ctx, instance, Welcome)
 
     Ok(pog.Returned(count: _, rows: [])) -> {
       let _ =
@@ -124,7 +133,7 @@ fn check_user_registration(
           "❌ You need to register first!\n\nUse /start to create your profile.",
         )
 
-      flow.cancel(ctx, instance)
+      action.cancel(ctx, instance)
     }
 
     Ok(pog.Returned(count: _, rows: _)) ->
@@ -139,8 +148,8 @@ fn check_user_registration(
 fn confirm_and_book_step(
   db: pog.Connection,
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(BookingStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(BookingStep, Nil, String) {
   case extract_booking_data(instance) {
     Ok(booking_data) -> {
       let confirmation = "
@@ -177,22 +186,22 @@ Thank you for choosing " <> util.get_restaurant_name() <> "!
               "
 
               case reply.with_text(ctx, success_message) {
-                Ok(_) -> flow.complete(ctx, instance)
-                Error(_) -> flow.cancel(ctx, instance)
+                Ok(_) -> action.complete(ctx, instance)
+                Error(_) -> action.cancel(ctx, instance)
               }
             }
             Error(err) -> {
               let _ = reply.with_text(ctx, "❌ Booking failed: " <> err)
-              flow.cancel(ctx, instance)
+              action.cancel(ctx, instance)
             }
           }
         }
-        Error(_) -> flow.cancel(ctx, instance)
+        Error(_) -> action.cancel(ctx, instance)
       }
     }
     Error(error_msg) -> {
       let _ = reply.with_text(ctx, "❌ Error: " <> error_msg)
-      flow.cancel(ctx, instance)
+      action.cancel(ctx, instance)
     }
   }
 }
@@ -219,21 +228,21 @@ pub type BookingData {
 
 /// Extract and validate booking data from flow instance state
 fn extract_booking_data(
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
 ) -> Result(BookingData, String) {
   use booking_date <- result.try(
-    dict.get(instance.state.data, "booking_date")
-    |> result.map_error(fn(_) { "Missing booking date" }),
+    instance.get_data(instance, "booking_date")
+    |> option.to_result("Missing booking date"),
   )
 
   use booking_time <- result.try(
-    dict.get(instance.state.data, "booking_time")
-    |> result.map_error(fn(_) { "Missing booking time" }),
+    instance.get_data(instance, "booking_time")
+    |> option.to_result("Missing booking time"),
   )
 
   use guest_count_str <- result.try(
-    dict.get(instance.state.data, "guest_count")
-    |> result.map_error(fn(_) { "Missing guest count" }),
+    instance.get_data(instance, "guest_count")
+    |> option.to_result("Missing guest count"),
   )
 
   use guest_count <- result.try(

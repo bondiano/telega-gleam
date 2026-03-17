@@ -6,7 +6,17 @@ import gleam/option.{None, Some}
 import gleam/result
 import gleeunit
 import gleeunit/should
-import telega/flow
+import telega/bot
+import telega/flow/action
+import telega/flow/builder
+import telega/flow/engine
+import telega/flow/instance
+import telega/flow/registry
+import telega/flow/storage
+import telega/flow/types
+import telega/testing/context
+import telega/testing/factory
+import telega/testing/mock
 
 pub fn main() {
   gleeunit.main()
@@ -53,110 +63,387 @@ fn string_to_test_step(s: String) -> Result(TestStep, Nil) {
   }
 }
 
+// ============================================================================
+// Instance CRUD & Data Operations
+// ============================================================================
+
 pub fn step_data_operations_test() {
   let instance =
-    flow.FlowInstance(
+    instance.new_instance(
       id: "test_123_456",
       flow_name: "test_flow",
       user_id: 123,
       chat_id: 456,
-      state: flow.FlowState(
-        current_step: "step1",
-        data: dict.new(),
-        history: ["step1"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+      current_step: "step1",
     )
 
-  let instance1 = flow.store_step_data(instance, "key1", "value1")
-  flow.get_step_data(instance1, "key1") |> should.equal(Some("value1"))
+  let instance1 = instance.store_step_data(instance, "key1", "value1")
+  instance.get_step_data(instance1, "key1") |> should.equal(Some("value1"))
 
-  let instance2 = flow.store_step_data(instance1, "key2", "value2")
-  flow.get_step_data(instance2, "key1") |> should.equal(Some("value1"))
-  flow.get_step_data(instance2, "key2") |> should.equal(Some("value2"))
+  let instance2 = instance.store_step_data(instance1, "key2", "value2")
+  instance.get_step_data(instance2, "key1") |> should.equal(Some("value1"))
+  instance.get_step_data(instance2, "key2") |> should.equal(Some("value2"))
 
-  let instance3 = flow.clear_step_data_key(instance2, "key1")
-  flow.get_step_data(instance3, "key1") |> should.equal(None)
-  flow.get_step_data(instance3, "key2") |> should.equal(Some("value2"))
+  let instance3 = instance.clear_step_data_key(instance2, "key1")
+  instance.get_step_data(instance3, "key1") |> should.equal(None)
+  instance.get_step_data(instance3, "key2") |> should.equal(Some("value2"))
 
-  let instance4 = flow.clear_step_data(instance3)
-  flow.get_step_data(instance4, "key2") |> should.equal(None)
+  let instance4 = instance.clear_step_data(instance3)
+  instance.get_step_data(instance4, "key2") |> should.equal(None)
 }
 
 pub fn flow_data_persistence_test() {
   let instance =
-    flow.FlowInstance(
+    instance.new_instance(
       id: "test_123_456",
       flow_name: "test_flow",
       user_id: 123,
       chat_id: 456,
-      state: flow.FlowState(
-        current_step: "step1",
-        data: dict.new(),
-        history: [],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+      current_step: "step1",
     )
 
-  let instance1 = flow.store_data(instance, "name", "Alice")
-  let instance2 = flow.store_data(instance1, "age", "25")
-  let instance3 = flow.store_data(instance2, "email", "alice@example.com")
+  let instance1 = instance.store_data(instance, "name", "Alice")
+  let instance2 = instance.store_data(instance1, "age", "25")
+  let instance3 = instance.store_data(instance2, "email", "alice@example.com")
 
-  flow.get_data(instance3, "name") |> should.equal(Some("Alice"))
-  flow.get_data(instance3, "age") |> should.equal(Some("25"))
-  flow.get_data(instance3, "email") |> should.equal(Some("alice@example.com"))
-  flow.get_data(instance3, "nonexistent") |> should.equal(None)
+  instance.get_data(instance3, "name") |> should.equal(Some("Alice"))
+  instance.get_data(instance3, "age") |> should.equal(Some("25"))
+  instance.get_data(instance3, "email")
+  |> should.equal(Some("alice@example.com"))
+  instance.get_data(instance3, "nonexistent") |> should.equal(None)
 }
+
+pub fn flow_instance_id_test() {
+  let instance =
+    instance.new_instance(
+      id: "checkout_456_123",
+      flow_name: "checkout",
+      user_id: 123,
+      chat_id: 456,
+      current_step: "start",
+    )
+
+  instance.instance_id(instance) |> should.equal("checkout_456_123")
+  instance.instance_flow_name(instance) |> should.equal("checkout")
+  instance.instance_user_id(instance) |> should.equal(123)
+  instance.instance_chat_id(instance) |> should.equal(456)
+}
+
+pub fn instance_to_row_round_trip_test() {
+  let instance =
+    instance.new_instance_with_data(
+      id: "roundtrip_test",
+      flow_name: "my_flow",
+      user_id: 42,
+      chat_id: 99,
+      current_step: "middle",
+      data: dict.from_list([#("key1", "val1"), #("key2", "val2")]),
+    )
+
+  let row = instance.instance_to_row(instance)
+  let restored = instance.instance_from_row(row)
+
+  instance.instance_id(restored) |> should.equal("roundtrip_test")
+  instance.instance_flow_name(restored) |> should.equal("my_flow")
+  instance.instance_user_id(restored) |> should.equal(42)
+  instance.instance_chat_id(restored) |> should.equal(99)
+  instance.instance_current_step(restored) |> should.equal("middle")
+  instance.get_data(restored, "key1") |> should.equal(Some("val1"))
+  instance.get_data(restored, "key2") |> should.equal(Some("val2"))
+}
+
+pub fn generate_id_test() {
+  storage.generate_id(123, 456, "test") |> should.equal("test_456_123")
+}
+
+pub fn subflow_data_isolation_test() {
+  let instance =
+    instance.new_instance_with_data(
+      id: "test_123_456",
+      flow_name: "parent",
+      user_id: 123,
+      chat_id: 456,
+      current_step: "step1",
+      data: dict.from_list([#("persistent", "data")]),
+    )
+
+  let instance = instance.store_step_data(instance, "temp", "will_be_cleared")
+
+  instance.get_data(instance, "persistent") |> should.equal(Some("data"))
+  instance.get_step_data(instance, "temp")
+  |> should.equal(Some("will_be_cleared"))
+
+  let cleared = instance.clear_step_data(instance)
+  instance.get_data(cleared, "persistent") |> should.equal(Some("data"))
+  instance.get_step_data(cleared, "temp") |> should.equal(None)
+}
+
+// ============================================================================
+// WaitResult parsing
+// ============================================================================
+
+pub fn get_wait_result_pending_test() {
+  let instance =
+    instance.new_instance(
+      id: "wait_pending",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  instance.get_wait_result(instance) |> should.equal(types.Pending)
+}
+
+pub fn get_wait_result_text_test() {
+  let instance =
+    instance.new_instance(
+      id: "wait_text",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "text:hello")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.TextInput(value: "hello"))
+}
+
+pub fn get_wait_result_bool_test() {
+  let instance =
+    instance.new_instance(
+      id: "wait_bool",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "bool:true")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.BoolCallback(value: True))
+}
+
+pub fn get_wait_result_bool_false_test() {
+  let instance =
+    instance.new_instance(
+      id: "wait_bool_f",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "bool:false")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.BoolCallback(value: False))
+}
+
+pub fn get_wait_result_data_test() {
+  let instance =
+    instance.new_instance(
+      id: "wait_data",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "data:some_value")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.DataCallback(value: "some_value"))
+}
+
+pub fn get_wait_result_photo_test() {
+  let instance =
+    instance.new_instance(
+      id: "photo_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(
+      instance,
+      "__wait_result",
+      "photo:file1,file2,file3",
+    )
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.PhotoInput(file_ids: ["file1", "file2", "file3"]))
+}
+
+pub fn get_wait_result_video_test() {
+  let instance =
+    instance.new_instance(
+      id: "video_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "video:abc123")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.VideoInput(file_id: "abc123"))
+}
+
+pub fn get_wait_result_voice_test() {
+  let instance =
+    instance.new_instance(
+      id: "voice_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "voice:voice_file_1")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.VoiceInput(file_id: "voice_file_1"))
+}
+
+pub fn get_wait_result_audio_test() {
+  let instance =
+    instance.new_instance(
+      id: "audio_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "audio:audio_file_1")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.AudioInput(file_id: "audio_file_1"))
+}
+
+pub fn get_wait_result_location_test() {
+  let instance =
+    instance.new_instance(
+      id: "loc_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "location:55.75,37.62")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.LocationInput(latitude: 55.75, longitude: 37.62))
+}
+
+pub fn get_wait_result_location_invalid_test() {
+  let instance =
+    instance.new_instance(
+      id: "loc_bad",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "location:not_a_number")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.DataCallback(value: "location:not_a_number"))
+}
+
+pub fn get_wait_result_command_test() {
+  let instance =
+    instance.new_instance(
+      id: "cmd_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(
+      instance,
+      "__wait_result",
+      "command:start:some arg",
+    )
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.CommandInput(command: "start", payload: "some arg"))
+}
+
+pub fn get_wait_result_command_no_payload_test() {
+  let instance =
+    instance.new_instance(
+      id: "cmd_test2",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "command:help")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.CommandInput(command: "help", payload: ""))
+}
+
+pub fn get_wait_result_unknown_format_test() {
+  let instance =
+    instance.new_instance(
+      id: "unknown_test",
+      flow_name: "test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+  let instance =
+    instance.store_step_data(instance, "__wait_result", "random_stuff")
+
+  instance.get_wait_result(instance)
+  |> should.equal(types.DataCallback(value: "random_stuff"))
+}
+
+// ============================================================================
+// Middleware execution
+// ============================================================================
 
 pub fn middleware_execution_order_test() {
   let execution_order = process.new_subject()
 
-  let middleware1 = fn(_ctx, _instance: flow.FlowInstance, next) {
+  let middleware1 = fn(_ctx, _instance: types.FlowInstance, next) {
     process.send(execution_order, "middleware1_before")
     let result = next()
     process.send(execution_order, "middleware1_after")
     result
   }
 
-  let middleware2 = fn(_ctx, _instance: flow.FlowInstance, next) {
+  let middleware2 = fn(_ctx, _instance: types.FlowInstance, next) {
     process.send(execution_order, "middleware2_before")
     let result = next()
     process.send(execution_order, "middleware2_after")
     result
   }
 
-  let handler = fn(_ctx, instance: flow.FlowInstance) {
+  let handler = fn(_ctx, inst: types.FlowInstance) {
     process.send(execution_order, "handler")
-    Ok(#(Nil, flow.Next(End), instance))
+    Ok(#(Nil, types.Next(End), inst))
   }
 
   let test_instance =
-    flow.FlowInstance(
+    instance.new_instance(
       id: "test_middleware",
       flow_name: "test",
       user_id: 123,
       chat_id: 456,
-      state: flow.FlowState(
-        current_step: "start",
-        data: dict.new(),
-        history: [],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+      current_step: "start",
     )
 
   let result =
@@ -182,7 +469,7 @@ pub fn middleware_execution_order_test() {
   case result {
     Ok(#(_, action, _)) -> {
       case action {
-        flow.Next(End) -> Nil
+        types.Next(End) -> Nil
         _ -> should.fail()
       }
     }
@@ -190,92 +477,617 @@ pub fn middleware_execution_order_test() {
   }
 }
 
-pub fn test_parallel_steps_configuration() {
-  let storage = flow.create_noop_storage()
-  let parallel_results = process.new_subject()
+// ============================================================================
+// Engine: sequential flow execution with ETS storage
+// ============================================================================
 
-  let flow_builder =
-    flow.new("test", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.add_parallel_steps(Middle, [Parallel1, Parallel2], Join)
-    |> flow.add_step(Parallel1, fn(ctx, instance) {
-      process.send(parallel_results, "parallel1_executed")
-      let result = dict.from_list([#("task1", "completed")])
-      Ok(#(ctx, flow.CompleteParallelStep(Parallel1, result), instance))
-    })
-    |> flow.add_step(Parallel2, fn(ctx, instance) {
-      process.send(parallel_results, "parallel2_executed")
-      let result = dict.from_list([#("task2", "completed")])
-      Ok(#(ctx, flow.CompleteParallelStep(Parallel2, result), instance))
-    })
-    |> flow.add_step(Join, fn(ctx, instance) {
-      let task1 = flow.get_data(instance, "parallel1.task1")
-      let task2 = flow.get_data(instance, "parallel2.task2")
+pub fn engine_sequential_flow_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
 
-      case task1, task2 {
-        Some("completed"), Some("completed") -> {
-          process.send(parallel_results, "join_successful")
-          flow.complete(ctx, instance)
+  let flow =
+    builder.new("seq_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      let inst = instance.store_data(inst, "step", "visited_start")
+      action.next(ctx, inst, step: Middle)
+    })
+    |> builder.add_step(Middle, fn(ctx, inst) {
+      process.send(events, "middle")
+      instance.get_data(inst, "step") |> should.equal(Some("visited_start"))
+      let inst = instance.store_data(inst, "step", "visited_middle")
+      action.next(ctx, inst, step: End)
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "end")
+      instance.get_data(inst, "step") |> should.equal(Some("visited_middle"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _calls) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "hi", from_id: 10, chat_id: 20),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 10,
+      chat_id: 20,
+      initial_data: dict.new(),
+    )
+
+  // Verify execution order
+  let assert Ok("start") = process.receive(events, 100)
+  let assert Ok("middle") = process.receive(events, 100)
+  let assert Ok("end") = process.receive(events, 100)
+
+  // Instance should be deleted after Complete
+  let flow_id = storage.generate_id(10, 20, "seq_test")
+  let assert Ok(None) = ets.load(flow_id)
+}
+
+pub fn engine_data_flows_through_steps_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let collected = process.new_subject()
+
+  let flow =
+    builder.new("data_flow", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let inst = instance.store_data(inst, "name", "Alice")
+      action.next(ctx, inst, step: Middle)
+    })
+    |> builder.add_step(Middle, fn(ctx, inst) {
+      let inst = instance.store_data(inst, "age", "30")
+      action.next(ctx, inst, step: End)
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      let name = instance.get_data(inst, "name")
+      let age = instance.get_data(inst, "age")
+      process.send(collected, #(name, age))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok(#(Some("Alice"), Some("30"))) = process.receive(collected, 100)
+}
+
+// ============================================================================
+// Engine: Wait & Resume
+// ============================================================================
+
+pub fn engine_wait_and_resume_with_text_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("wait_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.Pending -> {
+          process.send(events, "waiting")
+          action.wait(ctx, inst)
         }
-        _, _ -> {
-          process.send(parallel_results, "join_failed")
-          flow.cancel(ctx, instance)
+        types.TextInput(value:) -> {
+          process.send(events, "got:" <> value)
+          let inst = instance.store_data(inst, "answer", value)
+          action.next(ctx, inst, step: End)
+        }
+        _ -> action.cancel(ctx, inst)
+      }
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      let answer = instance.get_data(inst, "answer")
+      process.send(events, "end:" <> option.unwrap(answer, "none"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 50, chat_id: 60),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // First call: should wait
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 50,
+      chat_id: 60,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("waiting") = process.receive(events, 100)
+
+  // Verify instance is saved with wait_token
+  let flow_id = storage.generate_id(50, 60, "wait_test")
+  let assert Ok(Some(saved_instance)) = ets.load(flow_id)
+  saved_instance.wait_token |> option.is_some() |> should.be_true()
+
+  // Resume with text input
+  let resume_data =
+    dict.from_list([
+      #("user_input", "hello world"),
+      #("__wait_result", "text:hello world"),
+    ])
+  let assert Ok(_) =
+    engine.resume_with_instance(flow, ctx, saved_instance, Some(resume_data))
+
+  let assert Ok("got:hello world") = process.receive(events, 100)
+  let assert Ok("end:hello world") = process.receive(events, 100)
+
+  // Instance should be cleaned up
+  let assert Ok(None) = ets.load(flow_id)
+}
+
+pub fn engine_wait_callback_and_resume_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("cb_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.Pending -> {
+          process.send(events, "waiting_callback")
+          action.wait_callback(ctx, inst)
+        }
+        types.BoolCallback(value: True) -> {
+          process.send(events, "confirmed")
+          action.next(ctx, inst, step: End)
+        }
+        types.BoolCallback(value: False) -> {
+          process.send(events, "declined")
+          action.cancel(ctx, inst)
+        }
+        _ -> action.cancel(ctx, inst)
+      }
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "completed")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 70, chat_id: 80),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 70,
+      chat_id: 80,
+      initial_data: dict.new(),
+    )
+  let assert Ok("waiting_callback") = process.receive(events, 100)
+
+  let flow_id = storage.generate_id(70, 80, "cb_test")
+  let assert Ok(Some(inst)) = ets.load(flow_id)
+
+  // Resume with bool:true callback
+  let data = dict.from_list([#("__wait_result", "bool:true")])
+  let assert Ok(_) = engine.resume_with_instance(flow, ctx, inst, Some(data))
+
+  let assert Ok("confirmed") = process.receive(events, 100)
+  let assert Ok("completed") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: Wait with timeout
+// ============================================================================
+
+pub fn engine_wait_with_timeout_sets_deadline_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("timeout_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      action.wait_with_timeout(ctx, inst, timeout_ms: 5000)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let flow_id = storage.generate_id(1, 2, "timeout_test")
+  let assert Ok(Some(inst)) = ets.load(flow_id)
+
+  inst.wait_token |> option.is_some() |> should.be_true()
+  inst.wait_timeout_at |> option.is_some() |> should.be_true()
+}
+
+pub fn engine_wait_callback_with_timeout_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("cb_timeout", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      action.wait_callback_with_timeout(ctx, inst, timeout_ms: 10_000)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 3, chat_id: 4),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 3,
+      chat_id: 4,
+      initial_data: dict.new(),
+    )
+
+  let flow_id = storage.generate_id(3, 4, "cb_timeout")
+  let assert Ok(Some(inst)) = ets.load(flow_id)
+
+  inst.wait_token |> option.is_some() |> should.be_true()
+  inst.wait_timeout_at |> option.is_some() |> should.be_true()
+}
+
+// ============================================================================
+// Engine: Cancel flow
+// ============================================================================
+
+pub fn engine_cancel_deletes_instance_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("cancel_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      action.cancel(ctx, inst)
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "end_never")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("start") = process.receive(events, 100)
+  // End handler should NOT be called
+  process.receive(events, 50) |> should.be_error()
+
+  // Instance should be cleaned up
+  let flow_id = storage.generate_id(1, 2, "cancel_test")
+  let assert Ok(None) = ets.load(flow_id)
+}
+
+pub fn engine_cancel_triggers_exit_hook_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("cancel_hook", ets, test_step_to_string, string_to_test_step)
+    |> builder.set_on_flow_exit(fn(ctx, _inst) {
+      process.send(events, "exit_hook")
+      Ok(ctx)
+    })
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      action.cancel(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("start") = process.receive(events, 100)
+  let assert Ok("exit_hook") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: GoTo (clears step data, resets flow_stack)
+// ============================================================================
+
+pub fn engine_goto_clears_step_data_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("goto_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      // Store step data, then goto Middle
+      let inst = instance.store_step_data(inst, "temp", "should_clear")
+      action.goto(ctx, inst, step: Middle)
+    })
+    |> builder.add_step(Middle, fn(ctx, inst) {
+      // step_data should be cleared by GoTo
+      let temp = instance.get_step_data(inst, "temp")
+      process.send(events, "temp:" <> option.unwrap(temp, "cleared"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("temp:cleared") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: Back navigation
+// ============================================================================
+
+pub fn engine_back_returns_to_previous_step_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let visit_count = process.new_subject()
+
+  let flow =
+    builder.new("back_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let visits =
+        instance.get_data(inst, "start_visits")
+        |> option.map(fn(s) { result.unwrap(int.parse(s), 0) })
+        |> option.unwrap(0)
+      let inst =
+        instance.store_data(inst, "start_visits", int.to_string(visits + 1))
+      process.send(visit_count, "start:" <> int.to_string(visits + 1))
+      action.next(ctx, inst, step: Middle)
+    })
+    |> builder.add_step(Middle, fn(ctx, inst) {
+      let visits =
+        instance.get_data(inst, "start_visits")
+        |> option.unwrap("0")
+      case visits {
+        "1" -> {
+          process.send(visit_count, "back_from_middle")
+          action.back(ctx, inst)
+        }
+        _ -> {
+          process.send(visit_count, "complete")
+          action.complete(ctx, inst)
         }
       }
     })
+    |> builder.build(initial: Start)
 
-  let _ = flow.build(flow_builder, initial: Start)
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
 
-  let instance_with_parallel =
-    flow.FlowInstance(
-      id: "test_parallel",
-      flow_name: "test",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "middle",
-        data: dict.new(),
-        history: ["start"],
-        flow_stack: [],
-        parallel_state: Some(flow.ParallelState(
-          pending_steps: ["parallel1", "parallel2"],
-          completed_steps: [],
-          results: dict.new(),
-          join_step: "join",
-        )),
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
     )
 
-  case instance_with_parallel.state.parallel_state {
-    Some(ps) -> {
-      ps.pending_steps |> should.equal(["parallel1", "parallel2"])
-      ps.join_step |> should.equal("join")
-      ps.completed_steps |> should.equal([])
-    }
-    None -> should.fail()
-  }
+  // start(1) -> middle -> back -> start(2) -> middle -> complete
+  let assert Ok("start:1") = process.receive(visit_count, 100)
+  let assert Ok("back_from_middle") = process.receive(visit_count, 100)
+  let assert Ok("start:2") = process.receive(visit_count, 100)
+  let assert Ok("complete") = process.receive(visit_count, 100)
 }
 
-pub fn multi_conditional_routing_test() {
-  let storage = flow.create_noop_storage()
+// ============================================================================
+// Engine: Conditional routing via engine
+// ============================================================================
 
-  let flow_builder =
-    flow.new("grading", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Middle)
+pub fn engine_conditional_routing_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("cond_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      // This step is never actually executed due to conditional redirect
+      process.send(events, "start_handler")
+      action.complete(ctx, inst)
     })
-    |> flow.add_multi_conditional(
-      Middle,
+    |> builder.add_conditional(
+      Start,
+      fn(inst) {
+        case instance.get_data(inst, "score") {
+          Some("high") -> True
+          _ -> False
+        }
+      },
+      true: ConditionalA,
+      false: ConditionalB,
+    )
+    |> builder.add_step(ConditionalA, fn(ctx, inst) {
+      process.send(events, "conditional_a")
+      action.complete(ctx, inst)
+    })
+    |> builder.add_step(ConditionalB, fn(ctx, inst) {
+      process.send(events, "conditional_b")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // With "high" score -> ConditionalA
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.from_list([#("score", "high")]),
+    )
+
+  let assert Ok("conditional_a") = process.receive(events, 100)
+}
+
+pub fn engine_conditional_default_branch_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("cond_def", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      action.complete(ctx, inst)
+    })
+    |> builder.add_conditional(
+      Start,
+      fn(inst) {
+        case instance.get_data(inst, "score") {
+          Some("high") -> True
+          _ -> False
+        }
+      },
+      true: ConditionalA,
+      false: ConditionalB,
+    )
+    |> builder.add_step(ConditionalA, fn(ctx, inst) {
+      process.send(events, "a")
+      action.complete(ctx, inst)
+    })
+    |> builder.add_step(ConditionalB, fn(ctx, inst) {
+      process.send(events, "b")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 5, chat_id: 6),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // With "low" score -> default branch (ConditionalB)
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 5,
+      chat_id: 6,
+      initial_data: dict.from_list([#("score", "low")]),
+    )
+
+  let assert Ok("b") = process.receive(events, 100)
+}
+
+pub fn engine_multi_conditional_routing_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("multi_cond", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      action.complete(ctx, inst)
+    })
+    |> builder.add_multi_conditional(
+      Start,
       [
         #(
           fn(i) {
-            case flow.get_data(i, "score") {
+            case instance.get_data(i, "score") {
               Some(s) ->
                 case int.parse(s) {
                   Ok(score) -> score >= 90
@@ -288,7 +1100,7 @@ pub fn multi_conditional_routing_test() {
         ),
         #(
           fn(i) {
-            case flow.get_data(i, "score") {
+            case instance.get_data(i, "score") {
               Some(s) ->
                 case int.parse(s) {
                   Ok(score) -> score >= 70 && score < 90
@@ -302,1306 +1114,933 @@ pub fn multi_conditional_routing_test() {
       ],
       End,
     )
-    |> flow.add_step(ConditionalA, fn(ctx, instance) {
-      let updated = flow.store_data(instance, "grade", "A")
-      flow.complete(ctx, updated)
+    |> builder.add_step(ConditionalA, fn(ctx, inst) {
+      process.send(events, "grade_a")
+      action.complete(ctx, inst)
     })
-    |> flow.add_step(ConditionalB, fn(ctx, instance) {
-      let updated = flow.store_data(instance, "grade", "B")
-      flow.complete(ctx, updated)
+    |> builder.add_step(ConditionalB, fn(ctx, inst) {
+      process.send(events, "grade_b")
+      action.complete(ctx, inst)
     })
-    |> flow.add_step(End, fn(ctx, instance) {
-      let updated = flow.store_data(instance, "grade", "F")
-      flow.complete(ctx, updated)
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "grade_f")
+      action.complete(ctx, inst)
     })
+    |> builder.build(initial: Start)
 
-  let _ = flow.build(flow_builder, initial: Start)
+  let #(client, _) = mock.message_client()
 
-  let test_cases = [
-    #("95", ConditionalA, "A"),
-    #("85", ConditionalB, "B"),
-    #("75", ConditionalB, "B"),
-    #("65", End, "F"),
-    #("50", End, "F"),
-  ]
-
-  list.each(test_cases, fn(test_case) {
-    let #(score, expected_step, _expected_grade) = test_case
-
-    let score_int = int.parse(score) |> result.unwrap(0)
-
-    case score_int {
-      s if s >= 90 -> expected_step |> should.equal(ConditionalA)
-      s if s >= 70 -> expected_step |> should.equal(ConditionalB)
-      _ -> expected_step |> should.equal(End)
-    }
-  })
-}
-
-pub fn flow_stack_for_nested_flows_test() {
-  let parent_instance =
-    flow.FlowInstance(
-      id: "parent_123",
-      flow_name: "parent_flow",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "parent_step",
-        data: dict.from_list([#("parent_data", "value")]),
-        history: ["parent_start"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+  // Score 95 -> A
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 10, chat_id: 20),
     )
-
-  let stack_frame =
-    flow.FlowStackFrame(
-      flow_name: "parent_flow",
-      return_step: "parent_step",
-      saved_data: parent_instance.state.data,
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 10,
+      chat_id: 20,
+      initial_data: dict.from_list([#("score", "95")]),
     )
+  let assert Ok("grade_a") = process.receive(events, 100)
 
-  let child_instance =
-    flow.FlowInstance(
-      id: "child_123",
-      flow_name: "child_flow",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "child_start",
-        data: dict.new(),
-        history: [],
-        flow_stack: [stack_frame],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+  // Score 80 -> B
+  let ctx2 =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 11, chat_id: 21),
     )
-
-  child_instance.state.flow_stack |> list.length() |> should.equal(1)
-
-  case child_instance.state.flow_stack {
-    [frame] -> {
-      frame.flow_name |> should.equal("parent_flow")
-      frame.return_step |> should.equal("parent_step")
-      dict.get(frame.saved_data, "parent_data") |> should.equal(Ok("value"))
-    }
-    _ -> should.fail()
-  }
-
-  case child_instance.state.flow_stack {
-    [frame, ..rest] -> {
-      let restored_instance =
-        flow.FlowInstance(
-          ..child_instance,
-          flow_name: frame.flow_name,
-          state: flow.FlowState(
-            current_step: frame.return_step,
-            data: frame.saved_data,
-            history: ["child_flow", "parent_start"],
-            flow_stack: rest,
-            parallel_state: None,
-          ),
-        )
-
-      restored_instance.flow_name |> should.equal("parent_flow")
-      restored_instance.state.current_step |> should.equal("parent_step")
-      flow.get_data(restored_instance, "parent_data")
-      |> should.equal(Some("value"))
-    }
-    _ -> should.fail()
-  }
-}
-
-pub fn wait_mechanisms_set_tokens_test() {
-  let storage = flow.create_noop_storage()
-
-  let flow_builder =
-    flow.new("test", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.wait(ctx, instance, "wait_for_input")
-    })
-    |> flow.add_step(Middle, fn(ctx, instance) {
-      flow.wait_callback(ctx, instance, "wait_for_button")
-    })
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-
-  let _ = flow.build(flow_builder, initial: Start)
-
-  let instance1 =
-    flow.FlowInstance(
-      id: "test_wait",
-      flow_name: "test",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "start",
-        data: dict.new(),
-        history: [],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+  let ctx2 = bot.Context(..ctx2, config: context.config_with_client(client))
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx2,
+      user_id: 11,
+      chat_id: 21,
+      initial_data: dict.from_list([#("score", "80")]),
     )
+  let assert Ok("grade_b") = process.receive(events, 100)
 
-  let waiting_instance =
-    flow.FlowInstance(..instance1, wait_token: Some("wait_for_input"))
-
-  waiting_instance.wait_token |> should.equal(Some("wait_for_input"))
-
-  let callback_instance =
-    flow.FlowInstance(
-      ..instance1,
-      state: flow.FlowState(..instance1.state, current_step: "middle"),
-      wait_token: Some("wait_for_button"),
+  // Score 50 -> default (End/F)
+  let ctx3 =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 12, chat_id: 22),
     )
-
-  callback_instance.wait_token |> should.equal(Some("wait_for_button"))
+  let ctx3 = bot.Context(..ctx3, config: context.config_with_client(client))
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx3,
+      user_id: 12,
+      chat_id: 22,
+      initial_data: dict.from_list([#("score", "50")]),
+    )
+  let assert Ok("grade_f") = process.receive(events, 100)
 }
 
 // ============================================================================
-// Nested Flow / Subflow Tests
+// Engine: Parallel steps
 // ============================================================================
 
-/// Test inline step type creation
-pub fn inline_step_type_test() {
-  let step = flow.InlineStep("my_step")
-  step.name |> should.equal("my_step")
+pub fn engine_parallel_steps_execute_and_join_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("par_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "trigger")
+      action.next(ctx, inst, step: Middle)
+    })
+    |> builder.parallel(from: Middle, steps: [Parallel1, Parallel2], join: Join)
+    |> builder.add_step(Parallel1, fn(ctx, inst) {
+      process.send(events, "parallel1")
+      let result = dict.from_list([#("task1", "done")])
+      Ok(#(ctx, types.CompleteParallelStep(Parallel1, result), inst))
+    })
+    |> builder.add_step(Parallel2, fn(ctx, inst) {
+      process.send(events, "parallel2")
+      let result = dict.from_list([#("task2", "done")])
+      Ok(#(ctx, types.CompleteParallelStep(Parallel2, result), inst))
+    })
+    |> builder.add_step(Join, fn(ctx, inst) {
+      // Parallel results are merged with prefix: "step_name.key"
+      let task1 = instance.get_data(inst, "parallel1.task1")
+      let task2 = instance.get_data(inst, "parallel2.task2")
+      process.send(
+        events,
+        "join:" <> option.unwrap(task1, "?") <> "," <> option.unwrap(task2, "?"),
+      )
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("trigger") = process.receive(events, 100)
+  let assert Ok("parallel1") = process.receive(events, 100)
+  let assert Ok("parallel2") = process.receive(events, 100)
+  let assert Ok("join:done,done") = process.receive(events, 100)
 }
 
-/// Test inline_next navigation helper
-pub fn inline_next_navigation_test() {
-  let storage = flow.create_noop_storage()
-  let execution_log = process.new_subject()
+// ============================================================================
+// Engine: Step hooks (on_enter, on_leave)
+// ============================================================================
 
-  // Just verify that the flow builds without errors
-  let _parent_flow =
-    flow.new("parent", storage, test_step_to_string, string_to_test_step)
-    |> flow.with_inline_subflow(
-      name: "inline_sub",
+pub fn engine_step_hooks_execution_order_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("hooks_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step_with_hooks(
+      Start,
+      handler: fn(ctx, inst) {
+        process.send(events, "handler:start")
+        action.next(ctx, inst, step: End)
+      },
+      on_enter: Some(fn(ctx, inst) {
+        process.send(events, "enter:start")
+        Ok(#(ctx, inst))
+      }),
+      on_leave: Some(fn(ctx, inst) {
+        process.send(events, "leave:start")
+        Ok(#(ctx, inst))
+      }),
+    )
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "handler:end")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  // Expected: enter -> handler -> leave -> next step handler
+  let assert Ok("enter:start") = process.receive(events, 100)
+  let assert Ok("handler:start") = process.receive(events, 100)
+  let assert Ok("leave:start") = process.receive(events, 100)
+  let assert Ok("handler:end") = process.receive(events, 100)
+}
+
+pub fn engine_step_hooks_skip_leave_on_wait_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("wait_hook", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step_with_hooks(
+      Start,
+      handler: fn(ctx, inst) {
+        process.send(events, "handler")
+        action.wait(ctx, inst)
+      },
+      on_enter: Some(fn(ctx, inst) {
+        process.send(events, "enter")
+        Ok(#(ctx, inst))
+      }),
+      on_leave: Some(fn(ctx, inst) {
+        process.send(events, "leave_should_not_run")
+        Ok(#(ctx, inst))
+      }),
+    )
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("enter") = process.receive(events, 100)
+  let assert Ok("handler") = process.receive(events, 100)
+  // Leave hook should NOT fire when waiting
+  process.receive(events, 50) |> should.be_error()
+}
+
+// ============================================================================
+// Engine: Flow lifecycle hooks (on_flow_enter, on_flow_leave, on_flow_exit)
+// ============================================================================
+
+pub fn engine_flow_lifecycle_hooks_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("lifecycle", ets, test_step_to_string, string_to_test_step)
+    |> builder.set_on_flow_enter(fn(ctx, inst) {
+      process.send(events, "flow_enter")
+      Ok(#(ctx, inst))
+    })
+    |> builder.set_on_flow_exit(fn(ctx, _inst) {
+      process.send(events, "flow_exit")
+      Ok(ctx)
+    })
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "step")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("flow_enter") = process.receive(events, 100)
+  let assert Ok("step") = process.receive(events, 100)
+  let assert Ok("flow_exit") = process.receive(events, 100)
+}
+
+pub fn engine_on_complete_handler_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("complete_h", ets, test_step_to_string, string_to_test_step)
+    |> builder.on_complete(fn(ctx, inst) {
+      let name = instance.get_data(inst, "name")
+      process.send(events, "complete:" <> option.unwrap(name, "?"))
+      Ok(ctx)
+    })
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let inst = instance.store_data(inst, "name", "Bob")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("complete:Bob") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: Global middleware
+// ============================================================================
+
+pub fn engine_global_middleware_applies_to_all_steps_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("global_mw", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_global_middleware(fn(_ctx, _inst, next) {
+      process.send(events, "mw_before")
+      let result = next()
+      process.send(events, "mw_after")
+      result
+    })
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "start")
+      action.next(ctx, inst, step: End)
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "end")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  // Middleware wraps Start step
+  let assert Ok("mw_before") = process.receive(events, 100)
+  let assert Ok("start") = process.receive(events, 100)
+  let assert Ok("mw_after") = process.receive(events, 100)
+  // Middleware wraps End step
+  let assert Ok("mw_before") = process.receive(events, 100)
+  let assert Ok("end") = process.receive(events, 100)
+  let assert Ok("mw_after") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: Inline subflows
+// ============================================================================
+
+pub fn engine_inline_subflow_execution_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("subflow_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      process.send(events, "parent:start")
+      action.next(ctx, inst, step: Middle)
+    })
+    |> builder.with_inline_subflow(
+      name: "child",
       trigger: Middle,
       return_to: End,
-      initial: "step1",
+      initial: "sub_a",
       steps: [
-        #("step1", fn(ctx, instance) {
-          process.send(execution_log, "inline_step1")
-          flow.inline_next(ctx, instance, "step2")
+        #("sub_a", fn(ctx, inst) {
+          process.send(events, "child:sub_a")
+          let inst = instance.store_data(inst, "sub_data", "collected")
+          builder.inline_next(ctx, inst, "sub_b")
         }),
-        #("step2", fn(ctx, instance) {
-          process.send(execution_log, "inline_step2")
-          flow.return_from_subflow(ctx, instance, dict.new())
+        #("sub_b", fn(ctx, inst) {
+          process.send(events, "child:sub_b")
+          action.return_from_subflow(ctx, inst, dict.new())
         }),
       ],
     )
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(execution_log, "parent_start")
-      flow.next(ctx, instance, step: Middle)
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "parent:end")
+      action.complete(ctx, inst)
     })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(execution_log, "parent_end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
+    |> builder.build(initial: Start)
 
-  // Flow builds successfully (no runtime assertion on opaque type)
-  True |> should.be_true()
-}
-
-/// Test step hooks are called in correct order
-pub fn step_hooks_execution_order_test() {
-  let storage = flow.create_noop_storage()
-  let execution_log = process.new_subject()
-
-  let _test_flow =
-    flow.new("hooks_test", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step_with_hooks(
-      Start,
-      handler: fn(ctx, instance) {
-        process.send(execution_log, "handler")
-        flow.next(ctx, instance, step: End)
-      },
-      on_enter: Some(fn(ctx, instance) {
-        process.send(execution_log, "on_enter")
-        Ok(#(ctx, instance))
-      }),
-      on_leave: Some(fn(ctx, instance) {
-        process.send(execution_log, "on_leave")
-        Ok(#(ctx, instance))
-      }),
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(execution_log, "end_handler")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
 
-  // Verify flow was built (no runtime assertion on opaque type)
-  True |> should.be_true()
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("parent:start") = process.receive(events, 100)
+  let assert Ok("child:sub_a") = process.receive(events, 100)
+  let assert Ok("child:sub_b") = process.receive(events, 100)
+  // After subflow returns, parent continues at End
+  // (return_to_parent_flow saves and returns Ok(ctx), End is reached on next resume)
 }
 
-/// Test flow lifecycle hooks are set correctly
-pub fn flow_lifecycle_hooks_builder_test() {
-  let storage = flow.create_noop_storage()
-  let execution_log = process.new_subject()
+pub fn engine_inline_subflow_with_mapping_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
 
-  let _test_flow =
-    flow.new("flow_test", storage, test_step_to_string, string_to_test_step)
-    |> flow.set_on_flow_enter(fn(ctx, instance) {
-      process.send(execution_log, "flow_enter")
-      Ok(#(ctx, instance))
+  let flow =
+    builder.new("mapped_sub", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let inst = instance.store_data(inst, "parent_val", "hello")
+      action.next(ctx, inst, step: Middle)
     })
-    |> flow.set_on_flow_leave(fn(ctx, instance) {
-      process.send(execution_log, "flow_leave")
-      Ok(#(ctx, instance))
-    })
-    |> flow.set_on_flow_exit(fn(ctx, _instance) {
-      process.send(execution_log, "flow_exit")
-      Ok(ctx)
-    })
-    |> flow.add_step(Start, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  // Verify flow was built with hooks (no runtime assertion on opaque type)
-  True |> should.be_true()
-}
-
-/// Test inline subflow with mapped data
-pub fn inline_subflow_with_mapping_test() {
-  let storage = flow.create_noop_storage()
-
-  let _parent_flow =
-    flow.new("parent", storage, test_step_to_string, string_to_test_step)
-    |> flow.with_inline_subflow_mapped(
-      name: "data_sub",
+    |> builder.with_inline_subflow_mapped(
+      name: "mapped",
       trigger: Middle,
       return_to: End,
       initial: "collect",
       steps: [
-        #("collect", fn(ctx, instance) {
-          let updated = flow.store_data(instance, "collected", "data")
-          flow.return_from_subflow(ctx, updated, updated.state.data)
+        #("collect", fn(ctx, inst) {
+          let parent_val = instance.get_data(inst, "mapped_arg")
+          process.send(events, "arg:" <> option.unwrap(parent_val, "none"))
+          action.return_from_subflow(
+            ctx,
+            inst,
+            dict.from_list([#("result_key", "result_val")]),
+          )
         }),
       ],
-      map_args: fn(_instance) {
-        dict.from_list([#("initial_arg", "from_parent")])
-      },
-      map_result: fn(_result, instance) {
-        flow.FlowInstance(
-          ..instance,
-          state: flow.FlowState(
-            ..instance.state,
-            data: dict.insert(instance.state.data, "subflow_result", "merged"),
+      map_args: fn(inst) {
+        dict.from_list([
+          #(
+            "mapped_arg",
+            option.unwrap(instance.get_data(inst, "parent_val"), ""),
           ),
-        )
+        ])
+      },
+      map_result: fn(result, inst) {
+        case dict.get(result, "result_key") {
+          Ok(val) -> instance.store_data(inst, "merged_result", val)
+          _ -> inst
+        }
       },
     )
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Middle)
+    |> builder.add_step(End, fn(ctx, inst) {
+      let merged = instance.get_data(inst, "merged_result")
+      process.send(events, "merged:" <> option.unwrap(merged, "none"))
+      action.complete(ctx, inst)
     })
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
+    |> builder.build(initial: Start)
 
-  // Flow builds successfully
-  True |> should.be_true()
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("arg:hello") = process.receive(events, 100)
 }
 
-/// Test flow stack frame creation
-pub fn flow_stack_frame_test() {
-  let saved_data = dict.from_list([#("parent_key", "parent_value")])
+// ============================================================================
+// Engine: Self-transition (goto same step)
+// ============================================================================
 
-  let frame =
-    flow.FlowStackFrame(
-      flow_name: "parent_flow",
-      return_step: "continue_step",
-      saved_data: saved_data,
-    )
-
-  frame.flow_name |> should.equal("parent_flow")
-  frame.return_step |> should.equal("continue_step")
-  dict.get(frame.saved_data, "parent_key") |> should.equal(Ok("parent_value"))
-}
-
-/// Test deeply nested flow stack
-pub fn deeply_nested_flow_stack_test() {
-  let grandparent_frame =
-    flow.FlowStackFrame(
-      flow_name: "grandparent",
-      return_step: "gp_return",
-      saved_data: dict.from_list([#("gp_data", "gp_value")]),
-    )
-
-  let parent_frame =
-    flow.FlowStackFrame(
-      flow_name: "parent",
-      return_step: "p_return",
-      saved_data: dict.from_list([#("p_data", "p_value")]),
-    )
-
-  let instance =
-    flow.FlowInstance(
-      id: "child_123",
-      flow_name: "child",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "child_step",
-        data: dict.new(),
-        history: [],
-        flow_stack: [parent_frame, grandparent_frame],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // Verify stack depth
-  list.length(instance.state.flow_stack) |> should.equal(2)
-
-  // Verify stack order (parent should be first)
-  case instance.state.flow_stack {
-    [first, second] -> {
-      first.flow_name |> should.equal("parent")
-      second.flow_name |> should.equal("grandparent")
-    }
-    _ -> should.fail()
-  }
-}
-
-// =============================================================================
-// Subflow Tests
-// =============================================================================
-
-/// Test enter_subflow returns correct EnterSubflow action
-pub fn enter_subflow_action_test() {
-  let storage = flow.create_noop_storage()
-
-  let instance =
-    flow.FlowInstance(
-      id: "test_123_456",
-      flow_name: "parent_flow",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "trigger_step",
-        data: dict.from_list([#("parent_data", "value")]),
-        history: ["trigger_step"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // Create a minimal flow to test enter_subflow
-  let _flow =
-    flow.new("parent", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, inst) {
-      // Test enter_subflow with data
-      let subflow_data = dict.from_list([#("key", "value")])
-      flow.enter_subflow(ctx, inst, "child_flow", subflow_data)
-    })
-    |> flow.build(initial: Start)
-
-  // Verify instance has correct structure for subflow entry
-  instance.state.flow_stack |> should.equal([])
-  dict.get(instance.state.data, "parent_data") |> should.equal(Ok("value"))
-}
-
-/// Test return_from_subflow returns correct ReturnFromSubflow action
-pub fn return_from_subflow_action_test() {
-  let storage = flow.create_noop_storage()
-
-  // Create parent frame on stack
-  let parent_frame =
-    flow.FlowStackFrame(
-      flow_name: "parent_flow",
-      return_step: "continue_step",
-      saved_data: dict.from_list([#("parent_key", "parent_value")]),
-    )
-
-  let instance =
-    flow.FlowInstance(
-      id: "child_123_456",
-      flow_name: "child_flow",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "final_step",
-        data: dict.from_list([#("collected", "data")]),
-        history: ["step1", "final_step"],
-        flow_stack: [parent_frame],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // Verify subflow has parent on stack
-  list.length(instance.state.flow_stack) |> should.equal(1)
-
-  case instance.state.flow_stack {
-    [frame] -> {
-      frame.flow_name |> should.equal("parent_flow")
-      frame.return_step |> should.equal("continue_step")
-    }
-    _ -> should.fail()
-  }
-
-  // Test flow with return_from_subflow
-  let _flow =
-    flow.new("child", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, inst) {
-      let result =
-        dict.from_list([#("street", "123 Main St"), #("city", "NYC")])
-      flow.return_from_subflow(ctx, inst, result)
-    })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
-}
-
-/// Test inline subflow creates correct flow structure
-pub fn inline_subflow_structure_test() {
-  let storage = flow.create_noop_storage()
-
-  let _parent_flow =
-    flow.new("checkout", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.with_inline_subflow(
-      name: "address",
-      trigger: Middle,
-      return_to: End,
-      initial: "street",
-      steps: [
-        #("street", fn(ctx, instance) {
-          let instance = flow.store_step_data(instance, "street", "123 Main")
-          flow.inline_next(ctx, instance, "city")
-        }),
-        #("city", fn(ctx, instance) {
-          let instance = flow.store_step_data(instance, "city", "NYC")
-          flow.inline_next(ctx, instance, "done")
-        }),
-        #("done", fn(ctx, instance) {
-          flow.return_from_subflow(ctx, instance, instance.state.data)
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  // Flow builds successfully with inline subflow
-  True |> should.be_true()
-}
-
-/// Test multiple inline subflows in one parent flow
-pub fn multiple_inline_subflows_test() {
-  let storage = flow.create_noop_storage()
-
-  let _flow =
-    flow.new("multi_sub", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.with_inline_subflow(
-      name: "shipping_address",
-      trigger: Middle,
-      return_to: Parallel1,
-      initial: "addr_step",
-      steps: [
-        #("addr_step", fn(ctx, instance) {
-          flow.return_from_subflow(ctx, instance, dict.new())
-        }),
-      ],
-    )
-    |> flow.add_step(Parallel1, fn(ctx, instance) {
-      flow.next(ctx, instance, step: Parallel2)
-    })
-    |> flow.with_inline_subflow(
-      name: "billing_address",
-      trigger: Parallel2,
-      return_to: End,
-      initial: "billing_step",
-      steps: [
-        #("billing_step", fn(ctx, instance) {
-          flow.return_from_subflow(ctx, instance, dict.new())
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  // Multiple subflows build successfully
-  True |> should.be_true()
-}
-
-/// Test subflow data isolation (step_data is cleared)
-pub fn subflow_data_isolation_test() {
-  let instance =
-    flow.FlowInstance(
-      id: "test_123_456",
-      flow_name: "parent",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "step1",
-        data: dict.from_list([#("persistent", "data")]),
-        history: ["step1"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.from_list([#("temp", "will_be_cleared")]),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // Persistent data survives
-  flow.get_data(instance, "persistent") |> should.equal(Some("data"))
-
-  // Step data is separate
-  flow.get_step_data(instance, "temp") |> should.equal(Some("will_be_cleared"))
-
-  // After clearing step data, persistent data remains
-  let cleared = flow.clear_step_data(instance)
-  flow.get_data(cleared, "persistent") |> should.equal(Some("data"))
-  flow.get_step_data(cleared, "temp") |> should.equal(None)
-}
-
-/// Test inline_next returns correct action for inline steps
-pub fn inline_next_returns_next_action_test() {
-  let storage = flow.create_noop_storage()
-  let execution_log = process.new_subject()
-
-  let _flow =
-    flow.new("inline_test", storage, test_step_to_string, string_to_test_step)
-    |> flow.with_inline_subflow(
-      name: "steps",
-      trigger: Start,
-      return_to: End,
-      initial: "a",
-      steps: [
-        #("a", fn(ctx, instance) {
-          process.send(execution_log, "step_a")
-          flow.inline_next(ctx, instance, "b")
-        }),
-        #("b", fn(ctx, instance) {
-          process.send(execution_log, "step_b")
-          flow.inline_next(ctx, instance, "c")
-        }),
-        #("c", fn(ctx, instance) {
-          process.send(execution_log, "step_c")
-          flow.return_from_subflow(ctx, instance, dict.new())
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
-}
-
-/// Test InlineStep type
-pub fn inline_step_type_operations_test() {
-  let step1 = flow.InlineStep("collect_name")
-  let step2 = flow.InlineStep("collect_email")
-  let step3 = flow.InlineStep("collect_name")
-
-  // Different steps are not equal
-  step1 |> should.not_equal(step2)
-
-  // Same steps are equal
-  step1 |> should.equal(step3)
-}
-
-/// Test flow preserves parent data when entering subflow
-pub fn subflow_preserves_parent_data_test() {
-  let parent_data =
-    dict.from_list([
-      #("user_name", "John"),
-      #("user_email", "john@example.com"),
-    ])
-
-  let parent_frame =
-    flow.FlowStackFrame(
-      flow_name: "checkout",
-      return_step: "payment",
-      saved_data: parent_data,
-    )
-
-  // Verify data is preserved in stack frame
-  dict.get(parent_frame.saved_data, "user_name") |> should.equal(Ok("John"))
-  dict.get(parent_frame.saved_data, "user_email")
-  |> should.equal(Ok("john@example.com"))
-}
-
-/// Test subflow with empty result data
-pub fn subflow_empty_result_test() {
-  let storage = flow.create_noop_storage()
-
-  let _flow =
-    flow.new("empty_result", storage, test_step_to_string, string_to_test_step)
-    |> flow.with_inline_subflow(
-      name: "empty_sub",
-      trigger: Start,
-      return_to: End,
-      initial: "only_step",
-      steps: [
-        #("only_step", fn(ctx, instance) {
-          // Return with empty dict
-          flow.return_from_subflow(ctx, instance, dict.new())
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
-}
-
-/// Test subflow collects and returns data correctly
-pub fn subflow_data_collection_test() {
-  let storage = flow.create_noop_storage()
-
-  let _flow =
-    flow.new("data_collect", storage, test_step_to_string, string_to_test_step)
-    |> flow.with_inline_subflow(
-      name: "collector",
-      trigger: Start,
-      return_to: End,
-      initial: "step1",
-      steps: [
-        #("step1", fn(ctx, instance) {
-          let instance = flow.store_data(instance, "field1", "value1")
-          flow.inline_next(ctx, instance, "step2")
-        }),
-        #("step2", fn(ctx, instance) {
-          let instance = flow.store_data(instance, "field2", "value2")
-          flow.inline_next(ctx, instance, "final")
-        }),
-        #("final", fn(ctx, instance) {
-          // Return all collected data
-          flow.return_from_subflow(ctx, instance, instance.state.data)
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) {
-      // Verify data was merged from subflow
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
-}
-
-// =============================================================================
-// FSM Execution Order Tests
-// =============================================================================
-
-/// Test step hooks execution order: on_enter → handler → on_leave
-pub fn step_hooks_order_test() {
-  let storage = flow.create_noop_storage()
+pub fn engine_self_transition_with_goto_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
   let events = process.new_subject()
 
-  let _flow =
-    flow.new("hooks_order", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step_with_hooks(
-      Start,
-      handler: fn(ctx, instance) {
-        process.send(events, "handler:start")
-        flow.next(ctx, instance, step: End)
-      },
-      on_enter: Some(fn(ctx, instance) {
-        process.send(events, "enter:start")
-        Ok(#(ctx, instance))
-      }),
-      on_leave: Some(fn(ctx, instance) {
-        process.send(events, "leave:start")
-        Ok(#(ctx, instance))
-      }),
-    )
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "handler:end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected order: enter:start → handler:start → leave:start → handler:end
-  True |> should.be_true()
-}
-
-/// Test flow lifecycle hooks order: on_flow_enter → steps → on_flow_exit
-pub fn flow_lifecycle_order_test() {
-  let storage = flow.create_noop_storage()
-  let events = process.new_subject()
-
-  let _flow =
-    flow.new(
-      "lifecycle_order",
-      storage,
-      test_step_to_string,
-      string_to_test_step,
-    )
-    |> flow.set_on_flow_enter(fn(ctx, instance) {
-      process.send(events, "flow:enter")
-      Ok(#(ctx, instance))
-    })
-    |> flow.set_on_flow_exit(fn(ctx, _instance) {
-      process.send(events, "flow:exit")
-      Ok(ctx)
-    })
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(events, "step:start")
-      flow.next(ctx, instance, step: End)
-    })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "step:end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected order: flow:enter → step:start → step:end → flow:exit
-  True |> should.be_true()
-}
-
-/// Test sequential transitions maintain correct order
-pub fn sequential_transitions_order_test() {
-  let storage = flow.create_noop_storage()
-  let events = process.new_subject()
-
-  let _flow =
-    flow.new("sequential", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(events, "1:start")
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.add_step(Middle, fn(ctx, instance) {
-      process.send(events, "2:middle")
-      flow.next(ctx, instance, step: End)
-    })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "3:end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected order: 1:start → 2:middle → 3:end
-  True |> should.be_true()
-}
-
-/// Test subflow entry/exit order with parent
-pub fn subflow_entry_exit_order_test() {
-  let storage = flow.create_noop_storage()
-  let events = process.new_subject()
-
-  let _flow =
-    flow.new("subflow_order", storage, test_step_to_string, string_to_test_step)
-    |> flow.set_on_flow_leave(fn(ctx, instance) {
-      process.send(events, "parent:leave")
-      Ok(#(ctx, instance))
-    })
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(events, "parent:start")
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.with_inline_subflow(
-      name: "child",
-      trigger: Middle,
-      return_to: End,
-      initial: "sub_step",
-      steps: [
-        #("sub_step", fn(ctx, instance) {
-          process.send(events, "child:step")
-          flow.return_from_subflow(ctx, instance, dict.new())
-        }),
-      ],
-    )
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "parent:end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected: parent:start → parent:leave → child:step → parent:end
-  True |> should.be_true()
-}
-
-// =============================================================================
-// FSM Corner Cases Tests
-// =============================================================================
-
-/// Test self-transition (goto same step)
-pub fn self_transition_test() {
-  let storage = flow.create_noop_storage()
-  let counter = process.new_subject()
-
-  let _flow =
-    flow.new("self_trans", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
+  let flow =
+    builder.new("self_goto", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
       let count =
-        flow.get_data(instance, "count")
+        instance.get_data(inst, "count")
         |> option.map(fn(s) { result.unwrap(int.parse(s), 0) })
         |> option.unwrap(0)
-
-      process.send(counter, "visit:" <> int.to_string(count))
+      process.send(events, "visit:" <> int.to_string(count))
 
       case count < 3 {
         True -> {
-          let instance =
-            flow.store_data(instance, "count", int.to_string(count + 1))
-          // Self-transition: goto same step
-          flow.goto(ctx, instance, Start)
+          let inst =
+            instance.store_data(inst, "count", int.to_string(count + 1))
+          action.goto(ctx, inst, step: Start)
         }
-        False -> flow.next(ctx, instance, step: End)
+        False -> action.complete(ctx, inst)
       }
     })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(counter, "done")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
+    |> builder.build(initial: Start)
 
-  // Should visit Start 4 times (0,1,2,3) then go to End
-  True |> should.be_true()
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("visit:0") = process.receive(events, 100)
+  let assert Ok("visit:1") = process.receive(events, 100)
+  let assert Ok("visit:2") = process.receive(events, 100)
+  let assert Ok("visit:3") = process.receive(events, 100)
 }
 
-/// Test cancel flow at different stages
-pub fn cancel_at_start_test() {
-  let storage = flow.create_noop_storage()
+// ============================================================================
+// Engine: Resume existing instance (not expired)
+// ============================================================================
+
+pub fn engine_resume_existing_instance_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
   let events = process.new_subject()
 
-  let _flow =
-    flow.new("cancel_start", storage, test_step_to_string, string_to_test_step)
-    |> flow.set_on_flow_exit(fn(ctx, _instance) {
-      process.send(events, "exit_hook")
+  let flow =
+    builder.new("resume_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.Pending -> {
+          process.send(events, "first_visit")
+          action.wait(ctx, inst)
+        }
+        types.TextInput(value:) -> {
+          process.send(events, "resumed:" <> value)
+          action.complete(ctx, inst)
+        }
+        _ -> action.cancel(ctx, inst)
+      }
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // First call: wait
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+  let assert Ok("first_visit") = process.receive(events, 100)
+
+  // Second call with same user/chat: should resume the existing instance (still waiting)
+  // Since instance exists and is not expired, start_or_resume calls execute_step
+  let flow_id = storage.generate_id(1, 2, "resume_test")
+  let assert Ok(Some(inst)) = ets.load(flow_id)
+  inst.wait_token |> option.is_some() |> should.be_true()
+}
+
+// ============================================================================
+// Engine: Exit action
+// ============================================================================
+
+pub fn engine_exit_deletes_instance_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("exit_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      action.exit(ctx, inst, result: Some(dict.from_list([#("k", "v")])))
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let flow_id = storage.generate_id(1, 2, "exit_test")
+  let assert Ok(None) = ets.load(flow_id)
+}
+
+// ============================================================================
+// Engine: Initial data is passed to flow
+// ============================================================================
+
+pub fn engine_initial_data_available_in_first_step_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("init_data", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let source = instance.get_data(inst, "source")
+      process.send(events, "source:" <> option.unwrap(source, "none"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.from_list([#("source", "command")]),
+    )
+
+  let assert Ok("source:command") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Engine: on_error handler
+// ============================================================================
+
+pub fn engine_missing_step_triggers_error_handler_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("err_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.on_error(fn(ctx, _inst, _err) {
+      process.send(events, "error_handled")
       Ok(ctx)
     })
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(events, "start")
-      flow.cancel(ctx, instance)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      // Navigate to a step that doesn't have a handler registered
+      action.unsafe_next(ctx, inst, step: "nonexistent")
     })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "end_never_called")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
+    |> builder.build(initial: Start)
 
-  // Cancel should trigger exit hook but not End step
-  True |> should.be_true()
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok("error_handled") = process.receive(events, 100)
 }
 
-/// Test cancel flow in middle step
-pub fn cancel_at_middle_test() {
-  let storage = flow.create_noop_storage()
+// ============================================================================
+// Engine: TTL expiration
+// ============================================================================
+
+pub fn engine_ttl_expired_instance_is_recreated_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
   let events = process.new_subject()
 
-  let _flow =
-    flow.new("cancel_middle", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      process.send(events, "start")
-      flow.next(ctx, instance, step: Middle)
-    })
-    |> flow.add_step(Middle, fn(ctx, instance) {
-      process.send(events, "middle")
-      flow.cancel(ctx, instance)
-    })
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "end_never_called")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected: start → middle, End never called
-  True |> should.be_true()
-}
-
-/// Test back navigation
-pub fn back_navigation_test() {
-  let instance =
-    flow.FlowInstance(
-      id: "back_test",
-      flow_name: "test",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "middle",
-        data: dict.new(),
-        history: ["start", "middle"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // Verify history for back navigation
-  instance.state.history |> should.equal(["start", "middle"])
-  instance.state.current_step |> should.equal("middle")
-}
-
-/// Test self-loop (stay on same step using goto to self)
-pub fn self_loop_step_test() {
-  let storage = flow.create_noop_storage()
-  let attempts = process.new_subject()
-
-  let _flow =
-    flow.new(
-      "self_loop_test",
-      storage,
-      test_step_to_string,
-      string_to_test_step,
-    )
-    |> flow.add_step(Start, fn(ctx, instance) {
-      let count =
-        flow.get_step_data(instance, "attempts")
-        |> option.map(fn(s) { result.unwrap(int.parse(s), 0) })
-        |> option.unwrap(0)
-
-      process.send(attempts, "attempt:" <> int.to_string(count))
-
-      case count < 2 {
-        True -> {
-          let instance =
-            flow.store_step_data(instance, "attempts", int.to_string(count + 1))
-          // Use goto to self for repeating the step
-          flow.goto(ctx, instance, step: Start)
+  let flow =
+    builder.new("ttl_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.with_ttl(ms: 1)
+    // 1ms TTL — will expire almost instantly
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.Pending -> {
+          process.send(events, "pending")
+          action.wait(ctx, inst)
         }
-        False -> flow.next(ctx, instance, step: End)
+        _ -> {
+          process.send(events, "resumed")
+          action.complete(ctx, inst)
+        }
       }
     })
-    |> flow.add_step(End, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
+    |> builder.build(initial: Start)
 
-  True |> should.be_true()
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // First: create instance
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+  let assert Ok("pending") = process.receive(events, 100)
+
+  // Sleep to ensure TTL expires
+  process.sleep(5)
+
+  // Second call: old instance expired -> new instance created -> Pending again
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+  let assert Ok("pending") = process.receive(events, 100)
 }
 
-/// Test goto clears step_data
-pub fn goto_clears_step_data_test() {
-  let instance =
-    flow.FlowInstance(
-      id: "goto_test",
+// ============================================================================
+// Instance: is_expired
+// ============================================================================
+
+pub fn instance_not_expired_without_ttl_test() {
+  let inst =
+    instance.new_instance(
+      id: "test",
       flow_name: "test",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "start",
-        data: dict.from_list([#("persistent", "stays")]),
-        history: ["start"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.from_list([#("temp", "will_be_cleared")]),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
     )
 
-  // Before clearing
-  flow.get_step_data(instance, "temp") |> should.equal(Some("will_be_cleared"))
-  flow.get_data(instance, "persistent") |> should.equal(Some("stays"))
-
-  // After goto/clear_step_data
-  let cleared = flow.clear_step_data(instance)
-  flow.get_step_data(cleared, "temp") |> should.equal(None)
-  flow.get_data(cleared, "persistent") |> should.equal(Some("stays"))
+  instance.is_expired(inst, None) |> should.be_false()
 }
 
-/// Test flow with no steps (edge case)
-pub fn empty_steps_flow_test() {
-  let storage = flow.create_noop_storage()
+pub fn instance_expired_by_wait_timeout_test() {
+  let inst =
+    types.FlowInstance(
+      ..instance.new_instance(
+        id: "test",
+        flow_name: "test",
+        user_id: 1,
+        chat_id: 2,
+        current_step: "start",
+      ),
+      wait_timeout_at: Some(1),
+      // expired long ago
+    )
 
-  // Flow with only one step that immediately completes
-  let _flow =
-    flow.new("minimal", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) { flow.complete(ctx, instance) })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
+  instance.is_expired(inst, None) |> should.be_true()
 }
 
-/// Test history accumulation across transitions
-pub fn history_accumulation_test() {
-  let instance1 =
-    flow.FlowInstance(
-      id: "hist_test",
+// ============================================================================
+// Instance: next_with_data helper
+// ============================================================================
+
+pub fn instance_next_with_data_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "test",
       flow_name: "test",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "start",
-        data: dict.new(),
-        history: ["start"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
     )
 
-  // Simulate transitions by updating history
-  let instance2 =
-    flow.FlowInstance(
-      ..instance1,
-      state: flow.FlowState(..instance1.state, current_step: "middle", history: [
-        "start",
-        "middle",
-      ]),
+  let assert Ok(#(_ctx, action, updated)) =
+    instance.next_with_data(ctx, inst, step: End, key: "name", value: "Alice")
+
+  case action {
+    types.Next(End) -> Nil
+    _ -> should.fail()
+  }
+  instance.get_data(updated, "name") |> should.equal(Some("Alice"))
+}
+
+// ============================================================================
+// Instance: get_current_step
+// ============================================================================
+
+pub fn instance_get_current_step_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let flow =
+    builder.new("step_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.complete(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let inst =
+    instance.new_instance(
+      id: "test",
+      flow_name: "step_test",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "middle",
     )
 
-  let instance3 =
-    flow.FlowInstance(
-      ..instance2,
-      state: flow.FlowState(..instance2.state, current_step: "end", history: [
-        "start",
-        "middle",
-        "end",
-      ]),
+  instance.get_current_step(flow, inst) |> should.equal(Ok(Middle))
+}
+
+pub fn instance_get_current_step_invalid_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let flow =
+    builder.new("step_test2", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.complete(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let inst =
+    instance.new_instance(
+      id: "test",
+      flow_name: "step_test2",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "unknown_step",
     )
 
-  // Verify history grows
-  list.length(instance1.state.history) |> should.equal(1)
-  list.length(instance2.state.history) |> should.equal(2)
-  list.length(instance3.state.history) |> should.equal(3)
-
-  // Verify order
-  instance3.state.history |> should.equal(["start", "middle", "end"])
+  instance.get_current_step(flow, inst) |> should.equal(Error(Nil))
 }
 
-/// Test wait token is set correctly
-pub fn wait_token_test() {
-  let storage = flow.create_noop_storage()
+// ============================================================================
+// Instance: encode_callback_wait_result
+// ============================================================================
 
-  let _flow =
-    flow.new("wait_test", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      // wait() should set the wait_token
-      flow.wait(ctx, instance, "unique_token_123")
-    })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
+pub fn encode_callback_bool_true_test() {
+  instance.encode_callback_wait_result("some_id:true")
+  |> should.equal("bool:true")
 }
 
-/// Test callback wait token
-pub fn wait_callback_token_test() {
-  let storage = flow.create_noop_storage()
-
-  let _flow =
-    flow.new("callback_test", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step(Start, fn(ctx, instance) {
-      flow.wait_callback(ctx, instance, "callback_token")
-    })
-    |> flow.build(initial: Start)
-
-  True |> should.be_true()
+pub fn encode_callback_bool_false_test() {
+  instance.encode_callback_wait_result("some_id:false")
+  |> should.equal("bool:false")
 }
 
-/// Test data merging during subflow return
-pub fn subflow_data_merge_test() {
-  let parent_data = dict.from_list([#("parent_key", "parent_value")])
-  let child_result = dict.from_list([#("child_key", "child_value")])
-
-  let merged = dict.merge(parent_data, child_result)
-
-  dict.get(merged, "parent_key") |> should.equal(Ok("parent_value"))
-  dict.get(merged, "child_key") |> should.equal(Ok("child_value"))
-  dict.size(merged) |> should.equal(2)
+pub fn encode_callback_data_test() {
+  instance.encode_callback_wait_result("some_random_data")
+  |> should.equal("data:some_random_data")
 }
 
-/// Test subflow data override (child overwrites parent key)
-pub fn subflow_data_override_test() {
-  let parent_data = dict.from_list([#("shared_key", "parent_value")])
-  let child_result = dict.from_list([#("shared_key", "child_value")])
-
-  // dict.merge: second dict overwrites first
-  let merged = dict.merge(parent_data, child_result)
-
-  dict.get(merged, "shared_key") |> should.equal(Ok("child_value"))
-}
-
-/// Test multiple hooks on different steps
-pub fn multiple_steps_with_hooks_test() {
-  let storage = flow.create_noop_storage()
-  let events = process.new_subject()
-
-  let _flow =
-    flow.new("multi_hooks", storage, test_step_to_string, string_to_test_step)
-    |> flow.add_step_with_hooks(
-      Start,
-      handler: fn(ctx, instance) {
-        process.send(events, "h:start")
-        flow.next(ctx, instance, step: Middle)
-      },
-      on_enter: Some(fn(ctx, instance) {
-        process.send(events, "e:start")
-        Ok(#(ctx, instance))
-      }),
-      on_leave: Some(fn(ctx, instance) {
-        process.send(events, "l:start")
-        Ok(#(ctx, instance))
-      }),
-    )
-    |> flow.add_step_with_hooks(
-      Middle,
-      handler: fn(ctx, instance) {
-        process.send(events, "h:middle")
-        flow.next(ctx, instance, step: End)
-      },
-      on_enter: Some(fn(ctx, instance) {
-        process.send(events, "e:middle")
-        Ok(#(ctx, instance))
-      }),
-      on_leave: Some(fn(ctx, instance) {
-        process.send(events, "l:middle")
-        Ok(#(ctx, instance))
-      }),
-    )
-    |> flow.add_step(End, fn(ctx, instance) {
-      process.send(events, "h:end")
-      flow.complete(ctx, instance)
-    })
-    |> flow.build(initial: Start)
-
-  // Expected: e:start → h:start → l:start → e:middle → h:middle → l:middle → h:end
-  True |> should.be_true()
-}
-
-/// Test flow instance ID generation
-pub fn flow_instance_id_test() {
-  let instance =
-    flow.FlowInstance(
-      id: "checkout_456_123",
-      flow_name: "checkout",
-      user_id: 123,
-      chat_id: 456,
-      state: flow.FlowState(
-        current_step: "start",
-        data: dict.new(),
-        history: [],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-      step_data: dict.new(),
-      wait_token: None,
-      created_at: 0,
-      updated_at: 0,
-    )
-
-  // ID format: {flow_name}_{chat_id}_{user_id}
-  instance.id |> should.equal("checkout_456_123")
-  instance.flow_name |> should.equal("checkout")
-  instance.user_id |> should.equal(123)
-  instance.chat_id |> should.equal(456)
-}
-
-/// Test parallel state initialization
-pub fn parallel_state_init_test() {
-  let parallel =
-    flow.ParallelState(
-      pending_steps: ["email", "phone", "document"],
-      completed_steps: [],
-      results: dict.new(),
-      join_step: "all_complete",
-    )
-
-  list.length(parallel.pending_steps) |> should.equal(3)
-  list.length(parallel.completed_steps) |> should.equal(0)
-  parallel.join_step |> should.equal("all_complete")
-}
-
-/// Test parallel state progress
-pub fn parallel_state_progress_test() {
-  let initial =
-    flow.ParallelState(
-      pending_steps: ["email", "phone", "document"],
-      completed_steps: [],
-      results: dict.new(),
-      join_step: "done",
-    )
-
-  // Simulate completing "email" step
-  let after_email =
-    flow.ParallelState(
-      ..initial,
-      pending_steps: ["phone", "document"],
-      completed_steps: ["email"],
-      results: dict.from_list([
-        #("email", dict.from_list([#("verified", "true")])),
-      ]),
-    )
-
-  list.length(after_email.pending_steps) |> should.equal(2)
-  list.length(after_email.completed_steps) |> should.equal(1)
-  list.contains(after_email.completed_steps, "email") |> should.be_true()
-}
-
-// --- ETS Storage Tests ---
+// ============================================================================
+// ETS Storage Tests
+// ============================================================================
 
 fn make_test_instance(
   id: String,
   user_id: Int,
   chat_id: Int,
-) -> flow.FlowInstance {
-  flow.FlowInstance(
+) -> types.FlowInstance {
+  instance.new_instance(
     id:,
     flow_name: "test_flow",
     user_id:,
     chat_id:,
-    state: flow.FlowState(
-      current_step: "start",
-      data: dict.new(),
-      history: ["start"],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: dict.new(),
-    wait_token: None,
-    created_at: 0,
-    updated_at: 0,
+    current_step: "start",
   )
 }
 
 pub fn ets_storage_save_and_load_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
   let instance = make_test_instance("ets_test_1", 100, 200)
 
   let assert Ok(Nil) = storage.save(instance)
   let assert Ok(Some(loaded)) = storage.load("ets_test_1")
 
-  loaded.id |> should.equal("ets_test_1")
-  loaded.user_id |> should.equal(100)
-  loaded.chat_id |> should.equal(200)
-  loaded.flow_name |> should.equal("test_flow")
+  instance.instance_id(loaded) |> should.equal("ets_test_1")
+  instance.instance_user_id(loaded) |> should.equal(100)
+  instance.instance_chat_id(loaded) |> should.equal(200)
+  instance.instance_flow_name(loaded) |> should.equal("test_flow")
 }
 
 pub fn ets_storage_load_nonexistent_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
 
   let assert Ok(None) = storage.load("nonexistent_id")
 }
 
 pub fn ets_storage_delete_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
   let instance = make_test_instance("ets_delete_1", 101, 201)
 
   let assert Ok(Nil) = storage.save(instance)
@@ -1612,29 +2051,21 @@ pub fn ets_storage_delete_test() {
 }
 
 pub fn ets_storage_overwrite_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
   let instance1 = make_test_instance("ets_overwrite_1", 102, 202)
   let instance2 =
-    flow.FlowInstance(
-      ..instance1,
-      state: flow.FlowState(
-        current_step: "middle",
-        data: dict.from_list([#("key", "value")]),
-        history: ["start", "middle"],
-        flow_stack: [],
-        parallel_state: None,
-      ),
-    )
+    instance1
+    |> instance.store_data(key: "key", value: "value")
 
   let assert Ok(Nil) = storage.save(instance1)
   let assert Ok(Nil) = storage.save(instance2)
   let assert Ok(Some(loaded)) = storage.load("ets_overwrite_1")
 
-  loaded.state.current_step |> should.equal("middle")
+  instance.get_data(loaded, "key") |> should.equal(Some("value"))
 }
 
 pub fn ets_storage_list_by_user_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
 
   let instance_a = make_test_instance("ets_list_a", 200, 300)
   let instance_b = make_test_instance("ets_list_b", 200, 300)
@@ -1649,14 +2080,519 @@ pub fn ets_storage_list_by_user_test() {
   let assert Ok(results) = storage.list_by_user(200, 300)
   list.length(results) |> should.equal(2)
 
-  let ids = list.map(results, fn(i) { i.id })
+  let ids = list.map(results, instance.instance_id)
   list.contains(ids, "ets_list_a") |> should.be_true()
   list.contains(ids, "ets_list_b") |> should.be_true()
 }
 
 pub fn ets_storage_list_by_user_empty_test() {
-  let assert Ok(storage) = flow.create_ets_storage()
+  let assert Ok(storage) = storage.create_ets_storage()
 
   let assert Ok(results) = storage.list_by_user(999, 999)
   results |> should.equal([])
+}
+
+pub fn ets_storage_delete_removes_from_user_index_test() {
+  let assert Ok(storage) = storage.create_ets_storage()
+
+  let inst = make_test_instance("ets_idx_del", 500, 600)
+  let assert Ok(Nil) = storage.save(inst)
+
+  let assert Ok(results_before) = storage.list_by_user(500, 600)
+  list.length(results_before) |> should.equal(1)
+
+  let assert Ok(Nil) = storage.delete("ets_idx_del")
+
+  let assert Ok(results_after) = storage.list_by_user(500, 600)
+  results_after |> should.equal([])
+}
+
+// ============================================================================
+// Registry: cancel_user_flows, cancel_flow_instance
+// ============================================================================
+
+pub fn registry_cancel_user_flows_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let flow =
+    builder.new("cancel_reg", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.wait(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("start"), flow)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 100, chat_id: 200),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // Start the flow to create an instance
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 100,
+      chat_id: 200,
+      initial_data: dict.new(),
+    )
+
+  // Verify instance exists
+  let flow_id = storage.generate_id(100, 200, "cancel_reg")
+  let assert Ok(Some(_)) = ets.load(flow_id)
+
+  // Cancel all user flows
+  let assert Ok(cancelled) =
+    registry.cancel_user_flows(reg, user_id: 100, chat_id: 200)
+  list.length(cancelled) |> should.equal(1)
+
+  // Verify instance is gone
+  let assert Ok(None) = ets.load(flow_id)
+}
+
+pub fn registry_cancel_flow_instance_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let flow =
+    builder.new("cancel_inst", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.wait(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("test"), flow)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 10, chat_id: 20),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 10,
+      chat_id: 20,
+      initial_data: dict.new(),
+    )
+
+  let flow_id = storage.generate_id(10, 20, "cancel_inst")
+
+  // Cancel by ID
+  let assert Ok(True) = registry.cancel_flow_instance(reg, flow_id:)
+
+  let assert Ok(None) = ets.load(flow_id)
+
+  // Cancel non-existent returns False
+  let assert Ok(False) =
+    registry.cancel_flow_instance(reg, flow_id: "nonexistent")
+}
+
+// ============================================================================
+// Registry: register_callable + call_flow
+// ============================================================================
+
+pub fn registry_call_flow_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("callable", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      let src = instance.get_data(inst, "src")
+      process.send(events, "called:" <> option.unwrap(src, "none"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register_callable(flow)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    registry.call_flow(
+      ctx:,
+      registry: reg,
+      name: "callable",
+      initial: dict.from_list([#("src", "handler")]),
+    )
+
+  let assert Ok("called:handler") = process.receive(events, 100)
+}
+
+pub fn registry_call_flow_nonexistent_test() {
+  let reg = registry.new_registry()
+
+  let ctx = context.context(session: Nil)
+
+  let assert Ok(_) =
+    registry.call_flow(
+      ctx:,
+      registry: reg,
+      name: "nonexistent",
+      initial: dict.new(),
+    )
+  // Should not error, just return Ok(ctx)
+}
+
+// ============================================================================
+// InlineStep type
+// ============================================================================
+
+pub fn inline_step_type_equality_test() {
+  let step1 = types.InlineStep("collect_name")
+  let step2 = types.InlineStep("collect_email")
+  let step3 = types.InlineStep("collect_name")
+
+  step1 |> should.not_equal(step2)
+  step1 |> should.equal(step3)
+}
+
+// ============================================================================
+// Action module: pure return values
+// ============================================================================
+
+pub fn action_next_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.next(ctx, inst, step: Middle)
+  case action {
+    types.Next(Middle) -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_goto_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.goto(ctx, inst, step: End)
+  case action {
+    types.GoTo(End) -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_back_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.back(ctx, inst)
+  case action {
+    types.Back -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_complete_includes_instance_data_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance_with_data(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+      data: dict.from_list([#("key", "val")]),
+    )
+
+  let assert Ok(#(_, action, _)) = action.complete(ctx, inst)
+  case action {
+    types.Complete(data) -> {
+      dict.get(data, "key") |> should.equal(Ok("val"))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn action_cancel_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.cancel(ctx, inst)
+  case action {
+    types.Cancel -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_wait_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.wait(ctx, inst)
+  case action {
+    types.Wait -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_wait_callback_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.wait_callback(ctx, inst)
+  case action {
+    types.WaitCallback -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_wait_with_timeout_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) =
+    action.wait_with_timeout(ctx, inst, timeout_ms: 5000)
+  case action {
+    types.WaitWithTimeout(5000) -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_wait_callback_with_timeout_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) =
+    action.wait_callback_with_timeout(ctx, inst, timeout_ms: 3000)
+  case action {
+    types.WaitCallbackWithTimeout(3000) -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn action_enter_subflow_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let data = dict.from_list([#("key", "val")])
+  let assert Ok(#(_, action, _)) =
+    action.enter_subflow(ctx, inst, subflow_name: "child", data:)
+  case action {
+    types.EnterSubflow("child", d) -> {
+      dict.get(d, "key") |> should.equal(Ok("val"))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn action_return_from_subflow_returns_correct_action_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let result = dict.from_list([#("result", "data")])
+  let assert Ok(#(_, action, _)) =
+    action.return_from_subflow(ctx, inst, result:)
+  case action {
+    types.ReturnFromSubflow(r) -> {
+      dict.get(r, "result") |> should.equal(Ok("data"))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn action_exit_with_result_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) =
+    action.exit(ctx, inst, result: Some(dict.from_list([#("k", "v")])))
+  case action {
+    types.Exit(Some(d)) -> dict.get(d, "k") |> should.equal(Ok("v"))
+    _ -> should.fail()
+  }
+}
+
+pub fn action_exit_without_result_test() {
+  let ctx = context.context(session: Nil)
+  let inst =
+    instance.new_instance(
+      id: "t",
+      flow_name: "t",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "start",
+    )
+
+  let assert Ok(#(_, action, _)) = action.exit(ctx, inst, result: None)
+  case action {
+    types.Exit(None) -> Nil
+    _ -> should.fail()
+  }
+}
+
+// ============================================================================
+// Builder: with_ttl, on_timeout
+// ============================================================================
+
+pub fn builder_with_ttl_builds_flow_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("ttl_build", ets, test_step_to_string, string_to_test_step)
+    |> builder.with_ttl(ms: 60_000)
+    |> builder.on_timeout(fn(ctx, _inst) { Ok(ctx) })
+    |> builder.add_step(Start, fn(ctx, inst) { action.complete(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  flow.ttl_ms |> should.equal(Some(60_000))
+  flow.on_timeout |> option.is_some() |> should.be_true()
+}
+
+// ============================================================================
+// Engine: step-level middleware combined with global
+// ============================================================================
+
+pub fn engine_step_middleware_combined_with_global_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("combo_mw", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_global_middleware(fn(_ctx, _inst, next) {
+      process.send(events, "global")
+      next()
+    })
+    |> builder.add_step_with_middleware(
+      Start,
+      [
+        fn(_ctx, _inst, next) {
+          process.send(events, "step_mw")
+          next()
+        },
+      ],
+      fn(ctx, inst) {
+        process.send(events, "handler")
+        action.complete(ctx, inst)
+      },
+    )
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  // Global middleware runs first, then step-level, then handler
+  let assert Ok("global") = process.receive(events, 100)
+  let assert Ok("step_mw") = process.receive(events, 100)
+  let assert Ok("handler") = process.receive(events, 100)
+}
+
+// ============================================================================
+// Noop storage
+// ============================================================================
+
+pub fn noop_storage_operations_test() {
+  let noop = storage.create_noop_storage()
+  let inst = make_test_instance("noop_test", 1, 2)
+
+  let assert Ok(Nil) = noop.save(inst)
+  let assert Ok(None) = noop.load("noop_test")
+  let assert Ok(Nil) = noop.delete("noop_test")
+  let assert Ok([]) = noop.list_by_user(1, 2)
 }

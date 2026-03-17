@@ -4,7 +4,8 @@ import pog
 import telega/polling
 
 import telega
-import telega/flow
+import telega/flow/registry
+import telega/flow/types
 import telega/router.{type Router}
 
 import restaurant_booking/config
@@ -49,15 +50,15 @@ pub fn build_router(
   let menu_flow = menu.create_menu_flow(db)
 
   let flow_registry =
-    flow.new_registry()
-    |> flow.register(flow.OnCommand("/start"), registration_flow)
-    |> flow.register(flow.OnCommand("/book"), booking_flow)
-    |> flow.register(flow.OnCommand("/menu"), menu_flow)
+    registry.new_registry()
+    |> registry.register(types.OnCommand("/start"), registration_flow)
+    |> registry.register(types.OnCommand("/book"), booking_flow)
+    |> registry.register(types.OnCommand("/menu"), menu_flow)
 
   router.new(cfg.restaurant_name <> constants.bot_name_suffix)
   |> router.on_command("/help", handlers.help)
   |> router.on_command("/my_bookings", fn(ctx, cmd) {
     handlers.my_bookings(db, ctx, cmd)
   })
-  |> flow.apply_to_router(flow_registry)
+  |> registry.apply_to_router(flow_registry)
 }

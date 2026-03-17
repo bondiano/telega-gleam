@@ -1,0 +1,40 @@
+version: "3"
+
+tasks:
+  format:
+    desc: Format root project
+    cmd: gleam format
+
+  format:all:
+    desc: Format root project and all examples
+    cmds:
+      - gleam format
+      - for: [
+          "00-echo-bot",
+          "01-commands-bot",
+          "02-session-bot",
+          "03-conversation-bot",
+          "04-keyboard-bot",
+          "05-media-group-bot",
+          "06-restaurant-booking",
+        ]
+        cmd: cd examples/{{.ITEM}} && gleam format
+
+  test:
+    desc: Run tests in root project
+    cmd: gleam test
+
+  test:all:
+    desc: Run tests in root project and check all examples compile
+    cmds:
+      - gleam test
+      - for: [
+          "00-echo-bot",
+          "01-commands-bot",
+          "02-session-bot",
+          "03-conversation-bot",
+          "04-keyboard-bot",
+          "05-media-group-bot",
+          "06-restaurant-booking",
+        ]
+        cmd: cd examples/{{.ITEM}} && gleam test

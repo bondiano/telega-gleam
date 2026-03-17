@@ -7,7 +7,10 @@ import pog
 import restaurant_booking/sql
 import restaurant_booking/util
 import telega/bot.{type Context}
-import telega/flow
+import telega/flow/action
+import telega/flow/builder
+import telega/flow/instance
+import telega/flow/types
 import telega/keyboard
 import telega/reply
 
@@ -43,37 +46,39 @@ fn string_to_step(name: String) -> Result(RegistrationStep, Nil) {
 
 pub fn create_registration_flow(
   db: pog.Connection,
-) -> flow.Flow(RegistrationStep, Nil, String) {
+) -> types.Flow(RegistrationStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
-  flow.new("registration", storage, step_to_string, string_to_step)
-  |> flow.add_step(Welcome, fn(ctx, instance) {
-    welcome_step(ctx, instance, db)
+  builder.new("registration", storage, step_to_string, string_to_step)
+  |> builder.add_step(Welcome, fn(ctx, inst) { welcome_step(ctx, inst, db) })
+  |> builder.add_step(CollectName, collect_name_step)
+  |> builder.add_step(CollectPhone, collect_phone_step)
+  |> builder.add_step(CollectEmail, collect_email_step)
+  |> builder.add_step(ConfirmRegistration, fn(ctx, inst) {
+    confirm_registration_step(ctx, inst, db)
   })
-  |> flow.add_step(CollectName, collect_name_step)
-  |> flow.add_step(CollectPhone, collect_phone_step)
-  |> flow.add_step(CollectEmail, collect_email_step)
-  |> flow.add_step(ConfirmRegistration, fn(ctx, instance) {
-    confirm_registration_step(ctx, instance, db)
-  })
-  |> flow.on_complete(registration_complete)
-  |> flow.on_error(registration_error)
-  |> flow.build(initial: Welcome)
+  |> builder.on_complete(registration_complete)
+  |> builder.on_error(registration_error)
+  |> builder.build(initial: Welcome)
 }
 
 pub fn welcome_step(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String) {
   use user_in_db <- result.try(
-    sql.get_user(db, instance.user_id, instance.chat_id)
+    sql.get_user(
+      db,
+      instance.instance_user_id(instance),
+      instance.instance_chat_id(instance),
+    )
     |> result.map_error(fn(err) {
       "Failed to get user: " <> string.inspect(err)
     }),
   )
 
-  use <- bool.guard(user_in_db.count > 0, flow.cancel(ctx, instance))
+  use <- bool.guard(user_in_db.count > 0, action.cancel(ctx, instance))
 
   let message = "🍽️ Welcome to " <> util.get_restaurant_name() <> "!
 
@@ -83,28 +88,28 @@ This will only take a few minutes.
 Let's start! 👋"
 
   case reply.with_text(ctx, message) {
-    Ok(_) -> flow.next(ctx, instance, CollectName)
-    Error(_) -> flow.cancel(ctx, instance)
+    Ok(_) -> action.next(ctx, instance, CollectName)
+    Error(_) -> action.cancel(ctx, instance)
   }
 }
 
 fn collect_name_step(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "user_input") {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
+  case instance.get_step_data(instance, "user_input") {
     Some(name) -> {
-      let instance = flow.clear_step_data_key(instance, "user_input")
+      let instance = instance.clear_step_data_key(instance, "user_input")
       case validate_name(name) {
         Ok(valid_name) -> {
           let instance =
-            flow.store_step_data(instance, "collected_name", valid_name)
-          flow.next(ctx, instance, CollectPhone)
+            instance.store_step_data(instance, "collected_name", valid_name)
+          action.next(ctx, instance, CollectPhone)
         }
         Error(error_msg) -> {
           let _ =
             reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
-          flow.wait(ctx, instance, "name_input_" <> instance.id)
+          action.wait(ctx, instance)
         }
       }
     }
@@ -114,31 +119,31 @@ fn collect_name_step(
 
 fn ask_for_name(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
   case reply.with_text(ctx, "Please enter your full name:") {
-    Ok(_) -> flow.wait(ctx, instance, "name_input_" <> instance.id)
-    Error(_) -> flow.cancel(ctx, instance)
+    Ok(_) -> action.wait(ctx, instance)
+    Error(_) -> action.cancel(ctx, instance)
   }
 }
 
 fn collect_phone_step(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "user_input") {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
+  case instance.get_step_data(instance, "user_input") {
     Some(phone) -> {
-      let instance = flow.clear_step_data_key(instance, "user_input")
+      let instance = instance.clear_step_data_key(instance, "user_input")
       case validate_phone(phone) {
         Ok(valid_phone) -> {
           let instance =
-            flow.store_step_data(instance, "collected_phone", valid_phone)
-          flow.next(ctx, instance, CollectEmail)
+            instance.store_step_data(instance, "collected_phone", valid_phone)
+          action.next(ctx, instance, CollectEmail)
         }
         Error(error_msg) -> {
           let _ =
             reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
-          flow.wait(ctx, instance, "phone_input_" <> instance.id)
+          action.wait(ctx, instance)
         }
       }
     }
@@ -148,8 +153,8 @@ fn collect_phone_step(
 
 fn ask_for_phone(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
   let message =
     "
 📱 Please provide your phone number:
@@ -159,32 +164,37 @@ Format: +1-555-123-4567 or (555) 123-4567
   "
 
   case reply.with_text(ctx, message) {
-    Ok(_) -> flow.wait(ctx, instance, "phone_input_" <> instance.id)
-    Error(_) -> flow.cancel(ctx, instance)
+    Ok(_) -> action.wait(ctx, instance)
+    Error(_) -> action.cancel(ctx, instance)
   }
 }
 
 fn collect_email_step(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "user_input") {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
+  case instance.get_step_data(instance, "user_input") {
     Some(email) -> {
-      let instance = flow.clear_step_data_key(instance, "user_input")
+      let instance = instance.clear_step_data_key(instance, "user_input")
       let trimmed = string.trim(email)
       let is_skip = string.lowercase(trimmed) == "skip"
 
       case is_skip {
         True -> {
-          let instance = flow.store_step_data(instance, "collected_email", "")
-          flow.next(ctx, instance, ConfirmRegistration)
+          let instance =
+            instance.store_step_data(instance, "collected_email", "")
+          action.next(ctx, instance, ConfirmRegistration)
         }
         False -> {
           case validate_email(trimmed) {
             Ok(valid_email) -> {
               let instance =
-                flow.store_step_data(instance, "collected_email", valid_email)
-              flow.next(ctx, instance, ConfirmRegistration)
+                instance.store_step_data(
+                  instance,
+                  "collected_email",
+                  valid_email,
+                )
+              action.next(ctx, instance, ConfirmRegistration)
             }
             Error(_) -> {
               let _ =
@@ -192,7 +202,7 @@ fn collect_email_step(
                   ctx,
                   "❌ Invalid email format. Please try again or type 'skip'.",
                 )
-              flow.wait(ctx, instance, "email_input_" <> instance.id)
+              action.wait(ctx, instance)
             }
           }
         }
@@ -208,8 +218,8 @@ You can skip this step by typing 'skip'.
       "
 
       case reply.with_text(ctx, message) {
-        Ok(_) -> flow.wait(ctx, instance, "email_input_" <> instance.id)
-        Error(_) -> flow.cancel(ctx, instance)
+        Ok(_) -> action.wait(ctx, instance)
+        Error(_) -> action.cancel(ctx, instance)
       }
     }
   }
@@ -217,51 +227,52 @@ You can skip this step by typing 'skip'.
 
 fn confirm_registration_step(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.is_callback_passed(instance, "callback_data", "reg_confirm") {
-    Some(True) ->
+) -> types.StepResult(RegistrationStep, Nil, String) {
+  case instance.get_wait_result(instance) {
+    types.BoolCallback(value: True) ->
       save_and_complete(
         ctx,
-        flow.clear_step_data_key(instance, "callback_data"),
+        instance.clear_step_data_key(instance, "callback_data"),
         db,
       )
-    Some(False) ->
+    types.BoolCallback(value: False) ->
       restart_registration(
         ctx,
-        flow.clear_step_data_key(instance, "callback_data"),
+        instance.clear_step_data_key(instance, "callback_data"),
       )
-    None -> handle_text_response(ctx, instance)
+    types.Pending -> handle_text_response(ctx, instance)
+    _ -> action.cancel(ctx, instance)
   }
 }
 
 fn save_and_complete(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
   db: pog.Connection,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Error(e) -> {
       let _ = reply.with_text(ctx, "❌ " <> e)
-      flow.cancel(ctx, instance)
+      action.cancel(ctx, instance)
     }
     Ok(reg_data) -> {
       case
         sql.create_or_update_user(
           db,
-          instance.user_id,
-          instance.chat_id,
+          instance.instance_user_id(instance),
+          instance.instance_chat_id(instance),
           reg_data.name,
           reg_data.phone,
           option.unwrap(reg_data.email, ""),
         )
       {
-        Ok(_) -> flow.complete(ctx, instance)
+        Ok(_) -> action.complete(ctx, instance)
         Error(err) -> {
           let _ =
             reply.with_text(ctx, "❌ Failed to save: " <> string.inspect(err))
-          flow.cancel(ctx, instance)
+          action.cancel(ctx, instance)
         }
       }
     }
@@ -270,24 +281,24 @@ fn save_and_complete(
 
 fn restart_registration(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
   let _ = reply.with_text(ctx, "Starting over. Please enter your full name:")
-  flow.goto(ctx, flow.clear_step_data(instance), CollectName)
+  action.goto(ctx, instance.clear_step_data(instance), CollectName)
 }
 
 fn handle_text_response(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "user_input") {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
+  case instance.get_step_data(instance, "user_input") {
     None -> ask_for_confirmation(ctx, instance)
     Some(text) -> {
-      let instance = flow.clear_step_data_key(instance, "user_input")
+      let instance = instance.clear_step_data_key(instance, "user_input")
       case parse_edit_command(text) {
         Some(#(step, prompt)) -> {
           let _ = reply.with_text(ctx, prompt)
-          flow.goto(ctx, instance, step)
+          action.goto(ctx, instance, step)
         }
         None -> ask_for_confirmation(ctx, instance)
       }
@@ -317,8 +328,8 @@ fn parse_edit_command(
 
 fn ask_for_confirmation(
   ctx: Context(Nil, String),
-  instance: flow.FlowInstance,
-) -> flow.StepResult(RegistrationStep, Nil, String) {
+  instance: types.FlowInstance,
+) -> types.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Ok(reg_data) -> {
       let email_display = case reg_data.email {
@@ -341,20 +352,20 @@ To edit any field, type 'edit name', 'edit phone', or 'edit email'
       case
         reply.with_markup(ctx, message, keyboard.to_inline_markup(keyboard))
       {
-        Ok(_) -> flow.wait_callback(ctx, instance, "confirmation")
-        Error(_) -> flow.cancel(ctx, instance)
+        Ok(_) -> action.wait_callback(ctx, instance)
+        Error(_) -> action.cancel(ctx, instance)
       }
     }
     Error(error_msg) -> {
       let _ = reply.with_text(ctx, "❌ Registration error: " <> error_msg)
-      flow.cancel(ctx, instance)
+      action.cancel(ctx, instance)
     }
   }
 }
 
 fn registration_complete(
   ctx: Context(Nil, String),
-  _instance: flow.FlowInstance,
+  _instance: types.FlowInstance,
 ) -> Result(Context(Nil, String), String) {
   let message = "
 🎉 Registration successful!
@@ -374,7 +385,7 @@ Use /help for more options
 
 fn registration_error(
   ctx: Context(Nil, String),
-  _instance: flow.FlowInstance,
+  _instance: types.FlowInstance,
   _error: option.Option(String),
 ) -> Result(Context(Nil, String), String) {
   let message =
@@ -395,19 +406,19 @@ pub type RegistrationData {
 
 /// Extract and validate registration data from scene data
 fn extract_registration_data(
-  instance: flow.FlowInstance,
+  instance: types.FlowInstance,
 ) -> Result(RegistrationData, String) {
   use name <- result.try(
-    flow.get_step_data(instance, "collected_name")
+    instance.get_step_data(instance, "collected_name")
     |> option.to_result("Missing name"),
   )
 
   use phone <- result.try(
-    flow.get_step_data(instance, "collected_phone")
+    instance.get_step_data(instance, "collected_phone")
     |> option.to_result("Missing phone"),
   )
 
-  let email = flow.get_step_data(instance, "collected_email")
+  let email = instance.get_step_data(instance, "collected_email")
 
   use validated_name <- result.try(validate_name(name))
   use validated_phone <- result.try(validate_phone(phone))
