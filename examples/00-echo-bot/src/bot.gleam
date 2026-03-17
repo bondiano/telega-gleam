@@ -16,11 +16,14 @@ fn handle_command(ctx, command: update.Command) {
   Ok(ctx)
 }
 
+pub fn build_router() {
+  router.new("echo_bot")
+  |> router.on_any_text(handle_text)
+  |> router.on_commands(["start", "help"], handle_command)
+}
+
 pub fn main() {
-  let router =
-    router.new("echo_bot")
-    |> router.on_any_text(handle_text)
-    |> router.on_commands(["start", "help"], handle_command)
+  let router = build_router()
 
   let assert Ok(bot) =
     telega.new_for_polling(token: "BOT_TOKEN")

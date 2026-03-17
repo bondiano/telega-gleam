@@ -116,15 +116,18 @@ fn handle_photo(ctx, photo_sizes: List(types.PhotoSize)) {
   }
 }
 
+pub fn build_router() {
+  router.new("image_url_bot")
+  |> router.on_commands(["help", "start"], handle_help)
+  |> router.on_media_group(handle_media_group)
+  |> router.on_photo(handle_photo)
+  |> router.on_any_text(handle_text)
+}
+
 pub fn main() {
   let assert Ok(token) = envoy.get("BOT_TOKEN")
 
-  let router =
-    router.new("image_url_bot")
-    |> router.on_commands(["help", "start"], handle_help)
-    |> router.on_media_group(handle_media_group)
-    |> router.on_photo(handle_photo)
-    |> router.on_any_text(handle_text)
+  let router = build_router()
 
   let assert Ok(bot) =
     telega.new_for_polling(token:)

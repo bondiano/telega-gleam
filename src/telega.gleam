@@ -785,7 +785,7 @@ pub fn wait_choice(
   let _ = api.send_message(ctx.config.api_client, send_params)
 
   // Wait for callback query
-  use ctx, _callback_id, data <- wait_callback_query(
+  use ctx, data, _callback_query_id <- wait_callback_query(
     ctx,
     filter: None,
     or: handle_else,

@@ -314,6 +314,268 @@ pub fn command_update_with(
   )
 }
 
+// ---------------------------------------------------------------------------
+// Media type factories
+// ---------------------------------------------------------------------------
+
+/// Creates a `PhotoSize` with sensible defaults.
+pub fn photo_size() -> types.PhotoSize {
+  photo_size_with(file_id: "test_photo")
+}
+
+/// Creates a `PhotoSize` with a custom file_id.
+pub fn photo_size_with(file_id file_id: String) -> types.PhotoSize {
+  types.PhotoSize(
+    file_id:,
+    file_unique_id: file_id <> "_unique",
+    width: 640,
+    height: 480,
+    file_size: Some(12_345),
+  )
+}
+
+/// Creates an `Audio` with sensible defaults.
+pub fn audio() -> types.Audio {
+  audio_with(file_id: "test_audio", duration: 30)
+}
+
+/// Creates an `Audio` with custom file_id and duration.
+pub fn audio_with(
+  file_id file_id: String,
+  duration duration: Int,
+) -> types.Audio {
+  types.Audio(
+    file_id:,
+    file_unique_id: file_id <> "_unique",
+    duration:,
+    performer: None,
+    title: None,
+    file_name: None,
+    mime_type: Some("audio/mpeg"),
+    file_size: None,
+    thumbnail: None,
+  )
+}
+
+/// Creates a `Video` with sensible defaults.
+pub fn video() -> types.Video {
+  video_with(file_id: "test_video", duration: 60)
+}
+
+/// Creates a `Video` with custom file_id and duration.
+pub fn video_with(
+  file_id file_id: String,
+  duration duration: Int,
+) -> types.Video {
+  types.Video(
+    file_id:,
+    file_unique_id: file_id <> "_unique",
+    width: 1280,
+    height: 720,
+    duration:,
+    thumbnail: None,
+    cover: None,
+    start_timestamp: None,
+    file_name: None,
+    mime_type: Some("video/mp4"),
+    file_size: None,
+    qualities: None,
+  )
+}
+
+/// Creates a `Voice` with sensible defaults.
+pub fn voice() -> types.Voice {
+  voice_with(file_id: "test_voice", duration: 5)
+}
+
+/// Creates a `Voice` with custom file_id and duration.
+pub fn voice_with(
+  file_id file_id: String,
+  duration duration: Int,
+) -> types.Voice {
+  types.Voice(
+    file_id:,
+    file_unique_id: file_id <> "_unique",
+    duration:,
+    mime_type: Some("audio/ogg"),
+    file_size: None,
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Media message factories
+// ---------------------------------------------------------------------------
+
+/// Creates a message with photos attached.
+pub fn photo_message(photos photos: List(types.PhotoSize)) -> types.Message {
+  types.Message(..message(text: ""), text: None, photo: Some(photos))
+}
+
+/// Creates a message with a video attached.
+pub fn video_message(video video: types.Video) -> types.Message {
+  types.Message(..message(text: ""), text: None, video: Some(video))
+}
+
+/// Creates a message with audio attached.
+pub fn audio_message(audio audio: types.Audio) -> types.Message {
+  types.Message(..message(text: ""), text: None, audio: Some(audio))
+}
+
+/// Creates a message with a voice note attached.
+pub fn voice_message(voice voice: types.Voice) -> types.Message {
+  types.Message(..message(text: ""), text: None, voice: Some(voice))
+}
+
+// ---------------------------------------------------------------------------
+// Media update factories
+// ---------------------------------------------------------------------------
+
+/// Creates a typed `PhotoUpdate` with default user/chat IDs.
+pub fn photo_update() -> update.Update {
+  photo_update_with(
+    photos: [photo_size()],
+    from_id: default_user_id,
+    chat_id: default_chat_id,
+  )
+}
+
+/// Creates a typed `PhotoUpdate` with custom photos, from_id, and chat_id.
+pub fn photo_update_with(
+  photos photos: List(types.PhotoSize),
+  from_id from_id: Int,
+  chat_id chat_id: Int,
+) -> update.Update {
+  let from = user_with(id: from_id, first_name: "TestUser")
+  let chat = chat_with(id: chat_id, type_: "private")
+  let msg =
+    types.Message(
+      ..message_with(text: "", from:, chat:),
+      text: None,
+      photo: Some(photos),
+    )
+  update.PhotoUpdate(
+    photos:,
+    message: msg,
+    from_id:,
+    chat_id:,
+    raw: raw_update(message: msg),
+  )
+}
+
+/// Creates a typed `VideoUpdate` with default user/chat IDs.
+pub fn video_update() -> update.Update {
+  video_update_with(
+    video: video(),
+    from_id: default_user_id,
+    chat_id: default_chat_id,
+  )
+}
+
+/// Creates a typed `VideoUpdate` with custom video, from_id, and chat_id.
+pub fn video_update_with(
+  video video: types.Video,
+  from_id from_id: Int,
+  chat_id chat_id: Int,
+) -> update.Update {
+  let from = user_with(id: from_id, first_name: "TestUser")
+  let chat = chat_with(id: chat_id, type_: "private")
+  let msg =
+    types.Message(
+      ..message_with(text: "", from:, chat:),
+      text: None,
+      video: Some(video),
+    )
+  update.VideoUpdate(
+    video:,
+    message: msg,
+    from_id:,
+    chat_id:,
+    raw: raw_update(message: msg),
+  )
+}
+
+/// Creates a typed `AudioUpdate` with default user/chat IDs.
+pub fn audio_update() -> update.Update {
+  audio_update_with(
+    audio: audio(),
+    from_id: default_user_id,
+    chat_id: default_chat_id,
+  )
+}
+
+/// Creates a typed `AudioUpdate` with custom audio, from_id, and chat_id.
+pub fn audio_update_with(
+  audio audio: types.Audio,
+  from_id from_id: Int,
+  chat_id chat_id: Int,
+) -> update.Update {
+  let from = user_with(id: from_id, first_name: "TestUser")
+  let chat = chat_with(id: chat_id, type_: "private")
+  let msg =
+    types.Message(
+      ..message_with(text: "", from:, chat:),
+      text: None,
+      audio: Some(audio),
+    )
+  update.AudioUpdate(
+    audio:,
+    message: msg,
+    from_id:,
+    chat_id:,
+    raw: raw_update(message: msg),
+  )
+}
+
+/// Creates a typed `VoiceUpdate` with default user/chat IDs.
+pub fn voice_update() -> update.Update {
+  voice_update_with(
+    voice: voice(),
+    from_id: default_user_id,
+    chat_id: default_chat_id,
+  )
+}
+
+/// Creates a typed `VoiceUpdate` with custom voice, from_id, and chat_id.
+pub fn voice_update_with(
+  voice voice: types.Voice,
+  from_id from_id: Int,
+  chat_id chat_id: Int,
+) -> update.Update {
+  let from = user_with(id: from_id, first_name: "TestUser")
+  let chat = chat_with(id: chat_id, type_: "private")
+  let msg =
+    types.Message(
+      ..message_with(text: "", from:, chat:),
+      text: None,
+      voice: Some(voice),
+    )
+  update.VoiceUpdate(
+    voice:,
+    message: msg,
+    from_id:,
+    chat_id:,
+    raw: raw_update(message: msg),
+  )
+}
+
+/// Creates a typed `MessageUpdate` with default user/chat IDs.
+pub fn message_update(message message: types.Message) -> update.Update {
+  message_update_with(
+    message:,
+    from_id: default_user_id,
+    chat_id: default_chat_id,
+  )
+}
+
+/// Creates a typed `MessageUpdate` with custom from_id and chat_id.
+pub fn message_update_with(
+  message message: types.Message,
+  from_id from_id: Int,
+  chat_id chat_id: Int,
+) -> update.Update {
+  update.MessageUpdate(message:, from_id:, chat_id:, raw: raw_update(message:))
+}
+
 /// Creates a typed `CallbackQueryUpdate` with default user/chat IDs.
 pub fn callback_query_update(data data: String) -> update.Update {
   callback_query_update_with(

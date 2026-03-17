@@ -24,5 +24,20 @@ jobs:
       - name: Check Format
         run: gleam format --check src test
 
+      - name: Check
+        run: gleam check
+
       - name: Test
         run: GLEAM_LOG=trace gleam test
+
+      # - name: Check Examples
+      #   run: |
+      #     for dir in examples/*/; do
+      #       echo "=== Checking $dir ==="
+      #       cd "$dir"
+      #       gleam deps download
+      #       gleam format --check src test
+      #       gleam check
+      #       gleam test
+      #       cd "$GITHUB_WORKSPACE"
+      #     done

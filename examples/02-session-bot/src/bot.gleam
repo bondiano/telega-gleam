@@ -69,6 +69,21 @@ fn start_command_handler(ctx, _command) {
 
 const commands = [#("/set_name", "Set name"), #("/get_name", "Get name")]
 
+pub type BotContext =
+  Context(NameBotSession, BotError)
+
+pub type BotError {
+  TelegaBotError(telega_error.TelegaError)
+}
+
+pub fn build_router() -> router.Router(NameBotSession, BotError) {
+  router.new("session_bot")
+  |> router.on_command("start", start_command_handler)
+  |> router.on_command("set_name", set_name_command_handler)
+  |> router.on_command("get_name", get_name_command_handler)
+  |> router.on_any_text(set_name_message_handler)
+}
+
 fn build_bot() {
   let assert Ok(token) = envoy.get("BOT_TOKEN")
   let assert Ok(webhook_path) = envoy.get("WEBHOOK_PATH")
@@ -83,12 +98,7 @@ fn build_bot() {
       None,
     )
 
-  let router =
-    router.new("session_bot")
-    |> router.on_command("start", start_command_handler)
-    |> router.on_command("set_name", set_name_command_handler)
-    |> router.on_command("get_name", get_name_command_handler)
-    |> router.on_any_text(set_name_message_handler)
+  let router = build_router()
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.with_router(router)
@@ -109,13 +119,6 @@ pub fn main() {
     |> mist.start
 
   process.sleep_forever()
-}
-
-type BotContext =
-  Context(NameBotSession, BotError)
-
-type BotError {
-  TelegaBotError(telega_error.TelegaError)
 }
 
 fn try(result, fun) {
