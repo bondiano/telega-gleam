@@ -191,7 +191,7 @@ pub fn middleware_execution_order_test() {
 }
 
 pub fn test_parallel_steps_configuration() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let parallel_results = process.new_subject()
 
   let flow_builder =
@@ -263,7 +263,7 @@ pub fn test_parallel_steps_configuration() {
 }
 
 pub fn multi_conditional_routing_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let flow_builder =
     flow.new("grading", storage, test_step_to_string, string_to_test_step)
@@ -420,7 +420,7 @@ pub fn flow_stack_for_nested_flows_test() {
 }
 
 pub fn wait_mechanisms_set_tokens_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let flow_builder =
     flow.new("test", storage, test_step_to_string, string_to_test_step)
@@ -480,7 +480,7 @@ pub fn inline_step_type_test() {
 
 /// Test inline_next navigation helper
 pub fn inline_next_navigation_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let execution_log = process.new_subject()
 
   // Just verify that the flow builds without errors
@@ -518,7 +518,7 @@ pub fn inline_next_navigation_test() {
 
 /// Test step hooks are called in correct order
 pub fn step_hooks_execution_order_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let execution_log = process.new_subject()
 
   let _test_flow =
@@ -550,7 +550,7 @@ pub fn step_hooks_execution_order_test() {
 
 /// Test flow lifecycle hooks are set correctly
 pub fn flow_lifecycle_hooks_builder_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let execution_log = process.new_subject()
 
   let _test_flow =
@@ -576,7 +576,7 @@ pub fn flow_lifecycle_hooks_builder_test() {
 
 /// Test inline subflow with mapped data
 pub fn inline_subflow_with_mapping_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _parent_flow =
     flow.new("parent", storage, test_step_to_string, string_to_test_step)
@@ -684,7 +684,7 @@ pub fn deeply_nested_flow_stack_test() {
 
 /// Test enter_subflow returns correct EnterSubflow action
 pub fn enter_subflow_action_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let instance =
     flow.FlowInstance(
@@ -722,7 +722,7 @@ pub fn enter_subflow_action_test() {
 
 /// Test return_from_subflow returns correct ReturnFromSubflow action
 pub fn return_from_subflow_action_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   // Create parent frame on stack
   let parent_frame =
@@ -777,7 +777,7 @@ pub fn return_from_subflow_action_test() {
 
 /// Test inline subflow creates correct flow structure
 pub fn inline_subflow_structure_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _parent_flow =
     flow.new("checkout", storage, test_step_to_string, string_to_test_step)
@@ -812,7 +812,7 @@ pub fn inline_subflow_structure_test() {
 
 /// Test multiple inline subflows in one parent flow
 pub fn multiple_inline_subflows_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _flow =
     flow.new("multi_sub", storage, test_step_to_string, string_to_test_step)
@@ -886,7 +886,7 @@ pub fn subflow_data_isolation_test() {
 
 /// Test inline_next returns correct action for inline steps
 pub fn inline_next_returns_next_action_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let execution_log = process.new_subject()
 
   let _flow =
@@ -953,7 +953,7 @@ pub fn subflow_preserves_parent_data_test() {
 
 /// Test subflow with empty result data
 pub fn subflow_empty_result_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _flow =
     flow.new("empty_result", storage, test_step_to_string, string_to_test_step)
@@ -977,7 +977,7 @@ pub fn subflow_empty_result_test() {
 
 /// Test subflow collects and returns data correctly
 pub fn subflow_data_collection_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _flow =
     flow.new("data_collect", storage, test_step_to_string, string_to_test_step)
@@ -1016,7 +1016,7 @@ pub fn subflow_data_collection_test() {
 
 /// Test step hooks execution order: on_enter → handler → on_leave
 pub fn step_hooks_order_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1048,7 +1048,7 @@ pub fn step_hooks_order_test() {
 
 /// Test flow lifecycle hooks order: on_flow_enter → steps → on_flow_exit
 pub fn flow_lifecycle_order_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1082,7 +1082,7 @@ pub fn flow_lifecycle_order_test() {
 
 /// Test sequential transitions maintain correct order
 pub fn sequential_transitions_order_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1107,7 +1107,7 @@ pub fn sequential_transitions_order_test() {
 
 /// Test subflow entry/exit order with parent
 pub fn subflow_entry_exit_order_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1148,7 +1148,7 @@ pub fn subflow_entry_exit_order_test() {
 
 /// Test self-transition (goto same step)
 pub fn self_transition_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let counter = process.new_subject()
 
   let _flow =
@@ -1183,7 +1183,7 @@ pub fn self_transition_test() {
 
 /// Test cancel flow at different stages
 pub fn cancel_at_start_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1208,7 +1208,7 @@ pub fn cancel_at_start_test() {
 
 /// Test cancel flow in middle step
 pub fn cancel_at_middle_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1259,7 +1259,7 @@ pub fn back_navigation_test() {
 
 /// Test self-loop (stay on same step using goto to self)
 pub fn self_loop_step_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let attempts = process.new_subject()
 
   let _flow =
@@ -1326,7 +1326,7 @@ pub fn goto_clears_step_data_test() {
 
 /// Test flow with no steps (edge case)
 pub fn empty_steps_flow_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   // Flow with only one step that immediately completes
   let _flow =
@@ -1389,7 +1389,7 @@ pub fn history_accumulation_test() {
 
 /// Test wait token is set correctly
 pub fn wait_token_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _flow =
     flow.new("wait_test", storage, test_step_to_string, string_to_test_step)
@@ -1404,7 +1404,7 @@ pub fn wait_token_test() {
 
 /// Test callback wait token
 pub fn wait_callback_token_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
 
   let _flow =
     flow.new("callback_test", storage, test_step_to_string, string_to_test_step)
@@ -1441,7 +1441,7 @@ pub fn subflow_data_override_test() {
 
 /// Test multiple hooks on different steps
 pub fn multiple_steps_with_hooks_test() {
-  let storage = flow.create_memory_storage()
+  let storage = flow.create_noop_storage()
   let events = process.new_subject()
 
   let _flow =
@@ -1553,4 +1553,110 @@ pub fn parallel_state_progress_test() {
   list.length(after_email.pending_steps) |> should.equal(2)
   list.length(after_email.completed_steps) |> should.equal(1)
   list.contains(after_email.completed_steps, "email") |> should.be_true()
+}
+
+// --- ETS Storage Tests ---
+
+fn make_test_instance(
+  id: String,
+  user_id: Int,
+  chat_id: Int,
+) -> flow.FlowInstance {
+  flow.FlowInstance(
+    id:,
+    flow_name: "test_flow",
+    user_id:,
+    chat_id:,
+    state: flow.FlowState(
+      current_step: "start",
+      data: dict.new(),
+      history: ["start"],
+      flow_stack: [],
+      parallel_state: None,
+    ),
+    step_data: dict.new(),
+    wait_token: None,
+    created_at: 0,
+    updated_at: 0,
+  )
+}
+
+pub fn ets_storage_save_and_load_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+  let instance = make_test_instance("ets_test_1", 100, 200)
+
+  let assert Ok(Nil) = storage.save(instance)
+  let assert Ok(Some(loaded)) = storage.load("ets_test_1")
+
+  loaded.id |> should.equal("ets_test_1")
+  loaded.user_id |> should.equal(100)
+  loaded.chat_id |> should.equal(200)
+  loaded.flow_name |> should.equal("test_flow")
+}
+
+pub fn ets_storage_load_nonexistent_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+
+  let assert Ok(None) = storage.load("nonexistent_id")
+}
+
+pub fn ets_storage_delete_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+  let instance = make_test_instance("ets_delete_1", 101, 201)
+
+  let assert Ok(Nil) = storage.save(instance)
+  let assert Ok(Some(_)) = storage.load("ets_delete_1")
+
+  let assert Ok(Nil) = storage.delete("ets_delete_1")
+  let assert Ok(None) = storage.load("ets_delete_1")
+}
+
+pub fn ets_storage_overwrite_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+  let instance1 = make_test_instance("ets_overwrite_1", 102, 202)
+  let instance2 =
+    flow.FlowInstance(
+      ..instance1,
+      state: flow.FlowState(
+        current_step: "middle",
+        data: dict.from_list([#("key", "value")]),
+        history: ["start", "middle"],
+        flow_stack: [],
+        parallel_state: None,
+      ),
+    )
+
+  let assert Ok(Nil) = storage.save(instance1)
+  let assert Ok(Nil) = storage.save(instance2)
+  let assert Ok(Some(loaded)) = storage.load("ets_overwrite_1")
+
+  loaded.state.current_step |> should.equal("middle")
+}
+
+pub fn ets_storage_list_by_user_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+
+  let instance_a = make_test_instance("ets_list_a", 200, 300)
+  let instance_b = make_test_instance("ets_list_b", 200, 300)
+  let instance_c = make_test_instance("ets_list_c", 201, 300)
+  let instance_d = make_test_instance("ets_list_d", 200, 301)
+
+  let assert Ok(Nil) = storage.save(instance_a)
+  let assert Ok(Nil) = storage.save(instance_b)
+  let assert Ok(Nil) = storage.save(instance_c)
+  let assert Ok(Nil) = storage.save(instance_d)
+
+  let assert Ok(results) = storage.list_by_user(200, 300)
+  list.length(results) |> should.equal(2)
+
+  let ids = list.map(results, fn(i) { i.id })
+  list.contains(ids, "ets_list_a") |> should.be_true()
+  list.contains(ids, "ets_list_b") |> should.be_true()
+}
+
+pub fn ets_storage_list_by_user_empty_test() {
+  let assert Ok(storage) = flow.create_ets_storage()
+
+  let assert Ok(results) = storage.list_by_user(999, 999)
+  results |> should.equal([])
 }

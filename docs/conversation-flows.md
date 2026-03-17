@@ -289,13 +289,19 @@ flow.add_step_with_hooks(
 
 ## Storage
 
-Flows require a storage backend for persistence. Use the built-in memory storage for development:
+Flows require a storage backend for persistence. Use ETS storage for in-memory persistence:
 
 ```gleam
-let storage = flow.create_memory_storage()
+let assert Ok(storage) = flow.create_ets_storage()
 ```
 
-For production, implement `FlowStorage`:
+For testing or stateless flows, use no-op storage that discards all data:
+
+```gleam
+let storage = flow.create_noop_storage()
+```
+
+For production with persistence across VM restarts, implement `FlowStorage`:
 
 ```gleam
 pub type FlowStorage(error) {

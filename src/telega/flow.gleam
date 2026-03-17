@@ -71,6 +71,8 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import telega/error.{type TelegaError}
+import telega/internal/flow_storage
 import telega/internal/utils
 import telega/reply
 
@@ -1686,8 +1688,42 @@ fn generate_flow_id(user_id: Int, chat_id: Int, flow_name: String) -> String {
   flow_name <> "_" <> int.to_string(chat_id) <> "_" <> int.to_string(user_id)
 }
 
-/// Create in-memory storage (for testing)
-pub fn create_memory_storage() -> FlowStorage(error) {
+/// Create ETS-backed storage for flow instances.
+///
+/// Data persists in memory for the lifetime of the VM but does NOT survive VM restarts.
+/// For persistent storage across restarts, implement a custom `FlowStorage` with a database backend.
+pub fn create_ets_storage() -> Result(FlowStorage(error), TelegaError) {
+  use storage <- result.try(flow_storage.start())
+  Ok(
+    FlowStorage(
+      save: fn(instance) {
+        flow_storage.save(storage, instance.id, instance)
+        Ok(Nil)
+      },
+      load: fn(id) { Ok(flow_storage.load(storage, id)) },
+      delete: fn(id) {
+        flow_storage.delete(storage, id)
+        Ok(Nil)
+      },
+      list_by_user: fn(user_id, chat_id) {
+        Ok(
+          flow_storage.list_all(storage)
+          |> list.filter_map(fn(entry: #(String, FlowInstance)) {
+            let #(_, instance) = entry
+            case instance.user_id == user_id && instance.chat_id == chat_id {
+              True -> Ok(instance)
+              False -> Error(Nil)
+            }
+          }),
+        )
+      },
+    ),
+  )
+}
+
+/// Create no-op storage that discards all data.
+/// Useful for testing or stateless flows that don't need persistence.
+pub fn create_noop_storage() -> FlowStorage(error) {
   FlowStorage(
     save: fn(_instance) { Ok(Nil) },
     load: fn(_id) { Ok(None) },
