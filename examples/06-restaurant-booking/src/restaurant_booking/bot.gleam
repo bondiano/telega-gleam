@@ -23,7 +23,7 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
 
   let bot =
     telega.new_for_polling(cfg.bot_token)
-    |> telega.with_router(create_router(cfg, db))
+    |> telega.with_router(build_router(cfg, db))
 
   use telega_instance <- result.try(
     telega.init_for_polling_nil_session(bot) |> result.map_error(string.inspect),
@@ -40,7 +40,10 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
   Ok(Nil)
 }
 
-fn create_router(cfg: config.Config, db: pog.Connection) -> Router(Nil, String) {
+pub fn build_router(
+  cfg: config.Config,
+  db: pog.Connection,
+) -> Router(Nil, String) {
   let registration_flow = registration.create_registration_flow(db)
   let booking_flow = booking.create_booking_flow(db)
   let menu_flow = menu.create_menu_flow(db)

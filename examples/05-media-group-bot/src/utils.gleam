@@ -202,7 +202,7 @@ pub fn download_largest_photo(
       let path = "/tmp/photo_" <> int.to_string(index + 1) <> ".jpg"
       io.println("📥 Attempting to download photo to: " <> path)
       io.println("   File ID: " <> photo.file_id)
-      
+
       case file.download_to_file(ctx.config.api_client, photo.file_id, path) {
         Ok(_) -> {
           io.println("✅ Successfully downloaded to: " <> path)

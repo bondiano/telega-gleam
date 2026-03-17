@@ -1,5 +1,4 @@
 import gleam/bool
-import gleam/dict
 import gleam/int
 import gleam/option.{None, Some}
 import gleam/result
@@ -93,8 +92,9 @@ fn collect_name_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "name") {
+  case flow.get_step_data(instance, "user_input") {
     Some(name) -> {
+      let instance = flow.clear_step_data_key(instance, "user_input")
       case validate_name(name) {
         Ok(valid_name) -> {
           let instance =
@@ -126,8 +126,9 @@ fn collect_phone_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "phone") {
+  case flow.get_step_data(instance, "user_input") {
     Some(phone) -> {
+      let instance = flow.clear_step_data_key(instance, "user_input")
       case validate_phone(phone) {
         Ok(valid_phone) -> {
           let instance =
@@ -167,8 +168,9 @@ fn collect_email_step(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "email") {
+  case flow.get_step_data(instance, "user_input") {
     Some(email) -> {
+      let instance = flow.clear_step_data_key(instance, "user_input")
       let trimmed = string.trim(email)
       let is_skip = string.lowercase(trimmed) == "skip"
 
@@ -218,9 +220,18 @@ fn confirm_registration_step(
   instance: flow.FlowInstance,
   db: pog.Connection,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.is_callback_passed(instance, "confirmation", "reg_confirm") {
-    Some(True) -> save_and_complete(ctx, instance, db)
-    Some(False) -> restart_registration(ctx, instance)
+  case flow.is_callback_passed(instance, "callback_data", "reg_confirm") {
+    Some(True) ->
+      save_and_complete(
+        ctx,
+        flow.clear_step_data_key(instance, "callback_data"),
+        db,
+      )
+    Some(False) ->
+      restart_registration(
+        ctx,
+        flow.clear_step_data_key(instance, "callback_data"),
+      )
     None -> handle_text_response(ctx, instance)
   }
 }
@@ -269,27 +280,16 @@ fn handle_text_response(
   ctx: Context(Nil, String),
   instance: flow.FlowInstance,
 ) -> flow.StepResult(RegistrationStep, Nil, String) {
-  case flow.get_step_data(instance, "confirmation") {
+  case flow.get_step_data(instance, "user_input") {
     None -> ask_for_confirmation(ctx, instance)
     Some(text) -> {
+      let instance = flow.clear_step_data_key(instance, "user_input")
       case parse_edit_command(text) {
         Some(#(step, prompt)) -> {
           let _ = reply.with_text(ctx, prompt)
-          let cleared =
-            flow.FlowInstance(
-              ..instance,
-              step_data: dict.delete(instance.step_data, "confirmation"),
-            )
-          flow.goto(ctx, cleared, step)
+          flow.goto(ctx, instance, step)
         }
-        None ->
-          ask_for_confirmation(
-            ctx,
-            flow.FlowInstance(
-              ..instance,
-              step_data: dict.delete(instance.step_data, "confirmation"),
-            ),
-          )
+        None -> ask_for_confirmation(ctx, instance)
       }
     }
   }

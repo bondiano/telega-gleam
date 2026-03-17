@@ -36,7 +36,7 @@ fn handle_request(bot, req) {
   }
 }
 
-fn set_name_command_handler(ctx, _command) {
+pub fn set_name_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "set_name command")
   use _ <- try(reply.with_text(ctx, "What's your name?"))
 
@@ -46,13 +46,13 @@ fn set_name_command_handler(ctx, _command) {
   bot.next_session(ctx, NameBotSession(name: name))
 }
 
-fn get_name_command_handler(ctx: BotContext, _command) {
+pub fn get_name_command_handler(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "get_name command")
   use _ <- try(reply.with_text(ctx, "Your name is: " <> ctx.session.name))
   Ok(ctx)
 }
 
-fn start_command_handler(ctx, _command) {
+pub fn start_command_handler(ctx, _command) {
   use ctx <- telega.log_context(ctx, "start")
   use _ <- try(reply.with_text(
     ctx,
@@ -62,6 +62,13 @@ fn start_command_handler(ctx, _command) {
 }
 
 const commands = [#("/set_name", "Set name"), #("/get_name", "Get name")]
+
+pub fn build_router() -> router.Router(NameBotSession, BotError) {
+  router.new("conversation_bot")
+  |> router.on_command("start", start_command_handler)
+  |> router.on_command("set_name", set_name_command_handler)
+  |> router.on_command("get_name", get_name_command_handler)
+}
 
 fn build_bot() {
   let assert Ok(token) = envoy.get("BOT_TOKEN")
@@ -77,14 +84,8 @@ fn build_bot() {
       None,
     )
 
-  let router =
-    router.new("conversation_bot")
-    |> router.on_command("start", start_command_handler)
-    |> router.on_command("set_name", set_name_command_handler)
-    |> router.on_command("get_name", get_name_command_handler)
-
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
-  |> telega.with_router(router)
+  |> telega.with_router(build_router())
   |> session.attach
   |> telega.init()
 }
@@ -104,13 +105,13 @@ pub fn main() {
   process.sleep_forever()
 }
 
-type BotContext =
+pub type BotContext =
   Context(NameBotSession, BotError)
 
-type BotError {
+pub type BotError {
   TelegaBotError(telega_error.TelegaError)
 }
 
-fn try(result, fun) {
+pub fn try(result, fun) {
   telega_error.try(result, TelegaBotError, fun)
 }

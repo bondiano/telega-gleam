@@ -1044,20 +1044,27 @@ fn resume_with_token(
   data data: Option(Dict(String, String)),
 ) -> Result(Context(session, error), error) {
   case find_instance_by_token(flow.storage, token) {
-    Ok(Some(instance)) -> {
-      let updated_instance = case data {
-        Some(d) ->
-          FlowInstance(
-            ..instance,
-            step_data: dict.merge(instance.step_data, d),
-            wait_token: None,
-          )
-        None -> FlowInstance(..instance, wait_token: None)
-      }
-      execute_step(flow, ctx, updated_instance)
-    }
+    Ok(Some(instance)) -> resume_with_instance(flow, ctx, instance, data)
     _ -> Ok(ctx)
   }
+}
+
+fn resume_with_instance(
+  flow: Flow(step_type, session, error),
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  data data: Option(Dict(String, String)),
+) -> Result(Context(session, error), error) {
+  let updated_instance = case data {
+    Some(d) ->
+      FlowInstance(
+        ..instance,
+        step_data: dict.merge(instance.step_data, d),
+        wait_token: None,
+      )
+    None -> FlowInstance(..instance, wait_token: None)
+  }
+  execute_step(flow, ctx, updated_instance)
 }
 
 /// Get current step
@@ -2098,12 +2105,7 @@ fn auto_resume_handler(
               Ok(Some(instance)) if instance.wait_token != None -> {
                 let data = dict.from_list([#("user_input", text)])
 
-                resume_with_token(
-                  flow,
-                  ctx,
-                  option.unwrap(instance.wait_token, ""),
-                  Some(data),
-                )
+                resume_with_instance(flow, ctx, instance, Some(data))
                 |> Some
               }
               _ -> None
@@ -2137,12 +2139,7 @@ fn auto_resume_callback_handler(
             case flow.storage.load(flow_id) {
               Ok(Some(instance)) if instance.wait_token != None -> {
                 let callback_data = dict.from_list([#("callback_data", data)])
-                resume_with_token(
-                  flow,
-                  ctx,
-                  option.unwrap(instance.wait_token, ""),
-                  Some(callback_data),
-                )
+                resume_with_instance(flow, ctx, instance, Some(callback_data))
                 |> Some
               }
               _ -> None
