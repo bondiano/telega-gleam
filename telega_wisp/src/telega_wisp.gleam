@@ -3,7 +3,7 @@ import gleam/erlang/process
 import gleam/http/request
 import gleam/result
 import gleam/string
-import telega/internal/log
+import telega/error
 
 import wisp.{type Request as WispRequest, type Response as WispResponse}
 
@@ -19,7 +19,7 @@ const secret_header = "x-telegram-bot-api-secret-token"
 /// ```gleam
 /// import wisp.{type Request, type Response}
 /// import telega.{type Bot}
-/// import telega/adapters/wisp as telega_wisp
+/// import telega_wisp
 ///
 /// fn handle_request(bot: Bot, req: Request) -> Response {
 ///   use <- telega_wisp.handle_bot(req, bot)
@@ -45,7 +45,7 @@ pub fn handle_bot(
         telega.handle_update(telega, message)
         Nil
       }
-      Error(error) -> log.error_d("Failed to decode update", error)
+      Error(e) -> panic as { "Failed to decode update" <> error.to_string(e) }
     }
   })
 

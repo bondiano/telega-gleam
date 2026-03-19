@@ -6,12 +6,12 @@ import wisp
 import wisp/wisp_mist
 
 import telega
-import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
+import telega_wisp
 
 import bot/hackney_client
 import bot/utils

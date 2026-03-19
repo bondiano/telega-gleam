@@ -8,7 +8,6 @@ import wisp
 import wisp/wisp_mist
 
 import telega
-import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/client as telega_client
@@ -16,6 +15,7 @@ import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
+import telega_wisp
 
 import bot/utils
 
