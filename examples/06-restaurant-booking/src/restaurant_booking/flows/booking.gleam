@@ -150,9 +150,14 @@ fn confirm_and_book_step(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(BookingStep, Nil, String) {
-  case extract_booking_data(instance) {
-    Ok(booking_data) -> {
-      let confirmation = "
+  use booking_data <- action.try_with_message(
+    ctx,
+    instance,
+    extract_booking_data(instance),
+    fn(err) { "❌ Error: " <> err },
+  )
+
+  let confirmation = "
 🎉 Confirm your reservation:
 
 📅 Date: " <> booking_data.booking_date <> "
@@ -161,21 +166,24 @@ fn confirm_and_book_step(
 🍽️ Restaurant: " <> util.get_restaurant_name() <> "
 
 We'll book an available table for you!
-      "
+  "
 
-      case reply.with_text(ctx, confirmation) {
-        Ok(_) -> {
-          case
-            create_booking(
-              db,
-              ctx,
-              booking_data.booking_date,
-              booking_data.booking_time,
-              booking_data.guest_count,
-            )
-          {
-            Ok(booking) -> {
-              let success_message = "
+  use _ <- action.try(ctx, instance, reply.with_text(ctx, confirmation))
+
+  use booking <- action.try_with_message(
+    ctx,
+    instance,
+    create_booking(
+      db,
+      ctx,
+      booking_data.booking_date,
+      booking_data.booking_time,
+      booking_data.guest_count,
+    ),
+    fn(err) { "❌ Booking failed: " <> err },
+  )
+
+  let success_message = "
 ✅ Booking confirmed!
 
 Confirmation: " <> option.unwrap(booking.confirmation_code, "PENDING") <> "
@@ -183,27 +191,10 @@ Confirmation: " <> option.unwrap(booking.confirmation_code, "PENDING") <> "
 👥 " <> int.to_string(booking.guests) <> " guests
 
 Thank you for choosing " <> util.get_restaurant_name() <> "!
-              "
+  "
 
-              case reply.with_text(ctx, success_message) {
-                Ok(_) -> action.complete(ctx, instance)
-                Error(_) -> action.cancel(ctx, instance)
-              }
-            }
-            Error(err) -> {
-              let _ = reply.with_text(ctx, "❌ Booking failed: " <> err)
-              action.cancel(ctx, instance)
-            }
-          }
-        }
-        Error(_) -> action.cancel(ctx, instance)
-      }
-    }
-    Error(error_msg) -> {
-      let _ = reply.with_text(ctx, "❌ Error: " <> error_msg)
-      action.cancel(ctx, instance)
-    }
-  }
+  use _ <- action.try(ctx, instance, reply.with_text(ctx, success_message))
+  action.complete(ctx, instance)
 }
 
 /// Booking type for the flow (matching database structure)

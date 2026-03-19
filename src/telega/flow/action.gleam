@@ -8,6 +8,7 @@ import telega/flow/types.{
   GoTo, Next, NextString, ReturnFromSubflow, Wait, WaitCallback,
   WaitCallbackWithTimeout, WaitWithTimeout,
 }
+import telega/reply
 
 /// Next navigation
 pub fn next(
@@ -127,4 +128,53 @@ pub fn return_from_subflow(
   result result: Dict(String, String),
 ) -> StepResult(step_type, session, error) {
   Ok(#(ctx, ReturnFromSubflow(result), instance))
+}
+
+/// Try a result, cancelling the flow on error.
+///
+/// Designed for `use` syntax to flatten nested error handling in flow steps:
+///
+/// ```gleam
+/// use _ <- action.try(ctx, instance, reply.with_text(ctx, "Hello!"))
+/// use data <- action.try(ctx, instance, fetch_data())
+/// action.complete(ctx, instance)
+/// ```
+pub fn try(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  result: Result(a, any_error),
+  continue: fn(a) -> StepResult(step_type, session, error),
+) -> StepResult(step_type, session, error) {
+  case result {
+    Ok(value) -> continue(value)
+    Error(_) -> cancel(ctx, instance)
+  }
+}
+
+/// Try a result, sending an error message and cancelling the flow on error.
+///
+/// The `to_message` function converts the error into a user-facing message
+/// that is sent via `reply.with_text` before cancelling.
+///
+/// ```gleam
+/// use data <- action.try_with_message(ctx, instance,
+///   extract_data(instance),
+///   fn(err) { "❌ Error: " <> err },
+/// )
+/// action.complete(ctx, instance)
+/// ```
+pub fn try_with_message(
+  ctx: Context(session, error),
+  instance: FlowInstance,
+  result: Result(a, err),
+  to_message: fn(err) -> String,
+  continue: fn(a) -> StepResult(step_type, session, error),
+) -> StepResult(step_type, session, error) {
+  case result {
+    Ok(value) -> continue(value)
+    Error(err) -> {
+      let _ = reply.with_text(ctx, to_message(err))
+      cancel(ctx, instance)
+    }
+  }
 }
