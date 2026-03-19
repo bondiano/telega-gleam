@@ -16,6 +16,7 @@ fn default_session() {
   NameBotSession(name: "Unknown", state: WaitName)
 }
 
+/// Attach session settings using an actor-based in-memory storage backend.
 pub fn attach(builder) {
   let assert Ok(session_storage) = storage.start()
 

@@ -157,6 +157,36 @@ pub fn handler_types_test() {
   |> should.equal(3)
 }
 
+pub fn get_session_error_fallback_test() {
+  let assert Ok(registry) = registry.start("session_error_fallback_test")
+  let config = context.config()
+  let bot_info = factory.bot_user()
+  let router_handler = fn(ctx, _update) { Ok(ctx) }
+  let session_settings =
+    bot.SessionSettings(
+      persist_session: fn(_key, session) { Ok(session) },
+      get_session: fn(_key) { Error(TestError("storage unavailable")) },
+      default_session: fn() { TestSession(counter: 0) },
+    )
+  let catch_handler = context.catch_handler()
+  let chat_factory = start_test_factory()
+
+  // Should succeed with default session instead of crashing
+  let result =
+    bot.start(
+      registry:,
+      config:,
+      bot_info:,
+      router_handler:,
+      session_settings:,
+      catch_handler:,
+      chat_factory:,
+      name: None,
+    )
+
+  result |> should.be_ok
+}
+
 pub fn wait_handler_test() {
   let ctx: bot.Context(TestSession, TestError) =
     context.context(session: TestSession(counter: 0))

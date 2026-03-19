@@ -266,8 +266,15 @@ pub fn start_chat_instance(
   let session = case args.session_settings.get_session(args.key) {
     Ok(Some(session)) -> session
     Ok(None) -> args.session_settings.default_session()
-    Error(error) ->
-      panic as { "Failed to get session: " <> string.inspect(error) }
+    Error(error) -> {
+      log.warning(
+        "Failed to get session for key "
+        <> args.key
+        <> ", falling back to default: "
+        <> string.inspect(error),
+      )
+      args.session_settings.default_session()
+    }
   }
 
   actor.new_with_initialiser(initialisation_timeout, fn(subject) {
@@ -537,7 +544,7 @@ pub type SessionSettings(session, error) {
     persist_session: fn(String, session) -> Result(session, error),
     // Calls on initialization of the chat instance to get the session.
     // Returns `None` if no session is found.
-    // **It will crash starting session process if error is returned.**
+    // On error, logs a warning and falls back to `default_session()`.
     get_session: fn(String) -> Result(Option(session), error),
     // Calls on initialization of the chat instance if no session is found.
     default_session: fn() -> session,
