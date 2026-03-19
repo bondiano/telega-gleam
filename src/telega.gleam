@@ -1,9 +1,15 @@
 import gleam/bool
+import gleam/erlang/atom
+import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/otp/factory_supervisor as fsup
+import gleam/otp/static_supervisor as sup
+import gleam/otp/supervision
 import gleam/regexp
 import gleam/result
+import gleam/string
 
 import telega/internal/config.{type Config}
 import telega/internal/log
@@ -15,11 +21,17 @@ import telega/bot.{type BotSubject, type Context, type SessionSettings}
 import telega/client
 import telega/error
 import telega/model/types.{type File, type Update, type User}
+import telega/polling
 import telega/router.{type Router}
 import telega/update
 
 pub opaque type Telega(session, error) {
-  Telega(config: Config, bot_info: User, bot_subject: BotSubject)
+  Telega(
+    config: Config,
+    bot_info: User,
+    bot_subject: BotSubject,
+    supervisor_pid: process.Pid,
+  )
 }
 
 pub opaque type TelegaBuilder(session, error) {
@@ -36,6 +48,15 @@ pub opaque type TelegaBuilder(session, error) {
     ip_address: Option(String),
     allowed_updates: Option(List(String)),
     certificate: Option(File),
+    // --- Polling parameters ---
+    polling_timeout: Option(Int),
+    polling_limit: Option(Int),
+    polling_interval: Option(Int),
+    polling_on_stop: Option(fn(error.TelegaError) -> Nil),
+    // --- Chat instance factory parameters ---
+    chat_restart_tolerance_intensity: Option(Int),
+    chat_restart_tolerance_period: Option(Int),
+    chat_init_timeout: Option(Int),
   )
 }
 
@@ -94,6 +115,13 @@ pub fn new(
     ip_address: None,
     allowed_updates: None,
     certificate: None,
+    polling_timeout: None,
+    polling_limit: None,
+    polling_interval: None,
+    polling_on_stop: None,
+    chat_restart_tolerance_intensity: None,
+    chat_restart_tolerance_period: None,
+    chat_init_timeout: None,
   )
 }
 
@@ -118,6 +146,13 @@ pub fn new_for_polling(token token: String) {
     ip_address: None,
     allowed_updates: None,
     certificate: None,
+    polling_timeout: None,
+    polling_limit: None,
+    polling_interval: None,
+    polling_on_stop: None,
+    chat_restart_tolerance_intensity: None,
+    chat_restart_tolerance_period: None,
+    chat_init_timeout: None,
   )
 }
 
@@ -196,6 +231,48 @@ pub fn set_api_client(
   TelegaBuilder(..builder, api_client: Some(client))
 }
 
+/// Set polling configuration for the supervised polling worker.
+pub fn with_polling_config(
+  builder: TelegaBuilder(session, error),
+  timeout timeout: Int,
+  limit limit: Int,
+  poll_interval poll_interval: Int,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(
+    ..builder,
+    polling_timeout: Some(timeout),
+    polling_limit: Some(limit),
+    polling_interval: Some(poll_interval),
+  )
+}
+
+/// Set a callback for when polling stops due to errors.
+pub fn with_polling_on_stop(
+  builder: TelegaBuilder(session, error),
+  on_stop on_stop: fn(error.TelegaError) -> Nil,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, polling_on_stop: Some(on_stop))
+}
+
+/// Configure the chat instance factory supervisor.
+///
+/// - `restart_tolerance_intensity` — max restarts within the period (default: 5)
+/// - `restart_tolerance_period` — period in seconds (default: 10)
+/// - `init_timeout` — chat instance init timeout in ms (default: 10 000)
+pub fn with_chat_config(
+  builder: TelegaBuilder(session, error),
+  restart_tolerance_intensity intensity: Int,
+  restart_tolerance_period period: Int,
+  init_timeout timeout: Int,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(
+    ..builder,
+    chat_restart_tolerance_intensity: Some(intensity),
+    chat_restart_tolerance_period: Some(period),
+    chat_init_timeout: Some(timeout),
+  )
+}
+
 /// Set nil session for the bot.
 pub fn with_nil_session(
   builder: TelegaBuilder(Nil, error),
@@ -225,7 +302,7 @@ pub fn init_for_polling_nil_session(
   |> init_for_polling()
 }
 
-/// Initialize the bot.
+/// Initialize the bot for webhook mode with a supervision tree.
 pub fn init(
   builder: TelegaBuilder(session, error),
 ) -> Result(Telega(session, error), error.TelegaError) {
@@ -251,9 +328,7 @@ pub fn init(
     option.to_result(builder.session_settings, error.NoSessionSettingsError)
 
   use session_settings <- result.try(session_settings)
-  use registry <- result.try(registry.start())
 
-  // Router is required now - no direct handlers
   let router =
     option.to_result(
       builder.router,
@@ -263,28 +338,49 @@ pub fn init(
     )
   use router <- result.try(router)
 
-  // Create a handler function that wraps the router
-  let router_handler = fn(ctx, update) { router.handle(router, ctx, update) }
-
-  // Use builder's catch handler or default to returning the error
+  let router_handler = fn(ctx, upd) { router.handle(router, ctx, upd) }
   let catch_handler =
     option.unwrap(builder.catch_handler, fn(_ctx, err) { Error(err) })
+  let config = config.Config(..builder.config, api_client:)
 
-  let config = config.Config(..builder.config, api_client: api_client)
+  let registry_name =
+    generate_registry_name(client.get_token(config.api_client))
+  use registry <- result.try(registry.start(registry_name))
 
-  use bot_subject <- result.try(bot.start(
-    bot_info:,
-    catch_handler:,
-    registry:,
-    session_settings:,
-    config:,
-    router_handler:,
-  ))
+  // Build supervision tree: factory → bot (no polling for webhook mode)
+  let #(chat_factory_spec, chat_factory_name) = build_chat_factory_spec(builder)
+  let bot_name = process.new_name("telega_bot")
+  let bot_subject = process.named_subject(bot_name)
+  let chat_factory_ref = fsup.get_by_name(chat_factory_name)
 
-  Ok(Telega(bot_info:, bot_subject:, config:))
+  let bot_spec =
+    supervision.worker(fn() {
+      bot.start(
+        registry:,
+        config:,
+        bot_info:,
+        router_handler:,
+        session_settings:,
+        catch_handler:,
+        chat_factory: chat_factory_ref,
+        name: Some(bot_name),
+      )
+    })
+    |> supervision.restart(supervision.Permanent)
+
+  use sup_started <- result.try(
+    sup.new(sup.OneForOne)
+    |> sup.add(chat_factory_spec)
+    |> sup.add(bot_spec)
+    |> sup.start
+    |> result.map_error(error.SupervisorStartError),
+  )
+
+  Ok(Telega(config:, bot_info:, bot_subject:, supervisor_pid: sup_started.pid))
 }
 
-/// Initialize the bot for long polling (doesn't set webhook).
+/// Initialize the bot for long polling with a supervision tree.
+/// Includes a supervised polling worker that auto-starts.
 pub fn init_for_polling(
   builder: TelegaBuilder(session, error),
 ) -> Result(Telega(session, error), error.TelegaError) {
@@ -313,7 +409,6 @@ pub fn init_for_polling(
     option.to_result(builder.session_settings, error.NoSessionSettingsError)
 
   use session_settings <- result.try(session_settings)
-  use registry <- result.try(registry.start())
 
   let router =
     option.to_result(
@@ -322,25 +417,63 @@ pub fn init_for_polling(
     )
   use router <- result.try(router)
 
-  // Create a handler function that wraps the router
-  let router_handler = fn(ctx, update) { router.handle(router, ctx, update) }
-
-  // Use builder's catch handler or default to returning the error
+  let router_handler = fn(ctx, upd) { router.handle(router, ctx, upd) }
   let catch_handler =
     option.unwrap(builder.catch_handler, fn(_ctx, err) { Error(err) })
+  let config = config.Config(..builder.config, api_client:)
 
-  let config = config.Config(..builder.config, api_client: api_client)
+  // Create registry with unique name
+  let registry_name =
+    generate_registry_name(client.get_token(config.api_client))
+  use registry <- result.try(registry.start(registry_name))
 
-  use bot_subject <- result.try(bot.start(
-    bot_info:,
-    catch_handler:,
-    registry:,
-    session_settings:,
-    config:,
-    router_handler:,
-  ))
+  // Build supervision tree: factory → bot → polling
+  let #(chat_factory_spec, chat_factory_name) = build_chat_factory_spec(builder)
+  let bot_name = process.new_name("telega_bot")
+  let bot_subject = process.named_subject(bot_name)
+  let chat_factory_ref = fsup.get_by_name(chat_factory_name)
 
-  Ok(Telega(bot_info:, bot_subject:, config:))
+  let bot_spec =
+    supervision.worker(fn() {
+      bot.start(
+        registry:,
+        config:,
+        bot_info:,
+        router_handler:,
+        session_settings:,
+        catch_handler:,
+        chat_factory: chat_factory_ref,
+        name: Some(bot_name),
+      )
+    })
+    |> supervision.restart(supervision.Permanent)
+
+  let polling_timeout = option.unwrap(builder.polling_timeout, 30)
+  let polling_limit = option.unwrap(builder.polling_limit, 100)
+  let polling_interval = option.unwrap(builder.polling_interval, 1000)
+  let allowed_updates = option.unwrap(builder.allowed_updates, [])
+
+  let polling_spec =
+    polling.supervised(
+      client: api_client,
+      bot: bot_subject,
+      timeout: polling_timeout,
+      limit: polling_limit,
+      allowed_updates:,
+      poll_interval: polling_interval,
+      on_stop: builder.polling_on_stop,
+    )
+
+  use sup_started <- result.try(
+    sup.new(sup.OneForOne)
+    |> sup.add(chat_factory_spec)
+    |> sup.add(bot_spec)
+    |> sup.add(polling_spec)
+    |> sup.start
+    |> result.map_error(error.SupervisorStartError),
+  )
+
+  Ok(Telega(config:, bot_info:, bot_subject:, supervisor_pid: sup_started.pid))
 }
 
 /// Handle an update.
@@ -844,6 +977,70 @@ pub fn wait_for(
     })
 
   bot.wait_handler(ctx:, timeout:, handle_else:, handler: filter_handler)
+}
+
+/// Start polling with default configuration for a Telega instance.
+/// This is useful when you want to manually start polling outside the supervision tree.
+pub fn start_polling_default(
+  telega: Telega(session, error),
+) -> Result(polling.Poller, error.TelegaError) {
+  polling.start_polling_default(
+    client: telega.config.api_client,
+    bot: telega.bot_subject,
+  )
+}
+
+/// Graceful shutdown — stops supervisor, cascading to all children.
+/// Children are stopped in reverse start order: polling → bot → chat_factory.
+pub fn shutdown(telega: Telega(session, error)) -> Nil {
+  process.send_abnormal_exit(telega.supervisor_pid, atom.create("shutdown"))
+}
+
+/// Get the supervisor PID for the running bot instance.
+pub fn get_supervisor_pid(telega: Telega(session, error)) -> process.Pid {
+  telega.supervisor_pid
+}
+
+// Default chat instance factory settings
+const default_chat_restart_intensity = 5
+
+const default_chat_restart_period = 10
+
+const default_chat_init_timeout = 10_000
+
+// Build the chat factory child spec from builder settings
+fn build_chat_factory_spec(builder: TelegaBuilder(session, error)) {
+  let intensity =
+    option.unwrap(
+      builder.chat_restart_tolerance_intensity,
+      default_chat_restart_intensity,
+    )
+  let period =
+    option.unwrap(
+      builder.chat_restart_tolerance_period,
+      default_chat_restart_period,
+    )
+  let timeout =
+    option.unwrap(builder.chat_init_timeout, default_chat_init_timeout)
+
+  let name = process.new_name("telega_chat_factory")
+
+  let spec =
+    fsup.worker_child(bot.start_chat_instance)
+    |> fsup.named(name)
+    |> fsup.restart_strategy(supervision.Transient)
+    |> fsup.restart_tolerance(intensity, period)
+    |> fsup.timeout(timeout)
+    |> fsup.supervised
+
+  #(spec, name)
+}
+
+// Generate a unique registry name from the bot token
+fn generate_registry_name(token: String) -> String {
+  token
+  |> string.slice(0, 8)
+  |> string.append("_" <> int.to_string(int.random(1_000_000)))
 }
 
 // Helper to get list element at index

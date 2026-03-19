@@ -18,6 +18,8 @@ import gleam/erlang/process
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/otp/factory_supervisor as fsup
+import gleam/otp/supervision
 import gleam/string
 
 import telega/bot
@@ -247,8 +249,13 @@ pub fn run_with_client(
 ) -> Nil {
   let config = test_context.config_with_client(client)
 
-  let assert Ok(reg) = registry.start()
-  let assert Ok(bot_subject) =
+  let assert Ok(reg) = registry.start("test_conversation")
+  let assert Ok(chat_factory_started) =
+    fsup.worker_child(bot.start_chat_instance)
+    |> fsup.restart_strategy(supervision.Transient)
+    |> fsup.start
+
+  let assert Ok(started) =
     bot.start(
       registry: reg,
       config:,
@@ -256,9 +263,11 @@ pub fn run_with_client(
       router_handler:,
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
+      chat_factory: chat_factory_started.data,
+      name: None,
     )
 
-  execute_steps(ct.steps, bot_subject, calls)
+  execute_steps(ct.steps, started.data, calls)
   let _ = registry.stop(reg)
   Nil
 }

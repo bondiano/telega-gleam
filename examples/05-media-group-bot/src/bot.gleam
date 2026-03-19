@@ -1,4 +1,5 @@
 import envoy
+import gleam/erlang/process
 import gleam/int
 import gleam/io
 import gleam/list
@@ -9,7 +10,6 @@ import telega
 import telega/error
 import telega/format as fmt
 import telega/model/types
-import telega/polling
 import telega/reply
 import telega/router
 import telega/update
@@ -129,7 +129,7 @@ pub fn main() {
 
   let router = build_router()
 
-  let assert Ok(bot) =
+  let assert Ok(_bot) =
     telega.new_for_polling(token:)
     |> telega.with_router(router)
     |> telega.init_for_polling_nil_session()
@@ -138,6 +138,5 @@ pub fn main() {
   io.println("📷 Send me image URLs to upload them to Telegram")
   io.println("💡 Use /help for instructions")
 
-  let assert Ok(poller) = polling.start_polling_default(bot)
-  polling.wait_finish(poller)
+  process.sleep_forever()
 }

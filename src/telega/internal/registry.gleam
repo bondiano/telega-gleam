@@ -10,9 +10,9 @@ pub opaque type Registry(message) {
   Registry(table: EtsTable)
 }
 
-pub fn start() -> Result(Registry(message), error.TelegaError) {
+pub fn start(name: String) -> Result(Registry(message), error.TelegaError) {
   let table =
-    ets_new(atom.create("telega_registry"), [
+    ets_new(atom.create("telega_registry_" <> name), [
       atom.create("set"),
       atom.create("public"),
     ])

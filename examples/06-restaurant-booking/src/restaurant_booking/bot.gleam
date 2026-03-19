@@ -1,7 +1,7 @@
+import gleam/erlang/process
 import gleam/result
 import gleam/string
 import pog
-import telega/polling
 
 import telega
 import telega/flow/registry
@@ -26,18 +26,14 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
     telega.new_for_polling(cfg.bot_token)
     |> telega.with_router(build_router(cfg, db))
 
-  use telega_instance <- result.try(
+  use _telega_instance <- result.try(
     telega.init_for_polling_nil_session(bot) |> result.map_error(string.inspect),
   )
 
   util.log("Bot started! Send /start to begin")
 
-  use poller <- result.try(
-    polling.start_polling_default(telega_instance)
-    |> result.map_error(string.inspect),
-  )
-
-  polling.wait_finish(poller)
+  // Bot is running with supervision tree (including polling)
+  process.sleep_forever()
   Ok(Nil)
 }
 

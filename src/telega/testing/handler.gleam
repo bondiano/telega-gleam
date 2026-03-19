@@ -32,6 +32,8 @@
 
 import gleam/erlang/process.{type Subject}
 import gleam/option.{None}
+import gleam/otp/factory_supervisor as fsup
+import gleam/otp/supervision
 
 import telega/bot
 import telega/internal/registry
@@ -94,8 +96,13 @@ pub fn with_test_bot_advanced(
   let #(client, calls) = mock.message_client()
   let config = test_context.config_with_client(client)
 
-  let assert Ok(reg) = registry.start()
-  let assert Ok(bot_subject) =
+  let assert Ok(reg) = registry.start("test_handler")
+  let assert Ok(chat_factory_started) =
+    fsup.worker_child(bot.start_chat_instance)
+    |> fsup.restart_strategy(supervision.Transient)
+    |> fsup.start
+
+  let assert Ok(started) =
     bot.start(
       registry: reg,
       config:,
@@ -103,9 +110,11 @@ pub fn with_test_bot_advanced(
       router_handler:,
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
+      chat_factory: chat_factory_started.data,
+      name: None,
     )
 
-  handler(bot_subject, calls)
+  handler(started.data, calls)
 
   let _ = registry.stop(reg)
   Nil

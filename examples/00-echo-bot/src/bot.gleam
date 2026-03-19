@@ -1,5 +1,5 @@
+import gleam/erlang/process
 import telega
-import telega/polling
 import telega/reply
 import telega/router
 import telega/update
@@ -25,12 +25,10 @@ pub fn build_router() {
 pub fn main() {
   let router = build_router()
 
-  let assert Ok(bot) =
+  let assert Ok(_bot) =
     telega.new_for_polling(token: "BOT_TOKEN")
     |> telega.with_router(router)
     |> telega.init_for_polling_nil_session()
 
-  let assert Ok(poller) = polling.start_polling_default(bot)
-
-  polling.wait_finish(poller)
+  process.sleep_forever()
 }

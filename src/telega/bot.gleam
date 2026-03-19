@@ -1,8 +1,53 @@
+//// Core bot actor and chat instance management.
+////
+//// This module implements the actor-based architecture for handling Telegram updates.
+//// It contains the `Bot` actor (the central dispatcher) and `ChatInstance` actors
+//// (one per unique `{chat_id}:{from_id}` combination).
+////
+//// ## Supervision tree
+////
+//// Both the `Bot` actor and `ChatInstance` actors run inside a supervision tree
+//// created by `telega.init()` or `telega.init_for_polling()`:
+////
+//// ```text
+//// TelegaRootSupervisor (static_supervisor, OneForOne)
+//// ├── ChatInstances (factory_supervisor, Transient children)
+//// │   ├── ChatInstance {chat1:user1}
+//// │   ├── ChatInstance {chat2:user2}
+//// │   └── ...
+//// ├── Bot actor (worker, Permanent)
+//// └── Polling worker (worker, Permanent) — only for polling mode
+//// ```
+////
+//// - The `Bot` actor is a `Permanent` worker — it always restarts on crash.
+//// - `ChatInstance` actors are `Transient` — they restart only on abnormal exit,
+////   not on normal shutdown. On restart a `ChatInstance` re-registers itself in
+////   the ETS registry, overwriting the stale subject.
+//// - The `Bot` creates new `ChatInstance` actors via `factory_supervisor.start_child`,
+////   which ensures they are supervised from the moment they start.
+////
+//// ## Handler pattern
+////
+//// All handlers follow this signature:
+////
+//// ```gleam
+//// fn handler(ctx: Context(session, error), data: Type) -> Result(Context(session, error), error)
+//// ```
+////
+//// Always return the updated context — it carries the (potentially modified) session.
+////
+//// ## Conversation API
+////
+//// The `wait_handler` function and the `Handler` type enable multi-message
+//// conversations: the chat instance suspends its main handler and waits for a
+//// specific update type. See `telega.wait_text`, `telega.wait_command`, etc.
+
 import gleam/erlang/process.{type Subject}
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/order
 import gleam/otp/actor
+import gleam/otp/factory_supervisor as fsup
 import gleam/regexp.{type Regexp}
 import gleam/result
 import gleam/string
@@ -35,6 +80,23 @@ pub opaque type Bot(session, error) {
     // Store a handler function that encapsulates the router
     router_handler: RouterHandler(session, error),
     registry: Registry(ChatInstanceMessage(session, error)),
+    chat_factory: fsup.Supervisor(
+      ChatInstanceArgs(session, error),
+      ChatInstanceSubject(session, error),
+    ),
+  )
+}
+
+/// Arguments for starting a chat instance via factory supervisor.
+pub type ChatInstanceArgs(session, error) {
+  ChatInstanceArgs(
+    key: String,
+    config: Config,
+    session_settings: SessionSettings(session, error),
+    catch_handler: CatchHandler(session, error),
+    router_handler: RouterHandler(session, error),
+    bot_info: User,
+    registry: Registry(ChatInstanceMessage(session, error)),
   )
 }
 
@@ -64,7 +126,12 @@ pub fn start(
   router_handler router_handler: RouterHandler(session, error),
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error),
-) -> Result(Subject(BotMessage), error.TelegaError) {
+  chat_factory chat_factory: fsup.Supervisor(
+    ChatInstanceArgs(session, error),
+    ChatInstanceSubject(session, error),
+  ),
+  name name: Option(process.Name(BotMessage)),
+) -> actor.StartResult(BotSubject) {
   let self = process.new_subject()
   let bot =
     Bot(
@@ -75,13 +142,19 @@ pub fn start(
       session_settings:,
       router_handler:,
       registry:,
+      chat_factory:,
     )
 
-  actor.new(bot)
-  |> actor.on_message(bot_loop)
-  |> actor.start
-  |> result.map(fn(started) { started.data })
-  |> result.map_error(error.BotStartError)
+  let builder =
+    actor.new(bot)
+    |> actor.on_message(bot_loop)
+
+  let builder = case name {
+    Some(n) -> actor.named(builder, n)
+    None -> builder
+  }
+
+  actor.start(builder)
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
@@ -123,17 +196,25 @@ fn handle_update_bot_message(
       |> Ok
     }
     None -> {
-      use subject <- result.try(start_chat_instance(
-        key:,
-        config: bot.config,
-        session_settings: bot.session_settings,
-        catch_handler: bot.catch_handler,
-        router_handler: bot.router_handler,
-        bot_info: bot.bot_info,
-      ))
-      registry.register(bot.registry, key:, subject:)
-
-      actor.send(subject, HandleNewChatInstanceMessage(update:, reply_with:))
+      let args =
+        ChatInstanceArgs(
+          key:,
+          config: bot.config,
+          session_settings: bot.session_settings,
+          catch_handler: bot.catch_handler,
+          router_handler: bot.router_handler,
+          bot_info: bot.bot_info,
+          registry: bot.registry,
+        )
+      use started <- result.try(
+        fsup.start_child(bot.chat_factory, args)
+        |> result.map_error(error.ChatInstanceStartError),
+      )
+      // No need to register here — start_chat_instance self-registers
+      actor.send(
+        started.data,
+        HandleNewChatInstanceMessage(update:, reply_with:),
+      )
       |> Ok
     }
   }
@@ -177,45 +258,39 @@ type ChatInstance(session, error) {
 
 const initialisation_timeout = 10
 
-fn start_chat_instance(
-  key key: String,
-  config config: Config,
-  session_settings session_settings: SessionSettings(session, error),
-  catch_handler catch_handler: CatchHandler(session, error),
-  router_handler router_handler: RouterHandler(session, error),
-  bot_info bot_info: User,
-) {
-  let session = case session_settings.get_session(key) {
+/// Start a chat instance. Used as the template function for factory_supervisor.
+/// Self-registers in the registry on start (handles both first start and restart after crash).
+pub fn start_chat_instance(
+  args: ChatInstanceArgs(session, error),
+) -> actor.StartResult(ChatInstanceSubject(session, error)) {
+  let session = case args.session_settings.get_session(args.key) {
     Ok(Some(session)) -> session
-    Ok(None) -> session_settings.default_session()
+    Ok(None) -> args.session_settings.default_session()
     Error(error) ->
       panic as { "Failed to get session: " <> string.inspect(error) }
   }
 
-  use started <- result.try(
-    actor.new_with_initialiser(initialisation_timeout, fn(subject) {
-      let chat_instance =
-        ChatInstance(
-          key:,
-          config:,
-          session:,
-          session_settings:,
-          catch_handler:,
-          self: subject,
-          continuation: None,
-          router_handler:,
-          bot_info:,
-        )
-      actor.initialised(chat_instance)
-      |> actor.returning(subject)
-      |> Ok
-    })
-    |> actor.on_message(loop_chat_instance)
-    |> actor.start
-    |> result.map_error(error.ChatInstanceStartError),
-  )
-
-  Ok(started.data)
+  actor.new_with_initialiser(initialisation_timeout, fn(subject) {
+    let chat_instance =
+      ChatInstance(
+        key: args.key,
+        config: args.config,
+        session:,
+        session_settings: args.session_settings,
+        catch_handler: args.catch_handler,
+        self: subject,
+        continuation: None,
+        router_handler: args.router_handler,
+        bot_info: args.bot_info,
+      )
+    // Self-register in registry (overwrites stale Subject on restart)
+    registry.register(args.registry, key: args.key, subject:)
+    actor.initialised(chat_instance)
+    |> actor.returning(subject)
+    |> Ok
+  })
+  |> actor.on_message(loop_chat_instance)
+  |> actor.start
 }
 
 fn loop_chat_instance(chat: ChatInstance(session, error), message) {

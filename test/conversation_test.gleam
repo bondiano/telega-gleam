@@ -1,6 +1,7 @@
 import gleam/erlang/process
-import gleam/list
 import gleam/option.{None, Some}
+import gleam/otp/factory_supervisor as fsup
+import gleam/otp/supervision
 import gleam/result
 import gleeunit/should
 
@@ -39,17 +40,28 @@ fn handlers_to_router_handler(
   }
 }
 
+import gleam/list
+
+fn start_test_factory() {
+  let assert Ok(started) =
+    fsup.worker_child(bot.start_chat_instance)
+    |> fsup.restart_strategy(supervision.Transient)
+    |> fsup.start
+  started.data
+}
+
 fn build_test_bot(
   router_handler: fn(bot.Context(TestSession, TestError), update.Update) ->
     Result(bot.Context(TestSession, TestError), TestError),
   session_settings: bot.SessionSettings(TestSession, TestError),
 ) -> bot.BotSubject {
-  let assert Ok(registry) = registry.start()
+  let assert Ok(registry) = registry.start("conv_test")
   let config = context.config()
   let bot_info = factory.bot_user()
   let catch_handler = context.catch_handler()
+  let chat_factory = start_test_factory()
 
-  let assert Ok(bot_subject) =
+  let assert Ok(started) =
     bot.start(
       registry:,
       config:,
@@ -57,9 +69,11 @@ fn build_test_bot(
       router_handler:,
       session_settings:,
       catch_handler:,
+      chat_factory:,
+      name: None,
     )
 
-  bot_subject
+  started.data
 }
 
 pub fn basic_conversation_flow_test() {

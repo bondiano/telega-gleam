@@ -8,12 +8,12 @@ import wisp/wisp_mist
 import telega
 import telega/adapters/wisp as telega_wisp
 import telega/api as telega_api
-import telega/client as telega_client
 import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
 
+import bot/hackney_client
 import bot/utils
 
 fn middleware(bot, req, handle_request) {
@@ -67,8 +67,7 @@ fn build_bot() {
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
-  // Set bot commands once at startup
-  let client = telega_client.new(token)
+  let client = hackney_client.new(token)
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
@@ -79,6 +78,7 @@ fn build_bot() {
   let router = build_router()
 
   telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
+  |> telega.set_api_client(client)
   |> telega.with_router(router)
   |> telega.with_nil_session()
   |> telega.init()

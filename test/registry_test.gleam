@@ -8,7 +8,7 @@ import telega/internal/registry
 type Msg
 
 pub fn simple_actor_test() {
-  let assert Ok(simple_registry) = registry.start()
+  let assert Ok(simple_registry) = registry.start("test")
 
   let assert Ok(started_a) =
     actor.new(Nil)
@@ -39,7 +39,7 @@ type MsgEcho {
 }
 
 pub fn still_work_after_crash_test() {
-  let assert Ok(simple_registry) = registry.start()
+  let assert Ok(simple_registry) = registry.start("test")
 
   let assert Ok(started_a) =
     actor.new(Nil)

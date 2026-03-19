@@ -1,5 +1,7 @@
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/otp/factory_supervisor as fsup
+import gleam/otp/supervision
 import gleam/string
 import gleeunit/should
 
@@ -16,8 +18,16 @@ pub type TestError {
   TestError(message: String)
 }
 
+fn start_test_factory() {
+  let assert Ok(started) =
+    fsup.worker_child(bot.start_chat_instance)
+    |> fsup.restart_strategy(supervision.Transient)
+    |> fsup.start
+  started.data
+}
+
 pub fn bot_start_test() {
-  let assert Ok(registry) = registry.start()
+  let assert Ok(registry) = registry.start("bot_start_test")
   let config = context.config()
   let bot_info = factory.bot_user()
   let router_handler = fn(ctx, _update) { Ok(ctx) }
@@ -27,6 +37,7 @@ pub fn bot_start_test() {
       initial: TestSession(counter: 0),
     )
   let catch_handler = context.catch_handler()
+  let chat_factory = start_test_factory()
 
   let result =
     bot.start(
@@ -36,6 +47,8 @@ pub fn bot_start_test() {
       router_handler:,
       session_settings:,
       catch_handler:,
+      chat_factory:,
+      name: None,
     )
 
   result
@@ -43,7 +56,7 @@ pub fn bot_start_test() {
 }
 
 pub fn bot_handle_update_test() {
-  let assert Ok(registry) = registry.start()
+  let assert Ok(registry) = registry.start("bot_handle_test")
   let config = context.config()
   let bot_info = factory.bot_user()
   let router_handler = fn(ctx, _update) { Ok(ctx) }
@@ -53,8 +66,9 @@ pub fn bot_handle_update_test() {
       initial: TestSession(counter: 0),
     )
   let catch_handler = context.catch_handler()
+  let chat_factory = start_test_factory()
 
-  let assert Ok(bot_subject) =
+  let assert Ok(started) =
     bot.start(
       registry:,
       config:,
@@ -62,10 +76,12 @@ pub fn bot_handle_update_test() {
       router_handler:,
       session_settings:,
       catch_handler:,
+      chat_factory:,
+      name: None,
     )
 
   let test_update = factory.text_update(text: "Hello")
-  let result = bot.handle_update(bot_subject, test_update)
+  let result = bot.handle_update(started.data, test_update)
 
   result |> should.be_true
 }
@@ -96,7 +112,7 @@ pub fn session_settings_test() {
 }
 
 pub fn context_next_session_test() {
-  let assert Ok(_registry) = registry.start()
+  let assert Ok(_registry) = registry.start("ctx_next_session_test")
 
   let ctx: bot.Context(TestSession, TestError) =
     context.context_with(

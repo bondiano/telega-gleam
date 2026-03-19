@@ -1,17 +1,53 @@
 //// Long polling implementation for Telegram Bot API.
 ////
-//// This module provides an alternative to webhooks for receiving updates.
-//// The polling system uses a worker actor that continuously fetches updates
-//// from Telegram and dispatches them to the bot's message handlers.
+//// This module provides long polling as an alternative to webhooks for receiving updates.
+//// A polling worker actor continuously fetches updates from Telegram and dispatches them
+//// to the bot's message handlers.
+////
+//// ## Supervised mode (recommended)
+////
+//// When using `telega.init_for_polling()`, the polling worker is automatically started
+//// inside the supervision tree as a `Permanent` child. No manual setup is needed:
+////
+//// ```gleam
+//// let assert Ok(_bot) =
+////   telega.new_for_polling(token: "BOT_TOKEN")
+////   |> telega.with_router(router)
+////   |> telega.init_for_polling_nil_session()
+////
+//// process.sleep_forever()
+//// ```
+////
+//// Use `telega.with_polling_config()` on the builder to customize timeout, limit,
+//// and poll interval before calling `init_for_polling()`.
+////
+//// ## Manual mode
+////
+//// For advanced use cases (custom offsets, separate lifecycle management),
+//// start polling manually:
+////
+//// ```gleam
+//// let assert Ok(poller) =
+////   polling.start_polling_default(
+////     client: telega.get_api_config(bot),
+////     bot: telega.get_bot_subject_internal(bot),
+////   )
+//// ```
+////
+//// ## Error handling
+////
+//// The polling worker uses exponential backoff for transient errors (network issues,
+//// rate limits, server errors). Critical errors (invalid token, bot deleted, or
+//// 10+ consecutive failures) stop polling and invoke the optional `on_stop` callback.
 
 import gleam/erlang/process.{type Subject}
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
+import gleam/otp/supervision
 import gleam/result
 import gleam/string
 
-import telega
 import telega/api
 import telega/bot.{type BotSubject}
 import telega/client.{type TelegramClient}
@@ -117,6 +153,55 @@ fn start_polling_worker(
   process.send(started.data, SetSelf(started.data))
 
   Ok(started.data)
+}
+
+/// Create a `ChildSpecification` for running polling inside a supervision tree.
+/// The polling worker will automatically delete the webhook and start polling.
+pub fn supervised(
+  client client: TelegramClient,
+  bot bot: BotSubject,
+  timeout timeout: Int,
+  limit limit: Int,
+  allowed_updates allowed_updates: List(String),
+  poll_interval poll_interval: Int,
+  on_stop on_stop: Option(fn(TelegaError) -> Nil),
+) -> supervision.ChildSpecification(Subject(PollingMessage)) {
+  supervision.worker(fn() {
+    let config =
+      create_config(
+        client,
+        bot,
+        timeout,
+        limit,
+        allowed_updates,
+        poll_interval,
+        on_stop,
+      )
+    use _ <- result.try(
+      api.delete_webhook(config.client)
+      |> result.map_error(fn(err) { actor.InitFailed(error.to_string(err)) }),
+    )
+
+    let initial_state =
+      PollingState(
+        config:,
+        offset: None,
+        is_running: False,
+        self: None,
+        consecutive_errors: 0,
+      )
+
+    use started <- result.try(
+      actor.new(initial_state)
+      |> actor.on_message(handle_polling_message)
+      |> actor.start(),
+    )
+
+    process.send(started.data, SetSelf(started.data))
+    process.send(started.data, StartPolling(None))
+    Ok(started)
+  })
+  |> supervision.restart(supervision.Permanent)
 }
 
 /// Handle messages in the polling worker
@@ -373,9 +458,10 @@ fn start_polling_internal(
   Ok(Poller(worker: worker, config: config, status: Starting))
 }
 
-/// Start polling with a Telega bot instance
+/// Start polling with the given client and bot subject.
 pub fn start_polling(
-  telega: telega.Telega(session, error),
+  client client: TelegramClient,
+  bot bot: BotSubject,
   timeout timeout: Int,
   limit limit: Int,
   allowed_updates allowed_updates: List(String),
@@ -383,8 +469,8 @@ pub fn start_polling(
 ) -> Result(Poller, TelegaError) {
   let config =
     create_config(
-      telega.get_client_internal(telega),
-      telega.get_bot_subject_internal(telega),
+      client,
+      bot,
       timeout,
       limit,
       allowed_updates,
@@ -395,12 +481,14 @@ pub fn start_polling(
   start_polling_internal(config, None)
 }
 
-/// Start polling with default configuration
+/// Start polling with default configuration.
 pub fn start_polling_default(
-  telega: telega.Telega(session, error),
+  client client: TelegramClient,
+  bot bot: BotSubject,
 ) -> Result(Poller, TelegaError) {
   start_polling(
-    telega,
+    client:,
+    bot:,
     timeout: 30,
     limit: 100,
     allowed_updates: [],
@@ -408,10 +496,11 @@ pub fn start_polling_default(
   )
 }
 
-/// Start polling with a custom offset
+/// Start polling with a custom offset.
 pub fn start_polling_with_offset(
-  telega: telega.Telega(session, error),
-  offset: Int,
+  client client: TelegramClient,
+  bot bot: BotSubject,
+  offset offset: Int,
   timeout timeout: Int,
   limit limit: Int,
   allowed_updates allowed_updates: List(String),
@@ -419,8 +508,8 @@ pub fn start_polling_with_offset(
 ) -> Result(Poller, TelegaError) {
   let config =
     create_config(
-      telega.get_client_internal(telega),
-      telega.get_bot_subject_internal(telega),
+      client,
+      bot,
       timeout,
       limit,
       allowed_updates,
@@ -434,7 +523,8 @@ pub fn start_polling_with_offset(
 /// Start polling with a notification callback for when polling stops due to errors.
 /// The callback will be invoked with the error that caused polling to stop.
 pub fn start_polling_with_notify(
-  telega: telega.Telega(session, error),
+  client client: TelegramClient,
+  bot bot: BotSubject,
   timeout timeout: Int,
   limit limit: Int,
   allowed_updates allowed_updates: List(String),
@@ -443,8 +533,8 @@ pub fn start_polling_with_notify(
 ) -> Result(Poller, TelegaError) {
   let config =
     create_config(
-      telega.get_client_internal(telega),
-      telega.get_bot_subject_internal(telega),
+      client,
+      bot,
       timeout,
       limit,
       allowed_updates,

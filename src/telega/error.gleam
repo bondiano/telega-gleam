@@ -37,6 +37,10 @@ pub type TelegaError {
   ActorError(reason: String)
 
   RouterError(reason: String)
+
+  // Supervision errors
+  SupervisorStartError(reason: actor.StartError)
+  ShutdownError(reason: String)
 }
 
 pub fn to_string(error: TelegaError) -> String {
@@ -58,6 +62,9 @@ pub fn to_string(error: TelegaError) -> String {
     UnknownUpdateError(update) -> "Unknown update: " <> string.inspect(update)
     ActorError(reason) -> "Actor error: " <> reason
     RouterError(reason) -> "Router error: " <> reason
+    SupervisorStartError(reason) ->
+      "Failed to start supervisor: " <> string.inspect(reason)
+    ShutdownError(reason) -> "Shutdown error: " <> reason
   }
 }
 
