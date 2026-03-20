@@ -94,8 +94,10 @@ pub fn get_api_config(telega: Telega(session, error)) {
 }
 
 /// Create a new Telega instance.
+///
+/// Requires an `api_client` created by an adapter package like `telega_httpc` or `telega_hackney`.
 pub fn new(
-  token token: String,
+  api_client api_client: client.TelegramClient,
   url server_url: String,
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
@@ -105,7 +107,7 @@ pub fn new(
 
   TelegaBuilder(
     router: None,
-    config: config.new(token:, webhook_path:, secret_token:, url:),
+    config: config.new(api_client:, webhook_path:, secret_token:, url:),
     session_settings: None,
     catch_handler: None,
     bot_subject: None,
@@ -127,12 +129,13 @@ pub fn new(
 
 /// Create a new Telega instance optimized for long polling.
 ///
+/// Requires an `api_client` created by an adapter package like `telega_httpc` or `telega_hackney`.
 /// This is a convenience function for polling bots that don't need webhook configuration.
-pub fn new_for_polling(token token: String) {
+pub fn new_for_polling(api_client api_client: client.TelegramClient) {
   TelegaBuilder(
     router: None,
     config: config.new(
-      token:,
+      api_client:,
       webhook_path: "/webhook",
       secret_token: None,
       url: "https://api.telegram.org",

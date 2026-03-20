@@ -2,7 +2,6 @@
 //// Provides types and functions for working with files in media uploads
 
 import gleam/http/request
-import gleam/httpc
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -206,12 +205,24 @@ pub fn download_file(
   }
 }
 
-/// Downloads a file using its file_path from the File object
+/// Downloads a file using its file_path from the File object.
+///
+/// Requires a `FetchBitsClient` to be configured on the client
+/// (via `client.set_fetch_bits_client`). Adapter packages like
+/// `telega_httpc` configure this automatically.
 pub fn download_by_path(
   client: TelegramClient,
   file_path: String,
 ) -> Result(BitArray, String) {
   let url = build_file_url(client, file_path)
+
+  use fetch_bits <- result.try(case client.get_fetch_bits_client(client:) {
+    Some(f) -> Ok(f)
+    None ->
+      Error(
+        "No FetchBitsClient configured. Use client.set_fetch_bits_client or an adapter like telega_httpc that provides one.",
+      )
+  })
 
   use req <- result.try(
     request.to(url)
@@ -222,8 +233,10 @@ pub fn download_by_path(
   let bits_req = request.set_body(req, <<>>)
 
   use resp <- result.try(
-    httpc.send_bits(bits_req)
-    |> result.map_error(fn(_) { "Failed to download file from: " <> url }),
+    fetch_bits(bits_req)
+    |> result.map_error(fn(e) {
+      "Failed to download file from: " <> url <> " — " <> string.inspect(e)
+    }),
   )
 
   case resp.status {

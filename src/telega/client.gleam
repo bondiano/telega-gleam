@@ -1,5 +1,8 @@
-//// Module provides a simple interface to the Telegram Bot API and uses `httpc` as a default HTTP client.
+//// Module provides a simple interface to the Telegram Bot API.
 //// If you want to use `telega` as a Telegram client, you can use only this module.
+////
+//// Use an adapter package like `telega_httpc` or `telega_hackney` to create a client,
+//// or provide your own `FetchClient` function.
 ////
 //// ```gleam
 //// import telega/client
@@ -7,7 +10,7 @@
 ////
 //// fn main() {
 ////   ...
-////   let response = client.new(token) |> api.send_message(client, send_message_parameters)
+////   let response = client.new(token, my_fetch_adapter) |> api.send_message(client, send_message_parameters)
 ////   ...
 //// }
 //// ```
@@ -16,11 +19,9 @@ import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
-import gleam/httpc
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
@@ -32,8 +33,11 @@ const telegram_url = "https://api.telegram.org/bot"
 
 const default_retry_count = 3
 
-type FetchClient =
+pub type FetchClient =
   fn(Request(String)) -> Result(Response(String), TelegaError)
+
+pub type FetchBitsClient =
+  fn(Request(BitArray)) -> Result(Response(BitArray), TelegaError)
 
 pub opaque type TelegramClient {
   TelegramClient(
@@ -44,32 +48,39 @@ pub opaque type TelegramClient {
     /// The Telegram Bot API URL. Default is "https://api.telegram.org".
     /// This is useful for running [a local server](https://core.telegram.org/bots/api#using-a-local-bot-api-server).
     tg_api_url: String,
-    /// The HTTP client to use. Default is `httpc`.
+    /// The HTTP client to use.
     fetch_client: FetchClient,
+    /// Optional HTTP client for binary downloads.
+    fetch_bits_client: Option(FetchBitsClient),
     /// Request queue for rate limiting
     request_queue: Option(RequestQueue),
   )
 }
 
-/// Create a new Telegram client. It uses `httpc` as a default HTTP client.
-pub fn new(token token: String) -> TelegramClient {
+/// Create a new Telegram client with the given fetch client adapter.
+pub fn new(
+  token token: String,
+  fetch_client fetch_client: FetchClient,
+) -> TelegramClient {
   TelegramClient(
     token:,
     max_retry_attempts: default_retry_count,
     tg_api_url: telegram_url,
-    fetch_client: fetch_httpc_adapter,
+    fetch_client:,
+    fetch_bits_client: None,
     request_queue: None,
   )
 }
 
-/// Create a new Telegram client with default request queue configuration
+/// Create a new Telegram client with default request queue configuration.
 ///
 /// This is a convenience function that creates a client with sensible
 /// default rate limiting settings for the Telegram Bot API.
 pub fn new_with_queue(
   token token: String,
+  fetch_client fetch_client: FetchClient,
 ) -> Result(TelegramClient, error.TelegaError) {
-  new(token)
+  new(token:, fetch_client:)
   |> set_request_queue(default_request_queue_config())
 }
 
@@ -97,6 +108,21 @@ pub fn set_fetch_client(
     Result(Response(String), TelegaError),
 ) -> TelegramClient {
   TelegramClient(..client, fetch_client:)
+}
+
+/// Set the binary HTTP client for file downloads.
+pub fn set_fetch_bits_client(
+  client client: TelegramClient,
+  fetch_bits_client fetch_bits_client: FetchBitsClient,
+) -> TelegramClient {
+  TelegramClient(..client, fetch_bits_client: Some(fetch_bits_client))
+}
+
+/// Get the binary HTTP client, if configured.
+pub fn get_fetch_bits_client(
+  client client: TelegramClient,
+) -> Option(FetchBitsClient) {
+  client.fetch_bits_client
 }
 
 /// Set the maximum number of times to retry sending a API message.
@@ -392,13 +418,6 @@ pub fn new_get_request(
   query query: Option(List(#(String, String))),
 ) -> TelegramApiRequest {
   TelegramApiGetRequest(url: build_url(client, path), query:)
-}
-
-fn fetch_httpc_adapter(
-  req: Request(String),
-) -> Result(Response(String), TelegaError) {
-  httpc.send(req)
-  |> result.map_error(fn(error) { error.FetchError(string.inspect(error)) })
 }
 
 fn build_url(client client: TelegramClient, path path: String) {

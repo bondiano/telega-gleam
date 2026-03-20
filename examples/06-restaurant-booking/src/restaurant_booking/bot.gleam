@@ -7,6 +7,7 @@ import telega
 import telega/flow/registry
 import telega/flow/types
 import telega/router.{type Router}
+import telega_httpc
 
 import restaurant_booking/config
 import restaurant_booking/constants
@@ -22,8 +23,10 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
 
   util.log("Connected to database")
 
+  let client = telega_httpc.new(cfg.bot_token)
+
   let bot =
-    telega.new_for_polling(cfg.bot_token)
+    telega.new_for_polling(api_client: client)
     |> telega.with_router(build_router(cfg, db))
 
   use _telega_instance <- result.try(

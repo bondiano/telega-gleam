@@ -13,6 +13,7 @@ simplifile = ">= 2.3.0 and < 3.0.0"
 taskle = ">= 2.0.0 and < 3.0.0"
 telega = { path = "../.." }
 telega_wisp = { path = "../../telega_wisp" }
+telega_httpc = { path = "../../telega_httpc" }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

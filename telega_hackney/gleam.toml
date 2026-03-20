@@ -1,0 +1,17 @@
+name = "telega_hackney"
+version = "1.0.0"
+description = "hackney adapter for Telega Telegram Bot Library"
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
+
+gleam = ">= 1.12.0"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = ">= 0.60.0 and < 1.0.0"
+gleam_http = ">= 4.0.0 and < 5.0.0"
+gleam_hackney = ">= 1.3.3 and < 2.0.0"
+telega = { path = ".." }
+
+[dev-dependencies]
+gleeunit = ">= 1.2.0 and < 2.0.0"

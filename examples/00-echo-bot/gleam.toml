@@ -6,6 +6,7 @@ description = "Telega Echo Bot example with long polling"
 gleam_stdlib = ">= 0.60.0 and < 1.0.0"
 gleam_erlang = ">= 1.2.0 and < 2.0.0"
 telega = { path = "../.." }
+telega_httpc = { path = "../../telega_httpc" }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

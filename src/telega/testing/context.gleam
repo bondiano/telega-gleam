@@ -14,17 +14,26 @@
 import gleam/erlang/process
 import gleam/option.{None, Some}
 
+import gleam/http/response
+
 import telega/bot
 import telega/client
+import telega/error
 import telega/internal/config
 import telega/model/types
 import telega/testing/factory
 import telega/update
 
+fn test_fetch_client(
+  _req,
+) -> Result(response.Response(String), error.TelegaError) {
+  Ok(response.new(200) |> response.set_body("{\"ok\":true,\"result\":{}}"))
+}
+
 /// Creates a test `Config` with a test token and URL.
 pub fn config() -> config.Config {
   config.new(
-    token: "test_token",
+    api_client: client.new(token: "test_token", fetch_client: test_fetch_client),
     webhook_path: "test_webhook",
     secret_token: None,
     url: "https://test.example.com",

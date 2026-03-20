@@ -17,7 +17,7 @@ pub type Config {
 ///
 /// If `secret_token` is not provided, a random one will be generated.
 pub fn new(
-  token token: String,
+  api_client api_client: TelegramClient,
   url server_url: String,
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
@@ -25,10 +25,5 @@ pub fn new(
   let secret_token =
     option.lazy_unwrap(secret_token, fn() { utils.random_string(64) })
 
-  Config(
-    server_url:,
-    webhook_path:,
-    secret_token:,
-    api_client: client.new(token),
-  )
+  Config(server_url:, webhook_path:, secret_token:, api_client:)
 }

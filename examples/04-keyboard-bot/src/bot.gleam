@@ -9,7 +9,6 @@ import wisp/wisp_mist
 import telega
 import telega/api as telega_api
 import telega/bot.{type Context}
-import telega/client as telega_client
 import telega/error as telega_error
 import telega/format as fmt
 import telega/keyboard as telega_keyboard
@@ -17,6 +16,7 @@ import telega/model/encoder as telega_model_encoder
 import telega/model/types.{AnswerCallbackQueryParameters}
 import telega/reply
 import telega/router
+import telega_httpc
 import telega_wisp
 
 import bot/utils
@@ -207,7 +207,7 @@ fn build_bot() {
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
-  let assert Ok(client) = telega_client.new_with_queue(token)
+  let assert Ok(client) = telega_httpc.new_with_queue(token)
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
@@ -217,8 +217,7 @@ fn build_bot() {
 
   let router = build_router()
 
-  telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
-  |> telega.set_api_client(client)
+  telega.new(api_client: client, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.with_router(router)
   |> telega.set_drop_pending_updates(True)
   |> session.attach()

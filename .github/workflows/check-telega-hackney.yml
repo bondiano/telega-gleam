@@ -1,0 +1,38 @@
+name: check-telega-hackney
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "telega_hackney/**"
+  pull_request:
+    paths:
+      - "telega_hackney/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telega_hackney
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: 28.0.1
+          gleam-version: 1.15.1
+          rebar3-version: 3.25.1
+
+      - name: Install Dependencies
+        run: gleam deps download
+
+      - name: Check Format
+        run: gleam format --check src test
+
+      - name: Check
+        run: gleam check
+
+      - name: Test
+        run: GLEAM_LOG=trace gleam test

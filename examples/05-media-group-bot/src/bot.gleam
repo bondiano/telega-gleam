@@ -9,6 +9,7 @@ import gleam/result
 import telega
 import telega/error
 import telega/format as fmt
+import telega_httpc
 import telega/model/types
 import telega/reply
 import telega/router
@@ -129,8 +130,10 @@ pub fn main() {
 
   let router = build_router()
 
+  let client = telega_httpc.new(token)
+
   let assert Ok(_bot) =
-    telega.new_for_polling(token:)
+    telega.new_for_polling(api_client: client)
     |> telega.with_router(router)
     |> telega.init_for_polling_nil_session()
 

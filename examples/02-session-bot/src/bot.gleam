@@ -10,11 +10,11 @@ import wisp/wisp_mist
 import telega
 import telega/api as telega_api
 import telega/bot.{type Context}
-import telega/client as telega_client
 import telega/error as telega_error
 import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
+import telega_httpc
 import telega_wisp
 
 import bot/utils
@@ -90,7 +90,7 @@ fn build_bot() {
   let assert Ok(url) = envoy.get("SERVER_URL")
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
-  let client = telega_client.new(token)
+  let client = telega_httpc.new(token)
   let assert Ok(_) =
     telega_api.set_my_commands(
       client,
@@ -100,7 +100,7 @@ fn build_bot() {
 
   let router = build_router()
 
-  telega.new(token:, url:, webhook_path:, secret_token: Some(secret_token))
+  telega.new(api_client: client, url:, webhook_path:, secret_token: Some(secret_token))
   |> telega.with_router(router)
   |> session.attach()
   |> telega.init()

@@ -14,7 +14,7 @@ pub fn main() {
 
 pub fn new_client_test() {
   let token = "test-token"
-  let client = client.new(token)
+  let client = client.new(token:, fetch_client: mock_success_fetch_client)
 
   client.get_api_url(client)
   |> should.equal("https://api.telegram.org/bot")
@@ -22,7 +22,7 @@ pub fn new_client_test() {
 
 pub fn set_tg_api_url_test() {
   let client =
-    client.new("token")
+    client.new(token: "token", fetch_client: mock_success_fetch_client)
     |> client.set_tg_api_url("https://custom.api.url/bot")
 
   client.get_api_url(client)
@@ -57,8 +57,7 @@ fn mock_error_fetch_client(
 
 pub fn fetch_with_success_test() {
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(mock_success_fetch_client)
+    client.new(token: "test-token", fetch_client: mock_success_fetch_client)
 
   let request = client.new_get_request(client, "getMe", None)
 
@@ -74,8 +73,7 @@ pub fn fetch_with_success_test() {
 
 pub fn fetch_with_rate_limit_test() {
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(mock_rate_limit_fetch_client)
+    client.new(token: "test-token", fetch_client: mock_rate_limit_fetch_client)
     |> client.set_max_retry_attempts(1)
 
   let request = client.new_get_request(client, "getMe", None)
@@ -92,8 +90,7 @@ pub fn fetch_with_rate_limit_test() {
 
 pub fn fetch_with_network_error_test() {
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(mock_error_fetch_client)
+    client.new(token: "test-token", fetch_client: mock_error_fetch_client)
     |> client.set_max_retry_attempts(2)
 
   let request = client.new_get_request(client, "getMe", None)
@@ -113,8 +110,7 @@ pub fn rate_limiting_behavior_test() {
   }
 
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(counting_fetch_client)
+    client.new(token: "test-token", fetch_client: counting_fetch_client)
 
   let request = client.new_get_request(client, "getMe", None)
 
@@ -152,8 +148,7 @@ pub fn adaptive_rate_limiting_test() {
   }
 
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(adaptive_fetch_client)
+    client.new(token: "test-token", fetch_client: adaptive_fetch_client)
     |> client.set_max_retry_attempts(0)
 
   let request = client.new_get_request(client, "getMe", None)
@@ -191,8 +186,7 @@ pub fn retry_on_error_test() {
   }
 
   let client =
-    client.new("test-token")
-    |> client.set_fetch_client(failing_then_success_client)
+    client.new(token: "test-token", fetch_client: failing_then_success_client)
     |> client.set_max_retry_attempts(3)
 
   let request = client.new_get_request(client, "getMe", None)

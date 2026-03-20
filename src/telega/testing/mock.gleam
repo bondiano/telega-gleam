@@ -55,9 +55,7 @@ pub fn client() -> #(client.TelegramClient, Subject(ApiCall)) {
     process.send(calls, ApiCall(request: req))
     Ok(response.new(200) |> response.set_body("{\"ok\":true,\"result\":{}}"))
   }
-  let telegram_client =
-    client.new(token: "test_token")
-    |> client.set_fetch_client(fetch_client)
+  let telegram_client = client.new(token: "test_token", fetch_client:)
   #(telegram_client, calls)
 }
 
@@ -71,9 +69,7 @@ pub fn message_client() -> #(client.TelegramClient, Subject(ApiCall)) {
     process.send(calls, ApiCall(request: req))
     Ok(response.new(200) |> response.set_body(response_body))
   }
-  let telegram_client =
-    client.new(token: "test_token")
-    |> client.set_fetch_client(fetch_client)
+  let telegram_client = client.new(token: "test_token", fetch_client:)
   #(telegram_client, calls)
 }
 
@@ -86,9 +82,7 @@ pub fn client_with(
     process.send(calls, ApiCall(request: req))
     handler(req)
   }
-  let telegram_client =
-    client.new(token: "test_token")
-    |> client.set_fetch_client(fetch_client)
+  let telegram_client = client.new(token: "test_token", fetch_client:)
   #(telegram_client, calls)
 }
 
@@ -153,9 +147,7 @@ pub fn routed_client(
       Error(_) -> Ok(response.new(200) |> response.set_body(default_body))
     }
   }
-  let telegram_client =
-    client.new(token: "test_token")
-    |> client.set_fetch_client(fetch_client)
+  let telegram_client = client.new(token: "test_token", fetch_client:)
   #(telegram_client, calls)
 }
 
@@ -185,9 +177,7 @@ pub fn stateful_client(
     process.send(calls, ApiCall(request: req))
     handler(req, n)
   }
-  let telegram_client =
-    client.new(token: "test_token")
-    |> client.set_fetch_client(fetch_client)
+  let telegram_client = client.new(token: "test_token", fetch_client:)
   #(telegram_client, calls)
 }
 

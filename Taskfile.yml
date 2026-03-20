@@ -6,10 +6,11 @@ tasks:
     cmd: gleam format
 
   format:all:
-    desc: Format root project, telega_wisp, and all examples
+    desc: Format root project, adapters, and all examples
     cmds:
       - gleam format
-      - cd telega_wisp && gleam format
+      - for: ["telega_wisp", "telega_httpc", "telega_hackney"]
+        cmd: cd {{.ITEM}} && gleam format
       - for: [
           "00-echo-bot",
           "01-commands-bot",
@@ -26,10 +27,11 @@ tasks:
     cmd: gleam test
 
   test:all:
-    desc: Run tests in root project, telega_wisp, and check all examples compile
+    desc: Run tests in root project, adapters, and check all examples compile
     cmds:
       - gleam test
-      - cd telega_wisp && gleam test
+      - for: ["telega_wisp", "telega_httpc", "telega_hackney"]
+        cmd: cd {{.ITEM}} && gleam test
       - for: [
           "00-echo-bot",
           "01-commands-bot",

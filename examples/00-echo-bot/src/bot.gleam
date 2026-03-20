@@ -3,6 +3,7 @@ import telega
 import telega/reply
 import telega/router
 import telega/update
+import telega_httpc
 
 fn handle_text(ctx, text) {
   use ctx <- telega.log_context(ctx, "echo_text")
@@ -25,8 +26,10 @@ pub fn build_router() {
 pub fn main() {
   let router = build_router()
 
+  let client = telega_httpc.new("BOT_TOKEN")
+
   let assert Ok(_bot) =
-    telega.new_for_polling(token: "BOT_TOKEN")
+    telega.new_for_polling(api_client: client)
     |> telega.with_router(router)
     |> telega.init_for_polling_nil_session()
 
