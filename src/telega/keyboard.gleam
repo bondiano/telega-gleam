@@ -177,7 +177,7 @@
 ////   let buttons = case current_page < total_pages {
 ////     True -> {
 ////       let next_callback = keyboard.pack_callback(page_callback, current_page + 1)
-////       case keyboard.inline_button("Next →", next_callback) {
+////       case keyboard.inline_button("Next ->", next_callback) {
 ////         Ok(next_btn) -> [next_btn, ..buttons]
 ////         Error(_) -> buttons
 ////       }
@@ -574,6 +574,7 @@ pub fn button(text: String) -> KeyboardButton {
     style: None,
     request_users: None,
     request_chat: None,
+    request_managed_bot: None,
     request_contact: None,
     request_location: None,
     request_poll: None,
@@ -1061,7 +1062,7 @@ pub fn string_callback_data(id: String) -> KeyboardCallbackData(String) {
 /// ```gleam
 /// let page_callback = keyboard.int_callback_data("page")
 /// let next_page = keyboard.pack_callback(page_callback, 2)
-/// let assert Ok(button) = keyboard.inline_button("Next →", next_page)
+/// let assert Ok(button) = keyboard.inline_button("Next ->", next_page)
 ///
 /// // In your callback handler:
 /// let assert Ok(unpacked) = keyboard.unpack_callback(payload, page_callback)

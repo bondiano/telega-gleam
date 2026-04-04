@@ -41,6 +41,7 @@ pub fn bot_user() -> types.User {
     has_main_web_app: None,
     has_topics_enabled: None,
     allows_users_to_create_topics: None,
+    can_manage_bots: None,
   )
 }
 
@@ -62,6 +63,7 @@ pub fn user() -> types.User {
     has_main_web_app: None,
     has_topics_enabled: None,
     allows_users_to_create_topics: None,
+    can_manage_bots: None,
   )
 }
 
@@ -120,6 +122,7 @@ pub fn message_with(
     quote: None,
     reply_to_story: None,
     reply_to_checklist_task_id: None,
+    reply_to_poll_option_id: None,
     via_bot: None,
     edit_date: None,
     has_protected_content: None,
@@ -207,6 +210,9 @@ pub fn message_with(
     suggested_post_declined: None,
     suggested_post_paid: None,
     suggested_post_refunded: None,
+    managed_bot_created: None,
+    poll_option_added: None,
+    poll_option_deleted: None,
   )
 }
 
@@ -245,6 +251,7 @@ pub fn raw_update_with(
     chat_join_request: None,
     chat_boost: None,
     removed_chat_boost: None,
+    managed_bot: None,
   )
 }
 

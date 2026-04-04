@@ -210,9 +210,9 @@ pub type Update {
     message_reaction: Option(MessageReactionUpdated),
     /// Optional. Reactions to a message with anonymous reactions were changed. The bot must be an administrator in the chat and must explicitly specify "message_reaction_count" in the list of allowed_updates to receive these updates. The updates are grouped and can be sent with delay up to a few minutes.
     message_reaction_count: Option(MessageReactionCountUpdated),
-    /// Optional. New incoming [inline](https://core.telegram.org/bots/api#inline-mode) query
+    /// Optional. New incoming inline query
     inline_query: Option(InlineQuery),
-    /// Optional. The result of an [inline](https://core.telegram.org/bots/api#inline-mode) query that was chosen by a user and sent to their chat partner. Please see our documentation on the [feedback collecting](https://core.telegram.org/bots/inline#collecting-feedback) for details on how to enable these updates for your bot.
+    /// Optional. The result of an inline query that was chosen by a user and sent to their chat partner. Please see our documentation on the feedback collecting for details on how to enable these updates for your bot.
     chosen_inline_result: Option(ChosenInlineResult),
     /// Optional. New incoming callback query
     callback_query: Option(CallbackQuery),
@@ -236,6 +236,8 @@ pub type Update {
     chat_boost: Option(ChatBoostUpdated),
     /// Optional. A boost was removed from a chat. The bot must be an administrator in the chat to receive these updates.
     removed_chat_boost: Option(ChatBoostRemoved),
+    /// Optional. A new bot was created to be managed by the bot or token of a bot was changed
+    managed_bot: Option(ManagedBotUpdated),
   )
 }
 
@@ -296,6 +298,8 @@ pub type User {
     has_topics_enabled: Option(Bool),
     /// Optional. True, if the bot allows users to create and delete topics in private chats. Returned only in getMe.
     allows_users_to_create_topics: Option(Bool),
+    /// Optional. True, if other bots can be created to be controlled by the bot. Returned only in getMe.
+    can_manage_bots: Option(Bool),
   )
 }
 
@@ -304,7 +308,7 @@ pub type Chat {
   Chat(
     /// Unique identifier for this chat. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
     id: Int,
-    /// Type of the chat, can be either “private”, “group”, “supergroup” or “channel”
+    /// Type of the chat, can be either "private", "group", "supergroup" or "channel"
     type_: String,
     /// Optional. Title, for supergroups, channels and group chats
     title: Option(String),
@@ -326,7 +330,7 @@ pub type ChatFullInfo {
   ChatFullInfo(
     /// Unique identifier for this chat. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
     id: Int,
-    /// Type of the chat, can be either “private”, “group”, “supergroup” or “channel”
+    /// Type of the chat, can be either "private", "group", "supergroup" or "channel"
     type_: String,
     /// Optional. Title, for supergroups, channels and group chats
     title: Option(String),
@@ -420,12 +424,12 @@ pub type ChatFullInfo {
     location: Option(ChatLocation),
     /// Optional. For private chats, the rating of the user if any
     rating: Option(UserRating),
+    /// Optional. For private chats, the first audio added to the profile of the user
+    first_profile_audio: Option(Audio),
     /// Optional. The color scheme based on a unique gift that must be used for the chat's name, message replies and link previews
     unique_gift_colors: Option(UniqueGiftColors),
     /// Optional. The number of Telegram Stars a general user have to pay to send a message to the chat
     paid_message_star_count: Option(Int),
-    /// Optional. For private chats, the first audio added to the profile of the user
-    first_profile_audio: Option(Audio),
   )
 }
 
@@ -470,6 +474,8 @@ pub type Message {
     reply_to_story: Option(Story),
     /// Optional. Identifier of the specific checklist task that is being replied to
     reply_to_checklist_task_id: Option(Int),
+    /// Optional. Persistent identifier of the specific poll option that is being replied to
+    reply_to_poll_option_id: Option(String),
     /// Optional. Bot through which the message was sent
     via_bot: Option(User),
     /// Optional. Date the message was last edited in Unix time
@@ -480,7 +486,7 @@ pub type Message {
     is_from_offline: Option(Bool),
     /// Optional. True, if the message is a paid post. Note that such posts must not be deleted for 24 hours to receive the payment and can't be edited.
     is_paid_post: Option(Bool),
-    /// Optional. The unique identifier of a media message group this message belongs to
+    /// Optional. The unique identifier inside this chat of a media message group this message belongs to
     media_group_id: Option(String),
     /// Optional. Signature of the post author for messages in channels, or the custom title of an anonymous group administrator
     author_signature: Option(String),
@@ -530,7 +536,7 @@ pub type Message {
     contact: Option(Contact),
     /// Optional. Message is a dice with random value
     dice: Option(Dice),
-    /// Optional. Message is a game, information about the game. More about games »
+    /// Optional. Message is a game, information about the game. More about games "
     game: Option(Game),
     /// Optional. Message is a native poll, information about the poll
     poll: Option(Poll),
@@ -542,6 +548,10 @@ pub type Message {
     new_chat_members: Option(List(User)),
     /// Optional. A member was removed from the group, information about them (this member may be the bot itself)
     left_chat_member: Option(User),
+    /// Optional. Service message: chat owner has left
+    chat_owner_left: Option(ChatOwnerLeft),
+    /// Optional. Service message: chat owner has changed
+    chat_owner_changed: Option(ChatOwnerChanged),
     /// Optional. A chat title was changed to this value
     new_chat_title: Option(String),
     /// Optional. A chat photo was change to this value
@@ -562,11 +572,11 @@ pub type Message {
     migrate_from_chat_id: Option(Int),
     /// Optional. Specified message was pinned. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply.
     pinned_message: Option(MaybeInaccessibleMessage),
-    /// Optional. Message is an invoice for a payment, information about the invoice. More about payments »
+    /// Optional. Message is an invoice for a payment, information about the invoice. More about payments "
     invoice: Option(Invoice),
-    /// Optional. Message is a service message about a successful payment, information about the payment. More about payments »
+    /// Optional. Message is a service message about a successful payment, information about the payment. More about payments "
     successful_payment: Option(SuccessfulPayment),
-    /// Optional. Message is a service message about a refunded payment, information about the payment. More about payments »
+    /// Optional. Message is a service message about a refunded payment, information about the payment. More about payments "
     refunded_payment: Option(RefundedPayment),
     /// Optional. Service message: users were shared with the bot
     users_shared: Option(UsersShared),
@@ -578,7 +588,7 @@ pub type Message {
     unique_gift: Option(UniqueGiftInfo),
     /// Optional. Service message: upgrade of a gift was purchased after the gift was sent
     gift_upgrade_sent: Option(GiftInfo),
-    /// Optional. The domain name of the website on which the user has logged in. More about Telegram Login »
+    /// Optional. The domain name of the website on which the user has logged in. More about Telegram Login "
     connected_website: Option(String),
     /// Optional. Service message: the user allowed the bot to write messages after adding it to the attachment or side menu, launching a Web App from a link, or accepting an explicit request from a Web App sent by the method requestWriteAccess
     write_access_allowed: Option(WriteAccessAllowed),
@@ -590,10 +600,6 @@ pub type Message {
     boost_added: Option(ChatBoostAdded),
     /// Optional. Service message: chat background set
     chat_background_set: Option(ChatBackground),
-    /// Optional. Service message: chat owner has left
-    chat_owner_left: Option(ChatOwnerLeft),
-    /// Optional. Service message: chat owner has changed
-    chat_owner_changed: Option(ChatOwnerChanged),
     /// Optional. Service message: some tasks in a checklist were marked as done or not done
     checklist_tasks_done: Option(ChecklistTasksDone),
     /// Optional. Service message: tasks were added to a checklist
@@ -620,8 +626,14 @@ pub type Message {
     giveaway_winners: Option(GiveawayWinners),
     /// Optional. Service message: a giveaway without public winners was completed
     giveaway_completed: Option(GiveawayCompleted),
+    /// Optional. Service message: user created a bot that will be managed by the current bot
+    managed_bot_created: Option(ManagedBotCreated),
     /// Optional. Service message: the price for paid messages has changed in the chat
     paid_message_price_changed: Option(PaidMessagePriceChanged),
+    /// Optional. Service message: answer option was added to a poll
+    poll_option_added: Option(PollOptionAdded),
+    /// Optional. Service message: answer option was deleted from a poll
+    poll_option_deleted: Option(PollOptionDeleted),
     /// Optional. Service message: a suggested post was approved
     suggested_post_approved: Option(SuggestedPostApproved),
     /// Optional. Service message: approval of a suggested post has failed
@@ -670,23 +682,23 @@ pub type InaccessibleMessage {
 /// **Official reference:** This object represents one special entity in a text message. For example, hashtags, usernames, URLs, etc.
 pub type MessageEntity {
   MessageEntity(
-    /// Type of the entity. Currently, can be “mention” (@username), “hashtag” (#hashtag or #hashtag@chatusername), “cashtag” ($USD or $USD@chatusername), “bot_command” (/start@jobs_bot), “url” (https://telegram.org), “email” (do-not-reply@telegram.org), “phone_number” (+1-212-555-0123), “bold” (bold text), “italic” (italic text), “underline” (underlined text), “strikethrough” (strikethrough text), “spoiler” (spoiler message), “blockquote” (block quotation), “expandable_blockquote” (collapsed-by-default block quotation), “code” (monowidth string), “pre” (monowidth block), “text_link” (for clickable text URLs), “text_mention” (for users without usernames), “custom_emoji” (for inline custom emoji stickers), or “date_time” (for formatted date and time)
+    /// Type of the entity. Currently, can be "mention" (@username), "hashtag" (#hashtag or #hashtag@chatusername), "cashtag" ($USD or $USD@chatusername), "bot_command" (/start@jobs_bot), "url" (https://telegram.org), "email" (do-not-reply@telegram.org), "phone_number" (+1-212-555-0123), "bold" (bold text), "italic" (italic text), "underline" (underlined text), "strikethrough" (strikethrough text), "spoiler" (spoiler message), "blockquote" (block quotation), "expandable_blockquote" (collapsed-by-default block quotation), "code" (monowidth string), "pre" (monowidth block), "text_link" (for clickable text URLs), "text_mention" (for users without usernames), "custom_emoji" (for inline custom emoji stickers), or "date_time" (for formatted date and time)
     type_: String,
     /// Offset in UTF-16 code units to the start of the entity
     offset: Int,
     /// Length of the entity in UTF-16 code units
     length: Int,
-    /// Optional. For “text_link” only, URL that will be opened after user taps on the text
+    /// Optional. For "text_link" only, URL that will be opened after user taps on the text
     url: Option(String),
-    /// Optional. For “text_mention” only, the mentioned user
+    /// Optional. For "text_mention" only, the mentioned user
     user: Option(User),
-    /// Optional. For “pre” only, the programming language of the entity text
+    /// Optional. For "pre" only, the programming language of the entity text
     language: Option(String),
-    /// Optional. For “custom_emoji” only, unique identifier of the custom emoji. Use getCustomEmojiStickers to get full information about the sticker
+    /// Optional. For "custom_emoji" only, unique identifier of the custom emoji. Use getCustomEmojiStickers to get full information about the sticker
     custom_emoji_id: Option(String),
-    /// Optional. For “date_time” only, the Unix time associated with the entity
+    /// Optional. For "date_time" only, the Unix time associated with the entity
     unix_time: Option(Int),
-    /// Optional. For “date_time” only, the string that defines the formatting of the date and time. See date-time entity formatting for more details.
+    /// Optional. For "date_time" only, the string that defines the formatting of the date and time. See date-time entity formatting for more details.
     date_time_format: Option(String),
   )
 }
@@ -696,7 +708,7 @@ pub type TextQuote {
   TextQuote(
     /// Text of the quoted part of a message that is replied to by the given message
     text: String,
-    /// Optional. Special entities that appear in the quote. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are kept in quotes.
+    /// Optional. Special entities that appear in the quote. Currently, only bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities are kept in quotes.
     entities: Option(List(MessageEntity)),
     /// Approximate quote position in the original message in UTF-16 code units as specified by the sender
     position: Int,
@@ -744,13 +756,13 @@ pub type ExternalReplyInfo {
     contact: Option(Contact),
     /// Optional. Message is a dice with random value
     dice: Option(Dice),
-    /// Optional. Message is a game, information about the game. More about games »
+    /// Optional. Message is a game, information about the game. More about games "
     game: Option(Game),
     /// Optional. Message is a scheduled giveaway, information about the giveaway
     giveaway: Option(Giveaway),
     /// Optional. A giveaway with public winners was completed
     giveaway_winners: Option(GiveawayWinners),
-    /// Optional. Message is an invoice for a payment, information about the invoice. More about payments »
+    /// Optional. Message is an invoice for a payment, information about the invoice. More about payments "
     invoice: Option(Invoice),
     /// Optional. Message is a shared location, information about the location
     location: Option(Location),
@@ -766,13 +778,11 @@ pub type ReplyParameters {
   ReplyParameters(
     /// Identifier of the message that will be replied to in the current chat, or in the chat chat_id if it is specified
     message_id: Int,
-    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the channel (in the format @channelusername). Not supported for messages sent on behalf of a business account.
+    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the channel (in the format @channelusername). Not supported for messages sent on behalf of a business account and messages from channel direct messages chats.
     chat_id: Option(IntOrString),
-    /// Optional. Identifier of the checklist task to be replied to; for checklists only
-    checklist_task_id: Option(Int),
     /// Optional. Pass True if the message should be sent even if the specified message to be replied to is not found. Always False for replies in another chat or forum topic. Always True for messages sent on behalf of a business account.
     allow_sending_without_reply: Option(Bool),
-    /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, and custom_emoji entities. The message will fail to send if the quote isn't found in the original message.
+    /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities. The message will fail to send if the quote isn't found in the original message.
     quote: Option(String),
     /// Optional. Mode for parsing entities in the quote. See formatting options for more details.
     quote_parse_mode: Option(String),
@@ -780,13 +790,17 @@ pub type ReplyParameters {
     quote_entities: Option(List(MessageEntity)),
     /// Optional. Position of the quote in the original message in UTF-16 code units
     quote_position: Option(Int),
+    /// Optional. Identifier of the specific checklist task to be replied to
+    checklist_task_id: Option(Int),
+    /// Optional. Persistent identifier of the specific poll option to be replied to
+    poll_option_id: Option(String),
   )
 }
 
 /// **Official reference:** The message was originally sent by a known user.
 pub type MessageOriginUser {
   MessageOriginUser(
-    /// Type of the message origin, always “user”
+    /// Type of the message origin, always "user"
     type_: String,
     /// Date the message was sent originally in Unix time
     date: Int,
@@ -798,7 +812,7 @@ pub type MessageOriginUser {
 /// **Official reference:** The message was originally sent by an unknown user.
 pub type MessageOriginHiddenUser {
   MessageOriginHiddenUser(
-    /// Type of the message origin, always “hidden_user”
+    /// Type of the message origin, always "hidden_user"
     type_: String,
     /// Date the message was sent originally in Unix time
     date: Int,
@@ -810,7 +824,7 @@ pub type MessageOriginHiddenUser {
 /// **Official reference:** The message was originally sent on behalf of a chat to a group chat.
 pub type MessageOriginChat {
   MessageOriginChat(
-    /// Type of the message origin, always “chat”
+    /// Type of the message origin, always "chat"
     type_: String,
     /// Date the message was sent originally in Unix time
     date: Int,
@@ -824,7 +838,7 @@ pub type MessageOriginChat {
 /// **Official reference:** The message was originally sent to a channel chat.
 pub type MessageOriginChannel {
   MessageOriginChannel(
-    /// Type of the message origin, always “channel”
+    /// Type of the message origin, always "channel"
     type_: String,
     /// Date the message was sent originally in Unix time
     date: Int,
@@ -929,6 +943,24 @@ pub type Story {
   )
 }
 
+/// **Official reference:** This object represents a video file of a specific quality.
+pub type VideoQuality {
+  VideoQuality(
+    /// Identifier for this file, which can be used to download or reuse the file
+    file_id: String,
+    /// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
+    file_unique_id: String,
+    /// Video width
+    width: Int,
+    /// Video height
+    height: Int,
+    /// Codec that was used to encode the video, for example, "h264", "h265", or "av01"
+    codec: String,
+    /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
+    file_size: Option(Int),
+  )
+}
+
 /// **Official reference:** This object represents a video file.
 pub type Video {
   Video(
@@ -948,30 +980,12 @@ pub type Video {
     cover: Option(List(PhotoSize)),
     /// Optional. Timestamp in seconds from which the video will play in the message
     start_timestamp: Option(Int),
+    /// Optional. List of available qualities of the video
+    qualities: Option(List(VideoQuality)),
     /// Optional. Original filename as defined by the sender
     file_name: Option(String),
     /// Optional. MIME type of the file as defined by the sender
     mime_type: Option(String),
-    /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
-    file_size: Option(Int),
-    /// Optional. List of available qualities of the video
-    qualities: Option(List(VideoQuality)),
-  )
-}
-
-/// **Official reference:** This object represents a video file of a specific quality.
-pub type VideoQuality {
-  VideoQuality(
-    /// Identifier for this file, which can be used to download or reuse the file
-    file_id: String,
-    /// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
-    file_unique_id: String,
-    /// Video width
-    width: Int,
-    /// Video height
-    height: Int,
-    /// Codec that was used to encode the video, for example, "h264", "h265", or "av01"
-    codec: String,
     /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
     file_size: Option(Int),
   )
@@ -1024,7 +1038,7 @@ pub type PaidMediaInfo {
 /// **Official reference:** The paid media isn't available before the payment.
 pub type PaidMediaPreview {
   PaidMediaPreview(
-    /// Type of the paid media, always “preview”
+    /// Type of the paid media, always "preview"
     type_: String,
     /// Optional. Media width as defined by the sender
     width: Option(Int),
@@ -1038,7 +1052,7 @@ pub type PaidMediaPreview {
 /// **Official reference:** The paid media is a photo.
 pub type PaidMediaPhoto {
   PaidMediaPhoto(
-    /// Type of the paid media, always “photo”
+    /// Type of the paid media, always "photo"
     type_: String,
     /// The photo
     photo: List(PhotoSize),
@@ -1048,7 +1062,7 @@ pub type PaidMediaPhoto {
 /// **Official reference:** The paid media is a video.
 pub type PaidMediaVideo {
   PaidMediaVideo(
-    /// Type of the paid media, always “video”
+    /// Type of the paid media, always "video"
     type_: String,
     /// The video
     video: Video,
@@ -1076,7 +1090,7 @@ pub type Dice {
   Dice(
     /// Emoji on which the dice throw animation is based
     emoji: String,
-    /// Value of the dice, 1-6 for “”, “” and “” base emoji, 1-5 for “” and “” base emoji, 1-64 for “” base emoji
+    /// Value of the dice, 1-6 for "", "" and "" base emoji, 1-5 for "" and "" base emoji, 1-64 for "" base emoji
     value: Int,
   )
 }
@@ -1084,12 +1098,20 @@ pub type Dice {
 /// **Official reference:** This object contains information about one answer option in a poll.
 pub type PollOption {
   PollOption(
+    /// Unique identifier of the option, persistent on option addition and deletion
+    persistent_id: String,
     /// Option text, 1-100 characters
     text: String,
     /// Optional. Special entities that appear in the option text. Currently, only custom emoji entities are allowed in poll option texts
     text_entities: Option(List(MessageEntity)),
-    /// Number of users that voted for this option
+    /// Number of users who voted for this option; may be 0 if unknown
     voter_count: Int,
+    /// Optional. User who added the option; omitted if the option wasn't added by a user after poll creation
+    added_by_user: Option(User),
+    /// Optional. Chat that added the option; omitted if the option wasn't added by a chat after poll creation
+    added_by_chat: Option(Chat),
+    /// Optional. Point in time (Unix timestamp) when the option was added; omitted if the option existed in the original poll
+    addition_date: Option(Int),
   )
 }
 
@@ -1116,6 +1138,8 @@ pub type PollAnswer {
     user: Option(User),
     /// 0-based identifiers of chosen answer options. May be empty if the vote was retracted.
     option_ids: List(Int),
+    /// Persistent identifiers of the chosen answer options. May be empty if the vote was retracted.
+    option_persistent_ids: List(String),
   )
 }
 
@@ -1136,12 +1160,14 @@ pub type Poll {
     is_closed: Bool,
     /// True, if the poll is anonymous
     is_anonymous: Bool,
-    /// Poll type, currently can be “regular” or “quiz”
+    /// Poll type, currently can be "regular" or "quiz"
     type_: String,
     /// True, if the poll allows multiple answers
     allows_multiple_answers: Bool,
-    /// Optional. 0-based identifier of the correct answer option. Available only for polls in the quiz mode, which are closed, or was sent (not forwarded) by the bot or to the private chat with the bot.
-    correct_option_id: Option(Int),
+    /// True, if the poll allows to change the chosen answer options
+    allows_revoting: Bool,
+    /// Optional. Array of 0-based identifiers of the correct answer options. Available only for polls in quiz mode which are closed or were sent (not forwarded) by the bot or to the private chat with the bot.
+    correct_option_ids: Option(List(Int)),
     /// Optional. Text that is shown when a user chooses an incorrect answer or taps on the lamp icon in a quiz-style poll, 0-200 characters
     explanation: Option(String),
     /// Optional. Special entities like usernames, URLs, bot commands, etc. that appear in the explanation
@@ -1150,6 +1176,10 @@ pub type Poll {
     open_period: Option(Int),
     /// Optional. Point in time (Unix timestamp) when the poll will be automatically closed
     close_date: Option(Int),
+    /// Optional. Description of the poll; for polls inside the Message object only
+    description: Option(String),
+    /// Optional. Special entities like usernames, URLs, bot commands, etc. that appear in the description
+    description_entities: Option(List(MessageEntity)),
   )
 }
 
@@ -1196,7 +1226,7 @@ pub type InputChecklistTask {
     text: String,
     /// Optional. Mode for parsing entities in the text. See formatting options for more details.
     parse_mode: Option(String),
-    /// Optional. List of special entities that appear in the text, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
+    /// Optional. List of special entities that appear in the text, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities are allowed.
     text_entities: Option(List(MessageEntity)),
   )
 }
@@ -1208,7 +1238,7 @@ pub type InputChecklist {
     title: String,
     /// Optional. Mode for parsing entities in the title. See formatting options for more details.
     parse_mode: Option(String),
-    /// Optional. List of special entities that appear in the title, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, and custom_emoji entities are allowed.
+    /// Optional. List of special entities that appear in the title, which can be specified instead of parse_mode. Currently, only bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities are allowed.
     title_entities: Option(List(MessageEntity)),
     /// List of 1-30 tasks in the checklist
     tasks: List(InputChecklistTask),
@@ -1270,7 +1300,7 @@ pub type Venue {
     address: String,
     /// Optional. Foursquare identifier of the venue
     foursquare_id: Option(String),
-    /// Optional. Foursquare type of the venue. (For example, “arts_entertainment/default”, “arts_entertainment/aquarium” or “food/icecream”.)
+    /// Optional. Foursquare type of the venue. (For example, "arts_entertainment/default", "arts_entertainment/aquarium" or "food/icecream".)
     foursquare_type: Option(String),
     /// Optional. Google Places identifier of the venue
     google_place_id: Option(String),
@@ -1309,6 +1339,52 @@ pub type MessageAutoDeleteTimerChanged {
   )
 }
 
+/// **Official reference:** This object contains information about the bot that was created to be managed by the current bot.
+pub type ManagedBotCreated {
+  ManagedBotCreated(
+    /// Information about the bot. The bot's token can be fetched using the method getManagedBotToken.
+    bot: User,
+  )
+}
+
+/// **Official reference:** This object contains information about the creation or token update of a bot that is managed by the current bot.
+pub type ManagedBotUpdated {
+  ManagedBotUpdated(
+    /// User that created the bot
+    user: User,
+    /// Information about the bot. Token of the bot can be fetched using the method getManagedBotToken.
+    bot: User,
+  )
+}
+
+/// **Official reference:** Describes a service message about an option added to a poll.
+pub type PollOptionAdded {
+  PollOptionAdded(
+    /// Optional. Message containing the poll to which the option was added, if known. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    poll_message: Option(MaybeInaccessibleMessage),
+    /// Unique identifier of the added option
+    option_persistent_id: String,
+    /// Option text
+    option_text: String,
+    /// Optional. Special entities that appear in the option_text
+    option_text_entities: Option(List(MessageEntity)),
+  )
+}
+
+/// **Official reference:** Describes a service message about an option deleted from a poll.
+pub type PollOptionDeleted {
+  PollOptionDeleted(
+    /// Optional. Message containing the poll from which the option was deleted, if known. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
+    poll_message: Option(MaybeInaccessibleMessage),
+    /// Unique identifier of the deleted option
+    option_persistent_id: String,
+    /// Option text
+    option_text: String,
+    /// Optional. Special entities that appear in the option_text
+    option_text_entities: Option(List(MessageEntity)),
+  )
+}
+
 /// **Official reference:** This object represents a service message about a user boosting a chat.
 pub type ChatBoostAdded {
   ChatBoostAdded(
@@ -1320,7 +1396,7 @@ pub type ChatBoostAdded {
 /// **Official reference:** The background is filled using the selected color.
 pub type BackgroundFillSolid {
   BackgroundFillSolid(
-    /// Type of the background fill, always “solid”
+    /// Type of the background fill, always "solid"
     type_: String,
     /// The color of the background fill in the RGB24 format
     color: Int,
@@ -1330,7 +1406,7 @@ pub type BackgroundFillSolid {
 /// **Official reference:** The background is a gradient fill.
 pub type BackgroundFillGradient {
   BackgroundFillGradient(
-    /// Type of the background fill, always “gradient”
+    /// Type of the background fill, always "gradient"
     type_: String,
     /// Top color of the gradient in the RGB24 format
     top_color: Int,
@@ -1344,7 +1420,7 @@ pub type BackgroundFillGradient {
 /// **Official reference:** The background is a freeform gradient that rotates after every message in the chat.
 pub type BackgroundFillFreeformGradient {
   BackgroundFillFreeformGradient(
-    /// Type of the background fill, always “freeform_gradient”
+    /// Type of the background fill, always "freeform_gradient"
     type_: String,
     /// A list of the 3 or 4 base colors that are used to generate the freeform gradient in the RGB24 format
     colors: List(Int),
@@ -1354,7 +1430,7 @@ pub type BackgroundFillFreeformGradient {
 /// **Official reference:** The background is automatically filled based on the selected colors.
 pub type BackgroundTypeFill {
   BackgroundTypeFill(
-    /// Type of the background, always “fill”
+    /// Type of the background, always "fill"
     type_: String,
     /// The background fill
     fill: BackgroundFill,
@@ -1366,7 +1442,7 @@ pub type BackgroundTypeFill {
 /// **Official reference:** The background is a wallpaper in the JPEG format.
 pub type BackgroundTypeWallpaper {
   BackgroundTypeWallpaper(
-    /// Type of the background, always “wallpaper”
+    /// Type of the background, always "wallpaper"
     type_: String,
     /// Document with the wallpaper
     document: Document,
@@ -1379,10 +1455,10 @@ pub type BackgroundTypeWallpaper {
   )
 }
 
-/// **Official reference:** The background is a .PNG or .TGV (gzipped subset of SVG with MIME type “application/x-tgwallpattern”) pattern to be combined with the background fill chosen by the user.
+/// **Official reference:** The background is a .PNG or .TGV (gzipped subset of SVG with MIME type "application/x-tgwallpattern") pattern to be combined with the background fill chosen by the user.
 pub type BackgroundTypePattern {
   BackgroundTypePattern(
-    /// Type of the background, always “pattern”
+    /// Type of the background, always "pattern"
     type_: String,
     /// Document with the pattern
     document: Document,
@@ -1400,7 +1476,7 @@ pub type BackgroundTypePattern {
 /// **Official reference:** The background is taken directly from a built-in chat theme.
 pub type BackgroundTypeChatTheme {
   BackgroundTypeChatTheme(
-    /// Type of the background, always “chat_theme”
+    /// Type of the background, always "chat_theme"
     type_: String,
     /// Name of the chat theme, which is usually an emoji
     theme_name: String,
@@ -1412,22 +1488,6 @@ pub type ChatBackground {
   ChatBackground(
     /// Type of the background
     type_: BackgroundType,
-  )
-}
-
-/// **Official reference:** Describes a service message about the chat owner leaving the chat.
-pub type ChatOwnerLeft {
-  ChatOwnerLeft(
-    /// Optional. The user which will be the new owner of the chat if the previous owner does not return to the chat
-    new_owner: Option(User),
-  )
-}
-
-/// **Official reference:** Describes a service message about an ownership change in the chat.
-pub type ChatOwnerChanged {
-  ChatOwnerChanged(
-    /// The new owner of the chat
-    new_owner: User,
   )
 }
 
@@ -1817,37 +1877,39 @@ pub type ReplyKeyboardMarkup {
     /// Optional. The placeholder to be shown in the input field when the keyboard is active; 1-64 characters
     input_field_placeholder: Option(String),
     /// Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply to a message in the same chat and forum topic, sender of the original message.
-    ///
+    /// 
     /// Example: A user requests to change the bot's language, bot replies to the request with a keyboard to select the new language. Other users in the group don't see the keyboard.
     selective: Option(Bool),
   )
 }
 
-/// **Official reference:** This object represents one button of the reply keyboard. At most one of the optional fields must be used to specify type of the button. For simple text buttons, String can be used instead of this object to specify the button text.
+/// **Official reference:** This object represents one button of the reply keyboard. At most one of the fields other than text, icon_custom_emoji_id, and style must be used to specify the type of the button. For simple text buttons, String can be used instead of this object to specify the button text.
 pub type KeyboardButton {
   KeyboardButton(
-    /// Text of the button. If none of the optional fields are used, it will be sent as a message when the button is pressed
+    /// Text of the button. If none of the fields other than text, icon_custom_emoji_id, and style are used, it will be sent as a message when the button is pressed
     text: String,
-    /// Optional. Unique identifier of the custom emoji shown before the text of the button.
+    /// Optional. Unique identifier of the custom emoji shown before the text of the button. Can only be used by bots that purchased additional usernames on Fragment or in the messages directly sent by the bot to private, group and supergroup chats if the owner of the bot has a Telegram Premium subscription.
     icon_custom_emoji_id: Option(String),
-    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue).
+    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue). If omitted, then an app-specific style is used.
     style: Option(String),
-    /// Optional. If specified, pressing the button will open a list of suitable users. Identifiers of selected users will be sent to the bot in a “users_shared” service message. Available in private chats only.
+    /// Optional. If specified, pressing the button will open a list of suitable users. Identifiers of selected users will be sent to the bot in a "users_shared" service message. Available in private chats only.
     request_users: Option(KeyboardButtonRequestUsers),
-    /// Optional. If specified, pressing the button will open a list of suitable chats. Tapping on a chat will send its identifier to the bot in a “chat_shared” service message. Available in private chats only.
+    /// Optional. If specified, pressing the button will open a list of suitable chats. Tapping on a chat will send its identifier to the bot in a "chat_shared" service message. Available in private chats only.
     request_chat: Option(KeyboardButtonRequestChat),
+    /// Optional. If specified, pressing the button will ask the user to create and share a bot that will be managed by the current bot. Available for bots that enabled management of other bots in the @BotFather Mini App. Available in private chats only.
+    request_managed_bot: Option(KeyboardButtonRequestManagedBot),
     /// Optional. If True, the user's phone number will be sent as a contact when the button is pressed. Available in private chats only.
     request_contact: Option(Bool),
     /// Optional. If True, the user's current location will be sent when the button is pressed. Available in private chats only.
     request_location: Option(Bool),
     /// Optional. If specified, the user will be asked to create a poll and send it to the bot when the button is pressed. Available in private chats only.
     request_poll: Option(KeyboardButtonPollType),
-    /// Optional. If specified, the described Web App will be launched when the button is pressed. The Web App will be able to send a “web_app_data” service message. Available in private chats only.
+    /// Optional. If specified, the described Web App will be launched when the button is pressed. The Web App will be able to send a "web_app_data" service message. Available in private chats only.
     web_app: Option(WebAppInfo),
   )
 }
 
-/// **Official reference:** This object defines the criteria used to request suitable users. Information about the selected users will be shared with the bot when the corresponding button is pressed. More about requesting users »
+/// **Official reference:** This object defines the criteria used to request suitable users. Information about the selected users will be shared with the bot when the corresponding button is pressed. More about requesting users "
 pub type KeyboardButtonRequestUsers {
   KeyboardButtonRequestUsers(
     /// Signed 32-bit identifier of the request that will be received back in the UsersShared object. Must be unique within the message
@@ -1867,7 +1929,7 @@ pub type KeyboardButtonRequestUsers {
   )
 }
 
-/// **Official reference:** This object defines the criteria used to request a suitable chat. Information about the selected chat will be shared with the bot when the corresponding button is pressed. The bot will be granted requested rights in the chat if appropriate. More about requesting chats ».
+/// **Official reference:** This object defines the criteria used to request a suitable chat. Information about the selected chat will be shared with the bot when the corresponding button is pressed. The bot will be granted requested rights in the chat if appropriate. More about requesting chats ".
 pub type KeyboardButtonRequestChat {
   KeyboardButtonRequestChat(
     /// Signed 32-bit identifier of the request, which will be received back in the ChatShared object. Must be unique within the message
@@ -1895,6 +1957,18 @@ pub type KeyboardButtonRequestChat {
   )
 }
 
+/// **Official reference:** This object defines the parameters for the creation of a managed bot. Information about the created bot will be shared with the bot using the update managed_bot and a Message with the field managed_bot_created.
+pub type KeyboardButtonRequestManagedBot {
+  KeyboardButtonRequestManagedBot(
+    /// Signed 32-bit identifier of the request. Must be unique within the message
+    request_id: Int,
+    /// Optional. Suggested name for the bot
+    suggested_name: Option(String),
+    /// Optional. Suggested username for the bot
+    suggested_username: Option(String),
+  )
+}
+
 /// **Official reference:** This object represents type of a poll, which is allowed to be created and sent when the corresponding button is pressed.
 pub type KeyboardButtonPollType {
   KeyboardButtonPollType(
@@ -1909,7 +1983,7 @@ pub type ReplyKeyboardRemove {
     /// Requests clients to remove the custom keyboard (user will not be able to summon this keyboard; if you want to hide the keyboard from sight but keep it accessible, use one_time_keyboard in ReplyKeyboardMarkup)
     remove_keyboard: Bool,
     /// Optional. Use this parameter if you want to remove the keyboard for specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply to a message in the same chat and forum topic, sender of the original message.
-    ///
+    /// 
     /// Example: A user votes in a poll, bot returns confirmation message in reply to the vote and removes the keyboard for that user, while still showing the keyboard with poll options to users who haven't voted yet.
     selective: Option(Bool),
   )
@@ -1923,14 +1997,14 @@ pub type InlineKeyboardMarkup {
   )
 }
 
-/// **Official reference:** This object represents one button of an inline keyboard. Exactly one of the optional fields must be used to specify type of the button.
+/// **Official reference:** This object represents one button of an inline keyboard. Exactly one of the fields other than text, icon_custom_emoji_id, and style must be used to specify the type of the button.
 pub type InlineKeyboardButton {
   InlineKeyboardButton(
     /// Label text on the button
     text: String,
-    /// Optional. Unique identifier of the custom emoji shown before the text of the button.
+    /// Optional. Unique identifier of the custom emoji shown before the text of the button. Can only be used by bots that purchased additional usernames on Fragment or in the messages directly sent by the bot to private, group and supergroup chats if the owner of the bot has a Telegram Premium subscription.
     icon_custom_emoji_id: Option(String),
-    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue).
+    /// Optional. Style of the button. Must be one of "danger" (red), "success" (green) or "primary" (blue). If omitted, then an app-specific style is used.
     style: Option(String),
     /// Optional. HTTP or tg:// URL to be opened when the button is pressed. Links tg://user?id=<user_id> can be used to mention a user by their identifier without using a username, if this is allowed by their privacy settings.
     url: Option(String),
@@ -1940,22 +2014,22 @@ pub type InlineKeyboardButton {
     web_app: Option(WebAppInfo),
     /// Optional. An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget.
     login_url: Option(LoginUrl),
-    /// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Not supported for messages sent on behalf of a Telegram Business account.
+    /// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Not supported for messages sent in channel direct messages chats and on behalf of a Telegram Business account.
     switch_inline_query: Option(String),
     /// Optional. If set, pressing the button will insert the bot's username and the specified inline query in the current chat's input field. May be empty, in which case only the bot's username will be inserted.
-    ///
-    /// This offers a quick way for the user to open your bot in inline mode in the same chat - good for selecting something from multiple options. Not supported in channels and for messages sent on behalf of a Telegram Business account.
+    /// 
+    /// This offers a quick way for the user to open your bot in inline mode in the same chat - good for selecting something from multiple options. Not supported in channels and for messages sent in channel direct messages chats and on behalf of a Telegram Business account.
     switch_inline_query_current_chat: Option(String),
-    /// Optional. If set, pressing the button will prompt the user to select one of their chats of the specified type, open that chat and insert the bot's username and the specified inline query in the input field. Not supported for messages sent on behalf of a Telegram Business account.
+    /// Optional. If set, pressing the button will prompt the user to select one of their chats of the specified type, open that chat and insert the bot's username and the specified inline query in the input field. Not supported for messages sent in channel direct messages chats and on behalf of a Telegram Business account.
     switch_inline_query_chosen_chat: Option(SwitchInlineQueryChosenChat),
     /// Optional. Description of the button that copies the specified text to the clipboard.
     copy_text: Option(CopyTextButton),
     /// Optional. Description of the game that will be launched when the user presses the button.
-    ///
+    /// 
     /// NOTE: This type of button must always be the first button in the first row.
     callback_game: Option(CallbackGame),
-    /// Optional. Specify True, to send a Pay button. Substrings “” and “XTR” in the buttons's text will be replaced with a Telegram Star icon.
-    ///
+    /// Optional. Specify True, to send a Pay button. Substrings "" and "XTR" in the buttons's text will be replaced with a Telegram Star icon.
+    /// 
     /// NOTE: This type of button must always be the first button in the first row and can only be used in invoice messages.
     pay: Option(Bool),
   )
@@ -1965,7 +2039,7 @@ pub type InlineKeyboardButton {
 pub type LoginUrl {
   LoginUrl(
     /// An HTTPS URL to be opened with user authorization data added to the query string when the button is pressed. If the user refuses to provide authorization data, the original URL without information about the user will be opened. The data added is the same as described in Receiving authorization data.
-    ///
+    /// 
     /// NOTE: You must always check the hash of the received data to verify the authentication and the integrity of the data as described in Checking authorization.
     url: String,
     /// Optional. New text of the button in forwarded messages.
@@ -2050,7 +2124,7 @@ pub type ChatPhoto {
 /// **Official reference:** Represents an invite link for a chat.
 pub type ChatInviteLink {
   ChatInviteLink(
-    /// The invite link. If the link was created by another chat administrator, then the second part of the link will be replaced with “…”.
+    /// The invite link. If the link was created by another chat administrator, then the second part of the link will be replaced with "...".
     invite_link: String,
     /// Creator of the link
     creator: User,
@@ -2140,7 +2214,7 @@ pub type ChatMemberUpdated {
 /// **Official reference:** Represents a chat member that owns the chat and has all administrator privileges.
 pub type ChatMemberOwner {
   ChatMemberOwner(
-    /// The member's status in the chat, always “creator”
+    /// The member's status in the chat, always "creator"
     status: String,
     /// Information about the user
     user: User,
@@ -2154,7 +2228,7 @@ pub type ChatMemberOwner {
 /// **Official reference:** Represents a chat member that has some additional privileges.
 pub type ChatMemberAdministrator {
   ChatMemberAdministrator(
-    /// The member's status in the chat, always “administrator”
+    /// The member's status in the chat, always "administrator"
     status: String,
     /// Information about the user
     user: User,
@@ -2182,7 +2256,7 @@ pub type ChatMemberAdministrator {
     can_edit_stories: Bool,
     /// True, if the administrator can delete stories posted by other users
     can_delete_stories: Bool,
-    /// Optional. True, if the administrator can post messages in the channel, or access channel statistics; for channels only
+    /// Optional. True, if the administrator can post messages in the channel, approve suggested posts, or access channel statistics; for channels only
     can_post_messages: Option(Bool),
     /// Optional. True, if the administrator can edit messages of other users and can pin messages; for channels only
     can_edit_messages: Option(Bool),
@@ -2202,7 +2276,7 @@ pub type ChatMemberAdministrator {
 /// **Official reference:** Represents a chat member that has no additional privileges or restrictions.
 pub type ChatMemberMember {
   ChatMemberMember(
-    /// The member's status in the chat, always “member”
+    /// The member's status in the chat, always "member"
     status: String,
     /// Optional. Tag of the member
     tag: Option(String),
@@ -2216,7 +2290,7 @@ pub type ChatMemberMember {
 /// **Official reference:** Represents a chat member that is under certain restrictions in the chat. Supergroups only.
 pub type ChatMemberRestricted {
   ChatMemberRestricted(
-    /// The member's status in the chat, always “restricted”
+    /// The member's status in the chat, always "restricted"
     status: String,
     /// Optional. Tag of the member
     tag: Option(String),
@@ -2262,7 +2336,7 @@ pub type ChatMemberRestricted {
 /// **Official reference:** Represents a chat member that isn't currently a member of the chat, but may join it themselves.
 pub type ChatMemberLeft {
   ChatMemberLeft(
-    /// The member's status in the chat, always “left”
+    /// The member's status in the chat, always "left"
     status: String,
     /// Information about the user
     user: User,
@@ -2272,7 +2346,7 @@ pub type ChatMemberLeft {
 /// **Official reference:** Represents a chat member that was banned in the chat and can't return to the chat or view chat messages.
 pub type ChatMemberBanned {
   ChatMemberBanned(
-    /// The member's status in the chat, always “kicked”
+    /// The member's status in the chat, always "kicked"
     status: String,
     /// Information about the user
     user: User,
@@ -2389,6 +2463,20 @@ pub type BusinessOpeningHours {
   )
 }
 
+/// **Official reference:** This object describes the rating of a user based on their Telegram Star spendings.
+pub type UserRating {
+  UserRating(
+    /// Current level of the user, indicating their reliability when purchasing digital goods and services. A higher level suggests a more trustworthy customer; a negative level is likely reason for concern.
+    level: Int,
+    /// Numerical value of the user's rating; the higher the rating, the better
+    rating: Int,
+    /// The rating value required to get the current level
+    current_level_rating: Int,
+    /// Optional. The rating value required to get to the next level; omitted if the maximum level was reached
+    next_level_rating: Option(Int),
+  )
+}
+
 /// **Official reference:** Describes the position of a clickable area within a story.
 pub type StoryAreaPosition {
   StoryAreaPosition(
@@ -2424,7 +2512,7 @@ pub type LocationAddress {
 /// **Official reference:** Describes the type of a clickable area on a story. Currently, it can be one of
 pub type StoryAreaType {
   StoryAreaType(
-    /// Type of the area, always “location”
+    /// Type of the area, always "location"
     type_: String,
     /// Location latitude in degrees
     latitude: Float,
@@ -2438,7 +2526,7 @@ pub type StoryAreaType {
 /// **Official reference:** Describes a story area pointing to a location. Currently, a story can have up to 10 location areas.
 pub type StoryAreaTypeLocation {
   StoryAreaTypeLocation(
-    /// Type of the area, always “location”
+    /// Type of the area, always "location"
     type_: String,
     /// Location latitude in degrees
     latitude: Float,
@@ -2452,7 +2540,7 @@ pub type StoryAreaTypeLocation {
 /// **Official reference:** Describes a story area pointing to a suggested reaction. Currently, a story can have up to 5 suggested reaction areas.
 pub type StoryAreaTypeSuggestedReaction {
   StoryAreaTypeSuggestedReaction(
-    /// Type of the area, always “suggested_reaction”
+    /// Type of the area, always "suggested_reaction"
     type_: String,
     /// Type of the reaction
     reaction_type: ReactionType,
@@ -2466,7 +2554,7 @@ pub type StoryAreaTypeSuggestedReaction {
 /// **Official reference:** Describes a story area pointing to an HTTP or tg:// link. Currently, a story can have up to 3 link areas.
 pub type StoryAreaTypeLink {
   StoryAreaTypeLink(
-    /// Type of the area, always “link”
+    /// Type of the area, always "link"
     type_: String,
     /// HTTP or tg:// URL to be opened when the area is clicked
     url: String,
@@ -2476,7 +2564,7 @@ pub type StoryAreaTypeLink {
 /// **Official reference:** Describes a story area containing weather information. Currently, a story can have up to 3 weather areas.
 pub type StoryAreaTypeWeather {
   StoryAreaTypeWeather(
-    /// Type of the area, always “weather”
+    /// Type of the area, always "weather"
     type_: String,
     /// Temperature, in degree Celsius
     temperature: Float,
@@ -2490,7 +2578,7 @@ pub type StoryAreaTypeWeather {
 /// **Official reference:** Describes a story area pointing to a unique gift. Currently, a story can have at most 1 unique gift area.
 pub type StoryAreaTypeUniqueGift {
   StoryAreaTypeUniqueGift(
-    /// Type of the area, always “unique_gift”
+    /// Type of the area, always "unique_gift"
     type_: String,
     /// Unique name of the gift
     name: String,
@@ -2520,7 +2608,7 @@ pub type ChatLocation {
 /// **Official reference:** The reaction is based on an emoji.
 pub type ReactionTypeEmoji {
   ReactionTypeEmoji(
-    /// Type of the reaction, always “emoji”
+    /// Type of the reaction, always "emoji"
     type_: String,
     /// Reaction emoji. Currently, it can be one of "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
     emoji: String,
@@ -2530,7 +2618,7 @@ pub type ReactionTypeEmoji {
 /// **Official reference:** The reaction is based on a custom emoji.
 pub type ReactionTypeCustomEmoji {
   ReactionTypeCustomEmoji(
-    /// Type of the reaction, always “custom_emoji”
+    /// Type of the reaction, always "custom_emoji"
     type_: String,
     /// Custom emoji identifier
     custom_emoji_id: String,
@@ -2540,7 +2628,7 @@ pub type ReactionTypeCustomEmoji {
 /// **Official reference:** The reaction is paid.
 pub type ReactionTypePaid {
   ReactionTypePaid(
-    /// Type of the reaction, always “paid”
+    /// Type of the reaction, always "paid"
     type_: String,
   )
 }
@@ -2605,17 +2693,55 @@ pub type ForumTopic {
   )
 }
 
-/// **Official reference:** This object describes the rating of a user.
-pub type UserRating {
-  UserRating(
-    /// Current level of the user, indicating their reliability when purchasing digital goods and services. A higher level suggests a more trustworthy customer; a negative level is likely reason for concern.
-    level: Int,
-    /// Numerical value of the user's rating; the higher the rating, the better
-    rating: Int,
-    /// The rating value required to get the current level
-    current_level_rating: Int,
-    /// Optional. The rating value required to get to the next level; omitted if the maximum level was reached
-    next_level_rating: Option(Int),
+/// **Official reference:** This object describes the background of a gift.
+pub type GiftBackground {
+  GiftBackground(
+    /// Center color of the background in RGB format
+    center_color: Int,
+    /// Edge color of the background in RGB format
+    edge_color: Int,
+    /// Text color of the background in RGB format
+    text_color: Int,
+  )
+}
+
+/// **Official reference:** This object represents a gift that can be sent by the bot.
+pub type Gift {
+  Gift(
+    /// Unique identifier of the gift
+    id: String,
+    /// The sticker that represents the gift
+    sticker: Sticker,
+    /// The number of Telegram Stars that must be paid to send the sticker
+    star_count: Int,
+    /// Optional. The number of Telegram Stars that must be paid to upgrade the gift to a unique one
+    upgrade_star_count: Option(Int),
+    /// Optional. True, if the gift can only be purchased by Telegram Premium subscribers
+    is_premium: Option(Bool),
+    /// Optional. True, if the gift can be used (after being upgraded) to customize a user's appearance
+    has_colors: Option(Bool),
+    /// Optional. The total number of gifts of this type that can be sent by all users; for limited gifts only
+    total_count: Option(Int),
+    /// Optional. The number of remaining gifts of this type that can be sent by all users; for limited gifts only
+    remaining_count: Option(Int),
+    /// Optional. The total number of gifts of this type that can be sent by the bot; for limited gifts only
+    personal_total_count: Option(Int),
+    /// Optional. The number of remaining gifts of this type that can be sent by the bot; for limited gifts only
+    personal_remaining_count: Option(Int),
+    /// Optional. Background of the gift
+    background: Option(GiftBackground),
+    /// Optional. The total number of different unique gifts that can be obtained by upgrading the gift
+    unique_gift_variant_count: Option(Int),
+    /// Optional. Information about the chat that published the gift
+    publisher_chat: Option(Chat),
+  )
+}
+
+/// **Official reference:** This object represent a list of gifts.
+pub type Gifts {
+  Gifts(
+    /// The list of gifts
+    gifts: List(Gift),
   )
 }
 
@@ -2626,7 +2752,7 @@ pub type UniqueGiftModel {
     name: String,
     /// The sticker that represents the unique gift
     sticker: Sticker,
-    /// The number of unique gifts that receive this model for every 1000 gifts upgraded
+    /// The number of unique gifts that receive this model for every 1000 gift upgrades. Always 0 for crafted gifts.
     rarity_per_mille: Int,
     /// Optional. Rarity of the model if it is a crafted model. Currently, can be "uncommon", "rare", "epic", or "legendary".
     rarity: Option(String),
@@ -2671,7 +2797,7 @@ pub type UniqueGiftBackdrop {
   )
 }
 
-/// **Official reference:** This object describes the color scheme for a user's name, replies to messages and link previews based on a unique gift.
+/// **Official reference:** This object contains information about the color scheme for a user's name, message replies and link previews based on a unique gift.
 pub type UniqueGiftColors {
   UniqueGiftColors(
     /// Custom emoji identifier of the unique gift's model
@@ -2768,7 +2894,7 @@ pub type UniqueGiftInfo {
 /// **Official reference:** This object describes a gift received and owned by a user or a chat. Currently, it can be one of
 pub type OwnedGift {
   OwnedGift(
-    /// Type of the gift, always “regular”
+    /// Type of the gift, always "regular"
     type_: String,
     /// Information about the regular gift
     gift: Gift,
@@ -2790,7 +2916,7 @@ pub type OwnedGift {
     can_be_upgraded: Option(Bool),
     /// Optional. True, if the gift was refunded and isn't available anymore
     was_refunded: Option(Bool),
-    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars
+    /// Optional. Number of Telegram Stars that can be claimed by the receiver instead of the gift; omitted if the gift cannot be converted to Telegram Stars; for gifts received on behalf of business accounts only
     convert_star_count: Option(Int),
     /// Optional. Number of Telegram Stars that were paid for the ability to upgrade the gift
     prepaid_upgrade_star_count: Option(Int),
@@ -2840,7 +2966,7 @@ pub type OwnedGiftRegular {
 /// **Official reference:** Describes a unique gift received and owned by a user or a chat.
 pub type OwnedGiftUnique {
   OwnedGiftUnique(
-    /// Type of the gift, always “unique”
+    /// Type of the gift, always "unique"
     type_: String,
     /// Information about the unique gift
     gift: UniqueGift,
@@ -2946,7 +3072,7 @@ pub type BotCommandScopeChat {
   BotCommandScopeChat(
     /// Scope type, must be chat
     type_: String,
-    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername). Channel direct messages chats and channel chats aren't supported.
     chat_id: IntOrString,
   )
 }
@@ -2956,7 +3082,7 @@ pub type BotCommandScopeChatAdministrators {
   BotCommandScopeChatAdministrators(
     /// Scope type, must be chat_administrators
     type_: String,
-    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername). Channel direct messages chats and channel chats aren't supported.
     chat_id: IntOrString,
   )
 }
@@ -2966,7 +3092,7 @@ pub type BotCommandScopeChatMember {
   BotCommandScopeChatMember(
     /// Scope type, must be chat_member
     type_: String,
-    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+    /// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername). Channel direct messages chats and channel chats aren't supported.
     chat_id: IntOrString,
     /// Unique identifier of the target user
     user_id: Int,
@@ -3028,7 +3154,7 @@ pub type MenuButtonDefault {
 /// **Official reference:** The boost was obtained by subscribing to Telegram Premium or by gifting a Telegram Premium subscription to another user.
 pub type ChatBoostSourcePremium {
   ChatBoostSourcePremium(
-    /// Source of the boost, always “premium”
+    /// Source of the boost, always "premium"
     source: String,
     /// User that boosted the chat
     user: User,
@@ -3038,7 +3164,7 @@ pub type ChatBoostSourcePremium {
 /// **Official reference:** The boost was obtained by the creation of Telegram Premium gift codes to boost a chat. Each such code boosts the chat 4 times for the duration of the corresponding Telegram Premium subscription.
 pub type ChatBoostSourceGiftCode {
   ChatBoostSourceGiftCode(
-    /// Source of the boost, always “gift_code”
+    /// Source of the boost, always "gift_code"
     source: String,
     /// User for which the gift code was created
     user: User,
@@ -3048,7 +3174,7 @@ pub type ChatBoostSourceGiftCode {
 /// **Official reference:** The boost was obtained by the creation of a Telegram Premium or a Telegram Star giveaway. This boosts the chat 4 times for the duration of the corresponding Telegram Premium subscription for Telegram Premium giveaways and prize_star_count / 500 times for one year for Telegram Star giveaways.
 pub type ChatBoostSourceGiveaway {
   ChatBoostSourceGiveaway(
-    /// Source of the boost, always “giveaway”
+    /// Source of the boost, always "giveaway"
     source: String,
     /// Identifier of a message in the chat with the giveaway; the message could have been deleted already. May be 0 if the message isn't sent yet.
     giveaway_message_id: Int,
@@ -3096,6 +3222,22 @@ pub type ChatBoostRemoved {
     remove_date: Int,
     /// Source of the removed boost
     source: ChatBoostSource,
+  )
+}
+
+/// **Official reference:** Describes a service message about the chat owner leaving the chat.
+pub type ChatOwnerLeft {
+  ChatOwnerLeft(
+    /// Optional. The user which will be the new owner of the chat if the previous owner does not return to the chat
+    new_owner: Option(User),
+  )
+}
+
+/// **Official reference:** Describes a service message about an ownership change in the chat.
+pub type ChatOwnerChanged {
+  ChatOwnerChanged(
+    /// The new owner of the chat
+    new_owner: User,
   )
 }
 
@@ -3171,6 +3313,32 @@ pub type BusinessMessagesDeleted {
   )
 }
 
+/// **Official reference:** Describes an inline message sent by a Web App on behalf of a user.
+pub type SentWebAppMessage {
+  SentWebAppMessage(
+    /// Optional. Identifier of the sent inline message. Available only if there is an inline keyboard attached to the message.
+    inline_message_id: Option(String),
+  )
+}
+
+/// **Official reference:** Describes an inline message to be sent by a user of a Mini App.
+pub type PreparedInlineMessage {
+  PreparedInlineMessage(
+    /// Unique identifier of the prepared message
+    id: String,
+    /// Expiration date of the prepared message, in Unix time. Expired prepared messages can no longer be used
+    expiration_date: Int,
+  )
+}
+
+/// **Official reference:** Describes a keyboard button to be used by a user of a Mini App.
+pub type PreparedKeyboardButton {
+  PreparedKeyboardButton(
+    /// Unique identifier of the keyboard button
+    id: String,
+  )
+}
+
 /// **Official reference:** Describes why a request was unsuccessful.
 pub type ResponseParameters {
   ResponseParameters(
@@ -3186,7 +3354,7 @@ pub type InputMediaPhoto {
   InputMediaPhoto(
     /// Type of the result, must be photo
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
     /// Optional. Caption of the photo to be sent, 0-1024 characters after entities parsing
     caption: Option(String),
@@ -3206,11 +3374,11 @@ pub type InputMediaVideo {
   InputMediaVideo(
     /// Type of the result, must be video
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
-    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     thumbnail: Option(String),
-    /// Optional. Cover for the video in the message. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// Optional. Cover for the video in the message. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     cover: Option(String),
     /// Optional. Start timestamp for the video in the message
     start_timestamp: Option(Int),
@@ -3240,9 +3408,9 @@ pub type InputMediaAnimation {
   InputMediaAnimation(
     /// Type of the result, must be animation
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
-    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     thumbnail: Option(String),
     /// Optional. Caption of the animation to be sent, 0-1024 characters after entities parsing
     caption: Option(String),
@@ -3268,9 +3436,9 @@ pub type InputMediaAudio {
   InputMediaAudio(
     /// Type of the result, must be audio
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
-    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     thumbnail: Option(String),
     /// Optional. Caption of the audio to be sent, 0-1024 characters after entities parsing
     caption: Option(String),
@@ -3292,9 +3460,9 @@ pub type InputMediaDocument {
   InputMediaDocument(
     /// Type of the result, must be document
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
-    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     thumbnail: Option(String),
     /// Optional. Caption of the document to be sent, 0-1024 characters after entities parsing
     caption: Option(String),
@@ -3312,7 +3480,7 @@ pub type InputPaidMediaPhoto {
   InputPaidMediaPhoto(
     /// Type of the media, must be photo
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
   )
 }
@@ -3322,11 +3490,11 @@ pub type InputPaidMediaVideo {
   InputPaidMediaVideo(
     /// Type of the media, must be video
     type_: String,
-    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     media: String,
-    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     thumbnail: Option(String),
-    /// Optional. Cover for the video in the message. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files »
+    /// Optional. Cover for the video in the message. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files "
     cover: Option(String),
     /// Optional. Start timestamp for the video in the message
     start_timestamp: Option(Int),
@@ -3346,7 +3514,7 @@ pub type InputProfilePhotoStatic {
   InputProfilePhotoStatic(
     /// Type of the profile photo, must be static
     type_: String,
-    /// The static profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// The static profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     photo: String,
   )
 }
@@ -3356,7 +3524,7 @@ pub type InputProfilePhotoAnimated {
   InputProfilePhotoAnimated(
     /// Type of the profile photo, must be animated
     type_: String,
-    /// The animated profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// The animated profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     animation: String,
     /// Optional. Timestamp in seconds of the frame that will be used as the static profile photo. Defaults to 0.0.
     main_frame_timestamp: Option(Float),
@@ -3368,7 +3536,7 @@ pub type InputStoryContent {
   InputStoryContent(
     /// Type of the content, must be photo
     type_: String,
-    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     photo: String,
   )
 }
@@ -3378,7 +3546,7 @@ pub type InputStoryContentPhoto {
   InputStoryContentPhoto(
     /// Type of the content, must be photo
     type_: String,
-    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// The photo to post as a story. The photo must be of the size 1080x1920 and must not exceed 10 MB. The photo can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     photo: String,
   )
 }
@@ -3388,7 +3556,7 @@ pub type InputStoryContentVideo {
   InputStoryContentVideo(
     /// Type of the content, must be video
     type_: String,
-    /// The video to post as a story. The video must be of the size 720x1280, streamable, encoded with H.265 codec, with key frames added each second in the MPEG4 format, and must not exceed 30 MB. The video can't be reused and can only be uploaded as a new file, so you can pass “attach://<file_attach_name>” if the video was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files »
+    /// The video to post as a story. The video must be of the size 720x1280, streamable, encoded with H.265 codec, with key frames added each second in the MPEG4 format, and must not exceed 30 MB. The video can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the video was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files "
     video: String,
     /// Optional. Precise duration of the video in seconds; 0-60
     duration: Option(Float),
@@ -3406,7 +3574,7 @@ pub type Sticker {
     file_id: String,
     /// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
     file_unique_id: String,
-    /// Type of the sticker, currently one of “regular”, “mask”, “custom_emoji”. The type of the sticker is independent from its format, which is determined by the fields is_animated and is_video.
+    /// Type of the sticker, currently one of "regular", "mask", "custom_emoji". The type of the sticker is independent from its format, which is determined by the fields is_animated and is_video.
     type_: String,
     /// Sticker width
     width: Int,
@@ -3442,7 +3610,7 @@ pub type StickerSet {
     name: String,
     /// Sticker set title
     title: String,
-    /// Type of stickers in the set, currently one of “regular”, “mask”, “custom_emoji”
+    /// Type of stickers in the set, currently one of "regular", "mask", "custom_emoji"
     sticker_type: String,
     /// List of all set stickers
     stickers: List(Sticker),
@@ -3454,7 +3622,7 @@ pub type StickerSet {
 /// **Official reference:** This object describes the position on faces where a mask should be placed by default.
 pub type MaskPosition {
   MaskPosition(
-    /// The part of the face relative to which the mask should be placed. One of “forehead”, “eyes”, “mouth”, or “chin”.
+    /// The part of the face relative to which the mask should be placed. One of "forehead", "eyes", "mouth", or "chin".
     point: String,
     /// Shift by X-axis measured in widths of the mask scaled to the face size, from left to right. For example, choosing -1.0 will place mask just to the left of the default mask position.
     x_shift: Float,
@@ -3468,68 +3636,16 @@ pub type MaskPosition {
 /// **Official reference:** This object describes a sticker to be added to a sticker set.
 pub type InputSticker {
   InputSticker(
-    /// The added sticker. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, upload a new one using multipart/form-data, or pass “attach://<file_attach_name>” to upload a new one using multipart/form-data under <file_attach_name> name. Animated and video stickers can't be uploaded via HTTP URL. More information on Sending Files »
-    sticker: FileOrString,
-    /// Format of the added sticker, must be one of “static” for a .WEBP or .PNG image, “animated” for a .TGS animation, “video” for a .WEBM video
+    /// The added sticker. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new file using multipart/form-data under <file_attach_name> name. Animated and video stickers can't be uploaded via HTTP URL. More information on Sending Files "
+    sticker: String,
+    /// Format of the added sticker, must be one of "static" for a .WEBP or .PNG image, "animated" for a .TGS animation, "video" for a .WEBM video
     format: String,
     /// List of 1-20 emoji associated with the sticker
     emoji_list: List(String),
-    /// Optional. Position where the mask should be placed on faces. For “mask” stickers only.
+    /// Optional. Position where the mask should be placed on faces. For "mask" stickers only.
     mask_position: Option(MaskPosition),
-    /// Optional. List of 0-20 search keywords for the sticker with total length of up to 64 characters. For “regular” and “custom_emoji” stickers only.
+    /// Optional. List of 0-20 search keywords for the sticker with total length of up to 64 characters. For "regular" and "custom_emoji" stickers only.
     keywords: Option(List(String)),
-  )
-}
-
-/// **Official reference:** This object describes the background of a gift.
-pub type GiftBackground {
-  GiftBackground(
-    /// Center color of the background in RGB format
-    center_color: Int,
-    /// Edge color of the background in RGB format
-    edge_color: Int,
-    /// Text color of the background in RGB format
-    text_color: Int,
-  )
-}
-
-/// **Official reference:** This object represents a gift that can be sent by the bot.
-pub type Gift {
-  Gift(
-    /// Unique identifier of the gift
-    id: String,
-    /// The sticker that represents the gift
-    sticker: Sticker,
-    /// The number of Telegram Stars that must be paid to send the sticker
-    star_count: Int,
-    /// Optional. The number of Telegram Stars that must be paid to upgrade the gift to a unique one
-    upgrade_star_count: Option(Int),
-    /// Optional. True, if the gift can only be purchased by Telegram Premium subscribers
-    is_premium: Option(Bool),
-    /// Optional. True, if the gift can be used (after being upgraded) to customize a user's appearance
-    has_colors: Option(Bool),
-    /// Optional. The total number of gifts of this type that can be sent by all users; for limited gifts only
-    total_count: Option(Int),
-    /// Optional. The number of remaining gifts of this type that can be sent by all users; for limited gifts only
-    remaining_count: Option(Int),
-    /// Optional. The total number of gifts of this type that can be sent by the bot; for limited gifts only
-    personal_total_count: Option(Int),
-    /// Optional. The number of remaining gifts of this type that can be sent by the bot; for limited gifts only
-    personal_remaining_count: Option(Int),
-    /// Optional. Background of the gift
-    background: Option(GiftBackground),
-    /// Optional. The total number of different unique gifts that can be obtained by upgrading the gift
-    unique_gift_variant_count: Option(Int),
-    /// Optional. Information about the chat that published the gift
-    publisher_chat: Option(Chat),
-  )
-}
-
-/// **Official reference:** This object represent a list of gifts.
-pub type Gifts {
-  Gifts(
-    /// The list of gifts
-    gifts: List(Gift),
   )
 }
 
@@ -3544,7 +3660,7 @@ pub type InlineQuery {
     query: String,
     /// Offset of the results to be returned, can be controlled by the bot
     offset: String,
-    /// Optional. Type of the chat from which the inline query was sent. Can be either “sender” for a private chat with the inline query sender, “private”, “group”, “supergroup”, or “channel”. The chat type should be always known for requests sent from official clients and most third-party clients, unless the request was sent from a secret chat
+    /// Optional. Type of the chat from which the inline query was sent. Can be either "sender" for a private chat with the inline query sender, "private", "group", "supergroup", or "channel". The chat type should be always known for requests sent from official clients and most third-party clients, unless the request was sent from a secret chat
     chat_type: Option(String),
     /// Optional. Sender location, only for bots that request user location
     location: Option(Location),
@@ -3559,7 +3675,7 @@ pub type InlineQueryResultsButton {
     /// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to switch back to the inline mode using the method switchInlineQuery inside the Web App.
     web_app: Option(WebAppInfo),
     /// Optional. Deep-linking parameter for the /start message sent to the bot when a user presses the button. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed.
-    ///
+    /// 
     /// Example: An inline bot that sends YouTube videos can ask the user to connect the bot to their YouTube account to adapt search results accordingly. To do this, it displays a 'Connect your YouTube account' button above the results, or even before showing any. The user presses the button, switches to a private chat with the bot and, in doing so, passes a start parameter that instructs the bot to return an OAuth link. Once done, the bot can offer a switch_inline button so that the user can easily return to the chat where they wanted to use the bot's inline capabilities.
     start_parameter: Option(String),
   )
@@ -3642,7 +3758,7 @@ pub type InlineQueryResultGif {
     gif_duration: Option(Int),
     /// URL of the static (JPEG or GIF) or animated (MPEG4) thumbnail for the result
     thumbnail_url: String,
-    /// Optional. MIME type of the thumbnail, must be one of “image/jpeg”, “image/gif”, or “video/mp4”. Defaults to “image/jpeg”
+    /// Optional. MIME type of the thumbnail, must be one of "image/jpeg", "image/gif", or "video/mp4". Defaults to "image/jpeg"
     thumbnail_mime_type: Option(String),
     /// Optional. Title for the result
     title: Option(String),
@@ -3678,7 +3794,7 @@ pub type InlineQueryResultMpeg4Gif {
     mpeg4_duration: Option(Int),
     /// URL of the static (JPEG or GIF) or animated (MPEG4) thumbnail for the result
     thumbnail_url: String,
-    /// Optional. MIME type of the thumbnail, must be one of “image/jpeg”, “image/gif”, or “video/mp4”. Defaults to “image/jpeg”
+    /// Optional. MIME type of the thumbnail, must be one of "image/jpeg", "image/gif", or "video/mp4". Defaults to "image/jpeg"
     thumbnail_mime_type: Option(String),
     /// Optional. Title for the result
     title: Option(String),
@@ -3706,7 +3822,7 @@ pub type InlineQueryResultVideo {
     id: String,
     /// A valid URL for the embedded video player or video file
     video_url: String,
-    /// MIME type of the content of the video URL, “text/html” or “video/mp4”
+    /// MIME type of the content of the video URL, "text/html" or "video/mp4"
     mime_type: String,
     /// URL of the thumbnail (JPEG only) for the video
     thumbnail_url: String,
@@ -3806,7 +3922,7 @@ pub type InlineQueryResultDocument {
     caption_entities: Option(List(MessageEntity)),
     /// A valid URL for the file
     document_url: String,
-    /// MIME type of the content of the file, either “application/pdf” or “application/zip”
+    /// MIME type of the content of the file, either "application/pdf" or "application/zip"
     mime_type: String,
     /// Optional. Short description of the result
     description: Option(String),
@@ -3874,7 +3990,7 @@ pub type InlineQueryResultVenue {
     address: String,
     /// Optional. Foursquare identifier of the venue if known
     foursquare_id: Option(String),
-    /// Optional. Foursquare type of the venue, if known. (For example, “arts_entertainment/default”, “arts_entertainment/aquarium” or “food/icecream”.)
+    /// Optional. Foursquare type of the venue, if known. (For example, "arts_entertainment/default", "arts_entertainment/aquarium" or "food/icecream".)
     foursquare_type: Option(String),
     /// Optional. Google Places identifier of the venue
     google_place_id: Option(String),
@@ -4176,7 +4292,7 @@ pub type InputVenueMessageContent {
     address: String,
     /// Optional. Foursquare identifier of the venue, if known
     foursquare_id: Option(String),
-    /// Optional. Foursquare type of the venue, if known. (For example, “arts_entertainment/default”, “arts_entertainment/aquarium” or “food/icecream”.)
+    /// Optional. Foursquare type of the venue, if known. (For example, "arts_entertainment/default", "arts_entertainment/aquarium" or "food/icecream".)
     foursquare_type: Option(String),
     /// Optional. Google Places identifier of the venue
     google_place_id: Option(String),
@@ -4210,7 +4326,7 @@ pub type InputInvoiceMessageContent {
     payload: String,
     /// Optional. Payment provider token, obtained via @BotFather. Pass an empty string for payments in Telegram Stars.
     provider_token: Option(String),
-    /// Three-letter ISO 4217 currency code, see more on currencies. Pass “XTR” for payments in Telegram Stars.
+    /// Three-letter ISO 4217 currency code, see more on currencies. Pass "XTR" for payments in Telegram Stars.
     currency: String,
     /// Price breakdown, a JSON-serialized list of components (e.g. product price, tax, discount, delivery cost, delivery tax, bonus, etc.). Must contain exactly one item for payments in Telegram Stars.
     prices: List(LabeledPrice),
@@ -4261,24 +4377,6 @@ pub type ChosenInlineResult {
   )
 }
 
-/// **Official reference:** Describes an inline message sent by a Web App on behalf of a user.
-pub type SentWebAppMessage {
-  SentWebAppMessage(
-    /// Optional. Identifier of the sent inline message. Available only if there is an inline keyboard attached to the message.
-    inline_message_id: Option(String),
-  )
-}
-
-/// **Official reference:** Describes an inline message to be sent by a user of a Mini App.
-pub type PreparedInlineMessage {
-  PreparedInlineMessage(
-    /// Unique identifier of the prepared message
-    id: String,
-    /// Expiration date of the prepared message, in Unix time. Expired prepared messages can no longer be used
-    expiration_date: Int,
-  )
-}
-
 /// **Official reference:** This object represents a portion of the price for goods or services.
 pub type LabeledPrice {
   LabeledPrice(
@@ -4298,7 +4396,7 @@ pub type Invoice {
     description: String,
     /// Unique bot deep-linking parameter that can be used to generate this invoice
     start_parameter: String,
-    /// Three-letter ISO 4217 currency code, or “XTR” for payments in Telegram Stars
+    /// Three-letter ISO 4217 currency code, or "XTR" for payments in Telegram Stars
     currency: String,
     /// Total price in the smallest units of the currency (integer, not float/double). For example, for a price of US$ 1.45 pass amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies).
     total_amount: Int,
@@ -4352,7 +4450,7 @@ pub type ShippingOption {
 /// **Official reference:** This object contains basic information about a successful payment. Note that if the buyer initiates a chargeback with the relevant payment provider following this transaction, the funds may be debited from your balance. This is outside of Telegram's control.
 pub type SuccessfulPayment {
   SuccessfulPayment(
-    /// Three-letter ISO 4217 currency code, or “XTR” for payments in Telegram Stars
+    /// Three-letter ISO 4217 currency code, or "XTR" for payments in Telegram Stars
     currency: String,
     /// Total price in the smallest units of the currency (integer, not float/double). For example, for a price of US$ 1.45 pass amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies).
     total_amount: Int,
@@ -4378,7 +4476,7 @@ pub type SuccessfulPayment {
 /// **Official reference:** This object contains basic information about a refunded payment.
 pub type RefundedPayment {
   RefundedPayment(
-    /// Three-letter ISO 4217 currency code, or “XTR” for payments in Telegram Stars. Currently, always “XTR”
+    /// Three-letter ISO 4217 currency code, or "XTR" for payments in Telegram Stars. Currently, always "XTR"
     currency: String,
     /// Total refunded price in the smallest units of the currency (integer, not float/double). For example, for a price of US$ 1.45, total_amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies).
     total_amount: Int,
@@ -4412,7 +4510,7 @@ pub type PreCheckoutQuery {
     id: String,
     /// User who sent the query
     from: User,
-    /// Three-letter ISO 4217 currency code, or “XTR” for payments in Telegram Stars
+    /// Three-letter ISO 4217 currency code, or "XTR" for payments in Telegram Stars
     currency: String,
     /// Total price in the smallest units of the currency (integer, not float/double). For example, for a price of US$ 1.45 pass amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies).
     total_amount: Int,
@@ -4438,7 +4536,7 @@ pub type PaidMediaPurchased {
 /// **Official reference:** The withdrawal is in progress.
 pub type RevenueWithdrawalStatePending {
   RevenueWithdrawalStatePending(
-    /// Type of the state, always “pending”
+    /// Type of the state, always "pending"
     type_: String,
   )
 }
@@ -4446,7 +4544,7 @@ pub type RevenueWithdrawalStatePending {
 /// **Official reference:** The withdrawal succeeded.
 pub type RevenueWithdrawalStateSucceeded {
   RevenueWithdrawalStateSucceeded(
-    /// Type of the state, always “succeeded”
+    /// Type of the state, always "succeeded"
     type_: String,
     /// Date the withdrawal was completed in Unix time
     date: Int,
@@ -4458,7 +4556,7 @@ pub type RevenueWithdrawalStateSucceeded {
 /// **Official reference:** The withdrawal failed and the transaction was refunded.
 pub type RevenueWithdrawalStateFailed {
   RevenueWithdrawalStateFailed(
-    /// Type of the state, always “failed”
+    /// Type of the state, always "failed"
     type_: String,
   )
 }
@@ -4482,25 +4580,25 @@ pub type AffiliateInfo {
 /// **Official reference:** Describes a transaction with a user.
 pub type TransactionPartnerUser {
   TransactionPartnerUser(
-    /// Type of the transaction partner, always “user”
+    /// Type of the transaction partner, always "user"
     type_: String,
-    /// Type of the transaction, currently one of “invoice_payment” for payments via invoices, “paid_media_payment” for payments for paid media, “gift_purchase” for gifts sent by the bot, “premium_purchase” for Telegram Premium subscriptions gifted by the bot, “business_account_transfer” for direct transfers from managed business accounts
+    /// Type of the transaction, currently one of "invoice_payment" for payments via invoices, "paid_media_payment" for payments for paid media, "gift_purchase" for gifts sent by the bot, "premium_purchase" for Telegram Premium subscriptions gifted by the bot, "business_account_transfer" for direct transfers from managed business accounts
     transaction_type: String,
     /// Information about the user
     user: User,
-    /// Optional. Information about the affiliate that received a commission via this transaction. Can be available only for “invoice_payment” and “paid_media_payment” transactions.
+    /// Optional. Information about the affiliate that received a commission via this transaction. Can be available only for "invoice_payment" and "paid_media_payment" transactions.
     affiliate: Option(AffiliateInfo),
-    /// Optional. Bot-specified invoice payload. Can be available only for “invoice_payment” transactions.
+    /// Optional. Bot-specified invoice payload. Can be available only for "invoice_payment" transactions.
     invoice_payload: Option(String),
-    /// Optional. The duration of the paid subscription. Can be available only for “invoice_payment” transactions.
+    /// Optional. The duration of the paid subscription. Can be available only for "invoice_payment" transactions.
     subscription_period: Option(Int),
-    /// Optional. Information about the paid media bought by the user; for “paid_media_payment” transactions only
+    /// Optional. Information about the paid media bought by the user; for "paid_media_payment" transactions only
     paid_media: Option(List(PaidMedia)),
-    /// Optional. Bot-specified paid media payload. Can be available only for “paid_media_payment” transactions.
+    /// Optional. Bot-specified paid media payload. Can be available only for "paid_media_payment" transactions.
     paid_media_payload: Option(String),
-    /// Optional. The gift sent to the user by the bot; for “gift_purchase” transactions only
+    /// Optional. The gift sent to the user by the bot; for "gift_purchase" transactions only
     gift: Option(Gift),
-    /// Optional. Number of months the gifted Telegram Premium subscription will be active for; for “premium_purchase” transactions only
+    /// Optional. Number of months the gifted Telegram Premium subscription will be active for; for "premium_purchase" transactions only
     premium_subscription_duration: Option(Int),
   )
 }
@@ -4508,7 +4606,7 @@ pub type TransactionPartnerUser {
 /// **Official reference:** Describes a transaction with a chat.
 pub type TransactionPartnerChat {
   TransactionPartnerChat(
-    /// Type of the transaction partner, always “chat”
+    /// Type of the transaction partner, always "chat"
     type_: String,
     /// Information about the chat
     chat: Chat,
@@ -4520,7 +4618,7 @@ pub type TransactionPartnerChat {
 /// **Official reference:** Describes the affiliate program that issued the affiliate commission received via this transaction.
 pub type TransactionPartnerAffiliateProgram {
   TransactionPartnerAffiliateProgram(
-    /// Type of the transaction partner, always “affiliate_program”
+    /// Type of the transaction partner, always "affiliate_program"
     type_: String,
     /// Optional. Information about the bot that sponsored the affiliate program
     sponsor_user: Option(User),
@@ -4532,7 +4630,7 @@ pub type TransactionPartnerAffiliateProgram {
 /// **Official reference:** Describes a withdrawal transaction with Fragment.
 pub type TransactionPartnerFragment {
   TransactionPartnerFragment(
-    /// Type of the transaction partner, always “fragment”
+    /// Type of the transaction partner, always "fragment"
     type_: String,
     /// Optional. State of the transaction if the transaction is outgoing
     withdrawal_state: Option(RevenueWithdrawalState),
@@ -4542,7 +4640,7 @@ pub type TransactionPartnerFragment {
 /// **Official reference:** Describes a withdrawal transaction to the Telegram Ads platform.
 pub type TransactionPartnerTelegramAds {
   TransactionPartnerTelegramAds(
-    /// Type of the transaction partner, always “telegram_ads”
+    /// Type of the transaction partner, always "telegram_ads"
     type_: String,
   )
 }
@@ -4550,7 +4648,7 @@ pub type TransactionPartnerTelegramAds {
 /// **Official reference:** Describes a transaction with payment for paid broadcasting.
 pub type TransactionPartnerTelegramApi {
   TransactionPartnerTelegramApi(
-    /// Type of the transaction partner, always “telegram_api”
+    /// Type of the transaction partner, always "telegram_api"
     type_: String,
     /// The number of successful requests that exceeded regular limits and were therefore billed
     request_count: Int,
@@ -4560,7 +4658,7 @@ pub type TransactionPartnerTelegramApi {
 /// **Official reference:** Describes a transaction with an unknown source or recipient.
 pub type TransactionPartnerOther {
   TransactionPartnerOther(
-    /// Type of the transaction partner, always “other”
+    /// Type of the transaction partner, always "other"
     type_: String,
   )
 }
@@ -4618,23 +4716,23 @@ pub type PassportFile {
 /// **Official reference:** Describes documents or other Telegram Passport elements shared with the bot by the user.
 pub type EncryptedPassportElement {
   EncryptedPassportElement(
-    /// Element type. One of “personal_details”, “passport”, “driver_license”, “identity_card”, “internal_passport”, “address”, “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration”, “temporary_registration”, “phone_number”, “email”.
+    /// Element type. One of "personal_details", "passport", "driver_license", "identity_card", "internal_passport", "address", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration", "phone_number", "email".
     type_: String,
-    /// Optional. Base64-encoded encrypted Telegram Passport element data provided by the user; available only for “personal_details”, “passport”, “driver_license”, “identity_card”, “internal_passport” and “address” types. Can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Base64-encoded encrypted Telegram Passport element data provided by the user; available only for "personal_details", "passport", "driver_license", "identity_card", "internal_passport" and "address" types. Can be decrypted and verified using the accompanying EncryptedCredentials.
     data: Option(String),
-    /// Optional. User's verified phone number; available only for “phone_number” type
+    /// Optional. User's verified phone number; available only for "phone_number" type
     phone_number: Option(String),
-    /// Optional. User's verified email address; available only for “email” type
+    /// Optional. User's verified email address; available only for "email" type
     email: Option(String),
-    /// Optional. Array of encrypted files with documents provided by the user; available only for “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration” and “temporary_registration” types. Files can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Array of encrypted files with documents provided by the user; available only for "utility_bill", "bank_statement", "rental_agreement", "passport_registration" and "temporary_registration" types. Files can be decrypted and verified using the accompanying EncryptedCredentials.
     files: Option(List(PassportFile)),
-    /// Optional. Encrypted file with the front side of the document, provided by the user; available only for “passport”, “driver_license”, “identity_card” and “internal_passport”. The file can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Encrypted file with the front side of the document, provided by the user; available only for "passport", "driver_license", "identity_card" and "internal_passport". The file can be decrypted and verified using the accompanying EncryptedCredentials.
     front_side: Option(PassportFile),
-    /// Optional. Encrypted file with the reverse side of the document, provided by the user; available only for “driver_license” and “identity_card”. The file can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Encrypted file with the reverse side of the document, provided by the user; available only for "driver_license" and "identity_card". The file can be decrypted and verified using the accompanying EncryptedCredentials.
     reverse_side: Option(PassportFile),
-    /// Optional. Encrypted file with the selfie of the user holding a document, provided by the user; available if requested for “passport”, “driver_license”, “identity_card” and “internal_passport”. The file can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Encrypted file with the selfie of the user holding a document, provided by the user; available if requested for "passport", "driver_license", "identity_card" and "internal_passport". The file can be decrypted and verified using the accompanying EncryptedCredentials.
     selfie: Option(PassportFile),
-    /// Optional. Array of encrypted files with translated versions of documents provided by the user; available if requested for “passport”, “driver_license”, “identity_card”, “internal_passport”, “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration” and “temporary_registration” types. Files can be decrypted and verified using the accompanying EncryptedCredentials.
+    /// Optional. Array of encrypted files with translated versions of documents provided by the user; available if requested for "passport", "driver_license", "identity_card", "internal_passport", "utility_bill", "bank_statement", "rental_agreement", "passport_registration" and "temporary_registration" types. Files can be decrypted and verified using the accompanying EncryptedCredentials.
     translation: Option(List(PassportFile)),
     /// Base64-encoded element hash for using in PassportElementErrorUnspecified
     hash: String,
@@ -4658,7 +4756,7 @@ pub type PassportElementErrorDataField {
   PassportElementErrorDataField(
     /// Error source, must be data
     source: String,
-    /// The section of the user's Telegram Passport which has the error, one of “personal_details”, “passport”, “driver_license”, “identity_card”, “internal_passport”, “address”
+    /// The section of the user's Telegram Passport which has the error, one of "personal_details", "passport", "driver_license", "identity_card", "internal_passport", "address"
     type_: String,
     /// Name of the data field which has the error
     field_name: String,
@@ -4674,7 +4772,7 @@ pub type PassportElementErrorFrontSide {
   PassportElementErrorFrontSide(
     /// Error source, must be front_side
     source: String,
-    /// The section of the user's Telegram Passport which has the issue, one of “passport”, “driver_license”, “identity_card”, “internal_passport”
+    /// The section of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport"
     type_: String,
     /// Base64-encoded hash of the file with the front side of the document
     file_hash: String,
@@ -4688,7 +4786,7 @@ pub type PassportElementErrorReverseSide {
   PassportElementErrorReverseSide(
     /// Error source, must be reverse_side
     source: String,
-    /// The section of the user's Telegram Passport which has the issue, one of “driver_license”, “identity_card”
+    /// The section of the user's Telegram Passport which has the issue, one of "driver_license", "identity_card"
     type_: String,
     /// Base64-encoded hash of the file with the reverse side of the document
     file_hash: String,
@@ -4702,7 +4800,7 @@ pub type PassportElementErrorSelfie {
   PassportElementErrorSelfie(
     /// Error source, must be selfie
     source: String,
-    /// The section of the user's Telegram Passport which has the issue, one of “passport”, “driver_license”, “identity_card”, “internal_passport”
+    /// The section of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport"
     type_: String,
     /// Base64-encoded hash of the file with the selfie
     file_hash: String,
@@ -4716,7 +4814,7 @@ pub type PassportElementErrorFile {
   PassportElementErrorFile(
     /// Error source, must be file
     source: String,
-    /// The section of the user's Telegram Passport which has the issue, one of “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration”, “temporary_registration”
+    /// The section of the user's Telegram Passport which has the issue, one of "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
     type_: String,
     /// Base64-encoded file hash
     file_hash: String,
@@ -4730,7 +4828,7 @@ pub type PassportElementErrorFiles {
   PassportElementErrorFiles(
     /// Error source, must be files
     source: String,
-    /// The section of the user's Telegram Passport which has the issue, one of “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration”, “temporary_registration”
+    /// The section of the user's Telegram Passport which has the issue, one of "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
     type_: String,
     /// List of base64-encoded file hashes
     file_hashes: List(String),
@@ -4744,7 +4842,7 @@ pub type PassportElementErrorTranslationFile {
   PassportElementErrorTranslationFile(
     /// Error source, must be translation_file
     source: String,
-    /// Type of element of the user's Telegram Passport which has the issue, one of “passport”, “driver_license”, “identity_card”, “internal_passport”, “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration”, “temporary_registration”
+    /// Type of element of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
     type_: String,
     /// Base64-encoded file hash
     file_hash: String,
@@ -4758,7 +4856,7 @@ pub type PassportElementErrorTranslationFiles {
   PassportElementErrorTranslationFiles(
     /// Error source, must be translation_files
     source: String,
-    /// Type of element of the user's Telegram Passport which has the issue, one of “passport”, “driver_license”, “identity_card”, “internal_passport”, “utility_bill”, “bank_statement”, “rental_agreement”, “passport_registration”, “temporary_registration”
+    /// Type of element of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
     type_: String,
     /// List of base64-encoded file hashes
     file_hashes: List(String),
@@ -5209,9 +5307,9 @@ pub type SendDocumentParameters {
     business_connection_id: Option(String),
     /// Unique identifier for the target message thread (topic)
     message_thread_id: Option(Int),
-    /// File to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. [More information on Sending Files »](https://core.telegram.org/bots/api#sending-files)
+    /// File to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. [More information on Sending Files "](https://core.telegram.org/bots/api#sending-files)
     document: FileOrString,
-    /// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass “attach://<file_attach_name>” if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. [More information on Sending Files »](https://core.telegram.org/bots/api#sending-files)
+    /// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. [More information on Sending Files "](https://core.telegram.org/bots/api#sending-files)
     thumbnail: Option(FileOrString),
     /// Document caption, 0-1024 characters
     caption: Option(String),
@@ -5551,20 +5649,34 @@ pub type SendPollParameters {
     type_: Option(String),
     /// Whether multiple answers are allowed
     allows_multiple_answers: Option(Bool),
-    /// Correct answer option ID (0-based)
-    correct_option_id: Option(Int),
+    /// Whether revoting is allowed
+    allows_revoting: Option(Bool),
+    /// 0-based identifiers of the correct answer options (for quizzes)
+    correct_option_ids: Option(List(Int)),
     /// Text shown for incorrect answers
     explanation: Option(String),
     /// Mode for parsing entities in the explanation
     explanation_parse_mode: Option(String),
     /// List of special entities in the explanation
     explanation_entities: Option(List(MessageEntity)),
-    /// Poll active period in seconds (5-600)
+    /// Poll active period in seconds (5-2628000)
     open_period: Option(Int),
     /// Poll close time (Unix timestamp)
     close_date: Option(Int),
     /// Whether the poll is closed
     is_closed: Option(Bool),
+    /// Whether to shuffle the order of options
+    shuffle_options: Option(Bool),
+    /// Whether users can add new options
+    allow_adding_options: Option(Bool),
+    /// Whether to hide results until the poll is closed
+    hide_results_until_closes: Option(Bool),
+    /// Poll description (0-255 characters)
+    description: Option(String),
+    /// Mode for parsing entities in the description
+    description_parse_mode: Option(String),
+    /// List of special entities in the description
+    description_entities: Option(List(MessageEntity)),
     /// Send message silently
     disable_notification: Option(Bool),
     /// Protect content from forwarding and saving

@@ -536,6 +536,7 @@ fn get_message_id(update: Update) -> Option(Int) {
     update.ChatMemberUpdate(..) -> None
     update.ChatJoinRequestUpdate(..) -> None
     update.RemovedChatBoost(..) -> None
+    update.ManagedBotUpdate(..) -> None
   }
 }
 

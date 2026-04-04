@@ -14,10 +14,11 @@ import telega/model/types.{
   type Audio, type BusinessConnection, type BusinessMessagesDeleted,
   type CallbackQuery, type ChatBoostRemoved, type ChatJoinRequest,
   type ChatMemberUpdated, type ChosenInlineResult, type InlineQuery,
-  type Message, type MessageEntity, type MessageReactionCountUpdated,
-  type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
-  type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
-  type Update as ModelUpdate, type Video, type Voice, type WebAppData,
+  type ManagedBotUpdated, type Message, type MessageEntity,
+  type MessageReactionCountUpdated, type MessageReactionUpdated,
+  type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
+  type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
+  type Video, type Voice, type WebAppData,
   InaccessibleMessageMaybeInaccessibleMessage, MessageMaybeInaccessibleMessage,
 }
 
@@ -196,6 +197,12 @@ pub type Update {
     removed_chat_boost: ChatBoostRemoved,
     raw: ModelUpdate,
   )
+  ManagedBotUpdate(
+    from_id: Int,
+    chat_id: Int,
+    managed_bot: ManagedBotUpdated,
+    raw: ModelUpdate,
+  )
 }
 
 pub type Command {
@@ -224,454 +231,99 @@ pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
 
 /// Decode a update from the Telegram API to `Update` instance.
 pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
-  case
-    raw_update.callback_query,
-    raw_update.channel_post,
-    raw_update.edited_message,
-    raw_update.business_connection,
-    raw_update.business_message,
-    raw_update.edited_business_message,
-    raw_update.deleted_business_messages,
-    raw_update.message_reaction,
-    raw_update.message_reaction_count,
-    raw_update.inline_query,
-    raw_update.chosen_inline_result,
-    raw_update.shipping_query,
-    raw_update.pre_checkout_query,
-    raw_update.purchased_paid_media,
-    raw_update.poll,
-    raw_update.poll_answer,
-    raw_update.my_chat_member,
-    raw_update.chat_member,
-    raw_update.chat_join_request,
-    raw_update.removed_chat_boost,
-    raw_update.message
-  {
-    Some(callback_query),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_callback_query_update(raw_update, callback_query)
-    _,
-      Some(channel_post),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_channel_post_update(raw_update, channel_post)
-    _,
-      _,
-      Some(edited_message),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_edited_message_update(raw_update, edited_message)
-    _,
-      _,
-      _,
-      Some(business_connection),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_business_connection_update(raw_update, business_connection)
-    _,
-      _,
-      _,
-      _,
-      Some(business_message),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_business_message_update(raw_update, business_message)
-    _,
-      _,
-      _,
-      _,
-      _,
-      Some(edited_business_message),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_edited_business_message_update(raw_update, edited_business_message)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(deleted_business_messages),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    ->
+  case raw_update {
+    _ if raw_update.callback_query != None -> {
+      let assert Some(callback_query) = raw_update.callback_query
+      new_callback_query_update(raw_update, callback_query)
+    }
+    _ if raw_update.channel_post != None -> {
+      let assert Some(channel_post) = raw_update.channel_post
+      new_channel_post_update(raw_update, channel_post)
+    }
+    _ if raw_update.edited_message != None -> {
+      let assert Some(edited_message) = raw_update.edited_message
+      new_edited_message_update(raw_update, edited_message)
+    }
+    _ if raw_update.business_connection != None -> {
+      let assert Some(business_connection) = raw_update.business_connection
+      new_business_connection_update(raw_update, business_connection)
+    }
+    _ if raw_update.business_message != None -> {
+      let assert Some(business_message) = raw_update.business_message
+      new_business_message_update(raw_update, business_message)
+    }
+    _ if raw_update.edited_business_message != None -> {
+      let assert Some(edited_business_message) =
+        raw_update.edited_business_message
+      new_edited_business_message_update(raw_update, edited_business_message)
+    }
+    _ if raw_update.deleted_business_messages != None -> {
+      let assert Some(deleted_business_messages) =
+        raw_update.deleted_business_messages
       new_deleted_business_message_update(raw_update, deleted_business_messages)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(message_reaction),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_message_reaction_update(raw_update, message_reaction)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(message_reaction_count),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_message_reaction_count_update(raw_update, message_reaction_count)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(inline_query),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_inline_query_update(raw_update, inline_query)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(chosen_inline_result),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_chosen_inline_result_update(raw_update, chosen_inline_result)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(shipping_query),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_shipping_query_update(raw_update, shipping_query)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(pre_checkout_query),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_pre_checkout_query_update(raw_update, pre_checkout_query)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(purchased_paid_media),
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_paid_media_purchase_update(raw_update, purchased_paid_media)
-    _, _, _, _, _, _, _, _, _, _, _, _, _, _, Some(poll), _, _, _, _, _, _ ->
+    }
+    _ if raw_update.message_reaction != None -> {
+      let assert Some(message_reaction) = raw_update.message_reaction
+      new_message_reaction_update(raw_update, message_reaction)
+    }
+    _ if raw_update.message_reaction_count != None -> {
+      let assert Some(message_reaction_count) =
+        raw_update.message_reaction_count
+      new_message_reaction_count_update(raw_update, message_reaction_count)
+    }
+    _ if raw_update.inline_query != None -> {
+      let assert Some(inline_query) = raw_update.inline_query
+      new_inline_query_update(raw_update, inline_query)
+    }
+    _ if raw_update.chosen_inline_result != None -> {
+      let assert Some(chosen_inline_result) = raw_update.chosen_inline_result
+      new_chosen_inline_result_update(raw_update, chosen_inline_result)
+    }
+    _ if raw_update.shipping_query != None -> {
+      let assert Some(shipping_query) = raw_update.shipping_query
+      new_shipping_query_update(raw_update, shipping_query)
+    }
+    _ if raw_update.pre_checkout_query != None -> {
+      let assert Some(pre_checkout_query) = raw_update.pre_checkout_query
+      new_pre_checkout_query_update(raw_update, pre_checkout_query)
+    }
+    _ if raw_update.purchased_paid_media != None -> {
+      let assert Some(purchased_paid_media) = raw_update.purchased_paid_media
+      new_paid_media_purchase_update(raw_update, purchased_paid_media)
+    }
+    _ if raw_update.poll != None -> {
+      let assert Some(poll) = raw_update.poll
       new_poll_update(raw_update, poll)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(poll_answer),
-      _,
-      _,
-      _,
-      _,
-      _
-    -> new_poll_answer_update(raw_update, poll_answer)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(my_chat_member),
-      _,
-      _,
-      _,
-      _
-    -> new_my_chat_member_update(raw_update, my_chat_member)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(chat_member),
-      _,
-      _,
-      _
-    -> new_chat_member_update(raw_update, chat_member)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(chat_join_request),
-      _,
-      _
-    -> new_chat_join_request_update(raw_update, chat_join_request)
-    _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      _,
-      Some(removed_chat_boost),
-      _
-    -> new_removed_chat_boost_update(raw_update, removed_chat_boost)
-    _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, Some(message) ->
+    }
+    _ if raw_update.poll_answer != None -> {
+      let assert Some(poll_answer) = raw_update.poll_answer
+      new_poll_answer_update(raw_update, poll_answer)
+    }
+    _ if raw_update.my_chat_member != None -> {
+      let assert Some(my_chat_member) = raw_update.my_chat_member
+      new_my_chat_member_update(raw_update, my_chat_member)
+    }
+    _ if raw_update.chat_member != None -> {
+      let assert Some(chat_member) = raw_update.chat_member
+      new_chat_member_update(raw_update, chat_member)
+    }
+    _ if raw_update.chat_join_request != None -> {
+      let assert Some(chat_join_request) = raw_update.chat_join_request
+      new_chat_join_request_update(raw_update, chat_join_request)
+    }
+    _ if raw_update.removed_chat_boost != None -> {
+      let assert Some(removed_chat_boost) = raw_update.removed_chat_boost
+      new_removed_chat_boost_update(raw_update, removed_chat_boost)
+    }
+    _ if raw_update.managed_bot != None -> {
+      let assert Some(managed_bot) = raw_update.managed_bot
+      new_managed_bot_update(raw_update, managed_bot)
+    }
+    _ if raw_update.message != None -> {
+      let assert Some(message) = raw_update.message
       decode_message_update(raw_update, message)
-    _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, None ->
-      panic as { "Unknown update: " <> string.inspect(raw_update) }
+    }
+    _ -> panic as { "Unknown update: " <> string.inspect(raw_update) }
   }
 }
 
@@ -827,6 +479,11 @@ pub fn to_string(update: Update) -> String {
     ShippingQueryUpdate(shipping_query:, from_id:, ..) ->
       "shipping query "
       <> shipping_query.id
+      <> " from "
+      <> int.to_string(from_id)
+    ManagedBotUpdate(managed_bot:, from_id:, ..) ->
+      "managed bot "
+      <> int.to_string(managed_bot.bot.id)
       <> " from "
       <> int.to_string(from_id)
   }
@@ -1204,5 +861,14 @@ fn new_removed_chat_boost_update(
     removed_chat_boost:,
     from_id: removed_chat_boost.chat.id,
     chat_id: removed_chat_boost.chat.id,
+  )
+}
+
+fn new_managed_bot_update(raw: ModelUpdate, managed_bot: ManagedBotUpdated) {
+  ManagedBotUpdate(
+    raw:,
+    managed_bot:,
+    from_id: managed_bot.user.id,
+    chat_id: managed_bot.user.id,
   )
 }
