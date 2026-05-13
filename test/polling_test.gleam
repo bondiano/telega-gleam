@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/list
 import gleam/option.{None}
 import gleeunit
@@ -81,7 +82,7 @@ pub fn offset_progression_test() {
   should.equal(offset2, 2)
 
   let updates =
-    list.range(10, 15)
+    int.range(15, 10, [], list.prepend)
     |> list.map(create_test_update)
   let offset3 = polling.calculate_new_offset(updates, offset2)
   should.equal(offset3, 16)
