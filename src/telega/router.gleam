@@ -2027,7 +2027,9 @@ fn apply_middleware(
 }
 
 /// Logging middleware - logs update processing
-pub fn with_logging(handler: Handler(session, error)) -> Handler(session, error) {
+pub fn with_logging(
+  handler: Handler(session, error),
+) -> Handler(session, error) {
   fn(ctx, update_param) {
     let update_type = update.to_string(update_param)
     log.info("Processing " <> update_type)

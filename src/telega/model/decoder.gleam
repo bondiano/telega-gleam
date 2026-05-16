@@ -9,7 +9,7 @@ import telega/model/types.{
   type BackgroundFillGradient, type BackgroundFillSolid, type BackgroundType,
   type BackgroundTypeChatTheme, type BackgroundTypeFill,
   type BackgroundTypePattern, type BackgroundTypeWallpaper, type Birthdate,
-  type BotCommand, type BotCommandScope,
+  type BotAccessSettings, type BotCommand, type BotCommandScope,
   type BotCommandScopeAllChatAdministrators, type BotCommandScopeAllGroupChats,
   type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
   type BotCommandScopeChatAdministrators, type BotCommandScopeChatMember,
@@ -52,41 +52,45 @@ import telega/model/types.{
   type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
   type InputInvoiceMessageContent, type InputLocationMessageContent,
   type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaPhoto, type InputMediaVideo,
-  type InputMessageContent, type InputPaidMedia, type InputPaidMediaPhoto,
-  type InputPaidMediaVideo, type InputPollOption, type InputProfilePhotoAnimated,
+  type InputMediaDocument, type InputMediaLivePhoto, type InputMediaLocation,
+  type InputMediaPhoto, type InputMediaSticker, type InputMediaVenue,
+  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
+  type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
+  type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
+  type InputPollOptionMedia, type InputProfilePhotoAnimated,
   type InputProfilePhotoStatic, type InputSticker, type InputStoryContent,
   type InputStoryContentPhoto, type InputStoryContentVideo,
   type InputTextMessageContent, type InputVenueMessageContent, type IntOrString,
   type Invoice, type KeyboardButton, type KeyboardButtonPollType,
   type KeyboardButtonRequestChat, type KeyboardButtonRequestManagedBot,
   type KeyboardButtonRequestUsers, type LabeledPrice, type LinkPreviewOptions,
-  type Location, type LocationAddress, type LoginUrl, type ManagedBotCreated,
-  type ManagedBotUpdated, type MaskPosition, type MaybeInaccessibleMessage,
-  type MenuButton, type MenuButtonCommands, type MenuButtonDefault,
-  type MenuButtonWebApp, type Message, type MessageAutoDeleteTimerChanged,
-  type MessageEntity, type MessageId, type MessageOrigin,
-  type MessageOriginChannel, type MessageOriginChat,
+  type LivePhoto, type Location, type LocationAddress, type LoginUrl,
+  type ManagedBotCreated, type ManagedBotUpdated, type MaskPosition,
+  type MaybeInaccessibleMessage, type MenuButton, type MenuButtonCommands,
+  type MenuButtonDefault, type MenuButtonWebApp, type Message,
+  type MessageAutoDeleteTimerChanged, type MessageEntity, type MessageId,
+  type MessageOrigin, type MessageOriginChannel, type MessageOriginChat,
   type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
-  type PaidMedia, type PaidMediaInfo, type PaidMediaPhoto, type PaidMediaPreview,
-  type PaidMediaPurchased, type PaidMediaVideo, type PaidMessagePriceChanged,
-  type PassportData, type PassportElementError,
-  type PassportElementErrorDataField, type PassportElementErrorFile,
-  type PassportElementErrorFiles, type PassportElementErrorFrontSide,
-  type PassportElementErrorReverseSide, type PassportElementErrorSelfie,
-  type PassportElementErrorTranslationFile,
+  type PaidMedia, type PaidMediaInfo, type PaidMediaLivePhoto,
+  type PaidMediaPhoto, type PaidMediaPreview, type PaidMediaPurchased,
+  type PaidMediaVideo, type PaidMessagePriceChanged, type PassportData,
+  type PassportElementError, type PassportElementErrorDataField,
+  type PassportElementErrorFile, type PassportElementErrorFiles,
+  type PassportElementErrorFrontSide, type PassportElementErrorReverseSide,
+  type PassportElementErrorSelfie, type PassportElementErrorTranslationFile,
   type PassportElementErrorTranslationFiles,
   type PassportElementErrorUnspecified, type PassportFile, type PhotoSize,
-  type Poll, type PollAnswer, type PollOption, type PollOptionAdded,
-  type PollOptionDeleted, type PreCheckoutQuery, type PreparedInlineMessage,
-  type PreparedKeyboardButton, type ProximityAlertTriggered, type ReactionCount,
-  type ReactionType, type ReactionTypeCustomEmoji, type ReactionTypeEmoji,
-  type ReactionTypePaid, type RefundedPayment, type ReplyKeyboardMarkup,
-  type ReplyKeyboardRemove, type ReplyParameters, type ResponseParameters,
-  type RevenueWithdrawalState, type RevenueWithdrawalStateFailed,
-  type RevenueWithdrawalStatePending, type RevenueWithdrawalStateSucceeded,
+  type Poll, type PollAnswer, type PollMedia, type PollOption,
+  type PollOptionAdded, type PollOptionDeleted, type PreCheckoutQuery,
+  type PreparedInlineMessage, type PreparedKeyboardButton,
+  type ProximityAlertTriggered, type ReactionCount, type ReactionType,
+  type ReactionTypeCustomEmoji, type ReactionTypeEmoji, type ReactionTypePaid,
+  type RefundedPayment, type ReplyKeyboardMarkup, type ReplyKeyboardRemove,
+  type ReplyParameters, type ResponseParameters, type RevenueWithdrawalState,
+  type RevenueWithdrawalStateFailed, type RevenueWithdrawalStatePending,
+  type RevenueWithdrawalStateSucceeded, type SentGuestMessage,
   type SentWebAppMessage, type SharedUser, type ShippingAddress,
   type ShippingOption, type ShippingQuery, type StarAmount, type StarTransaction,
   type StarTransactions, type Sticker, type StickerSet, type Story,
@@ -117,8 +121,8 @@ import telega/model/types.{
   BackgroundTypeChatTheme, BackgroundTypeChatThemeBackgroundType,
   BackgroundTypeFill, BackgroundTypeFillBackgroundType, BackgroundTypePattern,
   BackgroundTypePatternBackgroundType, BackgroundTypeWallpaper,
-  BackgroundTypeWallpaperBackgroundType, Birthdate, BotCommand,
-  BotCommandScopeAllChatAdministrators,
+  BackgroundTypeWallpaperBackgroundType, Birthdate, BotAccessSettings,
+  BotCommand, BotCommandScopeAllChatAdministrators,
   BotCommandScopeAllChatAdministratorsBotCommandScope,
   BotCommandScopeAllGroupChats, BotCommandScopeAllGroupChatsBotCommandScope,
   BotCommandScopeAllPrivateChats, BotCommandScopeAllPrivateChatsBotCommandScope,
@@ -176,18 +180,28 @@ import telega/model/types.{
   InputInvoiceMessageContentInputMessageContent, InputLocationMessageContent,
   InputLocationMessageContentInputMessageContent, InputMediaAnimation,
   InputMediaAnimationInputMedia, InputMediaAudio, InputMediaAudioInputMedia,
-  InputMediaDocument, InputMediaDocumentInputMedia, InputMediaPhoto,
-  InputMediaPhotoInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
+  InputMediaDocument, InputMediaDocumentInputMedia, InputMediaLivePhoto,
+  InputMediaLivePhotoInputMedia, InputMediaLocation,
+  InputMediaLocationInputMedia, InputMediaPhoto, InputMediaPhotoInputMedia,
+  InputMediaSticker, InputMediaStickerInputMedia, InputMediaVenue,
+  InputMediaVenueInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
+  InputPaidMediaLivePhoto, InputPaidMediaLivePhotoInputPaidMedia,
   InputPaidMediaPhoto, InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideo,
-  InputPaidMediaVideoInputPaidMedia, InputPollOption, InputProfilePhotoAnimated,
-  InputProfilePhotoStatic, InputSticker, InputStoryContent,
-  InputStoryContentPhoto, InputStoryContentVideo, InputTextMessageContent,
-  InputTextMessageContentInputMessageContent, InputVenueMessageContent,
-  InputVenueMessageContentInputMessageContent, Int, Invoice, KeyboardButton,
-  KeyboardButtonPollType, KeyboardButtonRequestChat,
+  InputPaidMediaVideoInputPaidMedia, InputPollMediaAnimation,
+  InputPollMediaAudio, InputPollMediaDocument, InputPollMediaLivePhoto,
+  InputPollMediaLocation, InputPollMediaPhoto, InputPollMediaVenue,
+  InputPollMediaVideo, InputPollOption, InputPollOptionMediaAnimation,
+  InputPollOptionMediaLivePhoto, InputPollOptionMediaLocation,
+  InputPollOptionMediaPhoto, InputPollOptionMediaSticker,
+  InputPollOptionMediaVenue, InputPollOptionMediaVideo,
+  InputProfilePhotoAnimated, InputProfilePhotoStatic, InputSticker,
+  InputStoryContent, InputStoryContentPhoto, InputStoryContentVideo,
+  InputTextMessageContent, InputTextMessageContentInputMessageContent,
+  InputVenueMessageContent, InputVenueMessageContentInputMessageContent, Int,
+  Invoice, KeyboardButton, KeyboardButtonPollType, KeyboardButtonRequestChat,
   KeyboardButtonRequestManagedBot, KeyboardButtonRequestUsers, LabeledPrice,
-  LinkPreviewOptions, Location, LocationAddress, LoginUrl, ManagedBotCreated,
-  ManagedBotUpdated, MaskPosition, MenuButtonCommands,
+  LinkPreviewOptions, LivePhoto, Location, LocationAddress, LoginUrl,
+  ManagedBotCreated, ManagedBotUpdated, MaskPosition, MenuButtonCommands,
   MenuButtonCommandsMenuButton, MenuButtonDefault, MenuButtonDefaultMenuButton,
   MenuButtonWebApp, MenuButtonWebAppMenuButton, Message,
   MessageAutoDeleteTimerChanged, MessageEntity, MessageId,
@@ -197,10 +211,11 @@ import telega/model/types.{
   MessageOriginHiddenUserMessageOrigin, MessageOriginUser,
   MessageOriginUserMessageOrigin, MessageReactionCountUpdated,
   MessageReactionUpdated, OrderInfo, OwnedGift, OwnedGiftRegular,
-  OwnedGiftUnique, OwnedGifts, PaidMediaInfo, PaidMediaPhoto,
-  PaidMediaPhotoPaidMedia, PaidMediaPreview, PaidMediaPreviewPaidMedia,
-  PaidMediaPurchased, PaidMediaVideo, PaidMediaVideoPaidMedia,
-  PaidMessagePriceChanged, PassportData, PassportElementErrorDataField,
+  OwnedGiftUnique, OwnedGifts, PaidMediaInfo, PaidMediaLivePhoto,
+  PaidMediaLivePhotoPaidMedia, PaidMediaPhoto, PaidMediaPhotoPaidMedia,
+  PaidMediaPreview, PaidMediaPreviewPaidMedia, PaidMediaPurchased,
+  PaidMediaVideo, PaidMediaVideoPaidMedia, PaidMessagePriceChanged, PassportData,
+  PassportElementErrorDataField,
   PassportElementErrorDataFieldPassportElementError, PassportElementErrorFile,
   PassportElementErrorFilePassportElementError, PassportElementErrorFiles,
   PassportElementErrorFilesPassportElementError, PassportElementErrorFrontSide,
@@ -214,7 +229,7 @@ import telega/model/types.{
   PassportElementErrorTranslationFilesPassportElementError,
   PassportElementErrorUnspecified,
   PassportElementErrorUnspecifiedPassportElementError, PassportFile, PhotoSize,
-  Poll, PollAnswer, PollOption, PollOptionAdded, PollOptionDeleted,
+  Poll, PollAnswer, PollMedia, PollOption, PollOptionAdded, PollOptionDeleted,
   PreCheckoutQuery, PreparedInlineMessage, PreparedKeyboardButton,
   ProximityAlertTriggered, ReactionCount, ReactionTypeCustomEmoji,
   ReactionTypeCustomEmojiReactionType, ReactionTypeEmoji,
@@ -225,16 +240,16 @@ import telega/model/types.{
   RevenueWithdrawalStatePending,
   RevenueWithdrawalStatePendingRevenueWithdrawalState,
   RevenueWithdrawalStateSucceeded,
-  RevenueWithdrawalStateSucceededRevenueWithdrawalState, SentWebAppMessage,
-  SharedUser, ShippingAddress, ShippingOption, ShippingQuery, StarAmount,
-  StarTransaction, StarTransactions, Sticker, StickerSet, Story, StoryArea,
-  StoryAreaPosition, StoryAreaType, StoryAreaTypeLink, StoryAreaTypeLocation,
-  StoryAreaTypeSuggestedReaction, StoryAreaTypeUniqueGift, StoryAreaTypeWeather,
-  Str, StringV, SuccessfulPayment, SuggestedPostApprovalFailed,
-  SuggestedPostApproved, SuggestedPostDeclined, SuggestedPostInfo,
-  SuggestedPostPaid, SuggestedPostParameters, SuggestedPostPrice,
-  SuggestedPostRefunded, SwitchInlineQueryChosenChat, TextQuote,
-  TransactionPartnerAffiliateProgram,
+  RevenueWithdrawalStateSucceededRevenueWithdrawalState, SentGuestMessage,
+  SentWebAppMessage, SharedUser, ShippingAddress, ShippingOption, ShippingQuery,
+  StarAmount, StarTransaction, StarTransactions, Sticker, StickerSet, Story,
+  StoryArea, StoryAreaPosition, StoryAreaType, StoryAreaTypeLink,
+  StoryAreaTypeLocation, StoryAreaTypeSuggestedReaction, StoryAreaTypeUniqueGift,
+  StoryAreaTypeWeather, Str, StringV, SuccessfulPayment,
+  SuggestedPostApprovalFailed, SuggestedPostApproved, SuggestedPostDeclined,
+  SuggestedPostInfo, SuggestedPostPaid, SuggestedPostParameters,
+  SuggestedPostPrice, SuggestedPostRefunded, SwitchInlineQueryChosenChat,
+  TextQuote, TransactionPartnerAffiliateProgram,
   TransactionPartnerAffiliateProgramTransactionPartner, TransactionPartnerChat,
   TransactionPartnerChatTransactionPartner, TransactionPartnerFragment,
   TransactionPartnerFragmentTransactionPartner, TransactionPartnerOther,
@@ -371,6 +386,11 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     None,
     decode.optional(managed_bot_updated_decoder()),
   )
+  use guest_message <- decode.optional_field(
+    "guest_message",
+    None,
+    decode.optional(message_decoder()),
+  )
   decode.success(Update(
     update_id: update_id,
     message: message,
@@ -397,6 +417,7 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     chat_boost: chat_boost,
     removed_chat_boost: removed_chat_boost,
     managed_bot: managed_bot,
+    guest_message: guest_message,
   ))
 }
 
@@ -519,6 +540,11 @@ pub fn user_decoder() -> decode.Decoder(User) {
     None,
     decode.optional(decode.bool),
   )
+  use supports_guest_queries <- decode.optional_field(
+    "supports_guest_queries",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(User(
     id: id,
     is_bot: is_bot,
@@ -536,6 +562,7 @@ pub fn user_decoder() -> decode.Decoder(User) {
     has_topics_enabled: has_topics_enabled,
     allows_users_to_create_topics: allows_users_to_create_topics,
     can_manage_bots: can_manage_bots,
+    supports_guest_queries: supports_guest_queries,
   ))
 }
 
@@ -910,6 +937,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(user_decoder()),
   )
+  use guest_bot_caller_user <- decode.optional_field(
+    "guest_bot_caller_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use guest_bot_caller_chat <- decode.optional_field(
+    "guest_bot_caller_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
   use sender_tag <- decode.optional_field(
     "sender_tag",
     None,
@@ -918,6 +955,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
   use date <- decode.field("date", decode.int)
   use business_connection_id <- decode.optional_field(
     "business_connection_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use guest_query_id <- decode.optional_field(
+    "guest_query_id",
     None,
     decode.optional(decode.string),
   )
@@ -1066,6 +1108,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "story",
     None,
     decode.optional(story_decoder()),
+  )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
   )
   use video <- decode.optional_field(
     "video",
@@ -1425,9 +1472,12 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     sender_chat: sender_chat,
     sender_boost_count: sender_boost_count,
     sender_business_bot: sender_business_bot,
+    guest_bot_caller_user: guest_bot_caller_user,
+    guest_bot_caller_chat: guest_bot_caller_chat,
     sender_tag: sender_tag,
     date: date,
     business_connection_id: business_connection_id,
+    guest_query_id: guest_query_id,
     chat: chat,
     forward_origin: forward_origin,
     is_topic_message: is_topic_message,
@@ -1458,6 +1508,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     photo: photo,
     sticker: sticker,
     story: story,
+    live_photo: live_photo,
     video: video,
     video_note: video_note,
     voice: voice,
@@ -1663,6 +1714,11 @@ pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
     None,
     decode.optional(story_decoder()),
   )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
+  )
   use video <- decode.optional_field(
     "video",
     None,
@@ -1745,6 +1801,7 @@ pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
     photo: photo,
     sticker: sticker,
     story: story,
+    live_photo: live_photo,
     video: video,
     video_note: video_note,
     voice: voice,
@@ -2189,6 +2246,104 @@ pub fn paid_media_video_decoder() -> decode.Decoder(PaidMediaVideo) {
   decode.success(PaidMediaVideo(type_: type_, video: video))
 }
 
+pub fn live_photo_decoder() -> decode.Decoder(LivePhoto) {
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use duration <- decode.field("duration", decode.int)
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(LivePhoto(
+    photo: photo,
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    duration: duration,
+    mime_type: mime_type,
+    file_size: file_size,
+  ))
+}
+
+pub fn paid_media_live_photo_decoder() -> decode.Decoder(PaidMediaLivePhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use live_photo <- decode.field("live_photo", live_photo_decoder())
+  decode.success(PaidMediaLivePhoto(type_: type_, live_photo: live_photo))
+}
+
+pub fn poll_media_decoder() -> decode.Decoder(PollMedia) {
+  use animation <- decode.optional_field(
+    "animation",
+    None,
+    decode.optional(animation_decoder()),
+  )
+  use audio <- decode.optional_field(
+    "audio",
+    None,
+    decode.optional(audio_decoder()),
+  )
+  use document <- decode.optional_field(
+    "document",
+    None,
+    decode.optional(document_decoder()),
+  )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
+  )
+  use location <- decode.optional_field(
+    "location",
+    None,
+    decode.optional(location_decoder()),
+  )
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use sticker <- decode.optional_field(
+    "sticker",
+    None,
+    decode.optional(sticker_decoder()),
+  )
+  use venue <- decode.optional_field(
+    "venue",
+    None,
+    decode.optional(venue_decoder()),
+  )
+  use video <- decode.optional_field(
+    "video",
+    None,
+    decode.optional(video_decoder()),
+  )
+  decode.success(PollMedia(
+    animation: animation,
+    audio: audio,
+    document: document,
+    live_photo: live_photo,
+    location: location,
+    photo: photo,
+    sticker: sticker,
+    venue: venue,
+    video: video,
+  ))
+}
+
 pub fn contact_decoder() -> decode.Decoder(Contact) {
   use phone_number <- decode.field("phone_number", decode.string)
   use first_name <- decode.field("first_name", decode.string)
@@ -2230,6 +2385,11 @@ pub fn poll_option_decoder() -> decode.Decoder(PollOption) {
     None,
     decode.optional(decode.list(message_entity_decoder())),
   )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(poll_media_decoder()),
+  )
   use voter_count <- decode.field("voter_count", decode.int)
   use added_by_user <- decode.optional_field(
     "added_by_user",
@@ -2250,6 +2410,7 @@ pub fn poll_option_decoder() -> decode.Decoder(PollOption) {
     persistent_id: persistent_id,
     text: text,
     text_entities: text_entities,
+    media: media,
     voter_count: voter_count,
     added_by_user: added_by_user,
     added_by_chat: added_by_chat,
@@ -2269,10 +2430,16 @@ pub fn input_poll_option_decoder() -> decode.Decoder(InputPollOption) {
     None,
     decode.optional(decode.list(message_entity_decoder())),
   )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(input_poll_option_media_decoder()),
+  )
   decode.success(InputPollOption(
     text: text,
     text_parse_mode: text_parse_mode,
     text_entities: text_entities,
+    media: media,
   ))
 }
 
@@ -2320,6 +2487,12 @@ pub fn poll_decoder() -> decode.Decoder(Poll) {
     decode.bool,
   )
   use allows_revoting <- decode.field("allows_revoting", decode.bool)
+  use members_only <- decode.field("members_only", decode.bool)
+  use country_codes <- decode.optional_field(
+    "country_codes",
+    None,
+    decode.optional(decode.list(decode.string)),
+  )
   use correct_option_ids <- decode.optional_field(
     "correct_option_ids",
     None,
@@ -2334,6 +2507,11 @@ pub fn poll_decoder() -> decode.Decoder(Poll) {
     "explanation_entities",
     None,
     decode.optional(decode.list(message_entity_decoder())),
+  )
+  use explanation_media <- decode.optional_field(
+    "explanation_media",
+    None,
+    decode.optional(poll_media_decoder()),
   )
   use open_period <- decode.optional_field(
     "open_period",
@@ -2355,6 +2533,11 @@ pub fn poll_decoder() -> decode.Decoder(Poll) {
     None,
     decode.optional(decode.list(message_entity_decoder())),
   )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(poll_media_decoder()),
+  )
   decode.success(Poll(
     id: id,
     question: question,
@@ -2366,13 +2549,17 @@ pub fn poll_decoder() -> decode.Decoder(Poll) {
     type_: type_,
     allows_multiple_answers: allows_multiple_answers,
     allows_revoting: allows_revoting,
+    members_only: members_only,
+    country_codes: country_codes,
     correct_option_ids: correct_option_ids,
     explanation: explanation,
     explanation_entities: explanation_entities,
+    explanation_media: explanation_media,
     open_period: open_period,
     close_date: close_date,
     description: description,
     description_entities: description_entities,
+    media: media,
   ))
 }
 
@@ -4114,6 +4301,10 @@ pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) 
     "can_add_web_page_previews",
     decode.bool,
   )
+  use can_react_to_messages <- decode.field(
+    "can_react_to_messages",
+    decode.bool,
+  )
   use can_edit_tag <- decode.field("can_edit_tag", decode.bool)
   use can_change_info <- decode.field("can_change_info", decode.bool)
   use can_invite_users <- decode.field("can_invite_users", decode.bool)
@@ -4135,6 +4326,7 @@ pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) 
     can_send_polls: can_send_polls,
     can_send_other_messages: can_send_other_messages,
     can_add_web_page_previews: can_add_web_page_previews,
+    can_react_to_messages: can_react_to_messages,
     can_edit_tag: can_edit_tag,
     can_change_info: can_change_info,
     can_invite_users: can_invite_users,
@@ -4233,6 +4425,11 @@ pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
     None,
     decode.optional(decode.bool),
   )
+  use can_react_to_messages <- decode.optional_field(
+    "can_react_to_messages",
+    None,
+    decode.optional(decode.bool),
+  )
   use can_edit_tag <- decode.optional_field(
     "can_edit_tag",
     None,
@@ -4269,6 +4466,7 @@ pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
     can_send_polls: can_send_polls,
     can_send_other_messages: can_send_other_messages,
     can_add_web_page_previews: can_add_web_page_previews,
+    can_react_to_messages: can_react_to_messages,
     can_edit_tag: can_edit_tag,
     can_change_info: can_change_info,
     can_invite_users: can_invite_users,
@@ -5150,6 +5348,19 @@ pub fn owned_gifts_decoder() -> decode.Decoder(OwnedGifts) {
   ))
 }
 
+pub fn bot_access_settings_decoder() -> decode.Decoder(BotAccessSettings) {
+  use is_access_restricted <- decode.field("is_access_restricted", decode.bool)
+  use added_users <- decode.optional_field(
+    "added_users",
+    None,
+    decode.optional(decode.list(user_decoder())),
+  )
+  decode.success(BotAccessSettings(
+    is_access_restricted: is_access_restricted,
+    added_users: added_users,
+  ))
+}
+
 pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
   use unlimited_gifts <- decode.field("unlimited_gifts", decode.bool)
   use limited_gifts <- decode.field("limited_gifts", decode.bool)
@@ -5502,6 +5713,11 @@ pub fn sent_web_app_message_decoder() -> decode.Decoder(SentWebAppMessage) {
   decode.success(SentWebAppMessage(inline_message_id: inline_message_id))
 }
 
+pub fn sent_guest_message_decoder() -> decode.Decoder(SentGuestMessage) {
+  use inline_message_id <- decode.field("inline_message_id", decode.string)
+  decode.success(SentGuestMessage(inline_message_id: inline_message_id))
+}
+
 pub fn prepared_inline_message_decoder() -> decode.Decoder(
   PreparedInlineMessage,
 ) {
@@ -5796,6 +6012,127 @@ pub fn input_media_document_decoder() -> decode.Decoder(InputMediaDocument) {
     parse_mode: parse_mode,
     caption_entities: caption_entities,
     disable_content_type_detection: disable_content_type_detection,
+  ))
+}
+
+pub fn input_media_live_photo_decoder() -> decode.Decoder(InputMediaLivePhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaLivePhoto(
+    type_: type_,
+    media: media,
+    photo: photo,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    has_spoiler: has_spoiler,
+  ))
+}
+
+pub fn input_media_location_decoder() -> decode.Decoder(InputMediaLocation) {
+  use type_ <- decode.field("type", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use horizontal_accuracy <- decode.optional_field(
+    "horizontal_accuracy",
+    None,
+    decode.optional(decode.float),
+  )
+  decode.success(InputMediaLocation(
+    type_: type_,
+    latitude: latitude,
+    longitude: longitude,
+    horizontal_accuracy: horizontal_accuracy,
+  ))
+}
+
+pub fn input_media_sticker_decoder() -> decode.Decoder(InputMediaSticker) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use emoji <- decode.optional_field(
+    "emoji",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputMediaSticker(type_: type_, media: media, emoji: emoji))
+}
+
+pub fn input_media_venue_decoder() -> decode.Decoder(InputMediaVenue) {
+  use type_ <- decode.field("type", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use title <- decode.field("title", decode.string)
+  use address <- decode.field("address", decode.string)
+  use foursquare_id <- decode.optional_field(
+    "foursquare_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use foursquare_type <- decode.optional_field(
+    "foursquare_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_id <- decode.optional_field(
+    "google_place_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_type <- decode.optional_field(
+    "google_place_type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputMediaVenue(
+    type_: type_,
+    latitude: latitude,
+    longitude: longitude,
+    title: title,
+    address: address,
+    foursquare_id: foursquare_id,
+    foursquare_type: foursquare_type,
+    google_place_id: google_place_id,
+    google_place_type: google_place_type,
+  ))
+}
+
+pub fn input_paid_media_live_photo_decoder() -> decode.Decoder(
+  InputPaidMediaLivePhoto,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  decode.success(InputPaidMediaLivePhoto(
+    type_: type_,
+    media: media,
+    photo: photo,
   ))
 }
 
@@ -8271,6 +8608,10 @@ pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
       use value <- decode.then(paid_media_video_decoder())
       decode.success(PaidMediaVideoPaidMedia(value))
     }
+    "live_photo" -> {
+      use value <- decode.then(paid_media_live_photo_decoder())
+      decode.success(PaidMediaLivePhotoPaidMedia(value))
+    }
     _ -> panic as "Invalid variant for PaidMedia"
   }
 }
@@ -8465,6 +8806,22 @@ pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
       use value <- decode.then(input_media_video_decoder())
       decode.success(InputMediaVideoInputMedia(value))
     }
+    "live_photo" -> {
+      use value <- decode.then(input_media_live_photo_decoder())
+      decode.success(InputMediaLivePhotoInputMedia(value))
+    }
+    "location" -> {
+      use value <- decode.then(input_media_location_decoder())
+      decode.success(InputMediaLocationInputMedia(value))
+    }
+    "sticker" -> {
+      use value <- decode.then(input_media_sticker_decoder())
+      decode.success(InputMediaStickerInputMedia(value))
+    }
+    "venue" -> {
+      use value <- decode.then(input_media_venue_decoder())
+      decode.success(InputMediaVenueInputMedia(value))
+    }
     _ -> panic as "Invalid variant for InputMedia"
   }
 }
@@ -8480,7 +8837,85 @@ pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
       use value <- decode.then(input_paid_media_video_decoder())
       decode.success(InputPaidMediaVideoInputPaidMedia(value))
     }
+    "live_photo" -> {
+      use value <- decode.then(input_paid_media_live_photo_decoder())
+      decode.success(InputPaidMediaLivePhotoInputPaidMedia(value))
+    }
     _ -> panic as "Invalid variant for InputPaidMedia"
+  }
+}
+
+pub fn input_poll_media_decoder() -> decode.Decoder(InputPollMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "animation" -> {
+      use value <- decode.then(input_media_animation_decoder())
+      decode.success(InputPollMediaAnimation(value))
+    }
+    "audio" -> {
+      use value <- decode.then(input_media_audio_decoder())
+      decode.success(InputPollMediaAudio(value))
+    }
+    "document" -> {
+      use value <- decode.then(input_media_document_decoder())
+      decode.success(InputPollMediaDocument(value))
+    }
+    "live_photo" -> {
+      use value <- decode.then(input_media_live_photo_decoder())
+      decode.success(InputPollMediaLivePhoto(value))
+    }
+    "location" -> {
+      use value <- decode.then(input_media_location_decoder())
+      decode.success(InputPollMediaLocation(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_media_photo_decoder())
+      decode.success(InputPollMediaPhoto(value))
+    }
+    "venue" -> {
+      use value <- decode.then(input_media_venue_decoder())
+      decode.success(InputPollMediaVenue(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_media_video_decoder())
+      decode.success(InputPollMediaVideo(value))
+    }
+    _ -> panic as "Invalid variant for InputPollMedia"
+  }
+}
+
+pub fn input_poll_option_media_decoder() -> decode.Decoder(InputPollOptionMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "animation" -> {
+      use value <- decode.then(input_media_animation_decoder())
+      decode.success(InputPollOptionMediaAnimation(value))
+    }
+    "live_photo" -> {
+      use value <- decode.then(input_media_live_photo_decoder())
+      decode.success(InputPollOptionMediaLivePhoto(value))
+    }
+    "location" -> {
+      use value <- decode.then(input_media_location_decoder())
+      decode.success(InputPollOptionMediaLocation(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_media_photo_decoder())
+      decode.success(InputPollOptionMediaPhoto(value))
+    }
+    "sticker" -> {
+      use value <- decode.then(input_media_sticker_decoder())
+      decode.success(InputPollOptionMediaSticker(value))
+    }
+    "venue" -> {
+      use value <- decode.then(input_media_venue_decoder())
+      decode.success(InputPollOptionMediaVenue(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_media_video_decoder())
+      decode.success(InputPollOptionMediaVideo(value))
+    }
+    _ -> panic as "Invalid variant for InputPollOptionMedia"
   }
 }
 

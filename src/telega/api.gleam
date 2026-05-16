@@ -14,10 +14,11 @@ import telega/model/decoder
 import telega/model/encoder
 import telega/model/types.{
   type AddStickerToSetParameters, type AnswerCallbackQueryParameters,
-  type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
-  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type BanChatMemberParameters, type BanChatSenderChatParameters,
-  type BotCommand, type BotCommandParameters, type BotDescription, type BotName,
+  type AnswerGuestQueryParameters, type AnswerInlineQueryParameters,
+  type AnswerPreCheckoutQueryParameters, type AnswerShippingQueryParameters,
+  type ApproveChatJoinRequestParameters, type BanChatMemberParameters,
+  type BanChatSenderChatParameters, type BotAccessSettings, type BotCommand,
+  type BotCommandParameters, type BotDescription, type BotName,
   type BotShortDescription, type BusinessConnection,
   type ChatAdministratorRights, type ChatFullInfo, type ChatInviteLink,
   type ChatMember, type CloseForumTopicParameters,
@@ -27,11 +28,13 @@ import telega/model/types.{
   type CreateChatSubscriptionInviteLinkParameters,
   type CreateForumTopicParameters, type CreateInvoiceLinkParameters,
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
+  type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
   type DeleteChatStickerSetParameters, type DeleteForumTopicParameters,
-  type DeleteMessageParameters, type DeleteMessagesParameters,
-  type DeleteStickerFromSetParameters, type DeleteStickerSetParameters,
-  type DeleteStoryParameters, type EditChatInviteLinkParameters,
+  type DeleteMessageParameters, type DeleteMessageReactionParameters,
+  type DeleteMessagesParameters, type DeleteStickerFromSetParameters,
+  type DeleteStickerSetParameters, type DeleteStoryParameters,
+  type EditChatInviteLinkParameters,
   type EditChatSubscriptionInviteLinkParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
   type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
@@ -45,11 +48,13 @@ import telega/model/types.{
   type GetChatGiftsParameters, type GetChatMemberCountParameters,
   type GetChatMemberParameters, type GetChatMenuButtonParameters,
   type GetCustomEmojiStickersParameters, type GetGameHighScoresParameters,
+  type GetManagedBotAccessSettingsParameters,
   type GetMyDefaultAdministratorRightsParameters,
   type GetMyDescriptionParameters, type GetMyNameParameters,
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
   type GetUserChatBoostsParameters, type GetUserGiftsParameters,
+  type GetUserPersonalChatMessagesParameters,
   type GetUserProfileAudiosParameters, type GetUserProfilePhotosParameters,
   type GiftPremiumSubscriptionParameters, type Gifts,
   type HideGeneralForumTopicParameters, type LeaveChatParameters,
@@ -65,11 +70,12 @@ import telega/model/types.{
   type SendChatActionParameters, type SendContactParameters,
   type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
   type SendGiftParameters, type SendInvoiceParameters,
-  type SendLocationParameters, type SendMediaGroupParameters,
-  type SendMessageDraftParameters, type SendMessageParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
-  type SendVenueParameters, type SendVideoNoteParameters,
-  type SendVideoParameters, type SendVoiceParameters,
+  type SendLivePhotoParameters, type SendLocationParameters,
+  type SendMediaGroupParameters, type SendMessageDraftParameters,
+  type SendMessageParameters, type SendPhotoParameters, type SendPollParameters,
+  type SendStickerParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SentGuestMessage,
   type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
@@ -80,7 +86,7 @@ import telega/model/types.{
   type SetChatPermissionsParameters, type SetChatPhotoParameters,
   type SetChatStickerSetParameters, type SetChatTitleParameters,
   type SetCustomEmojiStickerSetThumbnailParameters, type SetGameScoreParameters,
-  type SetMessageReactionParameters,
+  type SetManagedBotAccessSettingsParameters, type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
@@ -532,7 +538,7 @@ pub fn send_poll(
 
 /// Use this method when you need to tell the user that something is happening on the bot's side. The status is set for 5 seconds or less (when a message arrives from your bot, Telegram clients clear its typing status). Returns True on success.
 ///
-/// > Example: The [ImageBot](https://t.me/imagebot) needs some time to process a request and upload the image. Instead of sending a text message along the lines of “Retrieving image, please wait…”, the bot may use [sendChatAction](https://core.telegram.org/bots/api#sendchataction) with action = upload_photo. The user will see a “sending photo” status for the bot.
+/// > Example: The [ImageBot](https://t.me/imagebot) needs some time to process a request and upload the image. Instead of sending a text message along the lines of "Retrieving image, please wait...", the bot may use [sendChatAction](https://core.telegram.org/bots/api#sendchataction) with action = upload_photo. The user will see a "sending photo" status for the bot.
 ///
 /// We only recommend using this method when a response from the bot will take a noticeable amount of time to arrive.
 ///
@@ -2853,6 +2859,138 @@ pub fn repost_story(
   )
   |> fetch(client)
   |> map_response(decoder.story_decoder())
+}
+
+// Bot API 10.0 ----------------------------------------------------------------
+
+/// Use this method to send a response to a guest query. Returns a [SentGuestMessage](https://core.telegram.org/bots/api#sentguestmessage).
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answerguestquery
+pub fn answer_guest_query(
+  client client: client.TelegramClient,
+  parameters parameters: AnswerGuestQueryParameters,
+) -> Result(SentGuestMessage, error.TelegaError) {
+  let body_json = encoder.encode_answer_guest_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerGuestQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.sent_guest_message_decoder())
+}
+
+/// Use this method to delete a specific reaction from a message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deletemessagereaction
+pub fn delete_message_reaction(
+  client client: client.TelegramClient,
+  parameters parameters: DeleteMessageReactionParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_delete_message_reaction_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteMessageReaction",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to remove all reactions from a message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deleteallmessagereactions
+pub fn delete_all_message_reactions(
+  client client: client.TelegramClient,
+  parameters parameters: DeleteAllMessageReactionsParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_delete_all_message_reactions_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteAllMessageReactions",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to send a live photo. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendlivephoto
+pub fn send_live_photo(
+  client client: client.TelegramClient,
+  parameters parameters: SendLivePhotoParameters,
+) -> Result(Message, error.TelegaError) {
+  let body_json = encoder.encode_send_live_photo_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendLivePhoto",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Use this method to get the access settings of a bot managed by the current bot. Returns a [BotAccessSettings](https://core.telegram.org/bots/api#botaccesssettings) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmanagedbotaccesssettings
+pub fn get_managed_bot_access_settings(
+  client client: client.TelegramClient,
+  parameters parameters: GetManagedBotAccessSettingsParameters,
+) -> Result(BotAccessSettings, error.TelegaError) {
+  let body_json =
+    encoder.encode_get_managed_bot_access_settings_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getManagedBotAccessSettings",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.bot_access_settings_decoder())
+}
+
+/// Use this method to change the access settings of a bot managed by the current bot. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setmanagedbotaccesssettings
+pub fn set_managed_bot_access_settings(
+  client client: client.TelegramClient,
+  parameters parameters: SetManagedBotAccessSettingsParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_set_managed_bot_access_settings_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setManagedBotAccessSettings",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to fetch messages sent by the bot in the personal chat of a user. Returns a list of [Message](https://core.telegram.org/bots/api#message) objects.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getuserpersonalchatmessages
+pub fn get_user_personal_chat_messages(
+  client client: client.TelegramClient,
+  parameters parameters: GetUserPersonalChatMessagesParameters,
+) -> Result(List(Message), error.TelegaError) {
+  let body_json =
+    encoder.encode_get_user_personal_chat_messages_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getUserPersonalChatMessages",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.list(decoder.message_decoder()))
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

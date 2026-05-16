@@ -206,7 +206,10 @@ pub fn is_overheated(queue: RequestQueue) -> Bool {
   }
 }
 
-fn handle_message(state: State, message: Message) -> actor.Next(State, Message) {
+fn handle_message(
+  state: State,
+  message: Message,
+) -> actor.Next(State, Message) {
   case message {
     Execute(request) -> {
       let new_state = add_to_queue(state, request)

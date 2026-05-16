@@ -381,6 +381,10 @@ pub fn with_poll(
       open_period: None,
       question_entities: None,
       question_parse_mode: None,
+      members_only: None,
+      country_codes: None,
+      explanation_media: None,
+      media: None,
     ),
   )
 }

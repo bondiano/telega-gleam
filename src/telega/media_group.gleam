@@ -73,8 +73,10 @@ import telega/file.{type MediaInput}
 import telega/model/types.{
   type InputMedia, type MessageEntity, InputMediaAnimation,
   InputMediaAnimationInputMedia, InputMediaAudio, InputMediaAudioInputMedia,
-  InputMediaDocument, InputMediaDocumentInputMedia, InputMediaPhoto,
-  InputMediaPhotoInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
+  InputMediaDocument, InputMediaDocumentInputMedia,
+  InputMediaLivePhotoInputMedia, InputMediaLocationInputMedia, InputMediaPhoto,
+  InputMediaPhotoInputMedia, InputMediaStickerInputMedia,
+  InputMediaVenueInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
 }
 
 /// A builder for creating media groups
@@ -450,6 +452,10 @@ fn get_media_type(media: InputMedia) -> String {
     InputMediaAudioInputMedia(_) -> "audio"
     InputMediaDocumentInputMedia(_) -> "document"
     InputMediaAnimationInputMedia(_) -> "animation"
+    InputMediaLivePhotoInputMedia(_) -> "live_photo"
+    InputMediaLocationInputMedia(_) -> "location"
+    InputMediaStickerInputMedia(_) -> "sticker"
+    InputMediaVenueInputMedia(_) -> "venue"
   }
 }
 
@@ -721,6 +727,13 @@ pub fn requires_multipart(builder: MediaGroupBuilder) -> Bool {
         file.requires_multipart(file.from_string(document.media))
       InputMediaAnimationInputMedia(animation) ->
         file.requires_multipart(file.from_string(animation.media))
+      InputMediaLivePhotoInputMedia(live_photo) ->
+        file.requires_multipart(file.from_string(live_photo.media))
+        || file.requires_multipart(file.from_string(live_photo.photo))
+      InputMediaStickerInputMedia(sticker) ->
+        file.requires_multipart(file.from_string(sticker.media))
+      InputMediaLocationInputMedia(_) -> False
+      InputMediaVenueInputMedia(_) -> False
     }
   })
 }

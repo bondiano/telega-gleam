@@ -25,6 +25,7 @@ pub type PaidMedia {
   PaidMediaPreviewPaidMedia(PaidMediaPreview)
   PaidMediaPhotoPaidMedia(PaidMediaPhoto)
   PaidMediaVideoPaidMedia(PaidMediaVideo)
+  PaidMediaLivePhotoPaidMedia(PaidMediaLivePhoto)
 }
 
 pub type BackgroundFill {
@@ -87,11 +88,16 @@ pub type InputMedia {
   InputMediaAudioInputMedia(InputMediaAudio)
   InputMediaPhotoInputMedia(InputMediaPhoto)
   InputMediaVideoInputMedia(InputMediaVideo)
+  InputMediaLivePhotoInputMedia(InputMediaLivePhoto)
+  InputMediaLocationInputMedia(InputMediaLocation)
+  InputMediaStickerInputMedia(InputMediaSticker)
+  InputMediaVenueInputMedia(InputMediaVenue)
 }
 
 pub type InputPaidMedia {
   InputPaidMediaPhotoInputPaidMedia(InputPaidMediaPhoto)
   InputPaidMediaVideoInputPaidMedia(InputPaidMediaVideo)
+  InputPaidMediaLivePhotoInputPaidMedia(InputPaidMediaLivePhoto)
 }
 
 pub type InputProfilePhoto {
@@ -238,6 +244,8 @@ pub type Update {
     removed_chat_boost: Option(ChatBoostRemoved),
     /// Optional. A new bot was created to be managed by the bot or token of a bot was changed
     managed_bot: Option(ManagedBotUpdated),
+    /// Optional. New guest message. The bot can use the field Message.guest_query_id and the method answerGuestQuery to send a message in response.
+    guest_message: Option(Message),
   )
 }
 
@@ -300,6 +308,8 @@ pub type User {
     allows_users_to_create_topics: Option(Bool),
     /// Optional. True, if other bots can be created to be controlled by the bot. Returned only in getMe.
     can_manage_bots: Option(Bool),
+    /// Optional. True, if the bot supports guest queries. Returned only in getMe.
+    supports_guest_queries: Option(Bool),
   )
 }
 
@@ -450,12 +460,18 @@ pub type Message {
     sender_boost_count: Option(Int),
     /// Optional. The bot that actually sent the message on behalf of the business account. Available only for outgoing messages sent on behalf of the connected business account.
     sender_business_bot: Option(User),
+    /// Optional. The bot that was caller of the guest bot which sent the message. Available only for messages sent by a guest bot summoned by another bot.
+    guest_bot_caller_user: Option(User),
+    /// Optional. The chat that was the caller of the guest bot which sent the message. Available only for messages sent by a guest bot summoned by a user in a group chat.
+    guest_bot_caller_chat: Option(Chat),
     /// Optional. Tag or custom title of the sender of the message; for supergroups only
     sender_tag: Option(String),
     /// Date the message was sent in Unix time. It is always a positive number, representing a valid date.
     date: Int,
     /// Optional. Unique identifier of the business connection from which the message was received. If non-empty, the message belongs to a chat of the corresponding business account that is independent from any potential bot chat which might share the same identifier.
     business_connection_id: Option(String),
+    /// Optional. The unique identifier for the guest query. Use this identifier with the method answerGuestQuery to send a response message. If non-empty, the message belongs to the chat where the guest bot was summoned, which may not coincide with other existing bot chats sharing the same identifier.
+    guest_query_id: Option(String),
     /// Chat the message belongs to
     chat: Chat,
     /// Optional. Information about the original message for forwarded messages
@@ -516,6 +532,8 @@ pub type Message {
     sticker: Option(Sticker),
     /// Optional. Message is a forwarded story
     story: Option(Story),
+    /// Optional. Message is a live photo, information about the live photo
+    live_photo: Option(LivePhoto),
     /// Optional. Message is a video, information about the video
     video: Option(Video),
     /// Optional. Message is a video note, information about the video message
@@ -742,6 +760,8 @@ pub type ExternalReplyInfo {
     sticker: Option(Sticker),
     /// Optional. Message is a forwarded story
     story: Option(Story),
+    /// Optional. Message is a live photo, information about the live photo
+    live_photo: Option(LivePhoto),
     /// Optional. Message is a video, information about the video
     video: Option(Video),
     /// Optional. Message is a video note, information about the video message
@@ -1069,6 +1089,62 @@ pub type PaidMediaVideo {
   )
 }
 
+/// **Official reference:** This object represents a live photo: a photo with a short video.
+pub type LivePhoto {
+  LivePhoto(
+    /// Optional. Available sizes of the corresponding static photo
+    photo: Option(List(PhotoSize)),
+    /// Identifier for the video file which can be used to download or reuse the file
+    file_id: String,
+    /// Unique identifier for the video file which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
+    file_unique_id: String,
+    /// Video width as defined by the sender
+    width: Int,
+    /// Video height as defined by the sender
+    height: Int,
+    /// Duration of the video in seconds as defined by the sender
+    duration: Int,
+    /// Optional. MIME type of the file as defined by the sender
+    mime_type: Option(String),
+    /// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
+    file_size: Option(Int),
+  )
+}
+
+/// **Official reference:** The paid media is a live photo.
+pub type PaidMediaLivePhoto {
+  PaidMediaLivePhoto(
+    /// Type of the paid media, always "live_photo"
+    type_: String,
+    /// The photo
+    live_photo: LivePhoto,
+  )
+}
+
+/// **Official reference:** Describes a media in a poll. At most one of the optional fields can be present in any given object.
+pub type PollMedia {
+  PollMedia(
+    /// Optional. Media is an animation, information about the animation
+    animation: Option(Animation),
+    /// Optional. Media is an audio file, information about the file; currently, can't be received in a poll option
+    audio: Option(Audio),
+    /// Optional. Media is a general file, information about the file; currently, can't be received in a poll option
+    document: Option(Document),
+    /// Optional. Media is a live photo, information about the live photo
+    live_photo: Option(LivePhoto),
+    /// Optional. Media is a shared location, information about the location
+    location: Option(Location),
+    /// Optional. Media is a photo, available sizes of the photo
+    photo: Option(List(PhotoSize)),
+    /// Optional. Media is a sticker, information about the sticker; currently, for poll options only
+    sticker: Option(Sticker),
+    /// Optional. Media is a venue, information about the venue
+    venue: Option(Venue),
+    /// Optional. Media is a video, information about the video
+    video: Option(Video),
+  )
+}
+
 /// **Official reference:** This object represents a phone contact.
 pub type Contact {
   Contact(
@@ -1104,6 +1180,8 @@ pub type PollOption {
     text: String,
     /// Optional. Special entities that appear in the option text. Currently, only custom emoji entities are allowed in poll option texts
     text_entities: Option(List(MessageEntity)),
+    /// Optional. Media added to the poll option
+    media: Option(PollMedia),
     /// Number of users who voted for this option; may be 0 if unknown
     voter_count: Int,
     /// Optional. User who added the option; omitted if the option wasn't added by a user after poll creation
@@ -1115,6 +1193,34 @@ pub type PollOption {
   )
 }
 
+/// This object describes a media to be added to a poll option. It should be one of:
+/// `InputMediaAnimation`, `InputMediaLivePhoto`, `InputMediaLocation`, `InputMediaPhoto`,
+/// `InputMediaSticker`, `InputMediaVenue`, `InputMediaVideo`.
+pub type InputPollOptionMedia {
+  InputPollOptionMediaAnimation(InputMediaAnimation)
+  InputPollOptionMediaLivePhoto(InputMediaLivePhoto)
+  InputPollOptionMediaLocation(InputMediaLocation)
+  InputPollOptionMediaPhoto(InputMediaPhoto)
+  InputPollOptionMediaSticker(InputMediaSticker)
+  InputPollOptionMediaVenue(InputMediaVenue)
+  InputPollOptionMediaVideo(InputMediaVideo)
+}
+
+/// This object describes a media to be added to a poll description or a quiz explanation. It
+/// should be one of: `InputMediaAnimation`, `InputMediaAudio`, `InputMediaDocument`,
+/// `InputMediaLivePhoto`, `InputMediaLocation`, `InputMediaPhoto`, `InputMediaVenue`,
+/// `InputMediaVideo`.
+pub type InputPollMedia {
+  InputPollMediaAnimation(InputMediaAnimation)
+  InputPollMediaAudio(InputMediaAudio)
+  InputPollMediaDocument(InputMediaDocument)
+  InputPollMediaLivePhoto(InputMediaLivePhoto)
+  InputPollMediaLocation(InputMediaLocation)
+  InputPollMediaPhoto(InputMediaPhoto)
+  InputPollMediaVenue(InputMediaVenue)
+  InputPollMediaVideo(InputMediaVideo)
+}
+
 /// **Official reference:** This object contains information about one answer option in a poll to be sent.
 pub type InputPollOption {
   InputPollOption(
@@ -1124,6 +1230,8 @@ pub type InputPollOption {
     text_parse_mode: Option(String),
     /// Optional. A JSON-serialized list of special entities that appear in the poll option text. It can be specified instead of text_parse_mode
     text_entities: Option(List(MessageEntity)),
+    /// Optional. Media added to the poll option
+    media: Option(InputPollOptionMedia),
   )
 }
 
@@ -1166,12 +1274,18 @@ pub type Poll {
     allows_multiple_answers: Bool,
     /// True, if the poll allows to change the chosen answer options
     allows_revoting: Bool,
+    /// True if voting is limited to users who have been members of the chat where the poll was originally sent for more than 24 hours
+    members_only: Bool,
+    /// Optional. A list of two-letter ISO 3166-1 alpha-2 country codes indicating the countries from which users can vote in the poll. The country code "FT" is used for users with anonymous numbers. If omitted, then users from any country can participate in the poll.
+    country_codes: Option(List(String)),
     /// Optional. Array of 0-based identifiers of the correct answer options. Available only for polls in quiz mode which are closed or were sent (not forwarded) by the bot or to the private chat with the bot.
     correct_option_ids: Option(List(Int)),
     /// Optional. Text that is shown when a user chooses an incorrect answer or taps on the lamp icon in a quiz-style poll, 0-200 characters
     explanation: Option(String),
     /// Optional. Special entities like usernames, URLs, bot commands, etc. that appear in the explanation
     explanation_entities: Option(List(MessageEntity)),
+    /// Optional. Media added to the quiz explanation
+    explanation_media: Option(PollMedia),
     /// Optional. Amount of time in seconds the poll will be active after creation
     open_period: Option(Int),
     /// Optional. Point in time (Unix timestamp) when the poll will be automatically closed
@@ -1180,6 +1294,8 @@ pub type Poll {
     description: Option(String),
     /// Optional. Special entities like usernames, URLs, bot commands, etc. that appear in the description
     description_entities: Option(List(MessageEntity)),
+    /// Optional. Media added to the poll description; for polls inside the Message object only
+    media: Option(PollMedia),
   )
 }
 
@@ -2318,6 +2434,8 @@ pub type ChatMemberRestricted {
     can_send_other_messages: Bool,
     /// True, if the user is allowed to add web page previews to their messages
     can_add_web_page_previews: Bool,
+    /// True, if the user is allowed to react to messages
+    can_react_to_messages: Bool,
     /// True, if the user is allowed to edit their own tag
     can_edit_tag: Bool,
     /// True, if the user is allowed to change the chat title, photo and other settings
@@ -2396,6 +2514,8 @@ pub type ChatPermissions {
     can_send_other_messages: Option(Bool),
     /// Optional. True, if the user is allowed to add web page previews to their messages
     can_add_web_page_previews: Option(Bool),
+    /// Optional. True, if the user is allowed to react to messages
+    can_react_to_messages: Option(Bool),
     /// Optional. True, if the user is allowed to edit their own tag
     can_edit_tag: Option(Bool),
     /// Optional. True, if the user is allowed to change the chat title, photo and other settings. Ignored in public supergroups
@@ -2999,6 +3119,16 @@ pub type OwnedGifts {
   )
 }
 
+/// **Official reference:** This object describes the access settings of a bot.
+pub type BotAccessSettings {
+  BotAccessSettings(
+    /// True, if only selected users can access the bot. The bot's owner can always access it.
+    is_access_restricted: Bool,
+    /// Optional. The list of other users who have access to the bot if the access is restricted
+    added_users: Option(List(User)),
+  )
+}
+
 /// **Official reference:** This object describes the types of gifts that can be gifted to a user or a chat.
 pub type AcceptedGiftTypes {
   AcceptedGiftTypes(
@@ -3321,6 +3451,14 @@ pub type SentWebAppMessage {
   )
 }
 
+/// **Official reference:** Describes an inline message sent by a guest bot.
+pub type SentGuestMessage {
+  SentGuestMessage(
+    /// Identifier of the sent inline message
+    inline_message_id: String,
+  )
+}
+
 /// **Official reference:** Describes an inline message to be sent by a user of a Mini App.
 pub type PreparedInlineMessage {
   PreparedInlineMessage(
@@ -3472,6 +3610,90 @@ pub type InputMediaDocument {
     caption_entities: Option(List(MessageEntity)),
     /// Optional. Disables automatic server-side content type detection for files uploaded using multipart/form-data. Always True, if the document is sent as part of an album.
     disable_content_type_detection: Option(Bool),
+  )
+}
+
+/// **Official reference:** Represents a live photo to be sent.
+pub type InputMediaLivePhoto {
+  InputMediaLivePhoto(
+    /// Type of the result, must be live_photo
+    type_: String,
+    /// Video of the live photo to send. Pass a file_id to send a file that exists on the Telegram servers (recommended) or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files. Sending live photos by a URL is currently unsupported.
+    media: String,
+    /// The static photo to send. Pass a file_id to send a file that exists on the Telegram servers (recommended) or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files. Sending live photos by a URL is currently unsupported.
+    photo: String,
+    /// Optional. Caption of the live photo to be sent, 0-1024 characters after entities parsing
+    caption: Option(String),
+    /// Optional. Mode for parsing entities in the live photo caption. See formatting options for more details.
+    parse_mode: Option(String),
+    /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+    caption_entities: Option(List(MessageEntity)),
+    /// Optional. Pass True, if the caption must be shown above the message media
+    show_caption_above_media: Option(Bool),
+    /// Optional. Pass True if the live photo needs to be covered with a spoiler animation
+    has_spoiler: Option(Bool),
+  )
+}
+
+/// **Official reference:** Represents a location to be sent.
+pub type InputMediaLocation {
+  InputMediaLocation(
+    /// Type of the result, must be location
+    type_: String,
+    /// Latitude of the location
+    latitude: Float,
+    /// Longitude of the location
+    longitude: Float,
+    /// Optional. The radius of uncertainty for the location, measured in meters; 0-1500
+    horizontal_accuracy: Option(Float),
+  )
+}
+
+/// **Official reference:** Represents a sticker file to be sent.
+pub type InputMediaSticker {
+  InputMediaSticker(
+    /// Type of the result, must be sticker
+    type_: String,
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a .WEBP sticker from the Internet, or pass "attach://<file_attach_name>" to upload a new .WEBP, .TGS, or .WEBM sticker using multipart/form-data under <file_attach_name> name. More information on Sending Files.
+    media: String,
+    /// Optional. Emoji associated with the sticker; only for just uploaded stickers
+    emoji: Option(String),
+  )
+}
+
+/// **Official reference:** Represents a venue to be sent.
+pub type InputMediaVenue {
+  InputMediaVenue(
+    /// Type of the result, must be venue
+    type_: String,
+    /// Latitude of the location
+    latitude: Float,
+    /// Longitude of the location
+    longitude: Float,
+    /// Name of the venue
+    title: String,
+    /// Address of the venue
+    address: String,
+    /// Optional. Foursquare identifier of the venue
+    foursquare_id: Option(String),
+    /// Optional. Foursquare type of the venue, if known. (For example, "arts_entertainment/default", "arts_entertainment/aquarium" or "food/icecream".)
+    foursquare_type: Option(String),
+    /// Optional. Google Places identifier of the venue
+    google_place_id: Option(String),
+    /// Optional. Google Places type of the venue. (See supported types.)
+    google_place_type: Option(String),
+  )
+}
+
+/// **Official reference:** The paid media to send is a live photo.
+pub type InputPaidMediaLivePhoto {
+  InputPaidMediaLivePhoto(
+    /// Type of the media, must be live_photo
+    type_: String,
+    /// Video of the live photo to send. Pass a file_id to send a file that exists on the Telegram servers (recommended) or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files. Sending live photos by a URL is currently unsupported.
+    media: String,
+    /// The static photo to send. Pass a file_id to send a file that exists on the Telegram servers (recommended) or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files. Sending live photos by a URL is currently unsupported.
+    photo: String,
   )
 }
 
@@ -5651,6 +5873,10 @@ pub type SendPollParameters {
     allows_multiple_answers: Option(Bool),
     /// Whether revoting is allowed
     allows_revoting: Option(Bool),
+    /// Bot API 10.0: limit voting to members of the chat where the poll was sent for >24h
+    members_only: Option(Bool),
+    /// Bot API 10.0: list of two-letter ISO 3166-1 alpha-2 country codes from which users can vote ("FT" for anonymous numbers)
+    country_codes: Option(List(String)),
     /// 0-based identifiers of the correct answer options (for quizzes)
     correct_option_ids: Option(List(Int)),
     /// Text shown for incorrect answers
@@ -5659,6 +5885,10 @@ pub type SendPollParameters {
     explanation_parse_mode: Option(String),
     /// List of special entities in the explanation
     explanation_entities: Option(List(MessageEntity)),
+    /// Bot API 10.0: media for the quiz explanation
+    explanation_media: Option(InputPollMedia),
+    /// Bot API 10.0: media added to the poll description
+    media: Option(InputPollMedia),
     /// Poll active period in seconds (5-2628000)
     open_period: Option(Int),
     /// Poll close time (Unix timestamp)
@@ -6363,6 +6593,8 @@ pub type GetChatAdministratorsParameters {
   GetChatAdministratorsParameters(
     /// Unique identifier for the target chat or username of the target supergroup or channel (in the format `@channelusername`)
     chat_id: IntOrString,
+    /// Bot API 10.0: pass True to also include bots in the returned list
+    return_bots: Option(Bool),
   )
 }
 
@@ -7291,6 +7523,118 @@ pub type DeleteStoryParameters {
     business_connection_id: String,
     /// Unique identifier of the story to delete
     story_id: Int,
+  )
+}
+
+// Bot API 10.0 ---------------------------------------------------------------
+
+/// Parameters for `answerGuestQuery` (Bot API 10.0).
+pub type AnswerGuestQueryParameters {
+  AnswerGuestQueryParameters(
+    /// Unique identifier of the guest query as returned in `Message.guest_query_id`
+    guest_query_id: String,
+    /// Text of the message to be sent, 0-4096 characters
+    text: String,
+    /// Optional. Mode for parsing entities in the message text
+    parse_mode: Option(String),
+    /// Optional. A JSON-serialized list of special entities that appear in the message text
+    entities: Option(List(MessageEntity)),
+    /// Optional. Link preview generation options for the message
+    link_preview_options: Option(LinkPreviewOptions),
+    /// Optional. Additional interface options. A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+/// Parameters for `deleteMessageReaction` (Bot API 10.0).
+pub type DeleteMessageReactionParameters {
+  DeleteMessageReactionParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Identifier of the target message
+    message_id: Int,
+    /// Identifier of the user who set the reaction
+    user_id: Int,
+    /// The reaction to remove from the message
+    reaction: ReactionType,
+  )
+}
+
+/// Parameters for `deleteAllMessageReactions` (Bot API 10.0).
+pub type DeleteAllMessageReactionsParameters {
+  DeleteAllMessageReactionsParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Identifier of the target message
+    message_id: Int,
+  )
+}
+
+/// Parameters for `sendLivePhoto` (Bot API 10.0).
+pub type SendLivePhotoParameters {
+  SendLivePhotoParameters(
+    /// Unique identifier of the business connection
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier for the target message thread of the forum/direct messages chat
+    message_thread_id: Option(Int),
+    /// Information about the suggested post parameters
+    direct_messages_topic_id: Option(Int),
+    /// Video of the live photo to send. Pass a file_id or "attach://<file_attach_name>". URLs are not supported.
+    media: FileOrString,
+    /// The static photo to send. Pass a file_id or "attach://<file_attach_name>". URLs are not supported.
+    photo: FileOrString,
+    /// Optional. Photo caption, 0-1024 characters after entities parsing
+    caption: Option(String),
+    /// Optional. Mode for parsing entities in the photo caption
+    parse_mode: Option(String),
+    /// Optional. A JSON-serialized list of special entities that appear in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Optional. Pass True, if the caption must be shown above the message media
+    show_caption_above_media: Option(Bool),
+    /// Optional. Pass True if the live photo needs to be covered with a spoiler animation
+    has_spoiler: Option(Bool),
+    /// Optional. Sends the message silently
+    disable_notification: Option(Bool),
+    /// Optional. Protects the contents of the sent message from forwarding and saving
+    protect_content: Option(Bool),
+    /// Optional. Pass True to allow up to 1000 messages per second, ignoring broadcasting limits for a fee of 0.1 Telegram Stars per message
+    allow_paid_broadcast: Option(Bool),
+    /// Optional. Unique identifier of the message effect to be added to the message
+    message_effect_id: Option(String),
+    /// Optional. Description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// Optional. Reply markup
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+/// Parameters for `getManagedBotAccessSettings` (Bot API 10.0).
+pub type GetManagedBotAccessSettingsParameters {
+  GetManagedBotAccessSettingsParameters(
+    /// Unique identifier of the managed bot
+    bot_id: Int,
+  )
+}
+
+/// Parameters for `setManagedBotAccessSettings` (Bot API 10.0).
+pub type SetManagedBotAccessSettingsParameters {
+  SetManagedBotAccessSettingsParameters(
+    /// Unique identifier of the managed bot
+    bot_id: Int,
+    /// The new access settings of the bot
+    settings: BotAccessSettings,
+  )
+}
+
+/// Parameters for `getUserPersonalChatMessages` (Bot API 10.0).
+pub type GetUserPersonalChatMessagesParameters {
+  GetUserPersonalChatMessagesParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Identifiers of the messages to retrieve from the user's personal chat (1-100)
+    message_ids: List(Int),
   )
 }
 

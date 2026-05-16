@@ -482,7 +482,10 @@ pub fn init_for_polling(
 /// Handle an update.
 ///
 /// This function is useful when you want to handle updates in your own way.
-pub fn handle_update(telega: Telega(session, error), raw_update: Update) -> Bool {
+pub fn handle_update(
+  telega: Telega(session, error),
+  raw_update: Update,
+) -> Bool {
   let update = update.raw_to_update(raw_update)
   bot.handle_update(telega.bot_subject, update)
 }

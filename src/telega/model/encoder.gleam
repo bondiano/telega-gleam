@@ -8,13 +8,14 @@ import telega/internal/utils.{json_object_filter_nulls}
 import telega/model/types.{
   type AcceptedGiftTypes, type AddStickerToSetParameters, type AffiliateInfo,
   type Animation, type AnswerCallbackQueryParameters,
-  type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
-  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type Audio, type BackgroundFill, type BackgroundFillFreeformGradient,
-  type BackgroundFillGradient, type BackgroundFillSolid, type BackgroundType,
-  type BackgroundTypeChatTheme, type BackgroundTypeFill,
-  type BackgroundTypePattern, type BackgroundTypeWallpaper,
-  type BanChatMemberParameters, type BanChatSenderChatParameters, type Birthdate,
+  type AnswerGuestQueryParameters, type AnswerInlineQueryParameters,
+  type AnswerPreCheckoutQueryParameters, type AnswerShippingQueryParameters,
+  type ApproveChatJoinRequestParameters, type Audio, type BackgroundFill,
+  type BackgroundFillFreeformGradient, type BackgroundFillGradient,
+  type BackgroundFillSolid, type BackgroundType, type BackgroundTypeChatTheme,
+  type BackgroundTypeFill, type BackgroundTypePattern,
+  type BackgroundTypeWallpaper, type BanChatMemberParameters,
+  type BanChatSenderChatParameters, type Birthdate, type BotAccessSettings,
   type BotCommand, type BotCommandParameters, type BotCommandScope,
   type BotCommandScopeAllChatAdministrators, type BotCommandScopeAllGroupChats,
   type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
@@ -42,12 +43,14 @@ import telega/model/types.{
   type CreateChatSubscriptionInviteLinkParameters,
   type CreateForumTopicParameters, type CreateInvoiceLinkParameters,
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
+  type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
   type DeleteChatStickerSetParameters, type DeleteForumTopicParameters,
-  type DeleteMessageParameters, type DeleteMessagesParameters,
-  type DeleteStickerFromSetParameters, type DeleteStickerSetParameters,
-  type DeleteStoryParameters, type Dice, type DirectMessagePriceChanged,
-  type DirectMessagesTopic, type Document, type EditChatInviteLinkParameters,
+  type DeleteMessageParameters, type DeleteMessageReactionParameters,
+  type DeleteMessagesParameters, type DeleteStickerFromSetParameters,
+  type DeleteStickerSetParameters, type DeleteStoryParameters, type Dice,
+  type DirectMessagePriceChanged, type DirectMessagesTopic, type Document,
+  type EditChatInviteLinkParameters,
   type EditChatSubscriptionInviteLinkParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
   type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
@@ -65,11 +68,13 @@ import telega/model/types.{
   type GetChatGiftsParameters, type GetChatMemberCountParameters,
   type GetChatMemberParameters, type GetChatMenuButtonParameters,
   type GetCustomEmojiStickersParameters, type GetGameHighScoresParameters,
+  type GetManagedBotAccessSettingsParameters,
   type GetMyDefaultAdministratorRightsParameters,
   type GetMyDescriptionParameters, type GetMyNameParameters,
   type GetMyShortDescriptionParameters, type GetStarTransactionsParameters,
   type GetStickerSetParameters, type GetUpdatesParameters,
   type GetUserChatBoostsParameters, type GetUserGiftsParameters,
+  type GetUserPersonalChatMessagesParameters,
   type GetUserProfileAudiosParameters, type GetUserProfilePhotosParameters,
   type Gift, type GiftBackground, type GiftInfo,
   type GiftPremiumSubscriptionParameters, type Gifts, type Giveaway,
@@ -90,9 +95,12 @@ import telega/model/types.{
   type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
   type InputInvoiceMessageContent, type InputLocationMessageContent,
   type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaPhoto, type InputMediaVideo,
-  type InputMessageContent, type InputPaidMedia, type InputPaidMediaPhoto,
-  type InputPaidMediaVideo, type InputPollOption, type InputProfilePhoto,
+  type InputMediaDocument, type InputMediaLivePhoto, type InputMediaLocation,
+  type InputMediaPhoto, type InputMediaSticker, type InputMediaVenue,
+  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
+  type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
+  type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
+  type InputPollOptionMedia, type InputProfilePhoto,
   type InputProfilePhotoAnimated, type InputProfilePhotoStatic,
   type InputSticker, type InputStoryContent, type InputStoryContentPhoto,
   type InputStoryContentVideo, type InputTextMessageContent,
@@ -100,30 +108,30 @@ import telega/model/types.{
   type KeyboardButton, type KeyboardButtonPollType,
   type KeyboardButtonRequestChat, type KeyboardButtonRequestManagedBot,
   type KeyboardButtonRequestUsers, type LabeledPrice, type LeaveChatParameters,
-  type LinkPreviewOptions, type Location, type LocationAddress, type LoginUrl,
-  type ManagedBotCreated, type ManagedBotUpdated, type MaskPosition,
-  type MaybeInaccessibleMessage, type MenuButton, type MenuButtonCommands,
-  type MenuButtonDefault, type MenuButtonWebApp, type Message,
-  type MessageAutoDeleteTimerChanged, type MessageEntity, type MessageId,
-  type MessageOrigin, type MessageOriginChannel, type MessageOriginChat,
-  type MessageOriginHiddenUser, type MessageOriginUser,
+  type LinkPreviewOptions, type LivePhoto, type Location, type LocationAddress,
+  type LoginUrl, type ManagedBotCreated, type ManagedBotUpdated,
+  type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
+  type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
+  type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
+  type MessageId, type MessageOrigin, type MessageOriginChannel,
+  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
-  type PaidMedia, type PaidMediaInfo, type PaidMediaPhoto, type PaidMediaPreview,
-  type PaidMediaPurchased, type PaidMediaVideo, type PaidMessagePriceChanged,
-  type PassportData, type PassportElementError,
-  type PassportElementErrorDataField, type PassportElementErrorFile,
-  type PassportElementErrorFiles, type PassportElementErrorFrontSide,
-  type PassportElementErrorReverseSide, type PassportElementErrorSelfie,
-  type PassportElementErrorTranslationFile,
+  type PaidMedia, type PaidMediaInfo, type PaidMediaLivePhoto,
+  type PaidMediaPhoto, type PaidMediaPreview, type PaidMediaPurchased,
+  type PaidMediaVideo, type PaidMessagePriceChanged, type PassportData,
+  type PassportElementError, type PassportElementErrorDataField,
+  type PassportElementErrorFile, type PassportElementErrorFiles,
+  type PassportElementErrorFrontSide, type PassportElementErrorReverseSide,
+  type PassportElementErrorSelfie, type PassportElementErrorTranslationFile,
   type PassportElementErrorTranslationFiles,
   type PassportElementErrorUnspecified, type PassportFile, type PhotoSize,
-  type PinChatMessageParameters, type Poll, type PollAnswer, type PollOption,
-  type PollOptionAdded, type PollOptionDeleted, type PostStoryParameters,
-  type PreCheckoutQuery, type PreparedInlineMessage, type PreparedKeyboardButton,
-  type PromoteChatMemberParameters, type ProximityAlertTriggered,
-  type ReactionCount, type ReactionType, type ReactionTypeCustomEmoji,
-  type ReactionTypeEmoji, type ReactionTypePaid,
+  type PinChatMessageParameters, type Poll, type PollAnswer, type PollMedia,
+  type PollOption, type PollOptionAdded, type PollOptionDeleted,
+  type PostStoryParameters, type PreCheckoutQuery, type PreparedInlineMessage,
+  type PreparedKeyboardButton, type PromoteChatMemberParameters,
+  type ProximityAlertTriggered, type ReactionCount, type ReactionType,
+  type ReactionTypeCustomEmoji, type ReactionTypeEmoji, type ReactionTypePaid,
   type ReadBusinessMessageParameters, type RefundStarPaymentParameters,
   type RefundedPayment, type RemoveBusinessAccountProfilePhotoParameters,
   type RemoveChatVerificationParameters, type RemoveUserVerificationParameters,
@@ -137,12 +145,13 @@ import telega/model/types.{
   type SendAudioParameters, type SendChatActionParameters,
   type SendContactParameters, type SendDiceParameters,
   type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
-  type SendInvoiceParameters, type SendLocationParameters,
-  type SendMediaGroupParameters, type SendMessageDraftParameters,
-  type SendMessageParameters, type SendMessageReplyMarkupParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
-  type SendVenueParameters, type SendVideoNoteParameters,
-  type SendVideoParameters, type SendVoiceParameters, type SentWebAppMessage,
+  type SendInvoiceParameters, type SendLivePhotoParameters,
+  type SendLocationParameters, type SendMediaGroupParameters,
+  type SendMessageDraftParameters, type SendMessageParameters,
+  type SendMessageReplyMarkupParameters, type SendPhotoParameters,
+  type SendPollParameters, type SendStickerParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SentGuestMessage, type SentWebAppMessage,
   type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
@@ -153,7 +162,7 @@ import telega/model/types.{
   type SetChatPermissionsParameters, type SetChatPhotoParameters,
   type SetChatStickerSetParameters, type SetChatTitleParameters,
   type SetCustomEmojiStickerSetThumbnailParameters, type SetGameScoreParameters,
-  type SetMessageReactionParameters,
+  type SetManagedBotAccessSettingsParameters, type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
@@ -230,8 +239,17 @@ import telega/model/types.{
   InputInvoiceMessageContentInputMessageContent,
   InputLocationMessageContentInputMessageContent, InputMediaAnimationInputMedia,
   InputMediaAudioInputMedia, InputMediaDocumentInputMedia,
-  InputMediaPhotoInputMedia, InputMediaVideoInputMedia,
-  InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideoInputPaidMedia,
+  InputMediaLivePhotoInputMedia, InputMediaLocationInputMedia,
+  InputMediaPhotoInputMedia, InputMediaStickerInputMedia,
+  InputMediaVenueInputMedia, InputMediaVideoInputMedia,
+  InputPaidMediaLivePhotoInputPaidMedia, InputPaidMediaPhotoInputPaidMedia,
+  InputPaidMediaVideoInputPaidMedia, InputPollMediaAnimation,
+  InputPollMediaAudio, InputPollMediaDocument, InputPollMediaLivePhoto,
+  InputPollMediaLocation, InputPollMediaPhoto, InputPollMediaVenue,
+  InputPollMediaVideo, InputPollOptionMediaAnimation,
+  InputPollOptionMediaLivePhoto, InputPollOptionMediaLocation,
+  InputPollOptionMediaPhoto, InputPollOptionMediaSticker,
+  InputPollOptionMediaVenue, InputPollOptionMediaVideo,
   InputProfilePhotoAnimatedInputProfilePhoto,
   InputProfilePhotoStaticInputProfilePhoto,
   InputTextMessageContentInputMessageContent,
@@ -239,8 +257,8 @@ import telega/model/types.{
   MenuButtonDefaultMenuButton, MenuButtonWebAppMenuButton,
   MessageMaybeInaccessibleMessage, MessageOriginChannelMessageOrigin,
   MessageOriginChatMessageOrigin, MessageOriginHiddenUserMessageOrigin,
-  MessageOriginUserMessageOrigin, PaidMediaPhotoPaidMedia,
-  PaidMediaPreviewPaidMedia, PaidMediaVideoPaidMedia,
+  MessageOriginUserMessageOrigin, PaidMediaLivePhotoPaidMedia,
+  PaidMediaPhotoPaidMedia, PaidMediaPreviewPaidMedia, PaidMediaVideoPaidMedia,
   PassportElementErrorDataFieldPassportElementError,
   PassportElementErrorFilePassportElementError,
   PassportElementErrorFilesPassportElementError,
@@ -353,6 +371,7 @@ pub fn encode_update(update: Update) -> Json {
       "managed_bot",
       json.nullable(update.managed_bot, encode_managed_bot_updated),
     ),
+    #("guest_message", json.nullable(update.guest_message, encode_message)),
   ])
 }
 
@@ -412,6 +431,10 @@ pub fn encode_user(user: User) -> Json {
       json.nullable(user.allows_users_to_create_topics, json.bool),
     ),
     #("can_manage_bots", json.nullable(user.can_manage_bots, json.bool)),
+    #(
+      "supports_guest_queries",
+      json.nullable(user.supports_guest_queries, json.bool),
+    ),
   ])
 }
 
@@ -610,12 +633,21 @@ pub fn encode_message(message: Message) -> Json {
       "sender_business_bot",
       json.nullable(message.sender_business_bot, encode_user),
     ),
+    #(
+      "guest_bot_caller_user",
+      json.nullable(message.guest_bot_caller_user, encode_user),
+    ),
+    #(
+      "guest_bot_caller_chat",
+      json.nullable(message.guest_bot_caller_chat, encode_chat),
+    ),
     #("sender_tag", json.nullable(message.sender_tag, json.string)),
     #("date", json.int(message.date)),
     #(
       "business_connection_id",
       json.nullable(message.business_connection_id, json.string),
     ),
+    #("guest_query_id", json.nullable(message.guest_query_id, json.string)),
     #("chat", encode_chat(message.chat)),
     #(
       "forward_origin",
@@ -676,6 +708,7 @@ pub fn encode_message(message: Message) -> Json {
     #("photo", json.nullable(message.photo, json.array(_, encode_photo_size))),
     #("sticker", json.nullable(message.sticker, encode_sticker)),
     #("story", json.nullable(message.story, encode_story)),
+    #("live_photo", json.nullable(message.live_photo, encode_live_photo)),
     #("video", json.nullable(message.video, encode_video)),
     #("video_note", json.nullable(message.video_note, encode_video_note)),
     #("voice", json.nullable(message.voice, encode_voice)),
@@ -1007,6 +1040,10 @@ pub fn encode_external_reply_info(
     ),
     #("sticker", json.nullable(external_reply_info.sticker, encode_sticker)),
     #("story", json.nullable(external_reply_info.story, encode_story)),
+    #(
+      "live_photo",
+      json.nullable(external_reply_info.live_photo, encode_live_photo),
+    ),
     #("video", json.nullable(external_reply_info.video, encode_video)),
     #(
       "video_note",
@@ -1267,6 +1304,48 @@ pub fn encode_paid_media_video(paid_media_video: PaidMediaVideo) -> Json {
   ])
 }
 
+pub fn encode_live_photo(live_photo: LivePhoto) -> Json {
+  json_object_filter_nulls([
+    #(
+      "photo",
+      json.nullable(live_photo.photo, json.array(_, encode_photo_size)),
+    ),
+    #("file_id", json.string(live_photo.file_id)),
+    #("file_unique_id", json.string(live_photo.file_unique_id)),
+    #("width", json.int(live_photo.width)),
+    #("height", json.int(live_photo.height)),
+    #("duration", json.int(live_photo.duration)),
+    #("mime_type", json.nullable(live_photo.mime_type, json.string)),
+    #("file_size", json.nullable(live_photo.file_size, json.int)),
+  ])
+}
+
+pub fn encode_paid_media_live_photo(
+  paid_media_live_photo: PaidMediaLivePhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(paid_media_live_photo.type_)),
+    #("live_photo", encode_live_photo(paid_media_live_photo.live_photo)),
+  ])
+}
+
+pub fn encode_poll_media(poll_media: PollMedia) -> Json {
+  json_object_filter_nulls([
+    #("animation", json.nullable(poll_media.animation, encode_animation)),
+    #("audio", json.nullable(poll_media.audio, encode_audio)),
+    #("document", json.nullable(poll_media.document, encode_document)),
+    #("live_photo", json.nullable(poll_media.live_photo, encode_live_photo)),
+    #("location", json.nullable(poll_media.location, encode_location)),
+    #(
+      "photo",
+      json.nullable(poll_media.photo, json.array(_, encode_photo_size)),
+    ),
+    #("sticker", json.nullable(poll_media.sticker, encode_sticker)),
+    #("venue", json.nullable(poll_media.venue, encode_venue)),
+    #("video", json.nullable(poll_media.video, encode_video)),
+  ])
+}
+
 pub fn encode_contact(contact: Contact) -> Json {
   json_object_filter_nulls([
     #("phone_number", json.string(contact.phone_number)),
@@ -1295,6 +1374,7 @@ pub fn encode_poll_option(poll_option: PollOption) -> Json {
         encode_message_entity,
       )),
     ),
+    #("media", json.nullable(poll_option.media, encode_poll_media)),
     #("voter_count", json.int(poll_option.voter_count)),
     #("added_by_user", json.nullable(poll_option.added_by_user, encode_user)),
     #("added_by_chat", json.nullable(poll_option.added_by_chat, encode_chat)),
@@ -1315,6 +1395,10 @@ pub fn encode_input_poll_option(input_poll_option: InputPollOption) -> Json {
         _,
         encode_message_entity,
       )),
+    ),
+    #(
+      "media",
+      json.nullable(input_poll_option.media, encode_input_poll_option_media),
     ),
   ])
 }
@@ -1347,6 +1431,11 @@ pub fn encode_poll(poll: Poll) -> Json {
     #("type", json.string(poll.type_)),
     #("allows_multiple_answers", json.bool(poll.allows_multiple_answers)),
     #("allows_revoting", json.bool(poll.allows_revoting)),
+    #("members_only", json.bool(poll.members_only)),
+    #(
+      "country_codes",
+      json.nullable(poll.country_codes, json.array(_, json.string)),
+    ),
     #(
       "correct_option_ids",
       json.nullable(poll.correct_option_ids, json.array(_, json.int)),
@@ -1359,6 +1448,10 @@ pub fn encode_poll(poll: Poll) -> Json {
         encode_message_entity,
       )),
     ),
+    #(
+      "explanation_media",
+      json.nullable(poll.explanation_media, encode_poll_media),
+    ),
     #("open_period", json.nullable(poll.open_period, json.int)),
     #("close_date", json.nullable(poll.close_date, json.int)),
     #("description", json.nullable(poll.description, json.string)),
@@ -1369,6 +1462,7 @@ pub fn encode_poll(poll: Poll) -> Json {
         encode_message_entity,
       )),
     ),
+    #("media", json.nullable(poll.media, encode_poll_media)),
   ])
 }
 
@@ -1744,7 +1838,9 @@ pub fn encode_forum_topic_created(
   ])
 }
 
-pub fn encode_forum_topic_closed(_forum_topic_closed: ForumTopicClosed) -> Json {
+pub fn encode_forum_topic_closed(
+  _forum_topic_closed: ForumTopicClosed,
+) -> Json {
   json_object_filter_nulls([])
 }
 
@@ -1836,7 +1932,9 @@ pub fn encode_video_chat_scheduled(
   ])
 }
 
-pub fn encode_video_chat_started(_video_chat_started: VideoChatStarted) -> Json {
+pub fn encode_video_chat_started(
+  _video_chat_started: VideoChatStarted,
+) -> Json {
   json_object_filter_nulls([])
 }
 
@@ -2043,7 +2141,9 @@ pub fn encode_giveaway_winners(giveaway_winners: GiveawayWinners) -> Json {
   ])
 }
 
-pub fn encode_giveaway_completed(giveaway_completed: GiveawayCompleted) -> Json {
+pub fn encode_giveaway_completed(
+  giveaway_completed: GiveawayCompleted,
+) -> Json {
   json_object_filter_nulls([
     #("winner_count", json.int(giveaway_completed.winner_count)),
     #(
@@ -2769,6 +2869,10 @@ pub fn encode_chat_member_restricted(
       "can_add_web_page_previews",
       json.bool(chat_member_restricted.can_add_web_page_previews),
     ),
+    #(
+      "can_react_to_messages",
+      json.bool(chat_member_restricted.can_react_to_messages),
+    ),
     #("can_edit_tag", json.bool(chat_member_restricted.can_edit_tag)),
     #("can_change_info", json.bool(chat_member_restricted.can_change_info)),
     #("can_invite_users", json.bool(chat_member_restricted.can_invite_users)),
@@ -2848,6 +2952,10 @@ pub fn encode_chat_permissions(chat_permissions: ChatPermissions) -> Json {
     #(
       "can_add_web_page_previews",
       json.nullable(chat_permissions.can_add_web_page_previews, json.bool),
+    ),
+    #(
+      "can_react_to_messages",
+      json.nullable(chat_permissions.can_react_to_messages, json.bool),
     ),
     #("can_edit_tag", json.nullable(chat_permissions.can_edit_tag, json.bool)),
     #(
@@ -3434,6 +3542,21 @@ pub fn encode_owned_gifts(owned_gifts: OwnedGifts) -> Json {
   ])
 }
 
+pub fn encode_bot_access_settings(
+  bot_access_settings: BotAccessSettings,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "is_access_restricted",
+      json.bool(bot_access_settings.is_access_restricted),
+    ),
+    #(
+      "added_users",
+      json.nullable(bot_access_settings.added_users, json.array(_, encode_user)),
+    ),
+  ])
+}
+
 pub fn encode_accepted_gift_types(
   accepted_gift_types: AcceptedGiftTypes,
 ) -> Json {
@@ -3554,7 +3677,9 @@ pub fn encode_menu_button_commands(
   ])
 }
 
-pub fn encode_menu_button_web_app(menu_button_web_app: MenuButtonWebApp) -> Json {
+pub fn encode_menu_button_web_app(
+  menu_button_web_app: MenuButtonWebApp,
+) -> Json {
   json_object_filter_nulls([
     #("type", json.string(menu_button_web_app.type_)),
     #("text", json.string(menu_button_web_app.text)),
@@ -3758,6 +3883,12 @@ pub fn encode_sent_web_app_message(
   ])
 }
 
+pub fn encode_sent_guest_message(sent_guest_message: SentGuestMessage) -> Json {
+  json_object_filter_nulls([
+    #("inline_message_id", json.string(sent_guest_message.inline_message_id)),
+  ])
+}
+
 pub fn encode_prepared_inline_message(
   prepared_inline_message: PreparedInlineMessage,
 ) -> Json {
@@ -3918,6 +4049,96 @@ pub fn encode_input_media_document(
         json.bool,
       ),
     ),
+  ])
+}
+
+pub fn encode_input_media_live_photo(
+  input_media_live_photo: InputMediaLivePhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_live_photo.type_)),
+    #("media", json.string(input_media_live_photo.media)),
+    #("photo", json.string(input_media_live_photo.photo)),
+    #("caption", json.nullable(input_media_live_photo.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(input_media_live_photo.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(input_media_live_photo.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(input_media_live_photo.show_caption_above_media, json.bool),
+    ),
+    #(
+      "has_spoiler",
+      json.nullable(input_media_live_photo.has_spoiler, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_media_location(
+  input_media_location: InputMediaLocation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_location.type_)),
+    #("latitude", json.float(input_media_location.latitude)),
+    #("longitude", json.float(input_media_location.longitude)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(input_media_location.horizontal_accuracy, json.float),
+    ),
+  ])
+}
+
+pub fn encode_input_media_sticker(
+  input_media_sticker: InputMediaSticker,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_sticker.type_)),
+    #("media", json.string(input_media_sticker.media)),
+    #("emoji", json.nullable(input_media_sticker.emoji, json.string)),
+  ])
+}
+
+pub fn encode_input_media_venue(input_media_venue: InputMediaVenue) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_venue.type_)),
+    #("latitude", json.float(input_media_venue.latitude)),
+    #("longitude", json.float(input_media_venue.longitude)),
+    #("title", json.string(input_media_venue.title)),
+    #("address", json.string(input_media_venue.address)),
+    #(
+      "foursquare_id",
+      json.nullable(input_media_venue.foursquare_id, json.string),
+    ),
+    #(
+      "foursquare_type",
+      json.nullable(input_media_venue.foursquare_type, json.string),
+    ),
+    #(
+      "google_place_id",
+      json.nullable(input_media_venue.google_place_id, json.string),
+    ),
+    #(
+      "google_place_type",
+      json.nullable(input_media_venue.google_place_type, json.string),
+    ),
+  ])
+}
+
+pub fn encode_input_paid_media_live_photo(
+  input_paid_media_live_photo: InputPaidMediaLivePhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_paid_media_live_photo.type_)),
+    #("media", json.string(input_paid_media_live_photo.media)),
+    #("photo", json.string(input_paid_media_live_photo.photo)),
   ])
 }
 
@@ -5317,7 +5538,9 @@ pub fn encode_shipping_option(shipping_option: ShippingOption) -> Json {
   ])
 }
 
-pub fn encode_successful_payment(successful_payment: SuccessfulPayment) -> Json {
+pub fn encode_successful_payment(
+  successful_payment: SuccessfulPayment,
+) -> Json {
   json_object_filter_nulls([
     #("currency", json.string(successful_payment.currency)),
     #("total_amount", json.int(successful_payment.total_amount)),
@@ -5857,6 +6080,9 @@ pub fn encode_paid_media(value: PaidMedia) -> Json {
     PaidMediaPhotoPaidMedia(inner_value) -> encode_paid_media_photo(inner_value)
 
     PaidMediaVideoPaidMedia(inner_value) -> encode_paid_media_video(inner_value)
+
+    PaidMediaLivePhotoPaidMedia(inner_value) ->
+      encode_paid_media_live_photo(inner_value)
   }
 }
 
@@ -5991,6 +6217,18 @@ pub fn encode_input_media(value: InputMedia) -> Json {
 
     InputMediaVideoInputMedia(inner_value) ->
       encode_input_media_video(inner_value)
+
+    InputMediaLivePhotoInputMedia(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+
+    InputMediaLocationInputMedia(inner_value) ->
+      encode_input_media_location(inner_value)
+
+    InputMediaStickerInputMedia(inner_value) ->
+      encode_input_media_sticker(inner_value)
+
+    InputMediaVenueInputMedia(inner_value) ->
+      encode_input_media_venue(inner_value)
   }
 }
 
@@ -6001,6 +6239,58 @@ pub fn encode_input_paid_media(value: InputPaidMedia) -> Json {
 
     InputPaidMediaVideoInputPaidMedia(inner_value) ->
       encode_input_paid_media_video(inner_value)
+
+    InputPaidMediaLivePhotoInputPaidMedia(inner_value) ->
+      encode_input_paid_media_live_photo(inner_value)
+  }
+}
+
+pub fn encode_input_poll_media(value: InputPollMedia) -> Json {
+  case value {
+    InputPollMediaAnimation(inner_value) ->
+      encode_input_media_animation(inner_value)
+
+    InputPollMediaAudio(inner_value) -> encode_input_media_audio(inner_value)
+
+    InputPollMediaDocument(inner_value) ->
+      encode_input_media_document(inner_value)
+
+    InputPollMediaLivePhoto(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+
+    InputPollMediaLocation(inner_value) ->
+      encode_input_media_location(inner_value)
+
+    InputPollMediaPhoto(inner_value) -> encode_input_media_photo(inner_value)
+
+    InputPollMediaVenue(inner_value) -> encode_input_media_venue(inner_value)
+
+    InputPollMediaVideo(inner_value) -> encode_input_media_video(inner_value)
+  }
+}
+
+pub fn encode_input_poll_option_media(value: InputPollOptionMedia) -> Json {
+  case value {
+    InputPollOptionMediaAnimation(inner_value) ->
+      encode_input_media_animation(inner_value)
+
+    InputPollOptionMediaLivePhoto(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+
+    InputPollOptionMediaLocation(inner_value) ->
+      encode_input_media_location(inner_value)
+
+    InputPollOptionMediaPhoto(inner_value) ->
+      encode_input_media_photo(inner_value)
+
+    InputPollOptionMediaSticker(inner_value) ->
+      encode_input_media_sticker(inner_value)
+
+    InputPollOptionMediaVenue(inner_value) ->
+      encode_input_media_venue(inner_value)
+
+    InputPollOptionMediaVideo(inner_value) ->
+      encode_input_media_video(inner_value)
   }
 }
 
@@ -6246,7 +6536,9 @@ pub fn bot_command_scope_to_json(scope: BotCommandScope) -> Json {
   }
 }
 
-pub fn bot_commands_from(commands: List(#(String, String))) -> List(BotCommand) {
+pub fn bot_commands_from(
+  commands: List(#(String, String)),
+) -> List(BotCommand) {
   commands
   |> list.map(fn(cmd) {
     let #(command, description) = cmd
@@ -6811,7 +7103,9 @@ pub fn encode_send_video_parameters(params: SendVideoParameters) -> Json {
 
 // SendAnimationParameters --------------------------------------------------------------------------------------------
 
-pub fn encode_send_animation_parameters(params: SendAnimationParameters) -> Json {
+pub fn encode_send_animation_parameters(
+  params: SendAnimationParameters,
+) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #(
@@ -7133,6 +7427,11 @@ pub fn encode_send_poll_parameters(params: SendPollParameters) -> Json {
       json.nullable(params.allows_multiple_answers, json.bool),
     ),
     #("allows_revoting", json.nullable(params.allows_revoting, json.bool)),
+    #("members_only", json.nullable(params.members_only, json.bool)),
+    #(
+      "country_codes",
+      json.nullable(params.country_codes, json.array(_, json.string)),
+    ),
     #(
       "correct_option_ids",
       json.nullable(params.correct_option_ids, json.array(_, json.int)),
@@ -7149,6 +7448,11 @@ pub fn encode_send_poll_parameters(params: SendPollParameters) -> Json {
         encode_message_entity,
       )),
     ),
+    #(
+      "explanation_media",
+      json.nullable(params.explanation_media, encode_input_poll_media),
+    ),
+    #("media", json.nullable(params.media, encode_input_poll_media)),
     #("open_period", json.nullable(params.open_period, json.int)),
     #("close_date", json.nullable(params.close_date, json.int)),
     #("is_closed", json.nullable(params.is_closed, json.bool)),
@@ -7577,7 +7881,9 @@ pub fn encode_stop_poll_parameters(params: StopPollParameters) -> Json {
 
 // DeleteMessageParameters
 
-pub fn encode_delete_message_parameters(params: DeleteMessageParameters) -> Json {
+pub fn encode_delete_message_parameters(
+  params: DeleteMessageParameters,
+) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("message_id", json.int(params.message_id)),
@@ -7823,7 +8129,9 @@ pub fn encode_decline_chat_join_request_parameters(
 
 // SetChatPhotoParameters ------------------------------------------------------------
 
-pub fn encode_set_chat_photo_parameters(params: SetChatPhotoParameters) -> Json {
+pub fn encode_set_chat_photo_parameters(
+  params: SetChatPhotoParameters,
+) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("photo", encode_file(params.photo)),
@@ -7840,7 +8148,9 @@ pub fn encode_delete_chat_photo_parameters(
 
 // SetChatTitleParameters ------------------------------------------------------------
 
-pub fn encode_set_chat_title_parameters(params: SetChatTitleParameters) -> Json {
+pub fn encode_set_chat_title_parameters(
+  params: SetChatTitleParameters,
+) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("title", json.string(params.title)),
@@ -7911,7 +8221,10 @@ pub fn encode_leave_chat_parameters(params: LeaveChatParameters) -> Json {
 pub fn encode_get_chat_administrators_parameters(
   params: GetChatAdministratorsParameters,
 ) -> Json {
-  json_object_filter_nulls([#("chat_id", encode_int_or_string(params.chat_id))])
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("return_bots", json.nullable(params.return_bots, json.bool)),
+  ])
 }
 
 // GetChatMemberCountParameters ------------------------------------------------------------
@@ -8253,7 +8566,9 @@ pub fn encode_send_message_draft_parameters(
 
 // GetUserGiftsParameters ------------------------------------------------------------
 
-pub fn encode_get_user_gifts_parameters(params: GetUserGiftsParameters) -> Json {
+pub fn encode_get_user_gifts_parameters(
+  params: GetUserGiftsParameters,
+) -> Json {
   json_object_filter_nulls([
     #("user_id", json.int(params.user_id)),
     #("exclude_unlimited", json.nullable(params.exclude_unlimited, json.bool)),
@@ -8278,7 +8593,9 @@ pub fn encode_get_user_gifts_parameters(params: GetUserGiftsParameters) -> Json 
 
 // GetChatGiftsParameters ------------------------------------------------------------
 
-pub fn encode_get_chat_gifts_parameters(params: GetChatGiftsParameters) -> Json {
+pub fn encode_get_chat_gifts_parameters(
+  params: GetChatGiftsParameters,
+) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("exclude_unsaved", json.nullable(params.exclude_unsaved, json.bool)),
@@ -8643,7 +8960,9 @@ pub fn encode_send_game_parameters(params: SendGameParameters) -> Json {
 
 // SetGameScoreParameters ------------------------------------------------------------
 
-pub fn encode_set_game_score_parameters(params: SetGameScoreParameters) -> Json {
+pub fn encode_set_game_score_parameters(
+  params: SetGameScoreParameters,
+) -> Json {
   json_object_filter_nulls([
     #("user_id", json.int(params.user_id)),
     #("score", json.int(params.score)),
@@ -8893,5 +9212,127 @@ pub fn encode_delete_story_parameters(params: DeleteStoryParameters) -> Json {
   json_object_filter_nulls([
     #("business_connection_id", json.string(params.business_connection_id)),
     #("story_id", json.int(params.story_id)),
+  ])
+}
+
+// Bot API 10.0 ------------------------------------------------------------------
+
+pub fn encode_answer_guest_query_parameters(
+  params: AnswerGuestQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("guest_query_id", json.string(params.guest_query_id)),
+    #("text", json.string(params.text)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "entities",
+      json.nullable(params.entities, json.array(_, encode_message_entity)),
+    ),
+    #(
+      "link_preview_options",
+      json.nullable(params.link_preview_options, encode_link_preview_options),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+pub fn encode_delete_message_reaction_parameters(
+  params: DeleteMessageReactionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #("user_id", json.int(params.user_id)),
+    #("reaction", encode_reaction_type(params.reaction)),
+  ])
+}
+
+pub fn encode_delete_all_message_reactions_parameters(
+  params: DeleteAllMessageReactionsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+  ])
+}
+
+pub fn encode_send_live_photo_parameters(
+  params: SendLivePhotoParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #("media", encode_file_or_string(params.media)),
+    #("photo", encode_file_or_string(params.photo)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #("has_spoiler", json.nullable(params.has_spoiler, json.bool)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_get_managed_bot_access_settings_parameters(
+  params: GetManagedBotAccessSettingsParameters,
+) -> Json {
+  json_object_filter_nulls([#("bot_id", json.int(params.bot_id))])
+}
+
+pub fn encode_set_managed_bot_access_settings_parameters(
+  params: SetManagedBotAccessSettingsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("bot_id", json.int(params.bot_id)),
+    #("settings", encode_bot_access_settings(params.settings)),
+  ])
+}
+
+pub fn encode_get_user_personal_chat_messages_parameters(
+  params: GetUserPersonalChatMessagesParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("message_ids", json.array(params.message_ids, json.int)),
   ])
 }

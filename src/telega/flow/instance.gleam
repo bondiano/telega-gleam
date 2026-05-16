@@ -124,7 +124,10 @@ pub fn store_step_data(
 }
 
 /// Get step data
-pub fn get_step_data(instance: FlowInstance, key key: String) -> Option(String) {
+pub fn get_step_data(
+  instance: FlowInstance,
+  key key: String,
+) -> Option(String) {
   dict.get(instance.step_data, key)
   |> option.from_result()
 }

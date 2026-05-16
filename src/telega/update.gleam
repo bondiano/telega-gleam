@@ -203,6 +203,14 @@ pub type Update {
     managed_bot: ManagedBotUpdated,
     raw: ModelUpdate,
   )
+  /// New guest message from Bot API 10.0. The bot can use `message.guest_query_id`
+  /// and `api.answer_guest_query` to send a message in response.
+  GuestMessageUpdate(
+    from_id: Int,
+    chat_id: Int,
+    message: Message,
+    raw: ModelUpdate,
+  )
 }
 
 pub type Command {
@@ -318,6 +326,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
     _ if raw_update.managed_bot != None -> {
       let assert Some(managed_bot) = raw_update.managed_bot
       new_managed_bot_update(raw_update, managed_bot)
+    }
+    _ if raw_update.guest_message != None -> {
+      let assert Some(guest_message) = raw_update.guest_message
+      new_guest_message_update(raw_update, guest_message)
     }
     _ if raw_update.message != None -> {
       let assert Some(message) = raw_update.message
@@ -486,6 +498,11 @@ pub fn to_string(update: Update) -> String {
       <> int.to_string(managed_bot.bot.id)
       <> " from "
       <> int.to_string(from_id)
+    GuestMessageUpdate(message:, from_id:, ..) ->
+      "guest message "
+      <> int.to_string(message.message_id)
+      <> " from "
+      <> int.to_string(from_id)
   }
 }
 
@@ -527,7 +544,11 @@ fn new_command_update(raw: ModelUpdate, message: Message, text: String) {
   )
 }
 
-fn new_photo_update(raw: ModelUpdate, message: Message, photos: List(PhotoSize)) {
+fn new_photo_update(
+  raw: ModelUpdate,
+  message: Message,
+  photos: List(PhotoSize),
+) {
   PhotoUpdate(
     raw:,
     photos:,
@@ -870,5 +891,14 @@ fn new_managed_bot_update(raw: ModelUpdate, managed_bot: ManagedBotUpdated) {
     managed_bot:,
     from_id: managed_bot.user.id,
     chat_id: managed_bot.user.id,
+  )
+}
+
+fn new_guest_message_update(raw: ModelUpdate, guest_message: Message) {
+  GuestMessageUpdate(
+    raw:,
+    message: guest_message,
+    from_id: get_sender_id(guest_message),
+    chat_id: guest_message.chat.id,
   )
 }

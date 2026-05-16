@@ -86,7 +86,10 @@ pub fn remove_from_index(
 }
 
 /// Get all instance IDs from the secondary index for a user+chat key.
-pub fn lookup_index(storage: FlowEtsStorage, index_key: String) -> List(String) {
+pub fn lookup_index(
+  storage: FlowEtsStorage,
+  index_key: String,
+) -> List(String) {
   case ets_lookup(storage.table, index_key) {
     [] -> []
     [#(_, ids), ..] -> ids

@@ -138,8 +138,7 @@ pub type StepMiddleware(step_type, session, error) =
     Context(session, error),
     FlowInstance,
     fn() -> StepResult(step_type, session, error),
-  ) ->
-    StepResult(step_type, session, error)
+  ) -> StepResult(step_type, session, error)
 
 /// Hook called when entering a step (before the handler)
 pub type StepEnterHook(session, error) =

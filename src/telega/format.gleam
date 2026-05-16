@@ -94,7 +94,10 @@ pub fn underline_text(builder: FormatBuilder, text: String) -> FormatBuilder {
 }
 
 /// Add strikethrough text using builder
-pub fn strikethrough_text(builder: FormatBuilder, text: String) -> FormatBuilder {
+pub fn strikethrough_text(
+  builder: FormatBuilder,
+  text: String,
+) -> FormatBuilder {
   FormatBuilder(..builder, segments: [Strikethrough(text), ..builder.segments])
 }
 

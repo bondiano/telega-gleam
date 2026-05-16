@@ -537,7 +537,9 @@ pub fn inline_copy_text(
 }
 
 /// Start a new row in the inline keyboard builder.
-pub fn inline_next_row(builder: InlineKeyboardBuilder) -> InlineKeyboardBuilder {
+pub fn inline_next_row(
+  builder: InlineKeyboardBuilder,
+) -> InlineKeyboardBuilder {
   case builder.current_row {
     [] -> builder
     _ -> {

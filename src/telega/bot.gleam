@@ -158,7 +158,10 @@ pub fn start(
 }
 
 /// Stops waiting for any handler for specific key (chat_id)
-pub fn cancel_conversation(bot bot: Bot(session, error), key key: String) -> Nil {
+pub fn cancel_conversation(
+  bot bot: Bot(session, error),
+  key key: String,
+) -> Nil {
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 

@@ -42,6 +42,7 @@ pub fn bot_user() -> types.User {
     has_topics_enabled: None,
     allows_users_to_create_topics: None,
     can_manage_bots: None,
+    supports_guest_queries: None,
   )
 }
 
@@ -64,6 +65,7 @@ pub fn user() -> types.User {
     has_topics_enabled: None,
     allows_users_to_create_topics: None,
     can_manage_bots: None,
+    supports_guest_queries: None,
   )
 }
 
@@ -110,9 +112,12 @@ pub fn message_with(
     direct_messages_topic: None,
     sender_boost_count: None,
     sender_business_bot: None,
+    guest_bot_caller_user: None,
+    guest_bot_caller_chat: None,
     sender_tag: None,
     date: default_date,
     business_connection_id: None,
+    guest_query_id: None,
     chat:,
     forward_origin: None,
     is_topic_message: None,
@@ -142,6 +147,7 @@ pub fn message_with(
     photo: None,
     sticker: None,
     story: None,
+    live_photo: None,
     video: None,
     video_note: None,
     voice: None,
@@ -252,6 +258,7 @@ pub fn raw_update_with(
     chat_boost: None,
     removed_chat_boost: None,
     managed_bot: None,
+    guest_message: None,
   )
 }
 
