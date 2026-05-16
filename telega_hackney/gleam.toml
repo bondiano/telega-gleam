@@ -1,5 +1,5 @@
 name = "telega_hackney"
-version = "1.0.0"
+version = "1.1.0"
 description = "hackney adapter for Telega Telegram Bot Library"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
