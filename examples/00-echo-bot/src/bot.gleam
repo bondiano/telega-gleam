@@ -26,7 +26,8 @@ pub fn build_router() {
 pub fn main() {
   let router = build_router()
 
-  let client = telega_httpc.new("BOT_TOKEN")
+  let client =
+    telega_httpc.new("8442380256:AAGYP-BALUSAab6txp_GJSsvDIeYPOf8jP4")
 
   let assert Ok(_bot) =
     telega.new_for_polling(api_client: client)

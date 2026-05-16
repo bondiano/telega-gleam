@@ -3,7 +3,7 @@ version = "1.0.0"
 description = "Telega Session example"
 
 [dependencies]
-gleam_stdlib = ">= 0.60.0 and < 1.0.0"
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 gleam_erlang = ">= 1.2.0 and < 2.0.0"
 gleam_otp = ">= 1.0.0 and < 2.0.0"
 wisp = ">= 2.0.0 and < 3.0.0"
