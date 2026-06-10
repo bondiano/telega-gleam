@@ -22,6 +22,21 @@ tasks:
         ]
         cmd: cd examples/{{.ITEM}} && gleam format
 
+  codegen:fetch:
+    desc: Download the latest Telegram Bot API spec (PaulSonOfLars/telegram-bot-api-spec)
+    cmd: curl -fsSL https://raw.githubusercontent.com/PaulSonOfLars/telegram-bot-api-spec/main/api.json -o codegen/api.json
+
+  codegen:
+    desc: Regenerate the model layer (types/decoder/encoder) from codegen/api.json
+    cmds:
+      - cd codegen && gleam run
+      - gleam format src
+      - gleam check
+
+  codegen:diff:
+    desc: Show what the last codegen run changed in the model layer
+    cmd: git --no-pager diff --stat -- src/telega/model
+
   test:
     desc: Run tests in root project
     cmd: gleam test

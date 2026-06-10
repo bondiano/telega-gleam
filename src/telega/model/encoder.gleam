@@ -5,6 +5,7 @@ import gleam/json.{type Json}
 import gleam/list
 import gleam/option.{None, Some}
 import telega/internal/utils.{json_object_filter_nulls}
+
 import telega/model/types.{
   type AcceptedGiftTypes, type AddStickerToSetParameters, type AffiliateInfo,
   type Animation, type AnswerCallbackQueryParameters,
@@ -238,27 +239,31 @@ import telega/model/types.{
   InputContactMessageContentInputMessageContent,
   InputInvoiceMessageContentInputMessageContent,
   InputLocationMessageContentInputMessageContent, InputMediaAnimationInputMedia,
-  InputMediaAudioInputMedia, InputMediaDocumentInputMedia,
-  InputMediaLivePhotoInputMedia, InputMediaLocationInputMedia,
-  InputMediaPhotoInputMedia, InputMediaStickerInputMedia,
-  InputMediaVenueInputMedia, InputMediaVideoInputMedia,
-  InputPaidMediaLivePhotoInputPaidMedia, InputPaidMediaPhotoInputPaidMedia,
-  InputPaidMediaVideoInputPaidMedia, InputPollMediaAnimation,
-  InputPollMediaAudio, InputPollMediaDocument, InputPollMediaLivePhoto,
-  InputPollMediaLocation, InputPollMediaPhoto, InputPollMediaVenue,
-  InputPollMediaVideo, InputPollOptionMediaAnimation,
-  InputPollOptionMediaLivePhoto, InputPollOptionMediaLocation,
-  InputPollOptionMediaPhoto, InputPollOptionMediaSticker,
-  InputPollOptionMediaVenue, InputPollOptionMediaVideo,
+  InputMediaAnimationInputPollMedia, InputMediaAnimationInputPollOptionMedia,
+  InputMediaAudioInputMedia, InputMediaAudioInputPollMedia,
+  InputMediaDocumentInputMedia, InputMediaDocumentInputPollMedia,
+  InputMediaLivePhotoInputMedia, InputMediaLivePhotoInputPollMedia,
+  InputMediaLivePhotoInputPollOptionMedia, InputMediaLocationInputMedia,
+  InputMediaLocationInputPollMedia, InputMediaLocationInputPollOptionMedia,
+  InputMediaPhotoInputMedia, InputMediaPhotoInputPollMedia,
+  InputMediaPhotoInputPollOptionMedia, InputMediaStickerInputMedia,
+  InputMediaStickerInputPollOptionMedia, InputMediaVenueInputMedia,
+  InputMediaVenueInputPollMedia, InputMediaVenueInputPollOptionMedia,
+  InputMediaVideoInputMedia, InputMediaVideoInputPollMedia,
+  InputMediaVideoInputPollOptionMedia, InputPaidMediaLivePhotoInputPaidMedia,
+  InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideoInputPaidMedia,
   InputProfilePhotoAnimatedInputProfilePhoto,
   InputProfilePhotoStaticInputProfilePhoto,
+  InputStoryContentPhotoInputStoryContent,
+  InputStoryContentVideoInputStoryContent,
   InputTextMessageContentInputMessageContent,
   InputVenueMessageContentInputMessageContent, Int, MenuButtonCommandsMenuButton,
   MenuButtonDefaultMenuButton, MenuButtonWebAppMenuButton,
   MessageMaybeInaccessibleMessage, MessageOriginChannelMessageOrigin,
   MessageOriginChatMessageOrigin, MessageOriginHiddenUserMessageOrigin,
-  MessageOriginUserMessageOrigin, PaidMediaLivePhotoPaidMedia,
-  PaidMediaPhotoPaidMedia, PaidMediaPreviewPaidMedia, PaidMediaVideoPaidMedia,
+  MessageOriginUserMessageOrigin, OwnedGiftRegularOwnedGift,
+  OwnedGiftUniqueOwnedGift, PaidMediaLivePhotoPaidMedia, PaidMediaPhotoPaidMedia,
+  PaidMediaPreviewPaidMedia, PaidMediaVideoPaidMedia,
   PassportElementErrorDataFieldPassportElementError,
   PassportElementErrorFilePassportElementError,
   PassportElementErrorFilesPassportElementError,
@@ -276,8 +281,11 @@ import telega/model/types.{
   SendMessageReplyForceReplyMarkupParameters,
   SendMessageReplyInlineKeyboardMarkupParameters,
   SendMessageReplyRemoveKeyboardMarkupParameters,
-  SendMessageReplyReplyKeyboardMarkupParameters, Str, StringV,
-  TransactionPartnerAffiliateProgramTransactionPartner,
+  SendMessageReplyReplyKeyboardMarkupParameters, StoryAreaTypeLinkStoryAreaType,
+  StoryAreaTypeLocationStoryAreaType,
+  StoryAreaTypeSuggestedReactionStoryAreaType,
+  StoryAreaTypeUniqueGiftStoryAreaType, StoryAreaTypeWeatherStoryAreaType, Str,
+  StringV, TransactionPartnerAffiliateProgramTransactionPartner,
   TransactionPartnerChatTransactionPartner,
   TransactionPartnerFragmentTransactionPartner,
   TransactionPartnerOtherTransactionPartner,
@@ -287,153 +295,432 @@ import telega/model/types.{
   UploadVideo, UploadVideoNote, UploadVoice,
 }
 
-pub fn encode_update(update: Update) -> Json {
+// This file is auto-generated for Bot API 10.0 from the Telegram Bot API spec.
+// Do not edit above the MANUAL marker — run `task codegen` to regenerate.
+
+pub fn encode_accepted_gift_types(
+  accepted_gift_types: AcceptedGiftTypes,
+) -> Json {
   json_object_filter_nulls([
-    #("update_id", json.int(update.update_id)),
-    #("message", json.nullable(update.message, encode_message)),
-    #("edited_message", json.nullable(update.edited_message, encode_message)),
-    #("channel_post", json.nullable(update.channel_post, encode_message)),
+    #("unlimited_gifts", json.bool(accepted_gift_types.unlimited_gifts)),
+    #("limited_gifts", json.bool(accepted_gift_types.limited_gifts)),
+    #("unique_gifts", json.bool(accepted_gift_types.unique_gifts)),
     #(
-      "edited_channel_post",
-      json.nullable(update.edited_channel_post, encode_message),
+      "premium_subscription",
+      json.bool(accepted_gift_types.premium_subscription),
     ),
-    #(
-      "business_connection",
-      json.nullable(update.business_connection, encode_business_connection),
-    ),
-    #(
-      "business_message",
-      json.nullable(update.business_message, encode_message),
-    ),
-    #(
-      "edited_business_message",
-      json.nullable(update.edited_business_message, encode_message),
-    ),
-    #(
-      "deleted_business_messages",
-      json.nullable(
-        update.deleted_business_messages,
-        encode_business_messages_deleted,
-      ),
-    ),
-    #(
-      "message_reaction",
-      json.nullable(update.message_reaction, encode_message_reaction_updated),
-    ),
-    #(
-      "message_reaction_count",
-      json.nullable(
-        update.message_reaction_count,
-        encode_message_reaction_count_updated,
-      ),
-    ),
-    #("inline_query", json.nullable(update.inline_query, encode_inline_query)),
-    #(
-      "chosen_inline_result",
-      json.nullable(update.chosen_inline_result, encode_chosen_inline_result),
-    ),
-    #(
-      "callback_query",
-      json.nullable(update.callback_query, encode_callback_query),
-    ),
-    #(
-      "shipping_query",
-      json.nullable(update.shipping_query, encode_shipping_query),
-    ),
-    #(
-      "pre_checkout_query",
-      json.nullable(update.pre_checkout_query, encode_pre_checkout_query),
-    ),
-    #(
-      "purchased_paid_media",
-      json.nullable(update.purchased_paid_media, encode_paid_media_purchased),
-    ),
-    #("poll", json.nullable(update.poll, encode_poll)),
-    #("poll_answer", json.nullable(update.poll_answer, encode_poll_answer)),
-    #(
-      "my_chat_member",
-      json.nullable(update.my_chat_member, encode_chat_member_updated),
-    ),
-    #(
-      "chat_member",
-      json.nullable(update.chat_member, encode_chat_member_updated),
-    ),
-    #(
-      "chat_join_request",
-      json.nullable(update.chat_join_request, encode_chat_join_request),
-    ),
-    #("chat_boost", json.nullable(update.chat_boost, encode_chat_boost_updated)),
-    #(
-      "removed_chat_boost",
-      json.nullable(update.removed_chat_boost, encode_chat_boost_removed),
-    ),
-    #(
-      "managed_bot",
-      json.nullable(update.managed_bot, encode_managed_bot_updated),
-    ),
-    #("guest_message", json.nullable(update.guest_message, encode_message)),
+    #("gifts_from_channels", json.bool(accepted_gift_types.gifts_from_channels)),
   ])
 }
 
-pub fn encode_webhook_info(webhook_info: WebhookInfo) -> Json {
+pub fn encode_affiliate_info(affiliate_info: AffiliateInfo) -> Json {
   json_object_filter_nulls([
-    #("url", json.string(webhook_info.url)),
-    #("has_custom_certificate", json.bool(webhook_info.has_custom_certificate)),
-    #("pending_update_count", json.int(webhook_info.pending_update_count)),
-    #("ip_address", json.nullable(webhook_info.ip_address, json.string)),
-    #("last_error_date", json.nullable(webhook_info.last_error_date, json.int)),
     #(
-      "last_error_message",
-      json.nullable(webhook_info.last_error_message, json.string),
+      "affiliate_user",
+      json.nullable(affiliate_info.affiliate_user, encode_user),
     ),
     #(
-      "last_synchronization_error_date",
-      json.nullable(webhook_info.last_synchronization_error_date, json.int),
+      "affiliate_chat",
+      json.nullable(affiliate_info.affiliate_chat, encode_chat),
     ),
-    #("max_connections", json.nullable(webhook_info.max_connections, json.int)),
+    #("commission_per_mille", json.int(affiliate_info.commission_per_mille)),
+    #("amount", json.int(affiliate_info.amount)),
     #(
-      "allowed_updates",
-      json.nullable(webhook_info.allowed_updates, json.array(_, json.string)),
+      "nanostar_amount",
+      json.nullable(affiliate_info.nanostar_amount, json.int),
     ),
   ])
 }
 
-pub fn encode_user(user: User) -> Json {
+pub fn encode_animation(animation: Animation) -> Json {
   json_object_filter_nulls([
-    #("id", json.int(user.id)),
-    #("is_bot", json.bool(user.is_bot)),
-    #("first_name", json.string(user.first_name)),
-    #("last_name", json.nullable(user.last_name, json.string)),
-    #("username", json.nullable(user.username, json.string)),
-    #("language_code", json.nullable(user.language_code, json.string)),
-    #("is_premium", json.nullable(user.is_premium, json.bool)),
+    #("file_id", json.string(animation.file_id)),
+    #("file_unique_id", json.string(animation.file_unique_id)),
+    #("width", json.int(animation.width)),
+    #("height", json.int(animation.height)),
+    #("duration", json.int(animation.duration)),
+    #("thumbnail", json.nullable(animation.thumbnail, encode_photo_size)),
+    #("file_name", json.nullable(animation.file_name, json.string)),
+    #("mime_type", json.nullable(animation.mime_type, json.string)),
+    #("file_size", json.nullable(animation.file_size, json.int)),
+  ])
+}
+
+pub fn encode_audio(audio: Audio) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(audio.file_id)),
+    #("file_unique_id", json.string(audio.file_unique_id)),
+    #("duration", json.int(audio.duration)),
+    #("performer", json.nullable(audio.performer, json.string)),
+    #("title", json.nullable(audio.title, json.string)),
+    #("file_name", json.nullable(audio.file_name, json.string)),
+    #("mime_type", json.nullable(audio.mime_type, json.string)),
+    #("file_size", json.nullable(audio.file_size, json.int)),
+    #("thumbnail", json.nullable(audio.thumbnail, encode_photo_size)),
+  ])
+}
+
+pub fn encode_background_fill_freeform_gradient(
+  background_fill_freeform_gradient: BackgroundFillFreeformGradient,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_fill_freeform_gradient.type_)),
     #(
-      "added_to_attachment_menu",
-      json.nullable(user.added_to_attachment_menu, json.bool),
+      "colors",
+      json.array(_, json.int)(background_fill_freeform_gradient.colors),
     ),
-    #("can_join_groups", json.nullable(user.can_join_groups, json.bool)),
+  ])
+}
+
+pub fn encode_background_fill_gradient(
+  background_fill_gradient: BackgroundFillGradient,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_fill_gradient.type_)),
+    #("top_color", json.int(background_fill_gradient.top_color)),
+    #("bottom_color", json.int(background_fill_gradient.bottom_color)),
+    #("rotation_angle", json.int(background_fill_gradient.rotation_angle)),
+  ])
+}
+
+pub fn encode_background_fill_solid(
+  background_fill_solid: BackgroundFillSolid,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_fill_solid.type_)),
+    #("color", json.int(background_fill_solid.color)),
+  ])
+}
+
+pub fn encode_background_type_chat_theme(
+  background_type_chat_theme: BackgroundTypeChatTheme,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_type_chat_theme.type_)),
+    #("theme_name", json.string(background_type_chat_theme.theme_name)),
+  ])
+}
+
+pub fn encode_background_type_fill(
+  background_type_fill: BackgroundTypeFill,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_type_fill.type_)),
+    #("fill", encode_background_fill(background_type_fill.fill)),
+    #("dark_theme_dimming", json.int(background_type_fill.dark_theme_dimming)),
+  ])
+}
+
+pub fn encode_background_type_pattern(
+  background_type_pattern: BackgroundTypePattern,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_type_pattern.type_)),
+    #("document", encode_document(background_type_pattern.document)),
+    #("fill", encode_background_fill(background_type_pattern.fill)),
+    #("intensity", json.int(background_type_pattern.intensity)),
     #(
-      "can_read_all_group_messages",
-      json.nullable(user.can_read_all_group_messages, json.bool),
+      "is_inverted",
+      json.nullable(background_type_pattern.is_inverted, json.bool),
+    ),
+    #("is_moving", json.nullable(background_type_pattern.is_moving, json.bool)),
+  ])
+}
+
+pub fn encode_background_type_wallpaper(
+  background_type_wallpaper: BackgroundTypeWallpaper,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(background_type_wallpaper.type_)),
+    #("document", encode_document(background_type_wallpaper.document)),
+    #(
+      "dark_theme_dimming",
+      json.int(background_type_wallpaper.dark_theme_dimming),
     ),
     #(
-      "supports_inline_queries",
-      json.nullable(user.supports_inline_queries, json.bool),
+      "is_blurred",
+      json.nullable(background_type_wallpaper.is_blurred, json.bool),
     ),
     #(
-      "can_connect_to_business",
-      json.nullable(user.can_connect_to_business, json.bool),
+      "is_moving",
+      json.nullable(background_type_wallpaper.is_moving, json.bool),
     ),
-    #("has_main_web_app", json.nullable(user.has_main_web_app, json.bool)),
-    #("has_topics_enabled", json.nullable(user.has_topics_enabled, json.bool)),
+  ])
+}
+
+pub fn encode_birthdate(birthdate: Birthdate) -> Json {
+  json_object_filter_nulls([
+    #("day", json.int(birthdate.day)),
+    #("month", json.int(birthdate.month)),
+    #("year", json.nullable(birthdate.year, json.int)),
+  ])
+}
+
+pub fn encode_bot_access_settings(
+  bot_access_settings: BotAccessSettings,
+) -> Json {
+  json_object_filter_nulls([
     #(
-      "allows_users_to_create_topics",
-      json.nullable(user.allows_users_to_create_topics, json.bool),
+      "is_access_restricted",
+      json.bool(bot_access_settings.is_access_restricted),
     ),
-    #("can_manage_bots", json.nullable(user.can_manage_bots, json.bool)),
     #(
-      "supports_guest_queries",
-      json.nullable(user.supports_guest_queries, json.bool),
+      "added_users",
+      json.nullable(bot_access_settings.added_users, json.array(_, encode_user)),
+    ),
+  ])
+}
+
+pub fn encode_bot_command(bot_command: BotCommand) -> Json {
+  json_object_filter_nulls([
+    #("command", json.string(bot_command.command)),
+    #("description", json.string(bot_command.description)),
+  ])
+}
+
+pub fn encode_bot_command_scope_all_chat_administrators(
+  bot_command_scope_all_chat_administrators: BotCommandScopeAllChatAdministrators,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_all_chat_administrators.type_)),
+  ])
+}
+
+pub fn encode_bot_command_scope_all_group_chats(
+  bot_command_scope_all_group_chats: BotCommandScopeAllGroupChats,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_all_group_chats.type_)),
+  ])
+}
+
+pub fn encode_bot_command_scope_all_private_chats(
+  bot_command_scope_all_private_chats: BotCommandScopeAllPrivateChats,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_all_private_chats.type_)),
+  ])
+}
+
+pub fn encode_bot_command_scope_chat(
+  bot_command_scope_chat: BotCommandScopeChat,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_chat.type_)),
+    #("chat_id", encode_int_or_string(bot_command_scope_chat.chat_id)),
+  ])
+}
+
+pub fn encode_bot_command_scope_chat_administrators(
+  bot_command_scope_chat_administrators: BotCommandScopeChatAdministrators,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_chat_administrators.type_)),
+    #(
+      "chat_id",
+      encode_int_or_string(bot_command_scope_chat_administrators.chat_id),
+    ),
+  ])
+}
+
+pub fn encode_bot_command_scope_chat_member(
+  bot_command_scope_chat_member: BotCommandScopeChatMember,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_chat_member.type_)),
+    #("chat_id", encode_int_or_string(bot_command_scope_chat_member.chat_id)),
+    #("user_id", json.int(bot_command_scope_chat_member.user_id)),
+  ])
+}
+
+pub fn encode_bot_command_scope_default(
+  bot_command_scope_default: BotCommandScopeDefault,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(bot_command_scope_default.type_)),
+  ])
+}
+
+pub fn encode_bot_description(bot_description: BotDescription) -> Json {
+  json_object_filter_nulls([
+    #("description", json.string(bot_description.description)),
+  ])
+}
+
+pub fn encode_bot_name(bot_name: BotName) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(bot_name.name)),
+  ])
+}
+
+pub fn encode_bot_short_description(
+  bot_short_description: BotShortDescription,
+) -> Json {
+  json_object_filter_nulls([
+    #("short_description", json.string(bot_short_description.short_description)),
+  ])
+}
+
+pub fn encode_business_bot_rights(
+  business_bot_rights: BusinessBotRights,
+) -> Json {
+  json_object_filter_nulls([
+    #("can_reply", json.nullable(business_bot_rights.can_reply, json.bool)),
+    #(
+      "can_read_messages",
+      json.nullable(business_bot_rights.can_read_messages, json.bool),
+    ),
+    #(
+      "can_delete_sent_messages",
+      json.nullable(business_bot_rights.can_delete_sent_messages, json.bool),
+    ),
+    #(
+      "can_delete_all_messages",
+      json.nullable(business_bot_rights.can_delete_all_messages, json.bool),
+    ),
+    #(
+      "can_edit_name",
+      json.nullable(business_bot_rights.can_edit_name, json.bool),
+    ),
+    #(
+      "can_edit_bio",
+      json.nullable(business_bot_rights.can_edit_bio, json.bool),
+    ),
+    #(
+      "can_edit_profile_photo",
+      json.nullable(business_bot_rights.can_edit_profile_photo, json.bool),
+    ),
+    #(
+      "can_edit_username",
+      json.nullable(business_bot_rights.can_edit_username, json.bool),
+    ),
+    #(
+      "can_change_gift_settings",
+      json.nullable(business_bot_rights.can_change_gift_settings, json.bool),
+    ),
+    #(
+      "can_view_gifts_and_stars",
+      json.nullable(business_bot_rights.can_view_gifts_and_stars, json.bool),
+    ),
+    #(
+      "can_convert_gifts_to_stars",
+      json.nullable(business_bot_rights.can_convert_gifts_to_stars, json.bool),
+    ),
+    #(
+      "can_transfer_and_upgrade_gifts",
+      json.nullable(
+        business_bot_rights.can_transfer_and_upgrade_gifts,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_transfer_stars",
+      json.nullable(business_bot_rights.can_transfer_stars, json.bool),
+    ),
+    #(
+      "can_manage_stories",
+      json.nullable(business_bot_rights.can_manage_stories, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_business_connection(
+  business_connection: BusinessConnection,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(business_connection.id)),
+    #("user", encode_user(business_connection.user)),
+    #("user_chat_id", json.int(business_connection.user_chat_id)),
+    #("date", json.int(business_connection.date)),
+    #(
+      "rights",
+      json.nullable(business_connection.rights, encode_business_bot_rights),
+    ),
+    #("is_enabled", json.bool(business_connection.is_enabled)),
+  ])
+}
+
+pub fn encode_business_intro(business_intro: BusinessIntro) -> Json {
+  json_object_filter_nulls([
+    #("title", json.nullable(business_intro.title, json.string)),
+    #("message", json.nullable(business_intro.message, json.string)),
+    #("sticker", json.nullable(business_intro.sticker, encode_sticker)),
+  ])
+}
+
+pub fn encode_business_location(business_location: BusinessLocation) -> Json {
+  json_object_filter_nulls([
+    #("address", json.string(business_location.address)),
+    #("location", json.nullable(business_location.location, encode_location)),
+  ])
+}
+
+pub fn encode_business_messages_deleted(
+  business_messages_deleted: BusinessMessagesDeleted,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.string(business_messages_deleted.business_connection_id),
+    ),
+    #("chat", encode_chat(business_messages_deleted.chat)),
+    #(
+      "message_ids",
+      json.array(_, json.int)(business_messages_deleted.message_ids),
+    ),
+  ])
+}
+
+pub fn encode_business_opening_hours(
+  business_opening_hours: BusinessOpeningHours,
+) -> Json {
+  json_object_filter_nulls([
+    #("time_zone_name", json.string(business_opening_hours.time_zone_name)),
+    #(
+      "opening_hours",
+      json.array(_, encode_business_opening_hours_interval)(
+        business_opening_hours.opening_hours,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_business_opening_hours_interval(
+  business_opening_hours_interval: BusinessOpeningHoursInterval,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "opening_minute",
+      json.int(business_opening_hours_interval.opening_minute),
+    ),
+    #(
+      "closing_minute",
+      json.int(business_opening_hours_interval.closing_minute),
+    ),
+  ])
+}
+
+pub fn encode_callback_game(_callback_game: CallbackGame) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_callback_query(callback_query: CallbackQuery) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(callback_query.id)),
+    #("from", encode_user(callback_query.from)),
+    #(
+      "message",
+      json.nullable(callback_query.message, encode_maybe_inaccessible_message),
+    ),
+    #(
+      "inline_message_id",
+      json.nullable(callback_query.inline_message_id, json.string),
+    ),
+    #("chat_instance", json.string(callback_query.chat_instance)),
+    #("data", json.nullable(callback_query.data, json.string)),
+    #(
+      "game_short_name",
+      json.nullable(callback_query.game_short_name, json.string),
     ),
   ])
 }
@@ -448,6 +735,142 @@ pub fn encode_chat(chat: Chat) -> Json {
     #("last_name", json.nullable(chat.last_name, json.string)),
     #("is_forum", json.nullable(chat.is_forum, json.bool)),
     #("is_direct_messages", json.nullable(chat.is_direct_messages, json.bool)),
+  ])
+}
+
+pub fn encode_chat_administrator_rights(
+  chat_administrator_rights: ChatAdministratorRights,
+) -> Json {
+  json_object_filter_nulls([
+    #("is_anonymous", json.bool(chat_administrator_rights.is_anonymous)),
+    #("can_manage_chat", json.bool(chat_administrator_rights.can_manage_chat)),
+    #(
+      "can_delete_messages",
+      json.bool(chat_administrator_rights.can_delete_messages),
+    ),
+    #(
+      "can_manage_video_chats",
+      json.bool(chat_administrator_rights.can_manage_video_chats),
+    ),
+    #(
+      "can_restrict_members",
+      json.bool(chat_administrator_rights.can_restrict_members),
+    ),
+    #(
+      "can_promote_members",
+      json.bool(chat_administrator_rights.can_promote_members),
+    ),
+    #("can_change_info", json.bool(chat_administrator_rights.can_change_info)),
+    #("can_invite_users", json.bool(chat_administrator_rights.can_invite_users)),
+    #("can_post_stories", json.bool(chat_administrator_rights.can_post_stories)),
+    #("can_edit_stories", json.bool(chat_administrator_rights.can_edit_stories)),
+    #(
+      "can_delete_stories",
+      json.bool(chat_administrator_rights.can_delete_stories),
+    ),
+    #(
+      "can_post_messages",
+      json.nullable(chat_administrator_rights.can_post_messages, json.bool),
+    ),
+    #(
+      "can_edit_messages",
+      json.nullable(chat_administrator_rights.can_edit_messages, json.bool),
+    ),
+    #(
+      "can_pin_messages",
+      json.nullable(chat_administrator_rights.can_pin_messages, json.bool),
+    ),
+    #(
+      "can_manage_topics",
+      json.nullable(chat_administrator_rights.can_manage_topics, json.bool),
+    ),
+    #(
+      "can_manage_direct_messages",
+      json.nullable(
+        chat_administrator_rights.can_manage_direct_messages,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_manage_tags",
+      json.nullable(chat_administrator_rights.can_manage_tags, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_chat_background(chat_background: ChatBackground) -> Json {
+  json_object_filter_nulls([
+    #("type", encode_background_type(chat_background.type_)),
+  ])
+}
+
+pub fn encode_chat_boost(chat_boost: ChatBoost) -> Json {
+  json_object_filter_nulls([
+    #("boost_id", json.string(chat_boost.boost_id)),
+    #("add_date", json.int(chat_boost.add_date)),
+    #("expiration_date", json.int(chat_boost.expiration_date)),
+    #("source", encode_chat_boost_source(chat_boost.source)),
+  ])
+}
+
+pub fn encode_chat_boost_added(chat_boost_added: ChatBoostAdded) -> Json {
+  json_object_filter_nulls([
+    #("boost_count", json.int(chat_boost_added.boost_count)),
+  ])
+}
+
+pub fn encode_chat_boost_removed(chat_boost_removed: ChatBoostRemoved) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(chat_boost_removed.chat)),
+    #("boost_id", json.string(chat_boost_removed.boost_id)),
+    #("remove_date", json.int(chat_boost_removed.remove_date)),
+    #("source", encode_chat_boost_source(chat_boost_removed.source)),
+  ])
+}
+
+pub fn encode_chat_boost_source_gift_code(
+  chat_boost_source_gift_code: ChatBoostSourceGiftCode,
+) -> Json {
+  json_object_filter_nulls([
+    #("source", json.string(chat_boost_source_gift_code.source)),
+    #("user", encode_user(chat_boost_source_gift_code.user)),
+  ])
+}
+
+pub fn encode_chat_boost_source_giveaway(
+  chat_boost_source_giveaway: ChatBoostSourceGiveaway,
+) -> Json {
+  json_object_filter_nulls([
+    #("source", json.string(chat_boost_source_giveaway.source)),
+    #(
+      "giveaway_message_id",
+      json.int(chat_boost_source_giveaway.giveaway_message_id),
+    ),
+    #("user", json.nullable(chat_boost_source_giveaway.user, encode_user)),
+    #(
+      "prize_star_count",
+      json.nullable(chat_boost_source_giveaway.prize_star_count, json.int),
+    ),
+    #(
+      "is_unclaimed",
+      json.nullable(chat_boost_source_giveaway.is_unclaimed, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_chat_boost_source_premium(
+  chat_boost_source_premium: ChatBoostSourcePremium,
+) -> Json {
+  json_object_filter_nulls([
+    #("source", json.string(chat_boost_source_premium.source)),
+    #("user", encode_user(chat_boost_source_premium.user)),
+  ])
+}
+
+pub fn encode_chat_boost_updated(chat_boost_updated: ChatBoostUpdated) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(chat_boost_updated.chat)),
+    #("boost", encode_chat_boost(chat_boost_updated.boost)),
   ])
 }
 
@@ -618,6 +1041,2841 @@ pub fn encode_chat_full_info(chat_full_info: ChatFullInfo) -> Json {
   ])
 }
 
+pub fn encode_chat_invite_link(chat_invite_link: ChatInviteLink) -> Json {
+  json_object_filter_nulls([
+    #("invite_link", json.string(chat_invite_link.invite_link)),
+    #("creator", encode_user(chat_invite_link.creator)),
+    #("creates_join_request", json.bool(chat_invite_link.creates_join_request)),
+    #("is_primary", json.bool(chat_invite_link.is_primary)),
+    #("is_revoked", json.bool(chat_invite_link.is_revoked)),
+    #("name", json.nullable(chat_invite_link.name, json.string)),
+    #("expire_date", json.nullable(chat_invite_link.expire_date, json.int)),
+    #("member_limit", json.nullable(chat_invite_link.member_limit, json.int)),
+    #(
+      "pending_join_request_count",
+      json.nullable(chat_invite_link.pending_join_request_count, json.int),
+    ),
+    #(
+      "subscription_period",
+      json.nullable(chat_invite_link.subscription_period, json.int),
+    ),
+    #(
+      "subscription_price",
+      json.nullable(chat_invite_link.subscription_price, json.int),
+    ),
+  ])
+}
+
+pub fn encode_chat_join_request(chat_join_request: ChatJoinRequest) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(chat_join_request.chat)),
+    #("from", encode_user(chat_join_request.from)),
+    #("user_chat_id", json.int(chat_join_request.user_chat_id)),
+    #("date", json.int(chat_join_request.date)),
+    #("bio", json.nullable(chat_join_request.bio, json.string)),
+    #(
+      "invite_link",
+      json.nullable(chat_join_request.invite_link, encode_chat_invite_link),
+    ),
+  ])
+}
+
+pub fn encode_chat_location(chat_location: ChatLocation) -> Json {
+  json_object_filter_nulls([
+    #("location", encode_location(chat_location.location)),
+    #("address", json.string(chat_location.address)),
+  ])
+}
+
+pub fn encode_chat_member_administrator(
+  chat_member_administrator: ChatMemberAdministrator,
+) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_administrator.status)),
+    #("user", encode_user(chat_member_administrator.user)),
+    #("can_be_edited", json.bool(chat_member_administrator.can_be_edited)),
+    #("is_anonymous", json.bool(chat_member_administrator.is_anonymous)),
+    #("can_manage_chat", json.bool(chat_member_administrator.can_manage_chat)),
+    #(
+      "can_delete_messages",
+      json.bool(chat_member_administrator.can_delete_messages),
+    ),
+    #(
+      "can_manage_video_chats",
+      json.bool(chat_member_administrator.can_manage_video_chats),
+    ),
+    #(
+      "can_restrict_members",
+      json.bool(chat_member_administrator.can_restrict_members),
+    ),
+    #(
+      "can_promote_members",
+      json.bool(chat_member_administrator.can_promote_members),
+    ),
+    #("can_change_info", json.bool(chat_member_administrator.can_change_info)),
+    #("can_invite_users", json.bool(chat_member_administrator.can_invite_users)),
+    #("can_post_stories", json.bool(chat_member_administrator.can_post_stories)),
+    #("can_edit_stories", json.bool(chat_member_administrator.can_edit_stories)),
+    #(
+      "can_delete_stories",
+      json.bool(chat_member_administrator.can_delete_stories),
+    ),
+    #(
+      "can_post_messages",
+      json.nullable(chat_member_administrator.can_post_messages, json.bool),
+    ),
+    #(
+      "can_edit_messages",
+      json.nullable(chat_member_administrator.can_edit_messages, json.bool),
+    ),
+    #(
+      "can_pin_messages",
+      json.nullable(chat_member_administrator.can_pin_messages, json.bool),
+    ),
+    #(
+      "can_manage_topics",
+      json.nullable(chat_member_administrator.can_manage_topics, json.bool),
+    ),
+    #(
+      "can_manage_direct_messages",
+      json.nullable(
+        chat_member_administrator.can_manage_direct_messages,
+        json.bool,
+      ),
+    ),
+    #(
+      "can_manage_tags",
+      json.nullable(chat_member_administrator.can_manage_tags, json.bool),
+    ),
+    #(
+      "custom_title",
+      json.nullable(chat_member_administrator.custom_title, json.string),
+    ),
+  ])
+}
+
+pub fn encode_chat_member_banned(chat_member_banned: ChatMemberBanned) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_banned.status)),
+    #("user", encode_user(chat_member_banned.user)),
+    #("until_date", json.int(chat_member_banned.until_date)),
+  ])
+}
+
+pub fn encode_chat_member_left(chat_member_left: ChatMemberLeft) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_left.status)),
+    #("user", encode_user(chat_member_left.user)),
+  ])
+}
+
+pub fn encode_chat_member_member(chat_member_member: ChatMemberMember) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_member.status)),
+    #("tag", json.nullable(chat_member_member.tag, json.string)),
+    #("user", encode_user(chat_member_member.user)),
+    #("until_date", json.nullable(chat_member_member.until_date, json.int)),
+  ])
+}
+
+pub fn encode_chat_member_owner(chat_member_owner: ChatMemberOwner) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_owner.status)),
+    #("user", encode_user(chat_member_owner.user)),
+    #("is_anonymous", json.bool(chat_member_owner.is_anonymous)),
+    #(
+      "custom_title",
+      json.nullable(chat_member_owner.custom_title, json.string),
+    ),
+  ])
+}
+
+pub fn encode_chat_member_restricted(
+  chat_member_restricted: ChatMemberRestricted,
+) -> Json {
+  json_object_filter_nulls([
+    #("status", json.string(chat_member_restricted.status)),
+    #("tag", json.nullable(chat_member_restricted.tag, json.string)),
+    #("user", encode_user(chat_member_restricted.user)),
+    #("is_member", json.bool(chat_member_restricted.is_member)),
+    #("can_send_messages", json.bool(chat_member_restricted.can_send_messages)),
+    #("can_send_audios", json.bool(chat_member_restricted.can_send_audios)),
+    #(
+      "can_send_documents",
+      json.bool(chat_member_restricted.can_send_documents),
+    ),
+    #("can_send_photos", json.bool(chat_member_restricted.can_send_photos)),
+    #("can_send_videos", json.bool(chat_member_restricted.can_send_videos)),
+    #(
+      "can_send_video_notes",
+      json.bool(chat_member_restricted.can_send_video_notes),
+    ),
+    #(
+      "can_send_voice_notes",
+      json.bool(chat_member_restricted.can_send_voice_notes),
+    ),
+    #("can_send_polls", json.bool(chat_member_restricted.can_send_polls)),
+    #(
+      "can_send_other_messages",
+      json.bool(chat_member_restricted.can_send_other_messages),
+    ),
+    #(
+      "can_add_web_page_previews",
+      json.bool(chat_member_restricted.can_add_web_page_previews),
+    ),
+    #(
+      "can_react_to_messages",
+      json.bool(chat_member_restricted.can_react_to_messages),
+    ),
+    #("can_edit_tag", json.bool(chat_member_restricted.can_edit_tag)),
+    #("can_change_info", json.bool(chat_member_restricted.can_change_info)),
+    #("can_invite_users", json.bool(chat_member_restricted.can_invite_users)),
+    #("can_pin_messages", json.bool(chat_member_restricted.can_pin_messages)),
+    #("can_manage_topics", json.bool(chat_member_restricted.can_manage_topics)),
+    #("until_date", json.int(chat_member_restricted.until_date)),
+  ])
+}
+
+pub fn encode_chat_member_updated(
+  chat_member_updated: ChatMemberUpdated,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(chat_member_updated.chat)),
+    #("from", encode_user(chat_member_updated.from)),
+    #("date", json.int(chat_member_updated.date)),
+    #(
+      "old_chat_member",
+      encode_chat_member(chat_member_updated.old_chat_member),
+    ),
+    #(
+      "new_chat_member",
+      encode_chat_member(chat_member_updated.new_chat_member),
+    ),
+    #(
+      "invite_link",
+      json.nullable(chat_member_updated.invite_link, encode_chat_invite_link),
+    ),
+    #(
+      "via_join_request",
+      json.nullable(chat_member_updated.via_join_request, json.bool),
+    ),
+    #(
+      "via_chat_folder_invite_link",
+      json.nullable(chat_member_updated.via_chat_folder_invite_link, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_chat_owner_changed(chat_owner_changed: ChatOwnerChanged) -> Json {
+  json_object_filter_nulls([
+    #("new_owner", encode_user(chat_owner_changed.new_owner)),
+  ])
+}
+
+pub fn encode_chat_owner_left(chat_owner_left: ChatOwnerLeft) -> Json {
+  json_object_filter_nulls([
+    #("new_owner", json.nullable(chat_owner_left.new_owner, encode_user)),
+  ])
+}
+
+pub fn encode_chat_permissions(chat_permissions: ChatPermissions) -> Json {
+  json_object_filter_nulls([
+    #(
+      "can_send_messages",
+      json.nullable(chat_permissions.can_send_messages, json.bool),
+    ),
+    #(
+      "can_send_audios",
+      json.nullable(chat_permissions.can_send_audios, json.bool),
+    ),
+    #(
+      "can_send_documents",
+      json.nullable(chat_permissions.can_send_documents, json.bool),
+    ),
+    #(
+      "can_send_photos",
+      json.nullable(chat_permissions.can_send_photos, json.bool),
+    ),
+    #(
+      "can_send_videos",
+      json.nullable(chat_permissions.can_send_videos, json.bool),
+    ),
+    #(
+      "can_send_video_notes",
+      json.nullable(chat_permissions.can_send_video_notes, json.bool),
+    ),
+    #(
+      "can_send_voice_notes",
+      json.nullable(chat_permissions.can_send_voice_notes, json.bool),
+    ),
+    #(
+      "can_send_polls",
+      json.nullable(chat_permissions.can_send_polls, json.bool),
+    ),
+    #(
+      "can_send_other_messages",
+      json.nullable(chat_permissions.can_send_other_messages, json.bool),
+    ),
+    #(
+      "can_add_web_page_previews",
+      json.nullable(chat_permissions.can_add_web_page_previews, json.bool),
+    ),
+    #(
+      "can_react_to_messages",
+      json.nullable(chat_permissions.can_react_to_messages, json.bool),
+    ),
+    #("can_edit_tag", json.nullable(chat_permissions.can_edit_tag, json.bool)),
+    #(
+      "can_change_info",
+      json.nullable(chat_permissions.can_change_info, json.bool),
+    ),
+    #(
+      "can_invite_users",
+      json.nullable(chat_permissions.can_invite_users, json.bool),
+    ),
+    #(
+      "can_pin_messages",
+      json.nullable(chat_permissions.can_pin_messages, json.bool),
+    ),
+    #(
+      "can_manage_topics",
+      json.nullable(chat_permissions.can_manage_topics, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_chat_photo(chat_photo: ChatPhoto) -> Json {
+  json_object_filter_nulls([
+    #("small_file_id", json.string(chat_photo.small_file_id)),
+    #("small_file_unique_id", json.string(chat_photo.small_file_unique_id)),
+    #("big_file_id", json.string(chat_photo.big_file_id)),
+    #("big_file_unique_id", json.string(chat_photo.big_file_unique_id)),
+  ])
+}
+
+pub fn encode_chat_shared(chat_shared: ChatShared) -> Json {
+  json_object_filter_nulls([
+    #("request_id", json.int(chat_shared.request_id)),
+    #("chat_id", json.int(chat_shared.chat_id)),
+    #("title", json.nullable(chat_shared.title, json.string)),
+    #("username", json.nullable(chat_shared.username, json.string)),
+    #(
+      "photo",
+      json.nullable(chat_shared.photo, json.array(_, encode_photo_size)),
+    ),
+  ])
+}
+
+pub fn encode_checklist(checklist: Checklist) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(checklist.title)),
+    #(
+      "title_entities",
+      json.nullable(checklist.title_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("tasks", json.array(_, encode_checklist_task)(checklist.tasks)),
+    #(
+      "others_can_add_tasks",
+      json.nullable(checklist.others_can_add_tasks, json.bool),
+    ),
+    #(
+      "others_can_mark_tasks_as_done",
+      json.nullable(checklist.others_can_mark_tasks_as_done, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_checklist_task(checklist_task: ChecklistTask) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(checklist_task.id)),
+    #("text", json.string(checklist_task.text)),
+    #(
+      "text_entities",
+      json.nullable(checklist_task.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "completed_by_user",
+      json.nullable(checklist_task.completed_by_user, encode_user),
+    ),
+    #(
+      "completed_by_chat",
+      json.nullable(checklist_task.completed_by_chat, encode_chat),
+    ),
+    #(
+      "completion_date",
+      json.nullable(checklist_task.completion_date, json.int),
+    ),
+  ])
+}
+
+pub fn encode_checklist_tasks_added(
+  checklist_tasks_added: ChecklistTasksAdded,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "checklist_message",
+      json.nullable(checklist_tasks_added.checklist_message, encode_message),
+    ),
+    #(
+      "tasks",
+      json.array(_, encode_checklist_task)(checklist_tasks_added.tasks),
+    ),
+  ])
+}
+
+pub fn encode_checklist_tasks_done(
+  checklist_tasks_done: ChecklistTasksDone,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "checklist_message",
+      json.nullable(checklist_tasks_done.checklist_message, encode_message),
+    ),
+    #(
+      "marked_as_done_task_ids",
+      json.nullable(checklist_tasks_done.marked_as_done_task_ids, json.array(
+        _,
+        json.int,
+      )),
+    ),
+    #(
+      "marked_as_not_done_task_ids",
+      json.nullable(
+        checklist_tasks_done.marked_as_not_done_task_ids,
+        json.array(_, json.int),
+      ),
+    ),
+  ])
+}
+
+pub fn encode_chosen_inline_result(
+  chosen_inline_result: ChosenInlineResult,
+) -> Json {
+  json_object_filter_nulls([
+    #("result_id", json.string(chosen_inline_result.result_id)),
+    #("from", encode_user(chosen_inline_result.from)),
+    #("location", json.nullable(chosen_inline_result.location, encode_location)),
+    #(
+      "inline_message_id",
+      json.nullable(chosen_inline_result.inline_message_id, json.string),
+    ),
+    #("query", json.string(chosen_inline_result.query)),
+  ])
+}
+
+pub fn encode_contact(contact: Contact) -> Json {
+  json_object_filter_nulls([
+    #("phone_number", json.string(contact.phone_number)),
+    #("first_name", json.string(contact.first_name)),
+    #("last_name", json.nullable(contact.last_name, json.string)),
+    #("user_id", json.nullable(contact.user_id, json.int)),
+    #("vcard", json.nullable(contact.vcard, json.string)),
+  ])
+}
+
+pub fn encode_copy_text_button(copy_text_button: CopyTextButton) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(copy_text_button.text)),
+  ])
+}
+
+pub fn encode_dice(dice: Dice) -> Json {
+  json_object_filter_nulls([
+    #("emoji", json.string(dice.emoji)),
+    #("value", json.int(dice.value)),
+  ])
+}
+
+pub fn encode_direct_message_price_changed(
+  direct_message_price_changed: DirectMessagePriceChanged,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "are_direct_messages_enabled",
+      json.bool(direct_message_price_changed.are_direct_messages_enabled),
+    ),
+    #(
+      "direct_message_star_count",
+      json.nullable(
+        direct_message_price_changed.direct_message_star_count,
+        json.int,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_direct_messages_topic(
+  direct_messages_topic: DirectMessagesTopic,
+) -> Json {
+  json_object_filter_nulls([
+    #("topic_id", json.int(direct_messages_topic.topic_id)),
+    #("user", json.nullable(direct_messages_topic.user, encode_user)),
+  ])
+}
+
+pub fn encode_document(document: Document) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(document.file_id)),
+    #("file_unique_id", json.string(document.file_unique_id)),
+    #("thumbnail", json.nullable(document.thumbnail, encode_photo_size)),
+    #("file_name", json.nullable(document.file_name, json.string)),
+    #("mime_type", json.nullable(document.mime_type, json.string)),
+    #("file_size", json.nullable(document.file_size, json.int)),
+  ])
+}
+
+pub fn encode_encrypted_credentials(
+  encrypted_credentials: EncryptedCredentials,
+) -> Json {
+  json_object_filter_nulls([
+    #("data", json.string(encrypted_credentials.data)),
+    #("hash", json.string(encrypted_credentials.hash)),
+    #("secret", json.string(encrypted_credentials.secret)),
+  ])
+}
+
+pub fn encode_encrypted_passport_element(
+  encrypted_passport_element: EncryptedPassportElement,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(encrypted_passport_element.type_)),
+    #("data", json.nullable(encrypted_passport_element.data, json.string)),
+    #(
+      "phone_number",
+      json.nullable(encrypted_passport_element.phone_number, json.string),
+    ),
+    #("email", json.nullable(encrypted_passport_element.email, json.string)),
+    #(
+      "files",
+      json.nullable(encrypted_passport_element.files, json.array(
+        _,
+        encode_passport_file,
+      )),
+    ),
+    #(
+      "front_side",
+      json.nullable(encrypted_passport_element.front_side, encode_passport_file),
+    ),
+    #(
+      "reverse_side",
+      json.nullable(
+        encrypted_passport_element.reverse_side,
+        encode_passport_file,
+      ),
+    ),
+    #(
+      "selfie",
+      json.nullable(encrypted_passport_element.selfie, encode_passport_file),
+    ),
+    #(
+      "translation",
+      json.nullable(encrypted_passport_element.translation, json.array(
+        _,
+        encode_passport_file,
+      )),
+    ),
+    #("hash", json.string(encrypted_passport_element.hash)),
+  ])
+}
+
+pub fn encode_external_reply_info(
+  external_reply_info: ExternalReplyInfo,
+) -> Json {
+  json_object_filter_nulls([
+    #("origin", encode_message_origin(external_reply_info.origin)),
+    #("chat", json.nullable(external_reply_info.chat, encode_chat)),
+    #("message_id", json.nullable(external_reply_info.message_id, json.int)),
+    #(
+      "link_preview_options",
+      json.nullable(
+        external_reply_info.link_preview_options,
+        encode_link_preview_options,
+      ),
+    ),
+    #(
+      "animation",
+      json.nullable(external_reply_info.animation, encode_animation),
+    ),
+    #("audio", json.nullable(external_reply_info.audio, encode_audio)),
+    #("document", json.nullable(external_reply_info.document, encode_document)),
+    #(
+      "live_photo",
+      json.nullable(external_reply_info.live_photo, encode_live_photo),
+    ),
+    #(
+      "paid_media",
+      json.nullable(external_reply_info.paid_media, encode_paid_media_info),
+    ),
+    #(
+      "photo",
+      json.nullable(external_reply_info.photo, json.array(_, encode_photo_size)),
+    ),
+    #("sticker", json.nullable(external_reply_info.sticker, encode_sticker)),
+    #("story", json.nullable(external_reply_info.story, encode_story)),
+    #("video", json.nullable(external_reply_info.video, encode_video)),
+    #(
+      "video_note",
+      json.nullable(external_reply_info.video_note, encode_video_note),
+    ),
+    #("voice", json.nullable(external_reply_info.voice, encode_voice)),
+    #(
+      "has_media_spoiler",
+      json.nullable(external_reply_info.has_media_spoiler, json.bool),
+    ),
+    #(
+      "checklist",
+      json.nullable(external_reply_info.checklist, encode_checklist),
+    ),
+    #("contact", json.nullable(external_reply_info.contact, encode_contact)),
+    #("dice", json.nullable(external_reply_info.dice, encode_dice)),
+    #("game", json.nullable(external_reply_info.game, encode_game)),
+    #("giveaway", json.nullable(external_reply_info.giveaway, encode_giveaway)),
+    #(
+      "giveaway_winners",
+      json.nullable(
+        external_reply_info.giveaway_winners,
+        encode_giveaway_winners,
+      ),
+    ),
+    #("invoice", json.nullable(external_reply_info.invoice, encode_invoice)),
+    #("location", json.nullable(external_reply_info.location, encode_location)),
+    #("poll", json.nullable(external_reply_info.poll, encode_poll)),
+    #("venue", json.nullable(external_reply_info.venue, encode_venue)),
+  ])
+}
+
+pub fn encode_file(file: File) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(file.file_id)),
+    #("file_unique_id", json.string(file.file_unique_id)),
+    #("file_size", json.nullable(file.file_size, json.int)),
+    #("file_path", json.nullable(file.file_path, json.string)),
+  ])
+}
+
+pub fn encode_force_reply(force_reply: ForceReply) -> Json {
+  json_object_filter_nulls([
+    #("force_reply", json.bool(force_reply.force_reply)),
+    #(
+      "input_field_placeholder",
+      json.nullable(force_reply.input_field_placeholder, json.string),
+    ),
+    #("selective", json.nullable(force_reply.selective, json.bool)),
+  ])
+}
+
+pub fn encode_forum_topic(forum_topic: ForumTopic) -> Json {
+  json_object_filter_nulls([
+    #("message_thread_id", json.int(forum_topic.message_thread_id)),
+    #("name", json.string(forum_topic.name)),
+    #("icon_color", json.int(forum_topic.icon_color)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(forum_topic.icon_custom_emoji_id, json.string),
+    ),
+    #(
+      "is_name_implicit",
+      json.nullable(forum_topic.is_name_implicit, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_forum_topic_closed(
+  _forum_topic_closed: ForumTopicClosed,
+) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_forum_topic_created(
+  forum_topic_created: ForumTopicCreated,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(forum_topic_created.name)),
+    #("icon_color", json.int(forum_topic_created.icon_color)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(forum_topic_created.icon_custom_emoji_id, json.string),
+    ),
+    #(
+      "is_name_implicit",
+      json.nullable(forum_topic_created.is_name_implicit, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_forum_topic_edited(forum_topic_edited: ForumTopicEdited) -> Json {
+  json_object_filter_nulls([
+    #("name", json.nullable(forum_topic_edited.name, json.string)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(forum_topic_edited.icon_custom_emoji_id, json.string),
+    ),
+  ])
+}
+
+pub fn encode_forum_topic_reopened(
+  _forum_topic_reopened: ForumTopicReopened,
+) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_game(game: Game) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(game.title)),
+    #("description", json.string(game.description)),
+    #("photo", json.array(_, encode_photo_size)(game.photo)),
+    #("text", json.nullable(game.text, json.string)),
+    #(
+      "text_entities",
+      json.nullable(game.text_entities, json.array(_, encode_message_entity)),
+    ),
+    #("animation", json.nullable(game.animation, encode_animation)),
+  ])
+}
+
+pub fn encode_game_high_score(game_high_score: GameHighScore) -> Json {
+  json_object_filter_nulls([
+    #("position", json.int(game_high_score.position)),
+    #("user", encode_user(game_high_score.user)),
+    #("score", json.int(game_high_score.score)),
+  ])
+}
+
+pub fn encode_general_forum_topic_hidden(
+  _general_forum_topic_hidden: GeneralForumTopicHidden,
+) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_general_forum_topic_unhidden(
+  _general_forum_topic_unhidden: GeneralForumTopicUnhidden,
+) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_gift(gift: Gift) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(gift.id)),
+    #("sticker", encode_sticker(gift.sticker)),
+    #("star_count", json.int(gift.star_count)),
+    #("upgrade_star_count", json.nullable(gift.upgrade_star_count, json.int)),
+    #("is_premium", json.nullable(gift.is_premium, json.bool)),
+    #("has_colors", json.nullable(gift.has_colors, json.bool)),
+    #("total_count", json.nullable(gift.total_count, json.int)),
+    #("remaining_count", json.nullable(gift.remaining_count, json.int)),
+    #(
+      "personal_total_count",
+      json.nullable(gift.personal_total_count, json.int),
+    ),
+    #(
+      "personal_remaining_count",
+      json.nullable(gift.personal_remaining_count, json.int),
+    ),
+    #("background", json.nullable(gift.background, encode_gift_background)),
+    #(
+      "unique_gift_variant_count",
+      json.nullable(gift.unique_gift_variant_count, json.int),
+    ),
+    #("publisher_chat", json.nullable(gift.publisher_chat, encode_chat)),
+  ])
+}
+
+pub fn encode_gift_background(gift_background: GiftBackground) -> Json {
+  json_object_filter_nulls([
+    #("center_color", json.int(gift_background.center_color)),
+    #("edge_color", json.int(gift_background.edge_color)),
+    #("text_color", json.int(gift_background.text_color)),
+  ])
+}
+
+pub fn encode_gift_info(gift_info: GiftInfo) -> Json {
+  json_object_filter_nulls([
+    #("gift", encode_gift(gift_info.gift)),
+    #("owned_gift_id", json.nullable(gift_info.owned_gift_id, json.string)),
+    #(
+      "convert_star_count",
+      json.nullable(gift_info.convert_star_count, json.int),
+    ),
+    #(
+      "prepaid_upgrade_star_count",
+      json.nullable(gift_info.prepaid_upgrade_star_count, json.int),
+    ),
+    #(
+      "is_upgrade_separate",
+      json.nullable(gift_info.is_upgrade_separate, json.bool),
+    ),
+    #("can_be_upgraded", json.nullable(gift_info.can_be_upgraded, json.bool)),
+    #("text", json.nullable(gift_info.text, json.string)),
+    #(
+      "entities",
+      json.nullable(gift_info.entities, json.array(_, encode_message_entity)),
+    ),
+    #("is_private", json.nullable(gift_info.is_private, json.bool)),
+    #(
+      "unique_gift_number",
+      json.nullable(gift_info.unique_gift_number, json.int),
+    ),
+  ])
+}
+
+pub fn encode_gifts(gifts: Gifts) -> Json {
+  json_object_filter_nulls([
+    #("gifts", json.array(_, encode_gift)(gifts.gifts)),
+  ])
+}
+
+pub fn encode_giveaway(giveaway: Giveaway) -> Json {
+  json_object_filter_nulls([
+    #("chats", json.array(_, encode_chat)(giveaway.chats)),
+    #("winners_selection_date", json.int(giveaway.winners_selection_date)),
+    #("winner_count", json.int(giveaway.winner_count)),
+    #("only_new_members", json.nullable(giveaway.only_new_members, json.bool)),
+    #(
+      "has_public_winners",
+      json.nullable(giveaway.has_public_winners, json.bool),
+    ),
+    #(
+      "prize_description",
+      json.nullable(giveaway.prize_description, json.string),
+    ),
+    #(
+      "country_codes",
+      json.nullable(giveaway.country_codes, json.array(_, json.string)),
+    ),
+    #("prize_star_count", json.nullable(giveaway.prize_star_count, json.int)),
+    #(
+      "premium_subscription_month_count",
+      json.nullable(giveaway.premium_subscription_month_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_giveaway_completed(
+  giveaway_completed: GiveawayCompleted,
+) -> Json {
+  json_object_filter_nulls([
+    #("winner_count", json.int(giveaway_completed.winner_count)),
+    #(
+      "unclaimed_prize_count",
+      json.nullable(giveaway_completed.unclaimed_prize_count, json.int),
+    ),
+    #(
+      "giveaway_message",
+      json.nullable(giveaway_completed.giveaway_message, encode_message),
+    ),
+    #(
+      "is_star_giveaway",
+      json.nullable(giveaway_completed.is_star_giveaway, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_giveaway_created(giveaway_created: GiveawayCreated) -> Json {
+  json_object_filter_nulls([
+    #(
+      "prize_star_count",
+      json.nullable(giveaway_created.prize_star_count, json.int),
+    ),
+  ])
+}
+
+pub fn encode_giveaway_winners(giveaway_winners: GiveawayWinners) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(giveaway_winners.chat)),
+    #("giveaway_message_id", json.int(giveaway_winners.giveaway_message_id)),
+    #(
+      "winners_selection_date",
+      json.int(giveaway_winners.winners_selection_date),
+    ),
+    #("winner_count", json.int(giveaway_winners.winner_count)),
+    #("winners", json.array(_, encode_user)(giveaway_winners.winners)),
+    #(
+      "additional_chat_count",
+      json.nullable(giveaway_winners.additional_chat_count, json.int),
+    ),
+    #(
+      "prize_star_count",
+      json.nullable(giveaway_winners.prize_star_count, json.int),
+    ),
+    #(
+      "premium_subscription_month_count",
+      json.nullable(giveaway_winners.premium_subscription_month_count, json.int),
+    ),
+    #(
+      "unclaimed_prize_count",
+      json.nullable(giveaway_winners.unclaimed_prize_count, json.int),
+    ),
+    #(
+      "only_new_members",
+      json.nullable(giveaway_winners.only_new_members, json.bool),
+    ),
+    #("was_refunded", json.nullable(giveaway_winners.was_refunded, json.bool)),
+    #(
+      "prize_description",
+      json.nullable(giveaway_winners.prize_description, json.string),
+    ),
+  ])
+}
+
+pub fn encode_inaccessible_message(
+  inaccessible_message: InaccessibleMessage,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(inaccessible_message.chat)),
+    #("message_id", json.int(inaccessible_message.message_id)),
+    #("date", json.int(inaccessible_message.date)),
+  ])
+}
+
+pub fn encode_inline_keyboard_button(
+  inline_keyboard_button: InlineKeyboardButton,
+) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(inline_keyboard_button.text)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(inline_keyboard_button.icon_custom_emoji_id, json.string),
+    ),
+    #("style", json.nullable(inline_keyboard_button.style, json.string)),
+    #("url", json.nullable(inline_keyboard_button.url, json.string)),
+    #(
+      "callback_data",
+      json.nullable(inline_keyboard_button.callback_data, json.string),
+    ),
+    #(
+      "web_app",
+      json.nullable(inline_keyboard_button.web_app, encode_web_app_info),
+    ),
+    #(
+      "login_url",
+      json.nullable(inline_keyboard_button.login_url, encode_login_url),
+    ),
+    #(
+      "switch_inline_query",
+      json.nullable(inline_keyboard_button.switch_inline_query, json.string),
+    ),
+    #(
+      "switch_inline_query_current_chat",
+      json.nullable(
+        inline_keyboard_button.switch_inline_query_current_chat,
+        json.string,
+      ),
+    ),
+    #(
+      "switch_inline_query_chosen_chat",
+      json.nullable(
+        inline_keyboard_button.switch_inline_query_chosen_chat,
+        encode_switch_inline_query_chosen_chat,
+      ),
+    ),
+    #(
+      "copy_text",
+      json.nullable(inline_keyboard_button.copy_text, encode_copy_text_button),
+    ),
+    #(
+      "callback_game",
+      json.nullable(inline_keyboard_button.callback_game, encode_callback_game),
+    ),
+    #("pay", json.nullable(inline_keyboard_button.pay, json.bool)),
+  ])
+}
+
+pub fn encode_inline_keyboard_markup(
+  inline_keyboard_markup: InlineKeyboardMarkup,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "inline_keyboard",
+      fn(rows) {
+        json.array(rows, fn(row) {
+          json.array(row, encode_inline_keyboard_button)
+        })
+      }(inline_keyboard_markup.inline_keyboard),
+    ),
+  ])
+}
+
+pub fn encode_inline_query(inline_query: InlineQuery) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(inline_query.id)),
+    #("from", encode_user(inline_query.from)),
+    #("query", json.string(inline_query.query)),
+    #("offset", json.string(inline_query.offset)),
+    #("chat_type", json.nullable(inline_query.chat_type, json.string)),
+    #("location", json.nullable(inline_query.location, encode_location)),
+  ])
+}
+
+pub fn encode_inline_query_result_article(
+  inline_query_result_article: InlineQueryResultArticle,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_article.type_)),
+    #("id", json.string(inline_query_result_article.id)),
+    #("title", json.string(inline_query_result_article.title)),
+    #(
+      "input_message_content",
+      encode_input_message_content(
+        inline_query_result_article.input_message_content,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_article.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #("url", json.nullable(inline_query_result_article.url, json.string)),
+    #(
+      "description",
+      json.nullable(inline_query_result_article.description, json.string),
+    ),
+    #(
+      "thumbnail_url",
+      json.nullable(inline_query_result_article.thumbnail_url, json.string),
+    ),
+    #(
+      "thumbnail_width",
+      json.nullable(inline_query_result_article.thumbnail_width, json.int),
+    ),
+    #(
+      "thumbnail_height",
+      json.nullable(inline_query_result_article.thumbnail_height, json.int),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_audio(
+  inline_query_result_audio: InlineQueryResultAudio,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_audio.type_)),
+    #("id", json.string(inline_query_result_audio.id)),
+    #("audio_url", json.string(inline_query_result_audio.audio_url)),
+    #("title", json.string(inline_query_result_audio.title)),
+    #("caption", json.nullable(inline_query_result_audio.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_audio.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_audio.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "performer",
+      json.nullable(inline_query_result_audio.performer, json.string),
+    ),
+    #(
+      "audio_duration",
+      json.nullable(inline_query_result_audio.audio_duration, json.int),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_audio.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_audio.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_audio(
+  inline_query_result_cached_audio: InlineQueryResultCachedAudio,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_audio.type_)),
+    #("id", json.string(inline_query_result_cached_audio.id)),
+    #(
+      "audio_file_id",
+      json.string(inline_query_result_cached_audio.audio_file_id),
+    ),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_audio.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_audio.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_audio.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_audio.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_audio.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_document(
+  inline_query_result_cached_document: InlineQueryResultCachedDocument,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_document.type_)),
+    #("id", json.string(inline_query_result_cached_document.id)),
+    #("title", json.string(inline_query_result_cached_document.title)),
+    #(
+      "document_file_id",
+      json.string(inline_query_result_cached_document.document_file_id),
+    ),
+    #(
+      "description",
+      json.nullable(
+        inline_query_result_cached_document.description,
+        json.string,
+      ),
+    ),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_document.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_document.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_document.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_document.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_document.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_gif(
+  inline_query_result_cached_gif: InlineQueryResultCachedGif,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_gif.type_)),
+    #("id", json.string(inline_query_result_cached_gif.id)),
+    #("gif_file_id", json.string(inline_query_result_cached_gif.gif_file_id)),
+    #("title", json.nullable(inline_query_result_cached_gif.title, json.string)),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_gif.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_gif.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_cached_gif.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_cached_gif.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_gif.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_gif.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_mpeg4_gif(
+  inline_query_result_cached_mpeg4_gif: InlineQueryResultCachedMpeg4Gif,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_mpeg4_gif.type_)),
+    #("id", json.string(inline_query_result_cached_mpeg4_gif.id)),
+    #(
+      "mpeg4_file_id",
+      json.string(inline_query_result_cached_mpeg4_gif.mpeg4_file_id),
+    ),
+    #(
+      "title",
+      json.nullable(inline_query_result_cached_mpeg4_gif.title, json.string),
+    ),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_mpeg4_gif.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(
+        inline_query_result_cached_mpeg4_gif.parse_mode,
+        json.string,
+      ),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_mpeg4_gif.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_cached_mpeg4_gif.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_mpeg4_gif.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_mpeg4_gif.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_photo(
+  inline_query_result_cached_photo: InlineQueryResultCachedPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_photo.type_)),
+    #("id", json.string(inline_query_result_cached_photo.id)),
+    #(
+      "photo_file_id",
+      json.string(inline_query_result_cached_photo.photo_file_id),
+    ),
+    #(
+      "title",
+      json.nullable(inline_query_result_cached_photo.title, json.string),
+    ),
+    #(
+      "description",
+      json.nullable(inline_query_result_cached_photo.description, json.string),
+    ),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_photo.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_photo.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_photo.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_cached_photo.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_photo.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_photo.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_sticker(
+  inline_query_result_cached_sticker: InlineQueryResultCachedSticker,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_sticker.type_)),
+    #("id", json.string(inline_query_result_cached_sticker.id)),
+    #(
+      "sticker_file_id",
+      json.string(inline_query_result_cached_sticker.sticker_file_id),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_sticker.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_sticker.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_video(
+  inline_query_result_cached_video: InlineQueryResultCachedVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_video.type_)),
+    #("id", json.string(inline_query_result_cached_video.id)),
+    #(
+      "video_file_id",
+      json.string(inline_query_result_cached_video.video_file_id),
+    ),
+    #("title", json.string(inline_query_result_cached_video.title)),
+    #(
+      "description",
+      json.nullable(inline_query_result_cached_video.description, json.string),
+    ),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_video.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_video.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_video.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_cached_video.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_video.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_video.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_cached_voice(
+  inline_query_result_cached_voice: InlineQueryResultCachedVoice,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_cached_voice.type_)),
+    #("id", json.string(inline_query_result_cached_voice.id)),
+    #(
+      "voice_file_id",
+      json.string(inline_query_result_cached_voice.voice_file_id),
+    ),
+    #("title", json.string(inline_query_result_cached_voice.title)),
+    #(
+      "caption",
+      json.nullable(inline_query_result_cached_voice.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_cached_voice.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(
+        inline_query_result_cached_voice.caption_entities,
+        json.array(_, encode_message_entity),
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_cached_voice.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_cached_voice.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_contact(
+  inline_query_result_contact: InlineQueryResultContact,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_contact.type_)),
+    #("id", json.string(inline_query_result_contact.id)),
+    #("phone_number", json.string(inline_query_result_contact.phone_number)),
+    #("first_name", json.string(inline_query_result_contact.first_name)),
+    #(
+      "last_name",
+      json.nullable(inline_query_result_contact.last_name, json.string),
+    ),
+    #("vcard", json.nullable(inline_query_result_contact.vcard, json.string)),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_contact.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_contact.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+    #(
+      "thumbnail_url",
+      json.nullable(inline_query_result_contact.thumbnail_url, json.string),
+    ),
+    #(
+      "thumbnail_width",
+      json.nullable(inline_query_result_contact.thumbnail_width, json.int),
+    ),
+    #(
+      "thumbnail_height",
+      json.nullable(inline_query_result_contact.thumbnail_height, json.int),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_document(
+  inline_query_result_document: InlineQueryResultDocument,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_document.type_)),
+    #("id", json.string(inline_query_result_document.id)),
+    #("title", json.string(inline_query_result_document.title)),
+    #(
+      "caption",
+      json.nullable(inline_query_result_document.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_document.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_document.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("document_url", json.string(inline_query_result_document.document_url)),
+    #("mime_type", json.string(inline_query_result_document.mime_type)),
+    #(
+      "description",
+      json.nullable(inline_query_result_document.description, json.string),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_document.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_document.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+    #(
+      "thumbnail_url",
+      json.nullable(inline_query_result_document.thumbnail_url, json.string),
+    ),
+    #(
+      "thumbnail_width",
+      json.nullable(inline_query_result_document.thumbnail_width, json.int),
+    ),
+    #(
+      "thumbnail_height",
+      json.nullable(inline_query_result_document.thumbnail_height, json.int),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_game(
+  inline_query_result_game: InlineQueryResultGame,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_game.type_)),
+    #("id", json.string(inline_query_result_game.id)),
+    #("game_short_name", json.string(inline_query_result_game.game_short_name)),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_game.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_gif(
+  inline_query_result_gif: InlineQueryResultGif,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_gif.type_)),
+    #("id", json.string(inline_query_result_gif.id)),
+    #("gif_url", json.string(inline_query_result_gif.gif_url)),
+    #("gif_width", json.nullable(inline_query_result_gif.gif_width, json.int)),
+    #("gif_height", json.nullable(inline_query_result_gif.gif_height, json.int)),
+    #(
+      "gif_duration",
+      json.nullable(inline_query_result_gif.gif_duration, json.int),
+    ),
+    #("thumbnail_url", json.string(inline_query_result_gif.thumbnail_url)),
+    #(
+      "thumbnail_mime_type",
+      json.nullable(inline_query_result_gif.thumbnail_mime_type, json.string),
+    ),
+    #("title", json.nullable(inline_query_result_gif.title, json.string)),
+    #("caption", json.nullable(inline_query_result_gif.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_gif.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_gif.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(inline_query_result_gif.show_caption_above_media, json.bool),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_gif.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_gif.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_location(
+  inline_query_result_location: InlineQueryResultLocation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_location.type_)),
+    #("id", json.string(inline_query_result_location.id)),
+    #("latitude", json.float(inline_query_result_location.latitude)),
+    #("longitude", json.float(inline_query_result_location.longitude)),
+    #("title", json.string(inline_query_result_location.title)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(
+        inline_query_result_location.horizontal_accuracy,
+        json.float,
+      ),
+    ),
+    #(
+      "live_period",
+      json.nullable(inline_query_result_location.live_period, json.int),
+    ),
+    #("heading", json.nullable(inline_query_result_location.heading, json.int)),
+    #(
+      "proximity_alert_radius",
+      json.nullable(
+        inline_query_result_location.proximity_alert_radius,
+        json.int,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_location.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_location.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+    #(
+      "thumbnail_url",
+      json.nullable(inline_query_result_location.thumbnail_url, json.string),
+    ),
+    #(
+      "thumbnail_width",
+      json.nullable(inline_query_result_location.thumbnail_width, json.int),
+    ),
+    #(
+      "thumbnail_height",
+      json.nullable(inline_query_result_location.thumbnail_height, json.int),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_mpeg4_gif(
+  inline_query_result_mpeg4_gif: InlineQueryResultMpeg4Gif,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_mpeg4_gif.type_)),
+    #("id", json.string(inline_query_result_mpeg4_gif.id)),
+    #("mpeg4_url", json.string(inline_query_result_mpeg4_gif.mpeg4_url)),
+    #(
+      "mpeg4_width",
+      json.nullable(inline_query_result_mpeg4_gif.mpeg4_width, json.int),
+    ),
+    #(
+      "mpeg4_height",
+      json.nullable(inline_query_result_mpeg4_gif.mpeg4_height, json.int),
+    ),
+    #(
+      "mpeg4_duration",
+      json.nullable(inline_query_result_mpeg4_gif.mpeg4_duration, json.int),
+    ),
+    #("thumbnail_url", json.string(inline_query_result_mpeg4_gif.thumbnail_url)),
+    #(
+      "thumbnail_mime_type",
+      json.nullable(
+        inline_query_result_mpeg4_gif.thumbnail_mime_type,
+        json.string,
+      ),
+    ),
+    #("title", json.nullable(inline_query_result_mpeg4_gif.title, json.string)),
+    #(
+      "caption",
+      json.nullable(inline_query_result_mpeg4_gif.caption, json.string),
+    ),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_mpeg4_gif.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_mpeg4_gif.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_mpeg4_gif.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_mpeg4_gif.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_mpeg4_gif.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_photo(
+  inline_query_result_photo: InlineQueryResultPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_photo.type_)),
+    #("id", json.string(inline_query_result_photo.id)),
+    #("photo_url", json.string(inline_query_result_photo.photo_url)),
+    #("thumbnail_url", json.string(inline_query_result_photo.thumbnail_url)),
+    #(
+      "photo_width",
+      json.nullable(inline_query_result_photo.photo_width, json.int),
+    ),
+    #(
+      "photo_height",
+      json.nullable(inline_query_result_photo.photo_height, json.int),
+    ),
+    #("title", json.nullable(inline_query_result_photo.title, json.string)),
+    #(
+      "description",
+      json.nullable(inline_query_result_photo.description, json.string),
+    ),
+    #("caption", json.nullable(inline_query_result_photo.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_photo.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_photo.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_photo.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_photo.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_photo.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_venue(
+  inline_query_result_venue: InlineQueryResultVenue,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_venue.type_)),
+    #("id", json.string(inline_query_result_venue.id)),
+    #("latitude", json.float(inline_query_result_venue.latitude)),
+    #("longitude", json.float(inline_query_result_venue.longitude)),
+    #("title", json.string(inline_query_result_venue.title)),
+    #("address", json.string(inline_query_result_venue.address)),
+    #(
+      "foursquare_id",
+      json.nullable(inline_query_result_venue.foursquare_id, json.string),
+    ),
+    #(
+      "foursquare_type",
+      json.nullable(inline_query_result_venue.foursquare_type, json.string),
+    ),
+    #(
+      "google_place_id",
+      json.nullable(inline_query_result_venue.google_place_id, json.string),
+    ),
+    #(
+      "google_place_type",
+      json.nullable(inline_query_result_venue.google_place_type, json.string),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_venue.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_venue.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+    #(
+      "thumbnail_url",
+      json.nullable(inline_query_result_venue.thumbnail_url, json.string),
+    ),
+    #(
+      "thumbnail_width",
+      json.nullable(inline_query_result_venue.thumbnail_width, json.int),
+    ),
+    #(
+      "thumbnail_height",
+      json.nullable(inline_query_result_venue.thumbnail_height, json.int),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_video(
+  inline_query_result_video: InlineQueryResultVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_video.type_)),
+    #("id", json.string(inline_query_result_video.id)),
+    #("video_url", json.string(inline_query_result_video.video_url)),
+    #("mime_type", json.string(inline_query_result_video.mime_type)),
+    #("thumbnail_url", json.string(inline_query_result_video.thumbnail_url)),
+    #("title", json.string(inline_query_result_video.title)),
+    #("caption", json.nullable(inline_query_result_video.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_video.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_video.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(
+        inline_query_result_video.show_caption_above_media,
+        json.bool,
+      ),
+    ),
+    #(
+      "video_width",
+      json.nullable(inline_query_result_video.video_width, json.int),
+    ),
+    #(
+      "video_height",
+      json.nullable(inline_query_result_video.video_height, json.int),
+    ),
+    #(
+      "video_duration",
+      json.nullable(inline_query_result_video.video_duration, json.int),
+    ),
+    #(
+      "description",
+      json.nullable(inline_query_result_video.description, json.string),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_video.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_video.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_result_voice(
+  inline_query_result_voice: InlineQueryResultVoice,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(inline_query_result_voice.type_)),
+    #("id", json.string(inline_query_result_voice.id)),
+    #("voice_url", json.string(inline_query_result_voice.voice_url)),
+    #("title", json.string(inline_query_result_voice.title)),
+    #("caption", json.nullable(inline_query_result_voice.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(inline_query_result_voice.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(inline_query_result_voice.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "voice_duration",
+      json.nullable(inline_query_result_voice.voice_duration, json.int),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        inline_query_result_voice.reply_markup,
+        encode_inline_keyboard_markup,
+      ),
+    ),
+    #(
+      "input_message_content",
+      json.nullable(
+        inline_query_result_voice.input_message_content,
+        encode_input_message_content,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_inline_query_results_button(
+  inline_query_results_button: InlineQueryResultsButton,
+) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(inline_query_results_button.text)),
+    #(
+      "web_app",
+      json.nullable(inline_query_results_button.web_app, encode_web_app_info),
+    ),
+    #(
+      "start_parameter",
+      json.nullable(inline_query_results_button.start_parameter, json.string),
+    ),
+  ])
+}
+
+pub fn encode_input_checklist(input_checklist: InputChecklist) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(input_checklist.title)),
+    #("parse_mode", json.nullable(input_checklist.parse_mode, json.string)),
+    #(
+      "title_entities",
+      json.nullable(input_checklist.title_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "tasks",
+      json.array(_, encode_input_checklist_task)(input_checklist.tasks),
+    ),
+    #(
+      "others_can_add_tasks",
+      json.nullable(input_checklist.others_can_add_tasks, json.bool),
+    ),
+    #(
+      "others_can_mark_tasks_as_done",
+      json.nullable(input_checklist.others_can_mark_tasks_as_done, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_checklist_task(
+  input_checklist_task: InputChecklistTask,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(input_checklist_task.id)),
+    #("text", json.string(input_checklist_task.text)),
+    #("parse_mode", json.nullable(input_checklist_task.parse_mode, json.string)),
+    #(
+      "text_entities",
+      json.nullable(input_checklist_task.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+  ])
+}
+
+pub fn encode_input_contact_message_content(
+  input_contact_message_content: InputContactMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("phone_number", json.string(input_contact_message_content.phone_number)),
+    #("first_name", json.string(input_contact_message_content.first_name)),
+    #(
+      "last_name",
+      json.nullable(input_contact_message_content.last_name, json.string),
+    ),
+    #("vcard", json.nullable(input_contact_message_content.vcard, json.string)),
+  ])
+}
+
+pub fn encode_input_invoice_message_content(
+  input_invoice_message_content: InputInvoiceMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(input_invoice_message_content.title)),
+    #("description", json.string(input_invoice_message_content.description)),
+    #("payload", json.string(input_invoice_message_content.payload)),
+    #(
+      "provider_token",
+      json.nullable(input_invoice_message_content.provider_token, json.string),
+    ),
+    #("currency", json.string(input_invoice_message_content.currency)),
+    #(
+      "prices",
+      json.array(_, encode_labeled_price)(input_invoice_message_content.prices),
+    ),
+    #(
+      "max_tip_amount",
+      json.nullable(input_invoice_message_content.max_tip_amount, json.int),
+    ),
+    #(
+      "suggested_tip_amounts",
+      json.nullable(
+        input_invoice_message_content.suggested_tip_amounts,
+        json.array(_, json.int),
+      ),
+    ),
+    #(
+      "provider_data",
+      json.nullable(input_invoice_message_content.provider_data, json.string),
+    ),
+    #(
+      "photo_url",
+      json.nullable(input_invoice_message_content.photo_url, json.string),
+    ),
+    #(
+      "photo_size",
+      json.nullable(input_invoice_message_content.photo_size, json.int),
+    ),
+    #(
+      "photo_width",
+      json.nullable(input_invoice_message_content.photo_width, json.int),
+    ),
+    #(
+      "photo_height",
+      json.nullable(input_invoice_message_content.photo_height, json.int),
+    ),
+    #(
+      "need_name",
+      json.nullable(input_invoice_message_content.need_name, json.bool),
+    ),
+    #(
+      "need_phone_number",
+      json.nullable(input_invoice_message_content.need_phone_number, json.bool),
+    ),
+    #(
+      "need_email",
+      json.nullable(input_invoice_message_content.need_email, json.bool),
+    ),
+    #(
+      "need_shipping_address",
+      json.nullable(
+        input_invoice_message_content.need_shipping_address,
+        json.bool,
+      ),
+    ),
+    #(
+      "send_phone_number_to_provider",
+      json.nullable(
+        input_invoice_message_content.send_phone_number_to_provider,
+        json.bool,
+      ),
+    ),
+    #(
+      "send_email_to_provider",
+      json.nullable(
+        input_invoice_message_content.send_email_to_provider,
+        json.bool,
+      ),
+    ),
+    #(
+      "is_flexible",
+      json.nullable(input_invoice_message_content.is_flexible, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_location_message_content(
+  input_location_message_content: InputLocationMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("latitude", json.float(input_location_message_content.latitude)),
+    #("longitude", json.float(input_location_message_content.longitude)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(
+        input_location_message_content.horizontal_accuracy,
+        json.float,
+      ),
+    ),
+    #(
+      "live_period",
+      json.nullable(input_location_message_content.live_period, json.int),
+    ),
+    #(
+      "heading",
+      json.nullable(input_location_message_content.heading, json.int),
+    ),
+    #(
+      "proximity_alert_radius",
+      json.nullable(
+        input_location_message_content.proximity_alert_radius,
+        json.int,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_media_animation(
+  input_media_animation: InputMediaAnimation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_animation.type_)),
+    #("media", json.string(input_media_animation.media)),
+    #("thumbnail", json.nullable(input_media_animation.thumbnail, json.string)),
+    #("caption", json.nullable(input_media_animation.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(input_media_animation.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(input_media_animation.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(input_media_animation.show_caption_above_media, json.bool),
+    ),
+    #("width", json.nullable(input_media_animation.width, json.int)),
+    #("height", json.nullable(input_media_animation.height, json.int)),
+    #("duration", json.nullable(input_media_animation.duration, json.int)),
+    #(
+      "has_spoiler",
+      json.nullable(input_media_animation.has_spoiler, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_media_audio(input_media_audio: InputMediaAudio) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_audio.type_)),
+    #("media", json.string(input_media_audio.media)),
+    #("thumbnail", json.nullable(input_media_audio.thumbnail, json.string)),
+    #("caption", json.nullable(input_media_audio.caption, json.string)),
+    #("parse_mode", json.nullable(input_media_audio.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(input_media_audio.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("duration", json.nullable(input_media_audio.duration, json.int)),
+    #("performer", json.nullable(input_media_audio.performer, json.string)),
+    #("title", json.nullable(input_media_audio.title, json.string)),
+  ])
+}
+
+pub fn encode_input_media_document(
+  input_media_document: InputMediaDocument,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_document.type_)),
+    #("media", json.string(input_media_document.media)),
+    #("thumbnail", json.nullable(input_media_document.thumbnail, json.string)),
+    #("caption", json.nullable(input_media_document.caption, json.string)),
+    #("parse_mode", json.nullable(input_media_document.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(input_media_document.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "disable_content_type_detection",
+      json.nullable(
+        input_media_document.disable_content_type_detection,
+        json.bool,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_media_live_photo(
+  input_media_live_photo: InputMediaLivePhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_live_photo.type_)),
+    #("media", json.string(input_media_live_photo.media)),
+    #("photo", json.string(input_media_live_photo.photo)),
+    #("caption", json.nullable(input_media_live_photo.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(input_media_live_photo.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(input_media_live_photo.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(input_media_live_photo.show_caption_above_media, json.bool),
+    ),
+    #(
+      "has_spoiler",
+      json.nullable(input_media_live_photo.has_spoiler, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_media_location(
+  input_media_location: InputMediaLocation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_location.type_)),
+    #("latitude", json.float(input_media_location.latitude)),
+    #("longitude", json.float(input_media_location.longitude)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(input_media_location.horizontal_accuracy, json.float),
+    ),
+  ])
+}
+
+pub fn encode_input_media_photo(input_media_photo: InputMediaPhoto) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_photo.type_)),
+    #("media", json.string(input_media_photo.media)),
+    #("caption", json.nullable(input_media_photo.caption, json.string)),
+    #("parse_mode", json.nullable(input_media_photo.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(input_media_photo.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(input_media_photo.show_caption_above_media, json.bool),
+    ),
+    #("has_spoiler", json.nullable(input_media_photo.has_spoiler, json.bool)),
+  ])
+}
+
+pub fn encode_input_media_sticker(
+  input_media_sticker: InputMediaSticker,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_sticker.type_)),
+    #("media", json.string(input_media_sticker.media)),
+    #("emoji", json.nullable(input_media_sticker.emoji, json.string)),
+  ])
+}
+
+pub fn encode_input_media_venue(input_media_venue: InputMediaVenue) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_venue.type_)),
+    #("latitude", json.float(input_media_venue.latitude)),
+    #("longitude", json.float(input_media_venue.longitude)),
+    #("title", json.string(input_media_venue.title)),
+    #("address", json.string(input_media_venue.address)),
+    #(
+      "foursquare_id",
+      json.nullable(input_media_venue.foursquare_id, json.string),
+    ),
+    #(
+      "foursquare_type",
+      json.nullable(input_media_venue.foursquare_type, json.string),
+    ),
+    #(
+      "google_place_id",
+      json.nullable(input_media_venue.google_place_id, json.string),
+    ),
+    #(
+      "google_place_type",
+      json.nullable(input_media_venue.google_place_type, json.string),
+    ),
+  ])
+}
+
+pub fn encode_input_media_video(input_media_video: InputMediaVideo) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_video.type_)),
+    #("media", json.string(input_media_video.media)),
+    #("thumbnail", json.nullable(input_media_video.thumbnail, json.string)),
+    #("cover", json.nullable(input_media_video.cover, json.string)),
+    #(
+      "start_timestamp",
+      json.nullable(input_media_video.start_timestamp, json.int),
+    ),
+    #("caption", json.nullable(input_media_video.caption, json.string)),
+    #("parse_mode", json.nullable(input_media_video.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(input_media_video.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(input_media_video.show_caption_above_media, json.bool),
+    ),
+    #("width", json.nullable(input_media_video.width, json.int)),
+    #("height", json.nullable(input_media_video.height, json.int)),
+    #("duration", json.nullable(input_media_video.duration, json.int)),
+    #(
+      "supports_streaming",
+      json.nullable(input_media_video.supports_streaming, json.bool),
+    ),
+    #("has_spoiler", json.nullable(input_media_video.has_spoiler, json.bool)),
+  ])
+}
+
+pub fn encode_input_paid_media_live_photo(
+  input_paid_media_live_photo: InputPaidMediaLivePhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_paid_media_live_photo.type_)),
+    #("media", json.string(input_paid_media_live_photo.media)),
+    #("photo", json.string(input_paid_media_live_photo.photo)),
+  ])
+}
+
+pub fn encode_input_paid_media_photo(
+  input_paid_media_photo: InputPaidMediaPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_paid_media_photo.type_)),
+    #("media", json.string(input_paid_media_photo.media)),
+  ])
+}
+
+pub fn encode_input_paid_media_video(
+  input_paid_media_video: InputPaidMediaVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_paid_media_video.type_)),
+    #("media", json.string(input_paid_media_video.media)),
+    #("thumbnail", json.nullable(input_paid_media_video.thumbnail, json.string)),
+    #("cover", json.nullable(input_paid_media_video.cover, json.string)),
+    #(
+      "start_timestamp",
+      json.nullable(input_paid_media_video.start_timestamp, json.int),
+    ),
+    #("width", json.nullable(input_paid_media_video.width, json.int)),
+    #("height", json.nullable(input_paid_media_video.height, json.int)),
+    #("duration", json.nullable(input_paid_media_video.duration, json.int)),
+    #(
+      "supports_streaming",
+      json.nullable(input_paid_media_video.supports_streaming, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_poll_option(input_poll_option: InputPollOption) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(input_poll_option.text)),
+    #(
+      "text_parse_mode",
+      json.nullable(input_poll_option.text_parse_mode, json.string),
+    ),
+    #(
+      "text_entities",
+      json.nullable(input_poll_option.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "media",
+      json.nullable(input_poll_option.media, encode_input_poll_option_media),
+    ),
+  ])
+}
+
+pub fn encode_input_profile_photo_animated(
+  input_profile_photo_animated: InputProfilePhotoAnimated,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_profile_photo_animated.type_)),
+    #("animation", json.string(input_profile_photo_animated.animation)),
+    #(
+      "main_frame_timestamp",
+      json.nullable(
+        input_profile_photo_animated.main_frame_timestamp,
+        json.float,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_profile_photo_static(
+  input_profile_photo_static: InputProfilePhotoStatic,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_profile_photo_static.type_)),
+    #("photo", json.string(input_profile_photo_static.photo)),
+  ])
+}
+
+pub fn encode_input_sticker(input_sticker: InputSticker) -> Json {
+  json_object_filter_nulls([
+    #("sticker", json.string(input_sticker.sticker)),
+    #("format", json.string(input_sticker.format)),
+    #("emoji_list", json.array(_, json.string)(input_sticker.emoji_list)),
+    #(
+      "mask_position",
+      json.nullable(input_sticker.mask_position, encode_mask_position),
+    ),
+    #(
+      "keywords",
+      json.nullable(input_sticker.keywords, json.array(_, json.string)),
+    ),
+  ])
+}
+
+pub fn encode_input_story_content_photo(
+  input_story_content_photo: InputStoryContentPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_story_content_photo.type_)),
+    #("photo", json.string(input_story_content_photo.photo)),
+  ])
+}
+
+pub fn encode_input_story_content_video(
+  input_story_content_video: InputStoryContentVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_story_content_video.type_)),
+    #("video", json.string(input_story_content_video.video)),
+    #("duration", json.nullable(input_story_content_video.duration, json.float)),
+    #(
+      "cover_frame_timestamp",
+      json.nullable(input_story_content_video.cover_frame_timestamp, json.float),
+    ),
+    #(
+      "is_animation",
+      json.nullable(input_story_content_video.is_animation, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_text_message_content(
+  input_text_message_content: InputTextMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("message_text", json.string(input_text_message_content.message_text)),
+    #(
+      "parse_mode",
+      json.nullable(input_text_message_content.parse_mode, json.string),
+    ),
+    #(
+      "entities",
+      json.nullable(input_text_message_content.entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "link_preview_options",
+      json.nullable(
+        input_text_message_content.link_preview_options,
+        encode_link_preview_options,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_venue_message_content(
+  input_venue_message_content: InputVenueMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #("latitude", json.float(input_venue_message_content.latitude)),
+    #("longitude", json.float(input_venue_message_content.longitude)),
+    #("title", json.string(input_venue_message_content.title)),
+    #("address", json.string(input_venue_message_content.address)),
+    #(
+      "foursquare_id",
+      json.nullable(input_venue_message_content.foursquare_id, json.string),
+    ),
+    #(
+      "foursquare_type",
+      json.nullable(input_venue_message_content.foursquare_type, json.string),
+    ),
+    #(
+      "google_place_id",
+      json.nullable(input_venue_message_content.google_place_id, json.string),
+    ),
+    #(
+      "google_place_type",
+      json.nullable(input_venue_message_content.google_place_type, json.string),
+    ),
+  ])
+}
+
+pub fn encode_invoice(invoice: Invoice) -> Json {
+  json_object_filter_nulls([
+    #("title", json.string(invoice.title)),
+    #("description", json.string(invoice.description)),
+    #("start_parameter", json.string(invoice.start_parameter)),
+    #("currency", json.string(invoice.currency)),
+    #("total_amount", json.int(invoice.total_amount)),
+  ])
+}
+
+pub fn encode_keyboard_button(keyboard_button: KeyboardButton) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(keyboard_button.text)),
+    #(
+      "icon_custom_emoji_id",
+      json.nullable(keyboard_button.icon_custom_emoji_id, json.string),
+    ),
+    #("style", json.nullable(keyboard_button.style, json.string)),
+    #(
+      "request_users",
+      json.nullable(
+        keyboard_button.request_users,
+        encode_keyboard_button_request_users,
+      ),
+    ),
+    #(
+      "request_chat",
+      json.nullable(
+        keyboard_button.request_chat,
+        encode_keyboard_button_request_chat,
+      ),
+    ),
+    #(
+      "request_managed_bot",
+      json.nullable(
+        keyboard_button.request_managed_bot,
+        encode_keyboard_button_request_managed_bot,
+      ),
+    ),
+    #(
+      "request_contact",
+      json.nullable(keyboard_button.request_contact, json.bool),
+    ),
+    #(
+      "request_location",
+      json.nullable(keyboard_button.request_location, json.bool),
+    ),
+    #(
+      "request_poll",
+      json.nullable(
+        keyboard_button.request_poll,
+        encode_keyboard_button_poll_type,
+      ),
+    ),
+    #("web_app", json.nullable(keyboard_button.web_app, encode_web_app_info)),
+  ])
+}
+
+pub fn encode_keyboard_button_poll_type(
+  keyboard_button_poll_type: KeyboardButtonPollType,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.nullable(keyboard_button_poll_type.type_, json.string)),
+  ])
+}
+
+pub fn encode_keyboard_button_request_chat(
+  keyboard_button_request_chat: KeyboardButtonRequestChat,
+) -> Json {
+  json_object_filter_nulls([
+    #("request_id", json.int(keyboard_button_request_chat.request_id)),
+    #(
+      "chat_is_channel",
+      json.bool(keyboard_button_request_chat.chat_is_channel),
+    ),
+    #(
+      "chat_is_forum",
+      json.nullable(keyboard_button_request_chat.chat_is_forum, json.bool),
+    ),
+    #(
+      "chat_has_username",
+      json.nullable(keyboard_button_request_chat.chat_has_username, json.bool),
+    ),
+    #(
+      "chat_is_created",
+      json.nullable(keyboard_button_request_chat.chat_is_created, json.bool),
+    ),
+    #(
+      "user_administrator_rights",
+      json.nullable(
+        keyboard_button_request_chat.user_administrator_rights,
+        encode_chat_administrator_rights,
+      ),
+    ),
+    #(
+      "bot_administrator_rights",
+      json.nullable(
+        keyboard_button_request_chat.bot_administrator_rights,
+        encode_chat_administrator_rights,
+      ),
+    ),
+    #(
+      "bot_is_member",
+      json.nullable(keyboard_button_request_chat.bot_is_member, json.bool),
+    ),
+    #(
+      "request_title",
+      json.nullable(keyboard_button_request_chat.request_title, json.bool),
+    ),
+    #(
+      "request_username",
+      json.nullable(keyboard_button_request_chat.request_username, json.bool),
+    ),
+    #(
+      "request_photo",
+      json.nullable(keyboard_button_request_chat.request_photo, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_keyboard_button_request_managed_bot(
+  keyboard_button_request_managed_bot: KeyboardButtonRequestManagedBot,
+) -> Json {
+  json_object_filter_nulls([
+    #("request_id", json.int(keyboard_button_request_managed_bot.request_id)),
+    #(
+      "suggested_name",
+      json.nullable(
+        keyboard_button_request_managed_bot.suggested_name,
+        json.string,
+      ),
+    ),
+    #(
+      "suggested_username",
+      json.nullable(
+        keyboard_button_request_managed_bot.suggested_username,
+        json.string,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_keyboard_button_request_users(
+  keyboard_button_request_users: KeyboardButtonRequestUsers,
+) -> Json {
+  json_object_filter_nulls([
+    #("request_id", json.int(keyboard_button_request_users.request_id)),
+    #(
+      "user_is_bot",
+      json.nullable(keyboard_button_request_users.user_is_bot, json.bool),
+    ),
+    #(
+      "user_is_premium",
+      json.nullable(keyboard_button_request_users.user_is_premium, json.bool),
+    ),
+    #(
+      "max_quantity",
+      json.nullable(keyboard_button_request_users.max_quantity, json.int),
+    ),
+    #(
+      "request_name",
+      json.nullable(keyboard_button_request_users.request_name, json.bool),
+    ),
+    #(
+      "request_username",
+      json.nullable(keyboard_button_request_users.request_username, json.bool),
+    ),
+    #(
+      "request_photo",
+      json.nullable(keyboard_button_request_users.request_photo, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_labeled_price(labeled_price: LabeledPrice) -> Json {
+  json_object_filter_nulls([
+    #("label", json.string(labeled_price.label)),
+    #("amount", json.int(labeled_price.amount)),
+  ])
+}
+
+pub fn encode_link_preview_options(
+  link_preview_options: LinkPreviewOptions,
+) -> Json {
+  json_object_filter_nulls([
+    #("is_disabled", json.nullable(link_preview_options.is_disabled, json.bool)),
+    #("url", json.nullable(link_preview_options.url, json.string)),
+    #(
+      "prefer_small_media",
+      json.nullable(link_preview_options.prefer_small_media, json.bool),
+    ),
+    #(
+      "prefer_large_media",
+      json.nullable(link_preview_options.prefer_large_media, json.bool),
+    ),
+    #(
+      "show_above_text",
+      json.nullable(link_preview_options.show_above_text, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_live_photo(live_photo: LivePhoto) -> Json {
+  json_object_filter_nulls([
+    #(
+      "photo",
+      json.nullable(live_photo.photo, json.array(_, encode_photo_size)),
+    ),
+    #("file_id", json.string(live_photo.file_id)),
+    #("file_unique_id", json.string(live_photo.file_unique_id)),
+    #("width", json.int(live_photo.width)),
+    #("height", json.int(live_photo.height)),
+    #("duration", json.int(live_photo.duration)),
+    #("mime_type", json.nullable(live_photo.mime_type, json.string)),
+    #("file_size", json.nullable(live_photo.file_size, json.int)),
+  ])
+}
+
+pub fn encode_location(location: Location) -> Json {
+  json_object_filter_nulls([
+    #("latitude", json.float(location.latitude)),
+    #("longitude", json.float(location.longitude)),
+    #(
+      "horizontal_accuracy",
+      json.nullable(location.horizontal_accuracy, json.float),
+    ),
+    #("live_period", json.nullable(location.live_period, json.int)),
+    #("heading", json.nullable(location.heading, json.int)),
+    #(
+      "proximity_alert_radius",
+      json.nullable(location.proximity_alert_radius, json.int),
+    ),
+  ])
+}
+
+pub fn encode_location_address(location_address: LocationAddress) -> Json {
+  json_object_filter_nulls([
+    #("country_code", json.string(location_address.country_code)),
+    #("state", json.nullable(location_address.state, json.string)),
+    #("city", json.nullable(location_address.city, json.string)),
+    #("street", json.nullable(location_address.street, json.string)),
+  ])
+}
+
+pub fn encode_login_url(login_url: LoginUrl) -> Json {
+  json_object_filter_nulls([
+    #("url", json.string(login_url.url)),
+    #("forward_text", json.nullable(login_url.forward_text, json.string)),
+    #("bot_username", json.nullable(login_url.bot_username, json.string)),
+    #(
+      "request_write_access",
+      json.nullable(login_url.request_write_access, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_managed_bot_created(
+  managed_bot_created: ManagedBotCreated,
+) -> Json {
+  json_object_filter_nulls([
+    #("bot", encode_user(managed_bot_created.bot)),
+  ])
+}
+
+pub fn encode_managed_bot_updated(
+  managed_bot_updated: ManagedBotUpdated,
+) -> Json {
+  json_object_filter_nulls([
+    #("user", encode_user(managed_bot_updated.user)),
+    #("bot", encode_user(managed_bot_updated.bot)),
+  ])
+}
+
+pub fn encode_mask_position(mask_position: MaskPosition) -> Json {
+  json_object_filter_nulls([
+    #("point", json.string(mask_position.point)),
+    #("x_shift", json.float(mask_position.x_shift)),
+    #("y_shift", json.float(mask_position.y_shift)),
+    #("scale", json.float(mask_position.scale)),
+  ])
+}
+
+pub fn encode_menu_button_commands(
+  menu_button_commands: MenuButtonCommands,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(menu_button_commands.type_)),
+  ])
+}
+
+pub fn encode_menu_button_default(
+  menu_button_default: MenuButtonDefault,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(menu_button_default.type_)),
+  ])
+}
+
+pub fn encode_menu_button_web_app(
+  menu_button_web_app: MenuButtonWebApp,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(menu_button_web_app.type_)),
+    #("text", json.string(menu_button_web_app.text)),
+    #("web_app", encode_web_app_info(menu_button_web_app.web_app)),
+  ])
+}
+
 pub fn encode_message(message: Message) -> Json {
   json_object_filter_nulls([
     #("message_id", json.int(message.message_id)),
@@ -633,21 +3891,13 @@ pub fn encode_message(message: Message) -> Json {
       "sender_business_bot",
       json.nullable(message.sender_business_bot, encode_user),
     ),
-    #(
-      "guest_bot_caller_user",
-      json.nullable(message.guest_bot_caller_user, encode_user),
-    ),
-    #(
-      "guest_bot_caller_chat",
-      json.nullable(message.guest_bot_caller_chat, encode_chat),
-    ),
     #("sender_tag", json.nullable(message.sender_tag, json.string)),
     #("date", json.int(message.date)),
+    #("guest_query_id", json.nullable(message.guest_query_id, json.string)),
     #(
       "business_connection_id",
       json.nullable(message.business_connection_id, json.string),
     ),
-    #("guest_query_id", json.nullable(message.guest_query_id, json.string)),
     #("chat", encode_chat(message.chat)),
     #(
       "forward_origin",
@@ -677,6 +3927,14 @@ pub fn encode_message(message: Message) -> Json {
       json.nullable(message.reply_to_poll_option_id, json.string),
     ),
     #("via_bot", json.nullable(message.via_bot, encode_user)),
+    #(
+      "guest_bot_caller_user",
+      json.nullable(message.guest_bot_caller_user, encode_user),
+    ),
+    #(
+      "guest_bot_caller_chat",
+      json.nullable(message.guest_bot_caller_chat, encode_chat),
+    ),
     #("edit_date", json.nullable(message.edit_date, json.int)),
     #(
       "has_protected_content",
@@ -704,11 +3962,11 @@ pub fn encode_message(message: Message) -> Json {
     #("animation", json.nullable(message.animation, encode_animation)),
     #("audio", json.nullable(message.audio, encode_audio)),
     #("document", json.nullable(message.document, encode_document)),
+    #("live_photo", json.nullable(message.live_photo, encode_live_photo)),
     #("paid_media", json.nullable(message.paid_media, encode_paid_media_info)),
     #("photo", json.nullable(message.photo, json.array(_, encode_photo_size))),
     #("sticker", json.nullable(message.sticker, encode_sticker)),
     #("story", json.nullable(message.story, encode_story)),
-    #("live_photo", json.nullable(message.live_photo, encode_live_photo)),
     #("video", json.nullable(message.video, encode_video)),
     #("video_note", json.nullable(message.video_note, encode_video_note)),
     #("voice", json.nullable(message.voice, encode_voice)),
@@ -962,19 +4220,14 @@ pub fn encode_message(message: Message) -> Json {
   ])
 }
 
-pub fn encode_message_id(message_id: MessageId) -> Json {
-  json_object_filter_nulls([
-    #("message_id", json.int(message_id.message_id)),
-  ])
-}
-
-pub fn encode_inaccessible_message(
-  inaccessible_message: InaccessibleMessage,
+pub fn encode_message_auto_delete_timer_changed(
+  message_auto_delete_timer_changed: MessageAutoDeleteTimerChanged,
 ) -> Json {
   json_object_filter_nulls([
-    #("chat", encode_chat(inaccessible_message.chat)),
-    #("message_id", json.int(inaccessible_message.message_id)),
-    #("date", json.int(inaccessible_message.date)),
+    #(
+      "message_auto_delete_time",
+      json.int(message_auto_delete_timer_changed.message_auto_delete_time),
+    ),
   ])
 }
 
@@ -998,153 +4251,9 @@ pub fn encode_message_entity(message_entity: MessageEntity) -> Json {
   ])
 }
 
-pub fn encode_text_quote(text_quote: TextQuote) -> Json {
+pub fn encode_message_id(message_id: MessageId) -> Json {
   json_object_filter_nulls([
-    #("text", json.string(text_quote.text)),
-    #(
-      "entities",
-      json.nullable(text_quote.entities, json.array(_, encode_message_entity)),
-    ),
-    #("position", json.int(text_quote.position)),
-    #("is_manual", json.nullable(text_quote.is_manual, json.bool)),
-  ])
-}
-
-pub fn encode_external_reply_info(
-  external_reply_info: ExternalReplyInfo,
-) -> Json {
-  json_object_filter_nulls([
-    #("origin", encode_message_origin(external_reply_info.origin)),
-    #("chat", json.nullable(external_reply_info.chat, encode_chat)),
-    #("message_id", json.nullable(external_reply_info.message_id, json.int)),
-    #(
-      "link_preview_options",
-      json.nullable(
-        external_reply_info.link_preview_options,
-        encode_link_preview_options,
-      ),
-    ),
-    #(
-      "animation",
-      json.nullable(external_reply_info.animation, encode_animation),
-    ),
-    #("audio", json.nullable(external_reply_info.audio, encode_audio)),
-    #("document", json.nullable(external_reply_info.document, encode_document)),
-    #(
-      "paid_media",
-      json.nullable(external_reply_info.paid_media, encode_paid_media_info),
-    ),
-    #(
-      "photo",
-      json.nullable(external_reply_info.photo, json.array(_, encode_photo_size)),
-    ),
-    #("sticker", json.nullable(external_reply_info.sticker, encode_sticker)),
-    #("story", json.nullable(external_reply_info.story, encode_story)),
-    #(
-      "live_photo",
-      json.nullable(external_reply_info.live_photo, encode_live_photo),
-    ),
-    #("video", json.nullable(external_reply_info.video, encode_video)),
-    #(
-      "video_note",
-      json.nullable(external_reply_info.video_note, encode_video_note),
-    ),
-    #("voice", json.nullable(external_reply_info.voice, encode_voice)),
-    #(
-      "has_media_spoiler",
-      json.nullable(external_reply_info.has_media_spoiler, json.bool),
-    ),
-    #(
-      "checklist",
-      json.nullable(external_reply_info.checklist, encode_checklist),
-    ),
-    #("contact", json.nullable(external_reply_info.contact, encode_contact)),
-    #("dice", json.nullable(external_reply_info.dice, encode_dice)),
-    #("game", json.nullable(external_reply_info.game, encode_game)),
-    #("giveaway", json.nullable(external_reply_info.giveaway, encode_giveaway)),
-    #(
-      "giveaway_winners",
-      json.nullable(
-        external_reply_info.giveaway_winners,
-        encode_giveaway_winners,
-      ),
-    ),
-    #("invoice", json.nullable(external_reply_info.invoice, encode_invoice)),
-    #("location", json.nullable(external_reply_info.location, encode_location)),
-    #("poll", json.nullable(external_reply_info.poll, encode_poll)),
-    #("venue", json.nullable(external_reply_info.venue, encode_venue)),
-  ])
-}
-
-pub fn encode_reply_parameters(reply_parameters: ReplyParameters) -> Json {
-  json_object_filter_nulls([
-    #("message_id", json.int(reply_parameters.message_id)),
-    #("chat_id", json.nullable(reply_parameters.chat_id, encode_int_or_string)),
-    #(
-      "allow_sending_without_reply",
-      json.nullable(reply_parameters.allow_sending_without_reply, json.bool),
-    ),
-    #("quote", json.nullable(reply_parameters.quote, json.string)),
-    #(
-      "quote_parse_mode",
-      json.nullable(reply_parameters.quote_parse_mode, json.string),
-    ),
-    #(
-      "quote_entities",
-      json.nullable(reply_parameters.quote_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "quote_position",
-      json.nullable(reply_parameters.quote_position, json.int),
-    ),
-    #(
-      "checklist_task_id",
-      json.nullable(reply_parameters.checklist_task_id, json.int),
-    ),
-    #(
-      "poll_option_id",
-      json.nullable(reply_parameters.poll_option_id, json.string),
-    ),
-  ])
-}
-
-pub fn encode_message_origin_user(
-  message_origin_user: MessageOriginUser,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(message_origin_user.type_)),
-    #("date", json.int(message_origin_user.date)),
-    #("sender_user", encode_user(message_origin_user.sender_user)),
-  ])
-}
-
-pub fn encode_message_origin_hidden_user(
-  message_origin_hidden_user: MessageOriginHiddenUser,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(message_origin_hidden_user.type_)),
-    #("date", json.int(message_origin_hidden_user.date)),
-    #(
-      "sender_user_name",
-      json.string(message_origin_hidden_user.sender_user_name),
-    ),
-  ])
-}
-
-pub fn encode_message_origin_chat(
-  message_origin_chat: MessageOriginChat,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(message_origin_chat.type_)),
-    #("date", json.int(message_origin_chat.date)),
-    #("sender_chat", encode_chat(message_origin_chat.sender_chat)),
-    #(
-      "author_signature",
-      json.nullable(message_origin_chat.author_signature, json.string),
-    ),
+    #("message_id", json.int(message_id.message_id)),
   ])
 }
 
@@ -1163,2029 +4272,56 @@ pub fn encode_message_origin_channel(
   ])
 }
 
-pub fn encode_photo_size(photo_size: PhotoSize) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(photo_size.file_id)),
-    #("file_unique_id", json.string(photo_size.file_unique_id)),
-    #("width", json.int(photo_size.width)),
-    #("height", json.int(photo_size.height)),
-    #("file_size", json.nullable(photo_size.file_size, json.int)),
-  ])
-}
-
-pub fn encode_animation(animation: Animation) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(animation.file_id)),
-    #("file_unique_id", json.string(animation.file_unique_id)),
-    #("width", json.int(animation.width)),
-    #("height", json.int(animation.height)),
-    #("duration", json.int(animation.duration)),
-    #("thumbnail", json.nullable(animation.thumbnail, encode_photo_size)),
-    #("file_name", json.nullable(animation.file_name, json.string)),
-    #("mime_type", json.nullable(animation.mime_type, json.string)),
-    #("file_size", json.nullable(animation.file_size, json.int)),
-  ])
-}
-
-pub fn encode_audio(audio: Audio) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(audio.file_id)),
-    #("file_unique_id", json.string(audio.file_unique_id)),
-    #("duration", json.int(audio.duration)),
-    #("performer", json.nullable(audio.performer, json.string)),
-    #("title", json.nullable(audio.title, json.string)),
-    #("file_name", json.nullable(audio.file_name, json.string)),
-    #("mime_type", json.nullable(audio.mime_type, json.string)),
-    #("file_size", json.nullable(audio.file_size, json.int)),
-    #("thumbnail", json.nullable(audio.thumbnail, encode_photo_size)),
-  ])
-}
-
-pub fn encode_document(document: Document) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(document.file_id)),
-    #("file_unique_id", json.string(document.file_unique_id)),
-    #("thumbnail", json.nullable(document.thumbnail, encode_photo_size)),
-    #("file_name", json.nullable(document.file_name, json.string)),
-    #("mime_type", json.nullable(document.mime_type, json.string)),
-    #("file_size", json.nullable(document.file_size, json.int)),
-  ])
-}
-
-pub fn encode_story(story: Story) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(story.chat)),
-    #("id", json.int(story.id)),
-  ])
-}
-
-pub fn encode_video_quality(video_quality: VideoQuality) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(video_quality.file_id)),
-    #("file_unique_id", json.string(video_quality.file_unique_id)),
-    #("width", json.int(video_quality.width)),
-    #("height", json.int(video_quality.height)),
-    #("codec", json.string(video_quality.codec)),
-    #("file_size", json.nullable(video_quality.file_size, json.int)),
-  ])
-}
-
-pub fn encode_video(video: Video) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(video.file_id)),
-    #("file_unique_id", json.string(video.file_unique_id)),
-    #("width", json.int(video.width)),
-    #("height", json.int(video.height)),
-    #("duration", json.int(video.duration)),
-    #("thumbnail", json.nullable(video.thumbnail, encode_photo_size)),
-    #("cover", json.nullable(video.cover, json.array(_, encode_photo_size))),
-    #("start_timestamp", json.nullable(video.start_timestamp, json.int)),
-    #(
-      "qualities",
-      json.nullable(video.qualities, json.array(_, encode_video_quality)),
-    ),
-    #("file_name", json.nullable(video.file_name, json.string)),
-    #("mime_type", json.nullable(video.mime_type, json.string)),
-    #("file_size", json.nullable(video.file_size, json.int)),
-  ])
-}
-
-pub fn encode_video_note(video_note: VideoNote) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(video_note.file_id)),
-    #("file_unique_id", json.string(video_note.file_unique_id)),
-    #("length", json.int(video_note.length)),
-    #("duration", json.int(video_note.duration)),
-    #("thumbnail", json.nullable(video_note.thumbnail, encode_photo_size)),
-    #("file_size", json.nullable(video_note.file_size, json.int)),
-  ])
-}
-
-pub fn encode_voice(voice: Voice) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(voice.file_id)),
-    #("file_unique_id", json.string(voice.file_unique_id)),
-    #("duration", json.int(voice.duration)),
-    #("mime_type", json.nullable(voice.mime_type, json.string)),
-    #("file_size", json.nullable(voice.file_size, json.int)),
-  ])
-}
-
-pub fn encode_paid_media_info(paid_media_info: PaidMediaInfo) -> Json {
-  json_object_filter_nulls([
-    #("star_count", json.int(paid_media_info.star_count)),
-    #(
-      "paid_media",
-      json.array(_, encode_paid_media)(paid_media_info.paid_media),
-    ),
-  ])
-}
-
-pub fn encode_paid_media_preview(paid_media_preview: PaidMediaPreview) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(paid_media_preview.type_)),
-    #("width", json.nullable(paid_media_preview.width, json.int)),
-    #("height", json.nullable(paid_media_preview.height, json.int)),
-    #("duration", json.nullable(paid_media_preview.duration, json.int)),
-  ])
-}
-
-pub fn encode_paid_media_photo(paid_media_photo: PaidMediaPhoto) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(paid_media_photo.type_)),
-    #("photo", json.array(_, encode_photo_size)(paid_media_photo.photo)),
-  ])
-}
-
-pub fn encode_paid_media_video(paid_media_video: PaidMediaVideo) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(paid_media_video.type_)),
-    #("video", encode_video(paid_media_video.video)),
-  ])
-}
-
-pub fn encode_live_photo(live_photo: LivePhoto) -> Json {
-  json_object_filter_nulls([
-    #(
-      "photo",
-      json.nullable(live_photo.photo, json.array(_, encode_photo_size)),
-    ),
-    #("file_id", json.string(live_photo.file_id)),
-    #("file_unique_id", json.string(live_photo.file_unique_id)),
-    #("width", json.int(live_photo.width)),
-    #("height", json.int(live_photo.height)),
-    #("duration", json.int(live_photo.duration)),
-    #("mime_type", json.nullable(live_photo.mime_type, json.string)),
-    #("file_size", json.nullable(live_photo.file_size, json.int)),
-  ])
-}
-
-pub fn encode_paid_media_live_photo(
-  paid_media_live_photo: PaidMediaLivePhoto,
+pub fn encode_message_origin_chat(
+  message_origin_chat: MessageOriginChat,
 ) -> Json {
   json_object_filter_nulls([
-    #("type", json.string(paid_media_live_photo.type_)),
-    #("live_photo", encode_live_photo(paid_media_live_photo.live_photo)),
-  ])
-}
-
-pub fn encode_poll_media(poll_media: PollMedia) -> Json {
-  json_object_filter_nulls([
-    #("animation", json.nullable(poll_media.animation, encode_animation)),
-    #("audio", json.nullable(poll_media.audio, encode_audio)),
-    #("document", json.nullable(poll_media.document, encode_document)),
-    #("live_photo", json.nullable(poll_media.live_photo, encode_live_photo)),
-    #("location", json.nullable(poll_media.location, encode_location)),
+    #("type", json.string(message_origin_chat.type_)),
+    #("date", json.int(message_origin_chat.date)),
+    #("sender_chat", encode_chat(message_origin_chat.sender_chat)),
     #(
-      "photo",
-      json.nullable(poll_media.photo, json.array(_, encode_photo_size)),
-    ),
-    #("sticker", json.nullable(poll_media.sticker, encode_sticker)),
-    #("venue", json.nullable(poll_media.venue, encode_venue)),
-    #("video", json.nullable(poll_media.video, encode_video)),
-  ])
-}
-
-pub fn encode_contact(contact: Contact) -> Json {
-  json_object_filter_nulls([
-    #("phone_number", json.string(contact.phone_number)),
-    #("first_name", json.string(contact.first_name)),
-    #("last_name", json.nullable(contact.last_name, json.string)),
-    #("user_id", json.nullable(contact.user_id, json.int)),
-    #("vcard", json.nullable(contact.vcard, json.string)),
-  ])
-}
-
-pub fn encode_dice(dice: Dice) -> Json {
-  json_object_filter_nulls([
-    #("emoji", json.string(dice.emoji)),
-    #("value", json.int(dice.value)),
-  ])
-}
-
-pub fn encode_poll_option(poll_option: PollOption) -> Json {
-  json_object_filter_nulls([
-    #("persistent_id", json.string(poll_option.persistent_id)),
-    #("text", json.string(poll_option.text)),
-    #(
-      "text_entities",
-      json.nullable(poll_option.text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #("media", json.nullable(poll_option.media, encode_poll_media)),
-    #("voter_count", json.int(poll_option.voter_count)),
-    #("added_by_user", json.nullable(poll_option.added_by_user, encode_user)),
-    #("added_by_chat", json.nullable(poll_option.added_by_chat, encode_chat)),
-    #("addition_date", json.nullable(poll_option.addition_date, json.int)),
-  ])
-}
-
-pub fn encode_input_poll_option(input_poll_option: InputPollOption) -> Json {
-  json_object_filter_nulls([
-    #("text", json.string(input_poll_option.text)),
-    #(
-      "text_parse_mode",
-      json.nullable(input_poll_option.text_parse_mode, json.string),
-    ),
-    #(
-      "text_entities",
-      json.nullable(input_poll_option.text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "media",
-      json.nullable(input_poll_option.media, encode_input_poll_option_media),
+      "author_signature",
+      json.nullable(message_origin_chat.author_signature, json.string),
     ),
   ])
 }
 
-pub fn encode_poll_answer(poll_answer: PollAnswer) -> Json {
-  json_object_filter_nulls([
-    #("poll_id", json.string(poll_answer.poll_id)),
-    #("voter_chat", json.nullable(poll_answer.voter_chat, encode_chat)),
-    #("user", json.nullable(poll_answer.user, encode_user)),
-    #("option_ids", json.array(_, json.int)(poll_answer.option_ids)),
-    #(
-      "option_persistent_ids",
-      json.array(_, json.string)(poll_answer.option_persistent_ids),
-    ),
-  ])
-}
-
-pub fn encode_poll(poll: Poll) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(poll.id)),
-    #("question", json.string(poll.question)),
-    #(
-      "question_entities",
-      json.nullable(poll.question_entities, json.array(_, encode_message_entity)),
-    ),
-    #("options", json.array(_, encode_poll_option)(poll.options)),
-    #("total_voter_count", json.int(poll.total_voter_count)),
-    #("is_closed", json.bool(poll.is_closed)),
-    #("is_anonymous", json.bool(poll.is_anonymous)),
-    #("type", json.string(poll.type_)),
-    #("allows_multiple_answers", json.bool(poll.allows_multiple_answers)),
-    #("allows_revoting", json.bool(poll.allows_revoting)),
-    #("members_only", json.bool(poll.members_only)),
-    #(
-      "country_codes",
-      json.nullable(poll.country_codes, json.array(_, json.string)),
-    ),
-    #(
-      "correct_option_ids",
-      json.nullable(poll.correct_option_ids, json.array(_, json.int)),
-    ),
-    #("explanation", json.nullable(poll.explanation, json.string)),
-    #(
-      "explanation_entities",
-      json.nullable(poll.explanation_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "explanation_media",
-      json.nullable(poll.explanation_media, encode_poll_media),
-    ),
-    #("open_period", json.nullable(poll.open_period, json.int)),
-    #("close_date", json.nullable(poll.close_date, json.int)),
-    #("description", json.nullable(poll.description, json.string)),
-    #(
-      "description_entities",
-      json.nullable(poll.description_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #("media", json.nullable(poll.media, encode_poll_media)),
-  ])
-}
-
-pub fn encode_checklist_task(checklist_task: ChecklistTask) -> Json {
-  json_object_filter_nulls([
-    #("id", json.int(checklist_task.id)),
-    #("text", json.string(checklist_task.text)),
-    #(
-      "text_entities",
-      json.nullable(checklist_task.text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "completed_by_user",
-      json.nullable(checklist_task.completed_by_user, encode_user),
-    ),
-    #(
-      "completed_by_chat",
-      json.nullable(checklist_task.completed_by_chat, encode_chat),
-    ),
-    #(
-      "completion_date",
-      json.nullable(checklist_task.completion_date, json.int),
-    ),
-  ])
-}
-
-pub fn encode_checklist(checklist: Checklist) -> Json {
-  json_object_filter_nulls([
-    #("title", json.string(checklist.title)),
-    #(
-      "title_entities",
-      json.nullable(checklist.title_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #("tasks", json.array(_, encode_checklist_task)(checklist.tasks)),
-    #(
-      "others_can_add_tasks",
-      json.nullable(checklist.others_can_add_tasks, json.bool),
-    ),
-    #(
-      "others_can_mark_tasks_as_done",
-      json.nullable(checklist.others_can_mark_tasks_as_done, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_input_checklist_task(
-  input_checklist_task: InputChecklistTask,
+pub fn encode_message_origin_hidden_user(
+  message_origin_hidden_user: MessageOriginHiddenUser,
 ) -> Json {
   json_object_filter_nulls([
-    #("id", json.int(input_checklist_task.id)),
-    #("text", json.string(input_checklist_task.text)),
-    #("parse_mode", json.nullable(input_checklist_task.parse_mode, json.string)),
+    #("type", json.string(message_origin_hidden_user.type_)),
+    #("date", json.int(message_origin_hidden_user.date)),
     #(
-      "text_entities",
-      json.nullable(input_checklist_task.text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
+      "sender_user_name",
+      json.string(message_origin_hidden_user.sender_user_name),
     ),
   ])
 }
 
-pub fn encode_input_checklist(input_checklist: InputChecklist) -> Json {
-  json_object_filter_nulls([
-    #("title", json.string(input_checklist.title)),
-    #("parse_mode", json.nullable(input_checklist.parse_mode, json.string)),
-    #(
-      "title_entities",
-      json.nullable(input_checklist.title_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "tasks",
-      json.array(_, encode_input_checklist_task)(input_checklist.tasks),
-    ),
-    #(
-      "others_can_add_tasks",
-      json.nullable(input_checklist.others_can_add_tasks, json.bool),
-    ),
-    #(
-      "others_can_mark_tasks_as_done",
-      json.nullable(input_checklist.others_can_mark_tasks_as_done, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_checklist_tasks_done(
-  checklist_tasks_done: ChecklistTasksDone,
+pub fn encode_message_origin_user(
+  message_origin_user: MessageOriginUser,
 ) -> Json {
   json_object_filter_nulls([
+    #("type", json.string(message_origin_user.type_)),
+    #("date", json.int(message_origin_user.date)),
+    #("sender_user", encode_user(message_origin_user.sender_user)),
+  ])
+}
+
+pub fn encode_message_reaction_count_updated(
+  message_reaction_count_updated: MessageReactionCountUpdated,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(message_reaction_count_updated.chat)),
+    #("message_id", json.int(message_reaction_count_updated.message_id)),
+    #("date", json.int(message_reaction_count_updated.date)),
     #(
-      "checklist_message",
-      json.nullable(checklist_tasks_done.checklist_message, encode_message),
-    ),
-    #(
-      "marked_as_done_task_ids",
-      json.nullable(checklist_tasks_done.marked_as_done_task_ids, json.array(
-        _,
-        json.int,
-      )),
-    ),
-    #(
-      "marked_as_not_done_task_ids",
-      json.nullable(
-        checklist_tasks_done.marked_as_not_done_task_ids,
-        json.array(_, json.int),
+      "reactions",
+      json.array(_, encode_reaction_count)(
+        message_reaction_count_updated.reactions,
       ),
     ),
-  ])
-}
-
-pub fn encode_checklist_tasks_added(
-  checklist_tasks_added: ChecklistTasksAdded,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "checklist_message",
-      json.nullable(checklist_tasks_added.checklist_message, encode_message),
-    ),
-    #(
-      "tasks",
-      json.array(_, encode_checklist_task)(checklist_tasks_added.tasks),
-    ),
-  ])
-}
-
-pub fn encode_location(location: Location) -> Json {
-  json_object_filter_nulls([
-    #("latitude", json.float(location.latitude)),
-    #("longitude", json.float(location.longitude)),
-    #(
-      "horizontal_accuracy",
-      json.nullable(location.horizontal_accuracy, json.float),
-    ),
-    #("live_period", json.nullable(location.live_period, json.int)),
-    #("heading", json.nullable(location.heading, json.int)),
-    #(
-      "proximity_alert_radius",
-      json.nullable(location.proximity_alert_radius, json.int),
-    ),
-  ])
-}
-
-pub fn encode_venue(venue: Venue) -> Json {
-  json_object_filter_nulls([
-    #("location", encode_location(venue.location)),
-    #("title", json.string(venue.title)),
-    #("address", json.string(venue.address)),
-    #("foursquare_id", json.nullable(venue.foursquare_id, json.string)),
-    #("foursquare_type", json.nullable(venue.foursquare_type, json.string)),
-    #("google_place_id", json.nullable(venue.google_place_id, json.string)),
-    #("google_place_type", json.nullable(venue.google_place_type, json.string)),
-  ])
-}
-
-pub fn encode_web_app_data(web_app_data: WebAppData) -> Json {
-  json_object_filter_nulls([
-    #("data", json.string(web_app_data.data)),
-    #("button_text", json.string(web_app_data.button_text)),
-  ])
-}
-
-pub fn encode_proximity_alert_triggered(
-  proximity_alert_triggered: ProximityAlertTriggered,
-) -> Json {
-  json_object_filter_nulls([
-    #("traveler", encode_user(proximity_alert_triggered.traveler)),
-    #("watcher", encode_user(proximity_alert_triggered.watcher)),
-    #("distance", json.int(proximity_alert_triggered.distance)),
-  ])
-}
-
-pub fn encode_message_auto_delete_timer_changed(
-  message_auto_delete_timer_changed: MessageAutoDeleteTimerChanged,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "message_auto_delete_time",
-      json.int(message_auto_delete_timer_changed.message_auto_delete_time),
-    ),
-  ])
-}
-
-pub fn encode_managed_bot_created(
-  managed_bot_created: ManagedBotCreated,
-) -> Json {
-  json_object_filter_nulls([
-    #("bot", encode_user(managed_bot_created.bot)),
-  ])
-}
-
-pub fn encode_managed_bot_updated(
-  managed_bot_updated: ManagedBotUpdated,
-) -> Json {
-  json_object_filter_nulls([
-    #("user", encode_user(managed_bot_updated.user)),
-    #("bot", encode_user(managed_bot_updated.bot)),
-  ])
-}
-
-pub fn encode_poll_option_added(poll_option_added: PollOptionAdded) -> Json {
-  json_object_filter_nulls([
-    #(
-      "poll_message",
-      json.nullable(
-        poll_option_added.poll_message,
-        encode_maybe_inaccessible_message,
-      ),
-    ),
-    #(
-      "option_persistent_id",
-      json.string(poll_option_added.option_persistent_id),
-    ),
-    #("option_text", json.string(poll_option_added.option_text)),
-    #(
-      "option_text_entities",
-      json.nullable(poll_option_added.option_text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-  ])
-}
-
-pub fn encode_poll_option_deleted(
-  poll_option_deleted: PollOptionDeleted,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "poll_message",
-      json.nullable(
-        poll_option_deleted.poll_message,
-        encode_maybe_inaccessible_message,
-      ),
-    ),
-    #(
-      "option_persistent_id",
-      json.string(poll_option_deleted.option_persistent_id),
-    ),
-    #("option_text", json.string(poll_option_deleted.option_text)),
-    #(
-      "option_text_entities",
-      json.nullable(poll_option_deleted.option_text_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-  ])
-}
-
-pub fn encode_chat_boost_added(chat_boost_added: ChatBoostAdded) -> Json {
-  json_object_filter_nulls([
-    #("boost_count", json.int(chat_boost_added.boost_count)),
-  ])
-}
-
-pub fn encode_background_fill_solid(
-  background_fill_solid: BackgroundFillSolid,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_fill_solid.type_)),
-    #("color", json.int(background_fill_solid.color)),
-  ])
-}
-
-pub fn encode_background_fill_gradient(
-  background_fill_gradient: BackgroundFillGradient,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_fill_gradient.type_)),
-    #("top_color", json.int(background_fill_gradient.top_color)),
-    #("bottom_color", json.int(background_fill_gradient.bottom_color)),
-    #("rotation_angle", json.int(background_fill_gradient.rotation_angle)),
-  ])
-}
-
-pub fn encode_background_fill_freeform_gradient(
-  background_fill_freeform_gradient: BackgroundFillFreeformGradient,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_fill_freeform_gradient.type_)),
-    #(
-      "colors",
-      json.array(_, json.int)(background_fill_freeform_gradient.colors),
-    ),
-  ])
-}
-
-pub fn encode_background_type_fill(
-  background_type_fill: BackgroundTypeFill,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_type_fill.type_)),
-    #("fill", encode_background_fill(background_type_fill.fill)),
-    #("dark_theme_dimming", json.int(background_type_fill.dark_theme_dimming)),
-  ])
-}
-
-pub fn encode_background_type_wallpaper(
-  background_type_wallpaper: BackgroundTypeWallpaper,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_type_wallpaper.type_)),
-    #("document", encode_document(background_type_wallpaper.document)),
-    #(
-      "dark_theme_dimming",
-      json.int(background_type_wallpaper.dark_theme_dimming),
-    ),
-    #(
-      "is_blurred",
-      json.nullable(background_type_wallpaper.is_blurred, json.bool),
-    ),
-    #(
-      "is_moving",
-      json.nullable(background_type_wallpaper.is_moving, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_background_type_pattern(
-  background_type_pattern: BackgroundTypePattern,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_type_pattern.type_)),
-    #("document", encode_document(background_type_pattern.document)),
-    #("fill", encode_background_fill(background_type_pattern.fill)),
-    #("intensity", json.int(background_type_pattern.intensity)),
-    #(
-      "is_inverted",
-      json.nullable(background_type_pattern.is_inverted, json.bool),
-    ),
-    #("is_moving", json.nullable(background_type_pattern.is_moving, json.bool)),
-  ])
-}
-
-pub fn encode_background_type_chat_theme(
-  background_type_chat_theme: BackgroundTypeChatTheme,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(background_type_chat_theme.type_)),
-    #("theme_name", json.string(background_type_chat_theme.theme_name)),
-  ])
-}
-
-pub fn encode_chat_background(chat_background: ChatBackground) -> Json {
-  json_object_filter_nulls([
-    #("type", encode_background_type(chat_background.type_)),
-  ])
-}
-
-pub fn encode_forum_topic_created(
-  forum_topic_created: ForumTopicCreated,
-) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(forum_topic_created.name)),
-    #("icon_color", json.int(forum_topic_created.icon_color)),
-    #(
-      "icon_custom_emoji_id",
-      json.nullable(forum_topic_created.icon_custom_emoji_id, json.string),
-    ),
-    #(
-      "is_name_implicit",
-      json.nullable(forum_topic_created.is_name_implicit, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_forum_topic_closed(
-  _forum_topic_closed: ForumTopicClosed,
-) -> Json {
-  json_object_filter_nulls([])
-}
-
-pub fn encode_forum_topic_edited(forum_topic_edited: ForumTopicEdited) -> Json {
-  json_object_filter_nulls([
-    #("name", json.nullable(forum_topic_edited.name, json.string)),
-    #(
-      "icon_custom_emoji_id",
-      json.nullable(forum_topic_edited.icon_custom_emoji_id, json.string),
-    ),
-  ])
-}
-
-pub fn encode_forum_topic_reopened(
-  _forum_topic_reopened: ForumTopicReopened,
-) -> Json {
-  json_object_filter_nulls([])
-}
-
-pub fn encode_general_forum_topic_hidden(
-  _general_forum_topic_hidden: GeneralForumTopicHidden,
-) -> Json {
-  json_object_filter_nulls([])
-}
-
-pub fn encode_general_forum_topic_unhidden(
-  _general_forum_topic_unhidden: GeneralForumTopicUnhidden,
-) -> Json {
-  json_object_filter_nulls([])
-}
-
-pub fn encode_shared_user(shared_user: SharedUser) -> Json {
-  json_object_filter_nulls([
-    #("user_id", json.int(shared_user.user_id)),
-    #("first_name", json.nullable(shared_user.first_name, json.string)),
-    #("last_name", json.nullable(shared_user.last_name, json.string)),
-    #("username", json.nullable(shared_user.username, json.string)),
-    #(
-      "photo",
-      json.nullable(shared_user.photo, json.array(_, encode_photo_size)),
-    ),
-  ])
-}
-
-pub fn encode_users_shared(users_shared: UsersShared) -> Json {
-  json_object_filter_nulls([
-    #("request_id", json.int(users_shared.request_id)),
-    #("users", json.array(_, encode_shared_user)(users_shared.users)),
-  ])
-}
-
-pub fn encode_chat_shared(chat_shared: ChatShared) -> Json {
-  json_object_filter_nulls([
-    #("request_id", json.int(chat_shared.request_id)),
-    #("chat_id", json.int(chat_shared.chat_id)),
-    #("title", json.nullable(chat_shared.title, json.string)),
-    #("username", json.nullable(chat_shared.username, json.string)),
-    #(
-      "photo",
-      json.nullable(chat_shared.photo, json.array(_, encode_photo_size)),
-    ),
-  ])
-}
-
-pub fn encode_write_access_allowed(
-  write_access_allowed: WriteAccessAllowed,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "from_request",
-      json.nullable(write_access_allowed.from_request, json.bool),
-    ),
-    #(
-      "web_app_name",
-      json.nullable(write_access_allowed.web_app_name, json.string),
-    ),
-    #(
-      "from_attachment_menu",
-      json.nullable(write_access_allowed.from_attachment_menu, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_video_chat_scheduled(
-  video_chat_scheduled: VideoChatScheduled,
-) -> Json {
-  json_object_filter_nulls([
-    #("start_date", json.int(video_chat_scheduled.start_date)),
-  ])
-}
-
-pub fn encode_video_chat_started(
-  _video_chat_started: VideoChatStarted,
-) -> Json {
-  json_object_filter_nulls([])
-}
-
-pub fn encode_video_chat_ended(video_chat_ended: VideoChatEnded) -> Json {
-  json_object_filter_nulls([
-    #("duration", json.int(video_chat_ended.duration)),
-  ])
-}
-
-pub fn encode_video_chat_participants_invited(
-  video_chat_participants_invited: VideoChatParticipantsInvited,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "users",
-      json.array(_, encode_user)(video_chat_participants_invited.users),
-    ),
-  ])
-}
-
-pub fn encode_paid_message_price_changed(
-  paid_message_price_changed: PaidMessagePriceChanged,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "paid_message_star_count",
-      json.int(paid_message_price_changed.paid_message_star_count),
-    ),
-  ])
-}
-
-pub fn encode_direct_message_price_changed(
-  direct_message_price_changed: DirectMessagePriceChanged,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "are_direct_messages_enabled",
-      json.bool(direct_message_price_changed.are_direct_messages_enabled),
-    ),
-    #(
-      "direct_message_star_count",
-      json.nullable(
-        direct_message_price_changed.direct_message_star_count,
-        json.int,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_suggested_post_approved(
-  suggested_post_approved: SuggestedPostApproved,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "suggested_post_message",
-      json.nullable(
-        suggested_post_approved.suggested_post_message,
-        encode_message,
-      ),
-    ),
-    #(
-      "price",
-      json.nullable(suggested_post_approved.price, encode_suggested_post_price),
-    ),
-    #("send_date", json.int(suggested_post_approved.send_date)),
-  ])
-}
-
-pub fn encode_suggested_post_approval_failed(
-  suggested_post_approval_failed: SuggestedPostApprovalFailed,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "suggested_post_message",
-      json.nullable(
-        suggested_post_approval_failed.suggested_post_message,
-        encode_message,
-      ),
-    ),
-    #(
-      "price",
-      encode_suggested_post_price(suggested_post_approval_failed.price),
-    ),
-  ])
-}
-
-pub fn encode_suggested_post_declined(
-  suggested_post_declined: SuggestedPostDeclined,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "suggested_post_message",
-      json.nullable(
-        suggested_post_declined.suggested_post_message,
-        encode_message,
-      ),
-    ),
-    #("comment", json.nullable(suggested_post_declined.comment, json.string)),
-  ])
-}
-
-pub fn encode_suggested_post_paid(
-  suggested_post_paid: SuggestedPostPaid,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "suggested_post_message",
-      json.nullable(suggested_post_paid.suggested_post_message, encode_message),
-    ),
-    #("currency", json.string(suggested_post_paid.currency)),
-    #("amount", json.nullable(suggested_post_paid.amount, json.int)),
-    #(
-      "star_amount",
-      json.nullable(suggested_post_paid.star_amount, encode_star_amount),
-    ),
-  ])
-}
-
-pub fn encode_suggested_post_refunded(
-  suggested_post_refunded: SuggestedPostRefunded,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "suggested_post_message",
-      json.nullable(
-        suggested_post_refunded.suggested_post_message,
-        encode_message,
-      ),
-    ),
-    #("reason", json.string(suggested_post_refunded.reason)),
-  ])
-}
-
-pub fn encode_giveaway_created(giveaway_created: GiveawayCreated) -> Json {
-  json_object_filter_nulls([
-    #(
-      "prize_star_count",
-      json.nullable(giveaway_created.prize_star_count, json.int),
-    ),
-  ])
-}
-
-pub fn encode_giveaway(giveaway: Giveaway) -> Json {
-  json_object_filter_nulls([
-    #("chats", json.array(_, encode_chat)(giveaway.chats)),
-    #("winners_selection_date", json.int(giveaway.winners_selection_date)),
-    #("winner_count", json.int(giveaway.winner_count)),
-    #("only_new_members", json.nullable(giveaway.only_new_members, json.bool)),
-    #(
-      "has_public_winners",
-      json.nullable(giveaway.has_public_winners, json.bool),
-    ),
-    #(
-      "prize_description",
-      json.nullable(giveaway.prize_description, json.string),
-    ),
-    #(
-      "country_codes",
-      json.nullable(giveaway.country_codes, json.array(_, json.string)),
-    ),
-    #("prize_star_count", json.nullable(giveaway.prize_star_count, json.int)),
-    #(
-      "premium_subscription_month_count",
-      json.nullable(giveaway.premium_subscription_month_count, json.int),
-    ),
-  ])
-}
-
-pub fn encode_giveaway_winners(giveaway_winners: GiveawayWinners) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(giveaway_winners.chat)),
-    #("giveaway_message_id", json.int(giveaway_winners.giveaway_message_id)),
-    #(
-      "winners_selection_date",
-      json.int(giveaway_winners.winners_selection_date),
-    ),
-    #("winner_count", json.int(giveaway_winners.winner_count)),
-    #("winners", json.array(_, encode_user)(giveaway_winners.winners)),
-    #(
-      "additional_chat_count",
-      json.nullable(giveaway_winners.additional_chat_count, json.int),
-    ),
-    #(
-      "prize_star_count",
-      json.nullable(giveaway_winners.prize_star_count, json.int),
-    ),
-    #(
-      "premium_subscription_month_count",
-      json.nullable(giveaway_winners.premium_subscription_month_count, json.int),
-    ),
-    #(
-      "unclaimed_prize_count",
-      json.nullable(giveaway_winners.unclaimed_prize_count, json.int),
-    ),
-    #(
-      "only_new_members",
-      json.nullable(giveaway_winners.only_new_members, json.bool),
-    ),
-    #("was_refunded", json.nullable(giveaway_winners.was_refunded, json.bool)),
-    #(
-      "prize_description",
-      json.nullable(giveaway_winners.prize_description, json.string),
-    ),
-  ])
-}
-
-pub fn encode_giveaway_completed(
-  giveaway_completed: GiveawayCompleted,
-) -> Json {
-  json_object_filter_nulls([
-    #("winner_count", json.int(giveaway_completed.winner_count)),
-    #(
-      "unclaimed_prize_count",
-      json.nullable(giveaway_completed.unclaimed_prize_count, json.int),
-    ),
-    #(
-      "giveaway_message",
-      json.nullable(giveaway_completed.giveaway_message, encode_message),
-    ),
-    #(
-      "is_star_giveaway",
-      json.nullable(giveaway_completed.is_star_giveaway, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_link_preview_options(
-  link_preview_options: LinkPreviewOptions,
-) -> Json {
-  json_object_filter_nulls([
-    #("is_disabled", json.nullable(link_preview_options.is_disabled, json.bool)),
-    #("url", json.nullable(link_preview_options.url, json.string)),
-    #(
-      "prefer_small_media",
-      json.nullable(link_preview_options.prefer_small_media, json.bool),
-    ),
-    #(
-      "prefer_large_media",
-      json.nullable(link_preview_options.prefer_large_media, json.bool),
-    ),
-    #(
-      "show_above_text",
-      json.nullable(link_preview_options.show_above_text, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_suggested_post_price(
-  suggested_post_price: SuggestedPostPrice,
-) -> Json {
-  json_object_filter_nulls([
-    #("currency", json.string(suggested_post_price.currency)),
-    #("amount", json.int(suggested_post_price.amount)),
-  ])
-}
-
-pub fn encode_suggested_post_info(
-  suggested_post_info: SuggestedPostInfo,
-) -> Json {
-  json_object_filter_nulls([
-    #("state", json.string(suggested_post_info.state)),
-    #(
-      "price",
-      json.nullable(suggested_post_info.price, encode_suggested_post_price),
-    ),
-    #("send_date", json.nullable(suggested_post_info.send_date, json.int)),
-  ])
-}
-
-pub fn encode_suggested_post_parameters(
-  suggested_post_parameters: SuggestedPostParameters,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "price",
-      json.nullable(
-        suggested_post_parameters.price,
-        encode_suggested_post_price,
-      ),
-    ),
-    #("send_date", json.nullable(suggested_post_parameters.send_date, json.int)),
-  ])
-}
-
-pub fn encode_direct_messages_topic(
-  direct_messages_topic: DirectMessagesTopic,
-) -> Json {
-  json_object_filter_nulls([
-    #("topic_id", json.int(direct_messages_topic.topic_id)),
-    #("user", json.nullable(direct_messages_topic.user, encode_user)),
-  ])
-}
-
-pub fn encode_user_profile_photos(
-  user_profile_photos: UserProfilePhotos,
-) -> Json {
-  json_object_filter_nulls([
-    #("total_count", json.int(user_profile_photos.total_count)),
-    #(
-      "photos",
-      fn(outer_list) {
-        json.array(outer_list, fn(inner_list) {
-          json.array(inner_list, encode_photo_size)
-        })
-      }(user_profile_photos.photos),
-    ),
-  ])
-}
-
-pub fn encode_user_profile_audios(
-  user_profile_audios: UserProfileAudios,
-) -> Json {
-  json_object_filter_nulls([
-    #("total_count", json.int(user_profile_audios.total_count)),
-    #("audios", json.array(_, encode_audio)(user_profile_audios.audios)),
-  ])
-}
-
-pub fn encode_file(file: File) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(file.file_id)),
-    #("file_unique_id", json.string(file.file_unique_id)),
-    #("file_size", json.nullable(file.file_size, json.int)),
-    #("file_path", json.nullable(file.file_path, json.string)),
-  ])
-}
-
-pub fn encode_web_app_info(web_app_info: WebAppInfo) -> Json {
-  json_object_filter_nulls([
-    #("url", json.string(web_app_info.url)),
-  ])
-}
-
-pub fn encode_reply_keyboard_markup(
-  reply_keyboard_markup: ReplyKeyboardMarkup,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "keyboard",
-      fn(outer_list) {
-        json.array(outer_list, fn(inner_list) {
-          json.array(inner_list, encode_keyboard_button)
-        })
-      }(reply_keyboard_markup.keyboard),
-    ),
-    #(
-      "is_persistent",
-      json.nullable(reply_keyboard_markup.is_persistent, json.bool),
-    ),
-    #(
-      "resize_keyboard",
-      json.nullable(reply_keyboard_markup.resize_keyboard, json.bool),
-    ),
-    #(
-      "one_time_keyboard",
-      json.nullable(reply_keyboard_markup.one_time_keyboard, json.bool),
-    ),
-    #(
-      "input_field_placeholder",
-      json.nullable(reply_keyboard_markup.input_field_placeholder, json.string),
-    ),
-    #("selective", json.nullable(reply_keyboard_markup.selective, json.bool)),
-  ])
-}
-
-pub fn encode_keyboard_button(keyboard_button: KeyboardButton) -> Json {
-  json_object_filter_nulls([
-    #("text", json.string(keyboard_button.text)),
-    #(
-      "icon_custom_emoji_id",
-      json.nullable(keyboard_button.icon_custom_emoji_id, json.string),
-    ),
-    #("style", json.nullable(keyboard_button.style, json.string)),
-    #(
-      "request_users",
-      json.nullable(
-        keyboard_button.request_users,
-        encode_keyboard_button_request_users,
-      ),
-    ),
-    #(
-      "request_chat",
-      json.nullable(
-        keyboard_button.request_chat,
-        encode_keyboard_button_request_chat,
-      ),
-    ),
-    #(
-      "request_managed_bot",
-      json.nullable(
-        keyboard_button.request_managed_bot,
-        encode_keyboard_button_request_managed_bot,
-      ),
-    ),
-    #(
-      "request_contact",
-      json.nullable(keyboard_button.request_contact, json.bool),
-    ),
-    #(
-      "request_location",
-      json.nullable(keyboard_button.request_location, json.bool),
-    ),
-    #(
-      "request_poll",
-      json.nullable(
-        keyboard_button.request_poll,
-        encode_keyboard_button_poll_type,
-      ),
-    ),
-    #("web_app", json.nullable(keyboard_button.web_app, encode_web_app_info)),
-  ])
-}
-
-pub fn encode_keyboard_button_request_users(
-  keyboard_button_request_users: KeyboardButtonRequestUsers,
-) -> Json {
-  json_object_filter_nulls([
-    #("request_id", json.int(keyboard_button_request_users.request_id)),
-    #(
-      "user_is_bot",
-      json.nullable(keyboard_button_request_users.user_is_bot, json.bool),
-    ),
-    #(
-      "user_is_premium",
-      json.nullable(keyboard_button_request_users.user_is_premium, json.bool),
-    ),
-    #(
-      "max_quantity",
-      json.nullable(keyboard_button_request_users.max_quantity, json.int),
-    ),
-    #(
-      "request_name",
-      json.nullable(keyboard_button_request_users.request_name, json.bool),
-    ),
-    #(
-      "request_username",
-      json.nullable(keyboard_button_request_users.request_username, json.bool),
-    ),
-    #(
-      "request_photo",
-      json.nullable(keyboard_button_request_users.request_photo, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_keyboard_button_request_chat(
-  keyboard_button_request_chat: KeyboardButtonRequestChat,
-) -> Json {
-  json_object_filter_nulls([
-    #("request_id", json.int(keyboard_button_request_chat.request_id)),
-    #(
-      "chat_is_channel",
-      json.bool(keyboard_button_request_chat.chat_is_channel),
-    ),
-    #(
-      "chat_is_forum",
-      json.nullable(keyboard_button_request_chat.chat_is_forum, json.bool),
-    ),
-    #(
-      "chat_has_username",
-      json.nullable(keyboard_button_request_chat.chat_has_username, json.bool),
-    ),
-    #(
-      "chat_is_created",
-      json.nullable(keyboard_button_request_chat.chat_is_created, json.bool),
-    ),
-    #(
-      "user_administrator_rights",
-      json.nullable(
-        keyboard_button_request_chat.user_administrator_rights,
-        encode_chat_administrator_rights,
-      ),
-    ),
-    #(
-      "bot_administrator_rights",
-      json.nullable(
-        keyboard_button_request_chat.bot_administrator_rights,
-        encode_chat_administrator_rights,
-      ),
-    ),
-    #(
-      "bot_is_member",
-      json.nullable(keyboard_button_request_chat.bot_is_member, json.bool),
-    ),
-    #(
-      "request_title",
-      json.nullable(keyboard_button_request_chat.request_title, json.bool),
-    ),
-    #(
-      "request_username",
-      json.nullable(keyboard_button_request_chat.request_username, json.bool),
-    ),
-    #(
-      "request_photo",
-      json.nullable(keyboard_button_request_chat.request_photo, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_keyboard_button_request_managed_bot(
-  keyboard_button_request_managed_bot: KeyboardButtonRequestManagedBot,
-) -> Json {
-  json_object_filter_nulls([
-    #("request_id", json.int(keyboard_button_request_managed_bot.request_id)),
-    #(
-      "suggested_name",
-      json.nullable(
-        keyboard_button_request_managed_bot.suggested_name,
-        json.string,
-      ),
-    ),
-    #(
-      "suggested_username",
-      json.nullable(
-        keyboard_button_request_managed_bot.suggested_username,
-        json.string,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_keyboard_button_poll_type(
-  keyboard_button_poll_type: KeyboardButtonPollType,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.nullable(keyboard_button_poll_type.type_, json.string)),
-  ])
-}
-
-pub fn encode_reply_keyboard_remove(
-  reply_keyboard_remove: ReplyKeyboardRemove,
-) -> Json {
-  json_object_filter_nulls([
-    #("remove_keyboard", json.bool(reply_keyboard_remove.remove_keyboard)),
-    #("selective", json.nullable(reply_keyboard_remove.selective, json.bool)),
-  ])
-}
-
-pub fn encode_inline_keyboard_markup(
-  inline_keyboard_markup: InlineKeyboardMarkup,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "inline_keyboard",
-      fn(outer_list) {
-        json.array(outer_list, fn(inner_list) {
-          json.array(inner_list, encode_inline_keyboard_button)
-        })
-      }(inline_keyboard_markup.inline_keyboard),
-    ),
-  ])
-}
-
-pub fn encode_inline_keyboard_button(
-  inline_keyboard_button: InlineKeyboardButton,
-) -> Json {
-  json_object_filter_nulls([
-    #("text", json.string(inline_keyboard_button.text)),
-    #(
-      "icon_custom_emoji_id",
-      json.nullable(inline_keyboard_button.icon_custom_emoji_id, json.string),
-    ),
-    #("style", json.nullable(inline_keyboard_button.style, json.string)),
-    #("url", json.nullable(inline_keyboard_button.url, json.string)),
-    #(
-      "callback_data",
-      json.nullable(inline_keyboard_button.callback_data, json.string),
-    ),
-    #(
-      "web_app",
-      json.nullable(inline_keyboard_button.web_app, encode_web_app_info),
-    ),
-    #(
-      "login_url",
-      json.nullable(inline_keyboard_button.login_url, encode_login_url),
-    ),
-    #(
-      "switch_inline_query",
-      json.nullable(inline_keyboard_button.switch_inline_query, json.string),
-    ),
-    #(
-      "switch_inline_query_current_chat",
-      json.nullable(
-        inline_keyboard_button.switch_inline_query_current_chat,
-        json.string,
-      ),
-    ),
-    #(
-      "switch_inline_query_chosen_chat",
-      json.nullable(
-        inline_keyboard_button.switch_inline_query_chosen_chat,
-        encode_switch_inline_query_chosen_chat,
-      ),
-    ),
-    #(
-      "copy_text",
-      json.nullable(inline_keyboard_button.copy_text, encode_copy_text_button),
-    ),
-    #(
-      "callback_game",
-      json.nullable(inline_keyboard_button.callback_game, encode_callback_game),
-    ),
-    #("pay", json.nullable(inline_keyboard_button.pay, json.bool)),
-  ])
-}
-
-pub fn encode_login_url(login_url: LoginUrl) -> Json {
-  json_object_filter_nulls([
-    #("url", json.string(login_url.url)),
-    #("forward_text", json.nullable(login_url.forward_text, json.string)),
-    #("bot_username", json.nullable(login_url.bot_username, json.string)),
-    #(
-      "request_write_access",
-      json.nullable(login_url.request_write_access, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_switch_inline_query_chosen_chat(
-  switch_inline_query_chosen_chat: SwitchInlineQueryChosenChat,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "query",
-      json.nullable(switch_inline_query_chosen_chat.query, json.string),
-    ),
-    #(
-      "allow_user_chats",
-      json.nullable(switch_inline_query_chosen_chat.allow_user_chats, json.bool),
-    ),
-    #(
-      "allow_bot_chats",
-      json.nullable(switch_inline_query_chosen_chat.allow_bot_chats, json.bool),
-    ),
-    #(
-      "allow_group_chats",
-      json.nullable(
-        switch_inline_query_chosen_chat.allow_group_chats,
-        json.bool,
-      ),
-    ),
-    #(
-      "allow_channel_chats",
-      json.nullable(
-        switch_inline_query_chosen_chat.allow_channel_chats,
-        json.bool,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_copy_text_button(copy_text_button: CopyTextButton) -> Json {
-  json_object_filter_nulls([
-    #("text", json.string(copy_text_button.text)),
-  ])
-}
-
-pub fn encode_callback_query(callback_query: CallbackQuery) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(callback_query.id)),
-    #("from", encode_user(callback_query.from)),
-    #(
-      "message",
-      json.nullable(callback_query.message, encode_maybe_inaccessible_message),
-    ),
-    #(
-      "inline_message_id",
-      json.nullable(callback_query.inline_message_id, json.string),
-    ),
-    #("chat_instance", json.string(callback_query.chat_instance)),
-    #("data", json.nullable(callback_query.data, json.string)),
-    #(
-      "game_short_name",
-      json.nullable(callback_query.game_short_name, json.string),
-    ),
-  ])
-}
-
-pub fn encode_force_reply(force_reply: ForceReply) -> Json {
-  json_object_filter_nulls([
-    #("force_reply", json.bool(force_reply.force_reply)),
-    #(
-      "input_field_placeholder",
-      json.nullable(force_reply.input_field_placeholder, json.string),
-    ),
-    #("selective", json.nullable(force_reply.selective, json.bool)),
-  ])
-}
-
-pub fn encode_chat_photo(chat_photo: ChatPhoto) -> Json {
-  json_object_filter_nulls([
-    #("small_file_id", json.string(chat_photo.small_file_id)),
-    #("small_file_unique_id", json.string(chat_photo.small_file_unique_id)),
-    #("big_file_id", json.string(chat_photo.big_file_id)),
-    #("big_file_unique_id", json.string(chat_photo.big_file_unique_id)),
-  ])
-}
-
-pub fn encode_chat_invite_link(chat_invite_link: ChatInviteLink) -> Json {
-  json_object_filter_nulls([
-    #("invite_link", json.string(chat_invite_link.invite_link)),
-    #("creator", encode_user(chat_invite_link.creator)),
-    #("creates_join_request", json.bool(chat_invite_link.creates_join_request)),
-    #("is_primary", json.bool(chat_invite_link.is_primary)),
-    #("is_revoked", json.bool(chat_invite_link.is_revoked)),
-    #("name", json.nullable(chat_invite_link.name, json.string)),
-    #("expire_date", json.nullable(chat_invite_link.expire_date, json.int)),
-    #("member_limit", json.nullable(chat_invite_link.member_limit, json.int)),
-    #(
-      "pending_join_request_count",
-      json.nullable(chat_invite_link.pending_join_request_count, json.int),
-    ),
-    #(
-      "subscription_period",
-      json.nullable(chat_invite_link.subscription_period, json.int),
-    ),
-    #(
-      "subscription_price",
-      json.nullable(chat_invite_link.subscription_price, json.int),
-    ),
-  ])
-}
-
-pub fn encode_chat_administrator_rights(
-  chat_administrator_rights: ChatAdministratorRights,
-) -> Json {
-  json_object_filter_nulls([
-    #("is_anonymous", json.bool(chat_administrator_rights.is_anonymous)),
-    #("can_manage_chat", json.bool(chat_administrator_rights.can_manage_chat)),
-    #(
-      "can_delete_messages",
-      json.bool(chat_administrator_rights.can_delete_messages),
-    ),
-    #(
-      "can_manage_video_chats",
-      json.bool(chat_administrator_rights.can_manage_video_chats),
-    ),
-    #(
-      "can_restrict_members",
-      json.bool(chat_administrator_rights.can_restrict_members),
-    ),
-    #(
-      "can_promote_members",
-      json.bool(chat_administrator_rights.can_promote_members),
-    ),
-    #("can_change_info", json.bool(chat_administrator_rights.can_change_info)),
-    #("can_invite_users", json.bool(chat_administrator_rights.can_invite_users)),
-    #("can_post_stories", json.bool(chat_administrator_rights.can_post_stories)),
-    #("can_edit_stories", json.bool(chat_administrator_rights.can_edit_stories)),
-    #(
-      "can_delete_stories",
-      json.bool(chat_administrator_rights.can_delete_stories),
-    ),
-    #(
-      "can_post_messages",
-      json.nullable(chat_administrator_rights.can_post_messages, json.bool),
-    ),
-    #(
-      "can_edit_messages",
-      json.nullable(chat_administrator_rights.can_edit_messages, json.bool),
-    ),
-    #(
-      "can_pin_messages",
-      json.nullable(chat_administrator_rights.can_pin_messages, json.bool),
-    ),
-    #(
-      "can_manage_topics",
-      json.nullable(chat_administrator_rights.can_manage_topics, json.bool),
-    ),
-    #(
-      "can_manage_direct_messages",
-      json.nullable(
-        chat_administrator_rights.can_manage_direct_messages,
-        json.bool,
-      ),
-    ),
-    #(
-      "can_manage_tags",
-      json.nullable(chat_administrator_rights.can_manage_tags, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_chat_member_updated(
-  chat_member_updated: ChatMemberUpdated,
-) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(chat_member_updated.chat)),
-    #("from", encode_user(chat_member_updated.from)),
-    #("date", json.int(chat_member_updated.date)),
-    #(
-      "old_chat_member",
-      encode_chat_member(chat_member_updated.old_chat_member),
-    ),
-    #(
-      "new_chat_member",
-      encode_chat_member(chat_member_updated.new_chat_member),
-    ),
-    #(
-      "invite_link",
-      json.nullable(chat_member_updated.invite_link, encode_chat_invite_link),
-    ),
-    #(
-      "via_join_request",
-      json.nullable(chat_member_updated.via_join_request, json.bool),
-    ),
-    #(
-      "via_chat_folder_invite_link",
-      json.nullable(chat_member_updated.via_chat_folder_invite_link, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_chat_member_owner(chat_member_owner: ChatMemberOwner) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_owner.status)),
-    #("user", encode_user(chat_member_owner.user)),
-    #("is_anonymous", json.bool(chat_member_owner.is_anonymous)),
-    #(
-      "custom_title",
-      json.nullable(chat_member_owner.custom_title, json.string),
-    ),
-  ])
-}
-
-pub fn encode_chat_member_administrator(
-  chat_member_administrator: ChatMemberAdministrator,
-) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_administrator.status)),
-    #("user", encode_user(chat_member_administrator.user)),
-    #("can_be_edited", json.bool(chat_member_administrator.can_be_edited)),
-    #("is_anonymous", json.bool(chat_member_administrator.is_anonymous)),
-    #("can_manage_chat", json.bool(chat_member_administrator.can_manage_chat)),
-    #(
-      "can_delete_messages",
-      json.bool(chat_member_administrator.can_delete_messages),
-    ),
-    #(
-      "can_manage_video_chats",
-      json.bool(chat_member_administrator.can_manage_video_chats),
-    ),
-    #(
-      "can_restrict_members",
-      json.bool(chat_member_administrator.can_restrict_members),
-    ),
-    #(
-      "can_promote_members",
-      json.bool(chat_member_administrator.can_promote_members),
-    ),
-    #("can_change_info", json.bool(chat_member_administrator.can_change_info)),
-    #("can_invite_users", json.bool(chat_member_administrator.can_invite_users)),
-    #("can_post_stories", json.bool(chat_member_administrator.can_post_stories)),
-    #("can_edit_stories", json.bool(chat_member_administrator.can_edit_stories)),
-    #(
-      "can_delete_stories",
-      json.bool(chat_member_administrator.can_delete_stories),
-    ),
-    #(
-      "can_post_messages",
-      json.nullable(chat_member_administrator.can_post_messages, json.bool),
-    ),
-    #(
-      "can_edit_messages",
-      json.nullable(chat_member_administrator.can_edit_messages, json.bool),
-    ),
-    #(
-      "can_pin_messages",
-      json.nullable(chat_member_administrator.can_pin_messages, json.bool),
-    ),
-    #(
-      "can_manage_topics",
-      json.nullable(chat_member_administrator.can_manage_topics, json.bool),
-    ),
-    #(
-      "can_manage_direct_messages",
-      json.nullable(
-        chat_member_administrator.can_manage_direct_messages,
-        json.bool,
-      ),
-    ),
-    #(
-      "can_manage_tags",
-      json.nullable(chat_member_administrator.can_manage_tags, json.bool),
-    ),
-    #(
-      "custom_title",
-      json.nullable(chat_member_administrator.custom_title, json.string),
-    ),
-  ])
-}
-
-pub fn encode_chat_member_member(chat_member_member: ChatMemberMember) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_member.status)),
-    #("tag", json.nullable(chat_member_member.tag, json.string)),
-    #("user", encode_user(chat_member_member.user)),
-    #("until_date", json.nullable(chat_member_member.until_date, json.int)),
-  ])
-}
-
-pub fn encode_chat_member_restricted(
-  chat_member_restricted: ChatMemberRestricted,
-) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_restricted.status)),
-    #("tag", json.nullable(chat_member_restricted.tag, json.string)),
-    #("user", encode_user(chat_member_restricted.user)),
-    #("is_member", json.bool(chat_member_restricted.is_member)),
-    #("can_send_messages", json.bool(chat_member_restricted.can_send_messages)),
-    #("can_send_audios", json.bool(chat_member_restricted.can_send_audios)),
-    #(
-      "can_send_documents",
-      json.bool(chat_member_restricted.can_send_documents),
-    ),
-    #("can_send_photos", json.bool(chat_member_restricted.can_send_photos)),
-    #("can_send_videos", json.bool(chat_member_restricted.can_send_videos)),
-    #(
-      "can_send_video_notes",
-      json.bool(chat_member_restricted.can_send_video_notes),
-    ),
-    #(
-      "can_send_voice_notes",
-      json.bool(chat_member_restricted.can_send_voice_notes),
-    ),
-    #("can_send_polls", json.bool(chat_member_restricted.can_send_polls)),
-    #(
-      "can_send_other_messages",
-      json.bool(chat_member_restricted.can_send_other_messages),
-    ),
-    #(
-      "can_add_web_page_previews",
-      json.bool(chat_member_restricted.can_add_web_page_previews),
-    ),
-    #(
-      "can_react_to_messages",
-      json.bool(chat_member_restricted.can_react_to_messages),
-    ),
-    #("can_edit_tag", json.bool(chat_member_restricted.can_edit_tag)),
-    #("can_change_info", json.bool(chat_member_restricted.can_change_info)),
-    #("can_invite_users", json.bool(chat_member_restricted.can_invite_users)),
-    #("can_pin_messages", json.bool(chat_member_restricted.can_pin_messages)),
-    #("can_manage_topics", json.bool(chat_member_restricted.can_manage_topics)),
-    #("until_date", json.int(chat_member_restricted.until_date)),
-  ])
-}
-
-pub fn encode_chat_member_left(chat_member_left: ChatMemberLeft) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_left.status)),
-    #("user", encode_user(chat_member_left.user)),
-  ])
-}
-
-pub fn encode_chat_member_banned(chat_member_banned: ChatMemberBanned) -> Json {
-  json_object_filter_nulls([
-    #("status", json.string(chat_member_banned.status)),
-    #("user", encode_user(chat_member_banned.user)),
-    #("until_date", json.int(chat_member_banned.until_date)),
-  ])
-}
-
-pub fn encode_chat_join_request(chat_join_request: ChatJoinRequest) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(chat_join_request.chat)),
-    #("from", encode_user(chat_join_request.from)),
-    #("user_chat_id", json.int(chat_join_request.user_chat_id)),
-    #("date", json.int(chat_join_request.date)),
-    #("bio", json.nullable(chat_join_request.bio, json.string)),
-    #(
-      "invite_link",
-      json.nullable(chat_join_request.invite_link, encode_chat_invite_link),
-    ),
-  ])
-}
-
-pub fn encode_chat_permissions(chat_permissions: ChatPermissions) -> Json {
-  json_object_filter_nulls([
-    #(
-      "can_send_messages",
-      json.nullable(chat_permissions.can_send_messages, json.bool),
-    ),
-    #(
-      "can_send_audios",
-      json.nullable(chat_permissions.can_send_audios, json.bool),
-    ),
-    #(
-      "can_send_documents",
-      json.nullable(chat_permissions.can_send_documents, json.bool),
-    ),
-    #(
-      "can_send_photos",
-      json.nullable(chat_permissions.can_send_photos, json.bool),
-    ),
-    #(
-      "can_send_videos",
-      json.nullable(chat_permissions.can_send_videos, json.bool),
-    ),
-    #(
-      "can_send_video_notes",
-      json.nullable(chat_permissions.can_send_video_notes, json.bool),
-    ),
-    #(
-      "can_send_voice_notes",
-      json.nullable(chat_permissions.can_send_voice_notes, json.bool),
-    ),
-    #(
-      "can_send_polls",
-      json.nullable(chat_permissions.can_send_polls, json.bool),
-    ),
-    #(
-      "can_send_other_messages",
-      json.nullable(chat_permissions.can_send_other_messages, json.bool),
-    ),
-    #(
-      "can_add_web_page_previews",
-      json.nullable(chat_permissions.can_add_web_page_previews, json.bool),
-    ),
-    #(
-      "can_react_to_messages",
-      json.nullable(chat_permissions.can_react_to_messages, json.bool),
-    ),
-    #("can_edit_tag", json.nullable(chat_permissions.can_edit_tag, json.bool)),
-    #(
-      "can_change_info",
-      json.nullable(chat_permissions.can_change_info, json.bool),
-    ),
-    #(
-      "can_invite_users",
-      json.nullable(chat_permissions.can_invite_users, json.bool),
-    ),
-    #(
-      "can_pin_messages",
-      json.nullable(chat_permissions.can_pin_messages, json.bool),
-    ),
-    #(
-      "can_manage_topics",
-      json.nullable(chat_permissions.can_manage_topics, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_birthdate(birthdate: Birthdate) -> Json {
-  json_object_filter_nulls([
-    #("day", json.int(birthdate.day)),
-    #("month", json.int(birthdate.month)),
-    #("year", json.nullable(birthdate.year, json.int)),
-  ])
-}
-
-pub fn encode_business_intro(business_intro: BusinessIntro) -> Json {
-  json_object_filter_nulls([
-    #("title", json.nullable(business_intro.title, json.string)),
-    #("message", json.nullable(business_intro.message, json.string)),
-    #("sticker", json.nullable(business_intro.sticker, encode_sticker)),
-  ])
-}
-
-pub fn encode_business_location(business_location: BusinessLocation) -> Json {
-  json_object_filter_nulls([
-    #("address", json.string(business_location.address)),
-    #("location", json.nullable(business_location.location, encode_location)),
-  ])
-}
-
-pub fn encode_business_opening_hours_interval(
-  business_opening_hours_interval: BusinessOpeningHoursInterval,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "opening_minute",
-      json.int(business_opening_hours_interval.opening_minute),
-    ),
-    #(
-      "closing_minute",
-      json.int(business_opening_hours_interval.closing_minute),
-    ),
-  ])
-}
-
-pub fn encode_business_opening_hours(
-  business_opening_hours: BusinessOpeningHours,
-) -> Json {
-  json_object_filter_nulls([
-    #("time_zone_name", json.string(business_opening_hours.time_zone_name)),
-    #(
-      "opening_hours",
-      json.array(_, encode_business_opening_hours_interval)(
-        business_opening_hours.opening_hours,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_user_rating(user_rating: UserRating) -> Json {
-  json_object_filter_nulls([
-    #("level", json.int(user_rating.level)),
-    #("rating", json.int(user_rating.rating)),
-    #("current_level_rating", json.int(user_rating.current_level_rating)),
-    #(
-      "next_level_rating",
-      json.nullable(user_rating.next_level_rating, json.int),
-    ),
-  ])
-}
-
-pub fn encode_story_area_position(
-  story_area_position: StoryAreaPosition,
-) -> Json {
-  json_object_filter_nulls([
-    #("x_percentage", json.float(story_area_position.x_percentage)),
-    #("y_percentage", json.float(story_area_position.y_percentage)),
-    #("width_percentage", json.float(story_area_position.width_percentage)),
-    #("height_percentage", json.float(story_area_position.height_percentage)),
-    #("rotation_angle", json.float(story_area_position.rotation_angle)),
-    #(
-      "corner_radius_percentage",
-      json.float(story_area_position.corner_radius_percentage),
-    ),
-  ])
-}
-
-pub fn encode_location_address(location_address: LocationAddress) -> Json {
-  json_object_filter_nulls([
-    #("country_code", json.string(location_address.country_code)),
-    #("state", json.nullable(location_address.state, json.string)),
-    #("city", json.nullable(location_address.city, json.string)),
-    #("street", json.nullable(location_address.street, json.string)),
-  ])
-}
-
-pub fn encode_story_area_type(story_area_type: StoryAreaType) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type.type_)),
-    #("latitude", json.float(story_area_type.latitude)),
-    #("longitude", json.float(story_area_type.longitude)),
-    #(
-      "address",
-      json.nullable(story_area_type.address, encode_location_address),
-    ),
-  ])
-}
-
-pub fn encode_story_area_type_location(
-  story_area_type_location: StoryAreaTypeLocation,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type_location.type_)),
-    #("latitude", json.float(story_area_type_location.latitude)),
-    #("longitude", json.float(story_area_type_location.longitude)),
-    #(
-      "address",
-      json.nullable(story_area_type_location.address, encode_location_address),
-    ),
-  ])
-}
-
-pub fn encode_story_area_type_suggested_reaction(
-  story_area_type_suggested_reaction: StoryAreaTypeSuggestedReaction,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type_suggested_reaction.type_)),
-    #(
-      "reaction_type",
-      encode_reaction_type(story_area_type_suggested_reaction.reaction_type),
-    ),
-    #(
-      "is_dark",
-      json.nullable(story_area_type_suggested_reaction.is_dark, json.bool),
-    ),
-    #(
-      "is_flipped",
-      json.nullable(story_area_type_suggested_reaction.is_flipped, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_story_area_type_link(
-  story_area_type_link: StoryAreaTypeLink,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type_link.type_)),
-    #("url", json.string(story_area_type_link.url)),
-  ])
-}
-
-pub fn encode_story_area_type_weather(
-  story_area_type_weather: StoryAreaTypeWeather,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type_weather.type_)),
-    #("temperature", json.float(story_area_type_weather.temperature)),
-    #("emoji", json.string(story_area_type_weather.emoji)),
-    #("background_color", json.int(story_area_type_weather.background_color)),
-  ])
-}
-
-pub fn encode_story_area_type_unique_gift(
-  story_area_type_unique_gift: StoryAreaTypeUniqueGift,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(story_area_type_unique_gift.type_)),
-    #("name", json.string(story_area_type_unique_gift.name)),
-  ])
-}
-
-pub fn encode_story_area(story_area: StoryArea) -> Json {
-  json_object_filter_nulls([
-    #("position", encode_story_area_position(story_area.position)),
-    #("type", encode_story_area_type(story_area.type_)),
-  ])
-}
-
-pub fn encode_chat_location(chat_location: ChatLocation) -> Json {
-  json_object_filter_nulls([
-    #("location", encode_location(chat_location.location)),
-    #("address", json.string(chat_location.address)),
-  ])
-}
-
-pub fn encode_reaction_type_emoji(
-  reaction_type_emoji: ReactionTypeEmoji,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(reaction_type_emoji.type_)),
-    #("emoji", json.string(reaction_type_emoji.emoji)),
-  ])
-}
-
-pub fn encode_reaction_type_custom_emoji(
-  reaction_type_custom_emoji: ReactionTypeCustomEmoji,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(reaction_type_custom_emoji.type_)),
-    #(
-      "custom_emoji_id",
-      json.string(reaction_type_custom_emoji.custom_emoji_id),
-    ),
-  ])
-}
-
-pub fn encode_reaction_type_paid(reaction_type_paid: ReactionTypePaid) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(reaction_type_paid.type_)),
-  ])
-}
-
-pub fn encode_reaction_count(reaction_count: ReactionCount) -> Json {
-  json_object_filter_nulls([
-    #("type", encode_reaction_type(reaction_count.type_)),
-    #("total_count", json.int(reaction_count.total_count)),
   ])
 }
 
@@ -3212,254 +4348,14 @@ pub fn encode_message_reaction_updated(
   ])
 }
 
-pub fn encode_message_reaction_count_updated(
-  message_reaction_count_updated: MessageReactionCountUpdated,
-) -> Json {
+pub fn encode_order_info(order_info: OrderInfo) -> Json {
   json_object_filter_nulls([
-    #("chat", encode_chat(message_reaction_count_updated.chat)),
-    #("message_id", json.int(message_reaction_count_updated.message_id)),
-    #("date", json.int(message_reaction_count_updated.date)),
+    #("name", json.nullable(order_info.name, json.string)),
+    #("phone_number", json.nullable(order_info.phone_number, json.string)),
+    #("email", json.nullable(order_info.email, json.string)),
     #(
-      "reactions",
-      json.array(_, encode_reaction_count)(
-        message_reaction_count_updated.reactions,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_forum_topic(forum_topic: ForumTopic) -> Json {
-  json_object_filter_nulls([
-    #("message_thread_id", json.int(forum_topic.message_thread_id)),
-    #("name", json.string(forum_topic.name)),
-    #("icon_color", json.int(forum_topic.icon_color)),
-    #(
-      "icon_custom_emoji_id",
-      json.nullable(forum_topic.icon_custom_emoji_id, json.string),
-    ),
-    #(
-      "is_name_implicit",
-      json.nullable(forum_topic.is_name_implicit, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_gift_background(gift_background: GiftBackground) -> Json {
-  json_object_filter_nulls([
-    #("center_color", json.int(gift_background.center_color)),
-    #("edge_color", json.int(gift_background.edge_color)),
-    #("text_color", json.int(gift_background.text_color)),
-  ])
-}
-
-pub fn encode_gift(gift: Gift) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(gift.id)),
-    #("sticker", encode_sticker(gift.sticker)),
-    #("star_count", json.int(gift.star_count)),
-    #("upgrade_star_count", json.nullable(gift.upgrade_star_count, json.int)),
-    #("is_premium", json.nullable(gift.is_premium, json.bool)),
-    #("has_colors", json.nullable(gift.has_colors, json.bool)),
-    #("total_count", json.nullable(gift.total_count, json.int)),
-    #("remaining_count", json.nullable(gift.remaining_count, json.int)),
-    #(
-      "personal_total_count",
-      json.nullable(gift.personal_total_count, json.int),
-    ),
-    #(
-      "personal_remaining_count",
-      json.nullable(gift.personal_remaining_count, json.int),
-    ),
-    #("background", json.nullable(gift.background, encode_gift_background)),
-    #(
-      "unique_gift_variant_count",
-      json.nullable(gift.unique_gift_variant_count, json.int),
-    ),
-    #("publisher_chat", json.nullable(gift.publisher_chat, encode_chat)),
-  ])
-}
-
-pub fn encode_gifts(gifts: Gifts) -> Json {
-  json_object_filter_nulls([
-    #("gifts", json.array(_, encode_gift)(gifts.gifts)),
-  ])
-}
-
-pub fn encode_unique_gift_model(unique_gift_model: UniqueGiftModel) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(unique_gift_model.name)),
-    #("sticker", encode_sticker(unique_gift_model.sticker)),
-    #("rarity_per_mille", json.int(unique_gift_model.rarity_per_mille)),
-    #("rarity", json.nullable(unique_gift_model.rarity, json.string)),
-  ])
-}
-
-pub fn encode_unique_gift_symbol(unique_gift_symbol: UniqueGiftSymbol) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(unique_gift_symbol.name)),
-    #("sticker", encode_sticker(unique_gift_symbol.sticker)),
-    #("rarity_per_mille", json.int(unique_gift_symbol.rarity_per_mille)),
-  ])
-}
-
-pub fn encode_unique_gift_backdrop_colors(
-  unique_gift_backdrop_colors: UniqueGiftBackdropColors,
-) -> Json {
-  json_object_filter_nulls([
-    #("center_color", json.int(unique_gift_backdrop_colors.center_color)),
-    #("edge_color", json.int(unique_gift_backdrop_colors.edge_color)),
-    #("symbol_color", json.int(unique_gift_backdrop_colors.symbol_color)),
-    #("text_color", json.int(unique_gift_backdrop_colors.text_color)),
-  ])
-}
-
-pub fn encode_unique_gift_backdrop(
-  unique_gift_backdrop: UniqueGiftBackdrop,
-) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(unique_gift_backdrop.name)),
-    #("colors", encode_unique_gift_backdrop_colors(unique_gift_backdrop.colors)),
-    #("rarity_per_mille", json.int(unique_gift_backdrop.rarity_per_mille)),
-  ])
-}
-
-pub fn encode_unique_gift_colors(unique_gift_colors: UniqueGiftColors) -> Json {
-  json_object_filter_nulls([
-    #(
-      "model_custom_emoji_id",
-      json.string(unique_gift_colors.model_custom_emoji_id),
-    ),
-    #(
-      "symbol_custom_emoji_id",
-      json.string(unique_gift_colors.symbol_custom_emoji_id),
-    ),
-    #(
-      "light_theme_main_color",
-      json.int(unique_gift_colors.light_theme_main_color),
-    ),
-    #(
-      "light_theme_other_colors",
-      json.array(_, json.int)(unique_gift_colors.light_theme_other_colors),
-    ),
-    #(
-      "dark_theme_main_color",
-      json.int(unique_gift_colors.dark_theme_main_color),
-    ),
-    #(
-      "dark_theme_other_colors",
-      json.array(_, json.int)(unique_gift_colors.dark_theme_other_colors),
-    ),
-  ])
-}
-
-pub fn encode_unique_gift(unique_gift: UniqueGift) -> Json {
-  json_object_filter_nulls([
-    #("gift_id", json.string(unique_gift.gift_id)),
-    #("base_name", json.string(unique_gift.base_name)),
-    #("name", json.string(unique_gift.name)),
-    #("number", json.int(unique_gift.number)),
-    #("model", encode_unique_gift_model(unique_gift.model)),
-    #("symbol", encode_unique_gift_symbol(unique_gift.symbol)),
-    #("backdrop", encode_unique_gift_backdrop(unique_gift.backdrop)),
-    #("is_premium", json.nullable(unique_gift.is_premium, json.bool)),
-    #("is_burned", json.nullable(unique_gift.is_burned, json.bool)),
-    #(
-      "is_from_blockchain",
-      json.nullable(unique_gift.is_from_blockchain, json.bool),
-    ),
-    #("colors", json.nullable(unique_gift.colors, encode_unique_gift_colors)),
-    #("publisher_chat", json.nullable(unique_gift.publisher_chat, encode_chat)),
-  ])
-}
-
-pub fn encode_gift_info(gift_info: GiftInfo) -> Json {
-  json_object_filter_nulls([
-    #("gift", encode_gift(gift_info.gift)),
-    #("owned_gift_id", json.nullable(gift_info.owned_gift_id, json.string)),
-    #(
-      "convert_star_count",
-      json.nullable(gift_info.convert_star_count, json.int),
-    ),
-    #(
-      "prepaid_upgrade_star_count",
-      json.nullable(gift_info.prepaid_upgrade_star_count, json.int),
-    ),
-    #(
-      "is_upgrade_separate",
-      json.nullable(gift_info.is_upgrade_separate, json.bool),
-    ),
-    #("can_be_upgraded", json.nullable(gift_info.can_be_upgraded, json.bool)),
-    #("text", json.nullable(gift_info.text, json.string)),
-    #(
-      "entities",
-      json.nullable(gift_info.entities, json.array(_, encode_message_entity)),
-    ),
-    #("is_private", json.nullable(gift_info.is_private, json.bool)),
-    #(
-      "unique_gift_number",
-      json.nullable(gift_info.unique_gift_number, json.int),
-    ),
-  ])
-}
-
-pub fn encode_unique_gift_info(unique_gift_info: UniqueGiftInfo) -> Json {
-  json_object_filter_nulls([
-    #("gift", encode_unique_gift(unique_gift_info.gift)),
-    #("origin", json.string(unique_gift_info.origin)),
-    #(
-      "last_resale_currency",
-      json.nullable(unique_gift_info.last_resale_currency, json.string),
-    ),
-    #(
-      "last_resale_amount",
-      json.nullable(unique_gift_info.last_resale_amount, json.int),
-    ),
-    #(
-      "owned_gift_id",
-      json.nullable(unique_gift_info.owned_gift_id, json.string),
-    ),
-    #(
-      "transfer_star_count",
-      json.nullable(unique_gift_info.transfer_star_count, json.int),
-    ),
-    #(
-      "next_transfer_date",
-      json.nullable(unique_gift_info.next_transfer_date, json.int),
-    ),
-  ])
-}
-
-pub fn encode_owned_gift(owned_gift: OwnedGift) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(owned_gift.type_)),
-    #("gift", encode_gift(owned_gift.gift)),
-    #("owned_gift_id", json.nullable(owned_gift.owned_gift_id, json.string)),
-    #("sender_user", json.nullable(owned_gift.sender_user, encode_user)),
-    #("send_date", json.int(owned_gift.send_date)),
-    #("text", json.nullable(owned_gift.text, json.string)),
-    #(
-      "entities",
-      json.nullable(owned_gift.entities, json.array(_, encode_message_entity)),
-    ),
-    #("is_private", json.nullable(owned_gift.is_private, json.bool)),
-    #("is_saved", json.nullable(owned_gift.is_saved, json.bool)),
-    #("can_be_upgraded", json.nullable(owned_gift.can_be_upgraded, json.bool)),
-    #("was_refunded", json.nullable(owned_gift.was_refunded, json.bool)),
-    #(
-      "convert_star_count",
-      json.nullable(owned_gift.convert_star_count, json.int),
-    ),
-    #(
-      "prepaid_upgrade_star_count",
-      json.nullable(owned_gift.prepaid_upgrade_star_count, json.int),
-    ),
-    #(
-      "is_upgrade_separate",
-      json.nullable(owned_gift.is_upgrade_separate, json.bool),
-    ),
-    #(
-      "unique_gift_number",
-      json.nullable(owned_gift.unique_gift_number, json.int),
+      "shipping_address",
+      json.nullable(order_info.shipping_address, encode_shipping_address),
     ),
   ])
 }
@@ -3542,2080 +4438,38 @@ pub fn encode_owned_gifts(owned_gifts: OwnedGifts) -> Json {
   ])
 }
 
-pub fn encode_bot_access_settings(
-  bot_access_settings: BotAccessSettings,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "is_access_restricted",
-      json.bool(bot_access_settings.is_access_restricted),
-    ),
-    #(
-      "added_users",
-      json.nullable(bot_access_settings.added_users, json.array(_, encode_user)),
-    ),
-  ])
-}
-
-pub fn encode_accepted_gift_types(
-  accepted_gift_types: AcceptedGiftTypes,
-) -> Json {
-  json_object_filter_nulls([
-    #("unlimited_gifts", json.bool(accepted_gift_types.unlimited_gifts)),
-    #("limited_gifts", json.bool(accepted_gift_types.limited_gifts)),
-    #("unique_gifts", json.bool(accepted_gift_types.unique_gifts)),
-    #(
-      "premium_subscription",
-      json.bool(accepted_gift_types.premium_subscription),
-    ),
-    #("gifts_from_channels", json.bool(accepted_gift_types.gifts_from_channels)),
-  ])
-}
-
-pub fn encode_star_amount(star_amount: StarAmount) -> Json {
-  json_object_filter_nulls([
-    #("amount", json.int(star_amount.amount)),
-    #("nanostar_amount", json.nullable(star_amount.nanostar_amount, json.int)),
-  ])
-}
-
-pub fn encode_bot_command(bot_command: BotCommand) -> Json {
-  json_object_filter_nulls([
-    #("command", json.string(bot_command.command)),
-    #("description", json.string(bot_command.description)),
-  ])
-}
-
-pub fn encode_bot_command_scope_default(
-  bot_command_scope_default: BotCommandScopeDefault,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_default.type_)),
-  ])
-}
-
-pub fn encode_bot_command_scope_all_private_chats(
-  bot_command_scope_all_private_chats: BotCommandScopeAllPrivateChats,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_all_private_chats.type_)),
-  ])
-}
-
-pub fn encode_bot_command_scope_all_group_chats(
-  bot_command_scope_all_group_chats: BotCommandScopeAllGroupChats,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_all_group_chats.type_)),
-  ])
-}
-
-pub fn encode_bot_command_scope_all_chat_administrators(
-  bot_command_scope_all_chat_administrators: BotCommandScopeAllChatAdministrators,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_all_chat_administrators.type_)),
-  ])
-}
-
-pub fn encode_bot_command_scope_chat(
-  bot_command_scope_chat: BotCommandScopeChat,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_chat.type_)),
-    #("chat_id", encode_int_or_string(bot_command_scope_chat.chat_id)),
-  ])
-}
-
-pub fn encode_bot_command_scope_chat_administrators(
-  bot_command_scope_chat_administrators: BotCommandScopeChatAdministrators,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_chat_administrators.type_)),
-    #(
-      "chat_id",
-      encode_int_or_string(bot_command_scope_chat_administrators.chat_id),
-    ),
-  ])
-}
-
-pub fn encode_bot_command_scope_chat_member(
-  bot_command_scope_chat_member: BotCommandScopeChatMember,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(bot_command_scope_chat_member.type_)),
-    #("chat_id", encode_int_or_string(bot_command_scope_chat_member.chat_id)),
-    #("user_id", json.int(bot_command_scope_chat_member.user_id)),
-  ])
-}
-
-pub fn encode_bot_name(bot_name: BotName) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(bot_name.name)),
-  ])
-}
-
-pub fn encode_bot_description(bot_description: BotDescription) -> Json {
-  json_object_filter_nulls([
-    #("description", json.string(bot_description.description)),
-  ])
-}
-
-pub fn encode_bot_short_description(
-  bot_short_description: BotShortDescription,
-) -> Json {
-  json_object_filter_nulls([
-    #("short_description", json.string(bot_short_description.short_description)),
-  ])
-}
-
-pub fn encode_menu_button_commands(
-  menu_button_commands: MenuButtonCommands,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(menu_button_commands.type_)),
-  ])
-}
-
-pub fn encode_menu_button_web_app(
-  menu_button_web_app: MenuButtonWebApp,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(menu_button_web_app.type_)),
-    #("text", json.string(menu_button_web_app.text)),
-    #("web_app", encode_web_app_info(menu_button_web_app.web_app)),
-  ])
-}
-
-pub fn encode_menu_button_default(
-  menu_button_default: MenuButtonDefault,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(menu_button_default.type_)),
-  ])
-}
-
-pub fn encode_chat_boost_source_premium(
-  chat_boost_source_premium: ChatBoostSourcePremium,
-) -> Json {
-  json_object_filter_nulls([
-    #("source", json.string(chat_boost_source_premium.source)),
-    #("user", encode_user(chat_boost_source_premium.user)),
-  ])
-}
-
-pub fn encode_chat_boost_source_gift_code(
-  chat_boost_source_gift_code: ChatBoostSourceGiftCode,
-) -> Json {
-  json_object_filter_nulls([
-    #("source", json.string(chat_boost_source_gift_code.source)),
-    #("user", encode_user(chat_boost_source_gift_code.user)),
-  ])
-}
-
-pub fn encode_chat_boost_source_giveaway(
-  chat_boost_source_giveaway: ChatBoostSourceGiveaway,
-) -> Json {
-  json_object_filter_nulls([
-    #("source", json.string(chat_boost_source_giveaway.source)),
-    #(
-      "giveaway_message_id",
-      json.int(chat_boost_source_giveaway.giveaway_message_id),
-    ),
-    #("user", json.nullable(chat_boost_source_giveaway.user, encode_user)),
-    #(
-      "prize_star_count",
-      json.nullable(chat_boost_source_giveaway.prize_star_count, json.int),
-    ),
-    #(
-      "is_unclaimed",
-      json.nullable(chat_boost_source_giveaway.is_unclaimed, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_chat_boost(chat_boost: ChatBoost) -> Json {
-  json_object_filter_nulls([
-    #("boost_id", json.string(chat_boost.boost_id)),
-    #("add_date", json.int(chat_boost.add_date)),
-    #("expiration_date", json.int(chat_boost.expiration_date)),
-    #("source", encode_chat_boost_source(chat_boost.source)),
-  ])
-}
-
-pub fn encode_chat_boost_updated(chat_boost_updated: ChatBoostUpdated) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(chat_boost_updated.chat)),
-    #("boost", encode_chat_boost(chat_boost_updated.boost)),
-  ])
-}
-
-pub fn encode_chat_boost_removed(chat_boost_removed: ChatBoostRemoved) -> Json {
-  json_object_filter_nulls([
-    #("chat", encode_chat(chat_boost_removed.chat)),
-    #("boost_id", json.string(chat_boost_removed.boost_id)),
-    #("remove_date", json.int(chat_boost_removed.remove_date)),
-    #("source", encode_chat_boost_source(chat_boost_removed.source)),
-  ])
-}
-
-pub fn encode_chat_owner_left(chat_owner_left: ChatOwnerLeft) -> Json {
-  json_object_filter_nulls([
-    #("new_owner", json.nullable(chat_owner_left.new_owner, encode_user)),
-  ])
-}
-
-pub fn encode_chat_owner_changed(chat_owner_changed: ChatOwnerChanged) -> Json {
-  json_object_filter_nulls([
-    #("new_owner", encode_user(chat_owner_changed.new_owner)),
-  ])
-}
-
-pub fn encode_user_chat_boosts(user_chat_boosts: UserChatBoosts) -> Json {
-  json_object_filter_nulls([
-    #("boosts", json.array(_, encode_chat_boost)(user_chat_boosts.boosts)),
-  ])
-}
-
-pub fn encode_business_bot_rights(
-  business_bot_rights: BusinessBotRights,
-) -> Json {
-  json_object_filter_nulls([
-    #("can_reply", json.nullable(business_bot_rights.can_reply, json.bool)),
-    #(
-      "can_read_messages",
-      json.nullable(business_bot_rights.can_read_messages, json.bool),
-    ),
-    #(
-      "can_delete_sent_messages",
-      json.nullable(business_bot_rights.can_delete_sent_messages, json.bool),
-    ),
-    #(
-      "can_delete_all_messages",
-      json.nullable(business_bot_rights.can_delete_all_messages, json.bool),
-    ),
-    #(
-      "can_edit_name",
-      json.nullable(business_bot_rights.can_edit_name, json.bool),
-    ),
-    #(
-      "can_edit_bio",
-      json.nullable(business_bot_rights.can_edit_bio, json.bool),
-    ),
-    #(
-      "can_edit_profile_photo",
-      json.nullable(business_bot_rights.can_edit_profile_photo, json.bool),
-    ),
-    #(
-      "can_edit_username",
-      json.nullable(business_bot_rights.can_edit_username, json.bool),
-    ),
-    #(
-      "can_change_gift_settings",
-      json.nullable(business_bot_rights.can_change_gift_settings, json.bool),
-    ),
-    #(
-      "can_view_gifts_and_stars",
-      json.nullable(business_bot_rights.can_view_gifts_and_stars, json.bool),
-    ),
-    #(
-      "can_convert_gifts_to_stars",
-      json.nullable(business_bot_rights.can_convert_gifts_to_stars, json.bool),
-    ),
-    #(
-      "can_transfer_and_upgrade_gifts",
-      json.nullable(
-        business_bot_rights.can_transfer_and_upgrade_gifts,
-        json.bool,
-      ),
-    ),
-    #(
-      "can_transfer_stars",
-      json.nullable(business_bot_rights.can_transfer_stars, json.bool),
-    ),
-    #(
-      "can_manage_stories",
-      json.nullable(business_bot_rights.can_manage_stories, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_business_connection(
-  business_connection: BusinessConnection,
-) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(business_connection.id)),
-    #("user", encode_user(business_connection.user)),
-    #("user_chat_id", json.int(business_connection.user_chat_id)),
-    #("date", json.int(business_connection.date)),
-    #(
-      "rights",
-      json.nullable(business_connection.rights, encode_business_bot_rights),
-    ),
-    #("is_enabled", json.bool(business_connection.is_enabled)),
-  ])
-}
-
-pub fn encode_business_messages_deleted(
-  business_messages_deleted: BusinessMessagesDeleted,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "business_connection_id",
-      json.string(business_messages_deleted.business_connection_id),
-    ),
-    #("chat", encode_chat(business_messages_deleted.chat)),
-    #(
-      "message_ids",
-      json.array(_, json.int)(business_messages_deleted.message_ids),
-    ),
-  ])
-}
-
-pub fn encode_sent_web_app_message(
-  sent_web_app_message: SentWebAppMessage,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "inline_message_id",
-      json.nullable(sent_web_app_message.inline_message_id, json.string),
-    ),
-  ])
-}
-
-pub fn encode_sent_guest_message(sent_guest_message: SentGuestMessage) -> Json {
-  json_object_filter_nulls([
-    #("inline_message_id", json.string(sent_guest_message.inline_message_id)),
-  ])
-}
-
-pub fn encode_prepared_inline_message(
-  prepared_inline_message: PreparedInlineMessage,
-) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(prepared_inline_message.id)),
-    #("expiration_date", json.int(prepared_inline_message.expiration_date)),
-  ])
-}
-
-pub fn encode_prepared_keyboard_button(
-  prepared_keyboard_button: PreparedKeyboardButton,
-) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(prepared_keyboard_button.id)),
-  ])
-}
-
-pub fn encode_response_parameters(
-  response_parameters: ResponseParameters,
-) -> Json {
-  json_object_filter_nulls([
-    #(
-      "migrate_to_chat_id",
-      json.nullable(response_parameters.migrate_to_chat_id, json.int),
-    ),
-    #("retry_after", json.nullable(response_parameters.retry_after, json.int)),
-  ])
-}
-
-pub fn encode_input_media_photo(input_media_photo: InputMediaPhoto) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_photo.type_)),
-    #("media", json.string(input_media_photo.media)),
-    #("caption", json.nullable(input_media_photo.caption, json.string)),
-    #("parse_mode", json.nullable(input_media_photo.parse_mode, json.string)),
-    #(
-      "caption_entities",
-      json.nullable(input_media_photo.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(input_media_photo.show_caption_above_media, json.bool),
-    ),
-    #("has_spoiler", json.nullable(input_media_photo.has_spoiler, json.bool)),
-  ])
-}
-
-pub fn encode_input_media_video(input_media_video: InputMediaVideo) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_video.type_)),
-    #("media", json.string(input_media_video.media)),
-    #("thumbnail", json.nullable(input_media_video.thumbnail, json.string)),
-    #("cover", json.nullable(input_media_video.cover, json.string)),
-    #(
-      "start_timestamp",
-      json.nullable(input_media_video.start_timestamp, json.int),
-    ),
-    #("caption", json.nullable(input_media_video.caption, json.string)),
-    #("parse_mode", json.nullable(input_media_video.parse_mode, json.string)),
-    #(
-      "caption_entities",
-      json.nullable(input_media_video.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(input_media_video.show_caption_above_media, json.bool),
-    ),
-    #("width", json.nullable(input_media_video.width, json.int)),
-    #("height", json.nullable(input_media_video.height, json.int)),
-    #("duration", json.nullable(input_media_video.duration, json.int)),
-    #(
-      "supports_streaming",
-      json.nullable(input_media_video.supports_streaming, json.bool),
-    ),
-    #("has_spoiler", json.nullable(input_media_video.has_spoiler, json.bool)),
-  ])
-}
-
-pub fn encode_input_media_animation(
-  input_media_animation: InputMediaAnimation,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_animation.type_)),
-    #("media", json.string(input_media_animation.media)),
-    #("thumbnail", json.nullable(input_media_animation.thumbnail, json.string)),
-    #("caption", json.nullable(input_media_animation.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(input_media_animation.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(input_media_animation.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(input_media_animation.show_caption_above_media, json.bool),
-    ),
-    #("width", json.nullable(input_media_animation.width, json.int)),
-    #("height", json.nullable(input_media_animation.height, json.int)),
-    #("duration", json.nullable(input_media_animation.duration, json.int)),
-    #(
-      "has_spoiler",
-      json.nullable(input_media_animation.has_spoiler, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_input_media_audio(input_media_audio: InputMediaAudio) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_audio.type_)),
-    #("media", json.string(input_media_audio.media)),
-    #("thumbnail", json.nullable(input_media_audio.thumbnail, json.string)),
-    #("caption", json.nullable(input_media_audio.caption, json.string)),
-    #("parse_mode", json.nullable(input_media_audio.parse_mode, json.string)),
-    #(
-      "caption_entities",
-      json.nullable(input_media_audio.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #("duration", json.nullable(input_media_audio.duration, json.int)),
-    #("performer", json.nullable(input_media_audio.performer, json.string)),
-    #("title", json.nullable(input_media_audio.title, json.string)),
-  ])
-}
-
-pub fn encode_input_media_document(
-  input_media_document: InputMediaDocument,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_document.type_)),
-    #("media", json.string(input_media_document.media)),
-    #("thumbnail", json.nullable(input_media_document.thumbnail, json.string)),
-    #("caption", json.nullable(input_media_document.caption, json.string)),
-    #("parse_mode", json.nullable(input_media_document.parse_mode, json.string)),
-    #(
-      "caption_entities",
-      json.nullable(input_media_document.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "disable_content_type_detection",
-      json.nullable(
-        input_media_document.disable_content_type_detection,
-        json.bool,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_input_media_live_photo(
-  input_media_live_photo: InputMediaLivePhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_live_photo.type_)),
-    #("media", json.string(input_media_live_photo.media)),
-    #("photo", json.string(input_media_live_photo.photo)),
-    #("caption", json.nullable(input_media_live_photo.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(input_media_live_photo.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(input_media_live_photo.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(input_media_live_photo.show_caption_above_media, json.bool),
-    ),
-    #(
-      "has_spoiler",
-      json.nullable(input_media_live_photo.has_spoiler, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_input_media_location(
-  input_media_location: InputMediaLocation,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_location.type_)),
-    #("latitude", json.float(input_media_location.latitude)),
-    #("longitude", json.float(input_media_location.longitude)),
-    #(
-      "horizontal_accuracy",
-      json.nullable(input_media_location.horizontal_accuracy, json.float),
-    ),
-  ])
-}
-
-pub fn encode_input_media_sticker(
-  input_media_sticker: InputMediaSticker,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_sticker.type_)),
-    #("media", json.string(input_media_sticker.media)),
-    #("emoji", json.nullable(input_media_sticker.emoji, json.string)),
-  ])
-}
-
-pub fn encode_input_media_venue(input_media_venue: InputMediaVenue) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_media_venue.type_)),
-    #("latitude", json.float(input_media_venue.latitude)),
-    #("longitude", json.float(input_media_venue.longitude)),
-    #("title", json.string(input_media_venue.title)),
-    #("address", json.string(input_media_venue.address)),
-    #(
-      "foursquare_id",
-      json.nullable(input_media_venue.foursquare_id, json.string),
-    ),
-    #(
-      "foursquare_type",
-      json.nullable(input_media_venue.foursquare_type, json.string),
-    ),
-    #(
-      "google_place_id",
-      json.nullable(input_media_venue.google_place_id, json.string),
-    ),
-    #(
-      "google_place_type",
-      json.nullable(input_media_venue.google_place_type, json.string),
-    ),
-  ])
-}
-
-pub fn encode_input_paid_media_live_photo(
-  input_paid_media_live_photo: InputPaidMediaLivePhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_paid_media_live_photo.type_)),
-    #("media", json.string(input_paid_media_live_photo.media)),
-    #("photo", json.string(input_paid_media_live_photo.photo)),
-  ])
-}
-
-pub fn encode_input_paid_media_photo(
-  input_paid_media_photo: InputPaidMediaPhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_paid_media_photo.type_)),
-    #("media", json.string(input_paid_media_photo.media)),
-  ])
-}
-
-pub fn encode_input_paid_media_video(
-  input_paid_media_video: InputPaidMediaVideo,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_paid_media_video.type_)),
-    #("media", json.string(input_paid_media_video.media)),
-    #("thumbnail", json.nullable(input_paid_media_video.thumbnail, json.string)),
-    #("cover", json.nullable(input_paid_media_video.cover, json.string)),
-    #(
-      "start_timestamp",
-      json.nullable(input_paid_media_video.start_timestamp, json.int),
-    ),
-    #("width", json.nullable(input_paid_media_video.width, json.int)),
-    #("height", json.nullable(input_paid_media_video.height, json.int)),
-    #("duration", json.nullable(input_paid_media_video.duration, json.int)),
-    #(
-      "supports_streaming",
-      json.nullable(input_paid_media_video.supports_streaming, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_input_profile_photo_static(
-  input_profile_photo_static: InputProfilePhotoStatic,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_profile_photo_static.type_)),
-    #("photo", json.string(input_profile_photo_static.photo)),
-  ])
-}
-
-pub fn encode_input_profile_photo_animated(
-  input_profile_photo_animated: InputProfilePhotoAnimated,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_profile_photo_animated.type_)),
-    #("animation", json.string(input_profile_photo_animated.animation)),
-    #(
-      "main_frame_timestamp",
-      json.nullable(
-        input_profile_photo_animated.main_frame_timestamp,
-        json.float,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_input_story_content(
-  input_story_content: InputStoryContent,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_story_content.type_)),
-    #("photo", json.string(input_story_content.photo)),
-  ])
-}
-
-pub fn encode_input_story_content_photo(
-  input_story_content_photo: InputStoryContentPhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_story_content_photo.type_)),
-    #("photo", json.string(input_story_content_photo.photo)),
-  ])
-}
-
-pub fn encode_input_story_content_video(
-  input_story_content_video: InputStoryContentVideo,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(input_story_content_video.type_)),
-    #("video", json.string(input_story_content_video.video)),
-    #("duration", json.nullable(input_story_content_video.duration, json.float)),
-    #(
-      "cover_frame_timestamp",
-      json.nullable(input_story_content_video.cover_frame_timestamp, json.float),
-    ),
-    #(
-      "is_animation",
-      json.nullable(input_story_content_video.is_animation, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_sticker(sticker: Sticker) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(sticker.file_id)),
-    #("file_unique_id", json.string(sticker.file_unique_id)),
-    #("type", json.string(sticker.type_)),
-    #("width", json.int(sticker.width)),
-    #("height", json.int(sticker.height)),
-    #("is_animated", json.bool(sticker.is_animated)),
-    #("is_video", json.bool(sticker.is_video)),
-    #("thumbnail", json.nullable(sticker.thumbnail, encode_photo_size)),
-    #("emoji", json.nullable(sticker.emoji, json.string)),
-    #("set_name", json.nullable(sticker.set_name, json.string)),
-    #(
-      "premium_animation",
-      json.nullable(sticker.premium_animation, encode_file),
-    ),
-    #(
-      "mask_position",
-      json.nullable(sticker.mask_position, encode_mask_position),
-    ),
-    #("custom_emoji_id", json.nullable(sticker.custom_emoji_id, json.string)),
-    #("needs_repainting", json.nullable(sticker.needs_repainting, json.bool)),
-    #("file_size", json.nullable(sticker.file_size, json.int)),
-  ])
-}
-
-pub fn encode_sticker_set(sticker_set: StickerSet) -> Json {
-  json_object_filter_nulls([
-    #("name", json.string(sticker_set.name)),
-    #("title", json.string(sticker_set.title)),
-    #("sticker_type", json.string(sticker_set.sticker_type)),
-    #("stickers", json.array(_, encode_sticker)(sticker_set.stickers)),
-    #("thumbnail", json.nullable(sticker_set.thumbnail, encode_photo_size)),
-  ])
-}
-
-pub fn encode_mask_position(mask_position: MaskPosition) -> Json {
-  json_object_filter_nulls([
-    #("point", json.string(mask_position.point)),
-    #("x_shift", json.float(mask_position.x_shift)),
-    #("y_shift", json.float(mask_position.y_shift)),
-    #("scale", json.float(mask_position.scale)),
-  ])
-}
-
-pub fn encode_input_sticker(input_sticker: InputSticker) -> Json {
-  json_object_filter_nulls([
-    #("sticker", json.string(input_sticker.sticker)),
-    #("format", json.string(input_sticker.format)),
-    #("emoji_list", json.array(_, json.string)(input_sticker.emoji_list)),
-    #(
-      "mask_position",
-      json.nullable(input_sticker.mask_position, encode_mask_position),
-    ),
-    #(
-      "keywords",
-      json.nullable(input_sticker.keywords, json.array(_, json.string)),
-    ),
-  ])
-}
-
-pub fn encode_inline_query(inline_query: InlineQuery) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(inline_query.id)),
-    #("from", encode_user(inline_query.from)),
-    #("query", json.string(inline_query.query)),
-    #("offset", json.string(inline_query.offset)),
-    #("chat_type", json.nullable(inline_query.chat_type, json.string)),
-    #("location", json.nullable(inline_query.location, encode_location)),
-  ])
-}
-
-pub fn encode_inline_query_results_button(
-  inline_query_results_button: InlineQueryResultsButton,
-) -> Json {
-  json_object_filter_nulls([
-    #("text", json.string(inline_query_results_button.text)),
-    #(
-      "web_app",
-      json.nullable(inline_query_results_button.web_app, encode_web_app_info),
-    ),
-    #(
-      "start_parameter",
-      json.nullable(inline_query_results_button.start_parameter, json.string),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_article(
-  inline_query_result_article: InlineQueryResultArticle,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_article.type_)),
-    #("id", json.string(inline_query_result_article.id)),
-    #("title", json.string(inline_query_result_article.title)),
-    #(
-      "input_message_content",
-      encode_input_message_content(
-        inline_query_result_article.input_message_content,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_article.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #("url", json.nullable(inline_query_result_article.url, json.string)),
-    #(
-      "description",
-      json.nullable(inline_query_result_article.description, json.string),
-    ),
-    #(
-      "thumbnail_url",
-      json.nullable(inline_query_result_article.thumbnail_url, json.string),
-    ),
-    #(
-      "thumbnail_width",
-      json.nullable(inline_query_result_article.thumbnail_width, json.int),
-    ),
-    #(
-      "thumbnail_height",
-      json.nullable(inline_query_result_article.thumbnail_height, json.int),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_photo(
-  inline_query_result_photo: InlineQueryResultPhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_photo.type_)),
-    #("id", json.string(inline_query_result_photo.id)),
-    #("photo_url", json.string(inline_query_result_photo.photo_url)),
-    #("thumbnail_url", json.string(inline_query_result_photo.thumbnail_url)),
-    #(
-      "photo_width",
-      json.nullable(inline_query_result_photo.photo_width, json.int),
-    ),
-    #(
-      "photo_height",
-      json.nullable(inline_query_result_photo.photo_height, json.int),
-    ),
-    #("title", json.nullable(inline_query_result_photo.title, json.string)),
-    #(
-      "description",
-      json.nullable(inline_query_result_photo.description, json.string),
-    ),
-    #("caption", json.nullable(inline_query_result_photo.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_photo.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_photo.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_photo.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_photo.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_photo.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_gif(
-  inline_query_result_gif: InlineQueryResultGif,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_gif.type_)),
-    #("id", json.string(inline_query_result_gif.id)),
-    #("gif_url", json.string(inline_query_result_gif.gif_url)),
-    #("gif_width", json.nullable(inline_query_result_gif.gif_width, json.int)),
-    #("gif_height", json.nullable(inline_query_result_gif.gif_height, json.int)),
-    #(
-      "gif_duration",
-      json.nullable(inline_query_result_gif.gif_duration, json.int),
-    ),
-    #("thumbnail_url", json.string(inline_query_result_gif.thumbnail_url)),
-    #(
-      "thumbnail_mime_type",
-      json.nullable(inline_query_result_gif.thumbnail_mime_type, json.string),
-    ),
-    #("title", json.nullable(inline_query_result_gif.title, json.string)),
-    #("caption", json.nullable(inline_query_result_gif.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_gif.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_gif.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(inline_query_result_gif.show_caption_above_media, json.bool),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_gif.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_gif.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_mpeg4_gif(
-  inline_query_result_mpeg4_gif: InlineQueryResultMpeg4Gif,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_mpeg4_gif.type_)),
-    #("id", json.string(inline_query_result_mpeg4_gif.id)),
-    #("mpeg4_url", json.string(inline_query_result_mpeg4_gif.mpeg4_url)),
-    #(
-      "mpeg4_width",
-      json.nullable(inline_query_result_mpeg4_gif.mpeg4_width, json.int),
-    ),
-    #(
-      "mpeg4_height",
-      json.nullable(inline_query_result_mpeg4_gif.mpeg4_height, json.int),
-    ),
-    #(
-      "mpeg4_duration",
-      json.nullable(inline_query_result_mpeg4_gif.mpeg4_duration, json.int),
-    ),
-    #("thumbnail_url", json.string(inline_query_result_mpeg4_gif.thumbnail_url)),
-    #(
-      "thumbnail_mime_type",
-      json.nullable(
-        inline_query_result_mpeg4_gif.thumbnail_mime_type,
-        json.string,
-      ),
-    ),
-    #("title", json.nullable(inline_query_result_mpeg4_gif.title, json.string)),
-    #(
-      "caption",
-      json.nullable(inline_query_result_mpeg4_gif.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_mpeg4_gif.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_mpeg4_gif.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_mpeg4_gif.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_mpeg4_gif.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_mpeg4_gif.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_video(
-  inline_query_result_video: InlineQueryResultVideo,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_video.type_)),
-    #("id", json.string(inline_query_result_video.id)),
-    #("video_url", json.string(inline_query_result_video.video_url)),
-    #("mime_type", json.string(inline_query_result_video.mime_type)),
-    #("thumbnail_url", json.string(inline_query_result_video.thumbnail_url)),
-    #("title", json.string(inline_query_result_video.title)),
-    #("caption", json.nullable(inline_query_result_video.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_video.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_video.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_video.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "video_width",
-      json.nullable(inline_query_result_video.video_width, json.int),
-    ),
-    #(
-      "video_height",
-      json.nullable(inline_query_result_video.video_height, json.int),
-    ),
-    #(
-      "video_duration",
-      json.nullable(inline_query_result_video.video_duration, json.int),
-    ),
-    #(
-      "description",
-      json.nullable(inline_query_result_video.description, json.string),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_video.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_video.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_audio(
-  inline_query_result_audio: InlineQueryResultAudio,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_audio.type_)),
-    #("id", json.string(inline_query_result_audio.id)),
-    #("audio_url", json.string(inline_query_result_audio.audio_url)),
-    #("title", json.string(inline_query_result_audio.title)),
-    #("caption", json.nullable(inline_query_result_audio.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_audio.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_audio.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "performer",
-      json.nullable(inline_query_result_audio.performer, json.string),
-    ),
-    #(
-      "audio_duration",
-      json.nullable(inline_query_result_audio.audio_duration, json.int),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_audio.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_audio.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_voice(
-  inline_query_result_voice: InlineQueryResultVoice,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_voice.type_)),
-    #("id", json.string(inline_query_result_voice.id)),
-    #("voice_url", json.string(inline_query_result_voice.voice_url)),
-    #("title", json.string(inline_query_result_voice.title)),
-    #("caption", json.nullable(inline_query_result_voice.caption, json.string)),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_voice.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_voice.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "voice_duration",
-      json.nullable(inline_query_result_voice.voice_duration, json.int),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_voice.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_voice.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_document(
-  inline_query_result_document: InlineQueryResultDocument,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_document.type_)),
-    #("id", json.string(inline_query_result_document.id)),
-    #("title", json.string(inline_query_result_document.title)),
-    #(
-      "caption",
-      json.nullable(inline_query_result_document.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_document.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_document.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #("document_url", json.string(inline_query_result_document.document_url)),
-    #("mime_type", json.string(inline_query_result_document.mime_type)),
-    #(
-      "description",
-      json.nullable(inline_query_result_document.description, json.string),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_document.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_document.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-    #(
-      "thumbnail_url",
-      json.nullable(inline_query_result_document.thumbnail_url, json.string),
-    ),
-    #(
-      "thumbnail_width",
-      json.nullable(inline_query_result_document.thumbnail_width, json.int),
-    ),
-    #(
-      "thumbnail_height",
-      json.nullable(inline_query_result_document.thumbnail_height, json.int),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_location(
-  inline_query_result_location: InlineQueryResultLocation,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_location.type_)),
-    #("id", json.string(inline_query_result_location.id)),
-    #("latitude", json.float(inline_query_result_location.latitude)),
-    #("longitude", json.float(inline_query_result_location.longitude)),
-    #("title", json.string(inline_query_result_location.title)),
-    #(
-      "horizontal_accuracy",
-      json.nullable(
-        inline_query_result_location.horizontal_accuracy,
-        json.float,
-      ),
-    ),
-    #(
-      "live_period",
-      json.nullable(inline_query_result_location.live_period, json.int),
-    ),
-    #("heading", json.nullable(inline_query_result_location.heading, json.int)),
-    #(
-      "proximity_alert_radius",
-      json.nullable(
-        inline_query_result_location.proximity_alert_radius,
-        json.int,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_location.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_location.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-    #(
-      "thumbnail_url",
-      json.nullable(inline_query_result_location.thumbnail_url, json.string),
-    ),
-    #(
-      "thumbnail_width",
-      json.nullable(inline_query_result_location.thumbnail_width, json.int),
-    ),
-    #(
-      "thumbnail_height",
-      json.nullable(inline_query_result_location.thumbnail_height, json.int),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_venue(
-  inline_query_result_venue: InlineQueryResultVenue,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_venue.type_)),
-    #("id", json.string(inline_query_result_venue.id)),
-    #("latitude", json.float(inline_query_result_venue.latitude)),
-    #("longitude", json.float(inline_query_result_venue.longitude)),
-    #("title", json.string(inline_query_result_venue.title)),
-    #("address", json.string(inline_query_result_venue.address)),
-    #(
-      "foursquare_id",
-      json.nullable(inline_query_result_venue.foursquare_id, json.string),
-    ),
-    #(
-      "foursquare_type",
-      json.nullable(inline_query_result_venue.foursquare_type, json.string),
-    ),
-    #(
-      "google_place_id",
-      json.nullable(inline_query_result_venue.google_place_id, json.string),
-    ),
-    #(
-      "google_place_type",
-      json.nullable(inline_query_result_venue.google_place_type, json.string),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_venue.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_venue.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-    #(
-      "thumbnail_url",
-      json.nullable(inline_query_result_venue.thumbnail_url, json.string),
-    ),
-    #(
-      "thumbnail_width",
-      json.nullable(inline_query_result_venue.thumbnail_width, json.int),
-    ),
-    #(
-      "thumbnail_height",
-      json.nullable(inline_query_result_venue.thumbnail_height, json.int),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_contact(
-  inline_query_result_contact: InlineQueryResultContact,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_contact.type_)),
-    #("id", json.string(inline_query_result_contact.id)),
-    #("phone_number", json.string(inline_query_result_contact.phone_number)),
-    #("first_name", json.string(inline_query_result_contact.first_name)),
-    #(
-      "last_name",
-      json.nullable(inline_query_result_contact.last_name, json.string),
-    ),
-    #("vcard", json.nullable(inline_query_result_contact.vcard, json.string)),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_contact.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_contact.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-    #(
-      "thumbnail_url",
-      json.nullable(inline_query_result_contact.thumbnail_url, json.string),
-    ),
-    #(
-      "thumbnail_width",
-      json.nullable(inline_query_result_contact.thumbnail_width, json.int),
-    ),
-    #(
-      "thumbnail_height",
-      json.nullable(inline_query_result_contact.thumbnail_height, json.int),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_game(
-  inline_query_result_game: InlineQueryResultGame,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_game.type_)),
-    #("id", json.string(inline_query_result_game.id)),
-    #("game_short_name", json.string(inline_query_result_game.game_short_name)),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_game.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_photo(
-  inline_query_result_cached_photo: InlineQueryResultCachedPhoto,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_photo.type_)),
-    #("id", json.string(inline_query_result_cached_photo.id)),
-    #(
-      "photo_file_id",
-      json.string(inline_query_result_cached_photo.photo_file_id),
-    ),
-    #(
-      "title",
-      json.nullable(inline_query_result_cached_photo.title, json.string),
-    ),
-    #(
-      "description",
-      json.nullable(inline_query_result_cached_photo.description, json.string),
-    ),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_photo.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_photo.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_photo.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_cached_photo.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_photo.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_photo.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_gif(
-  inline_query_result_cached_gif: InlineQueryResultCachedGif,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_gif.type_)),
-    #("id", json.string(inline_query_result_cached_gif.id)),
-    #("gif_file_id", json.string(inline_query_result_cached_gif.gif_file_id)),
-    #("title", json.nullable(inline_query_result_cached_gif.title, json.string)),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_gif.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_gif.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(inline_query_result_cached_gif.caption_entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_cached_gif.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_gif.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_gif.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_mpeg4_gif(
-  inline_query_result_cached_mpeg4_gif: InlineQueryResultCachedMpeg4Gif,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_mpeg4_gif.type_)),
-    #("id", json.string(inline_query_result_cached_mpeg4_gif.id)),
-    #(
-      "mpeg4_file_id",
-      json.string(inline_query_result_cached_mpeg4_gif.mpeg4_file_id),
-    ),
-    #(
-      "title",
-      json.nullable(inline_query_result_cached_mpeg4_gif.title, json.string),
-    ),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_mpeg4_gif.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(
-        inline_query_result_cached_mpeg4_gif.parse_mode,
-        json.string,
-      ),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_mpeg4_gif.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_cached_mpeg4_gif.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_mpeg4_gif.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_mpeg4_gif.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_sticker(
-  inline_query_result_cached_sticker: InlineQueryResultCachedSticker,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_sticker.type_)),
-    #("id", json.string(inline_query_result_cached_sticker.id)),
-    #(
-      "sticker_file_id",
-      json.string(inline_query_result_cached_sticker.sticker_file_id),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_sticker.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_sticker.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_document(
-  inline_query_result_cached_document: InlineQueryResultCachedDocument,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_document.type_)),
-    #("id", json.string(inline_query_result_cached_document.id)),
-    #("title", json.string(inline_query_result_cached_document.title)),
-    #(
-      "document_file_id",
-      json.string(inline_query_result_cached_document.document_file_id),
-    ),
-    #(
-      "description",
-      json.nullable(
-        inline_query_result_cached_document.description,
-        json.string,
-      ),
-    ),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_document.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_document.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_document.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_document.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_document.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_video(
-  inline_query_result_cached_video: InlineQueryResultCachedVideo,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_video.type_)),
-    #("id", json.string(inline_query_result_cached_video.id)),
-    #(
-      "video_file_id",
-      json.string(inline_query_result_cached_video.video_file_id),
-    ),
-    #("title", json.string(inline_query_result_cached_video.title)),
-    #(
-      "description",
-      json.nullable(inline_query_result_cached_video.description, json.string),
-    ),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_video.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_video.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_video.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "show_caption_above_media",
-      json.nullable(
-        inline_query_result_cached_video.show_caption_above_media,
-        json.bool,
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_video.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_video.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_voice(
-  inline_query_result_cached_voice: InlineQueryResultCachedVoice,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_voice.type_)),
-    #("id", json.string(inline_query_result_cached_voice.id)),
-    #(
-      "voice_file_id",
-      json.string(inline_query_result_cached_voice.voice_file_id),
-    ),
-    #("title", json.string(inline_query_result_cached_voice.title)),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_voice.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_voice.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_voice.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_voice.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_voice.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_inline_query_result_cached_audio(
-  inline_query_result_cached_audio: InlineQueryResultCachedAudio,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(inline_query_result_cached_audio.type_)),
-    #("id", json.string(inline_query_result_cached_audio.id)),
-    #(
-      "audio_file_id",
-      json.string(inline_query_result_cached_audio.audio_file_id),
-    ),
-    #(
-      "caption",
-      json.nullable(inline_query_result_cached_audio.caption, json.string),
-    ),
-    #(
-      "parse_mode",
-      json.nullable(inline_query_result_cached_audio.parse_mode, json.string),
-    ),
-    #(
-      "caption_entities",
-      json.nullable(
-        inline_query_result_cached_audio.caption_entities,
-        json.array(_, encode_message_entity),
-      ),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(
-        inline_query_result_cached_audio.reply_markup,
-        encode_inline_keyboard_markup,
-      ),
-    ),
-    #(
-      "input_message_content",
-      json.nullable(
-        inline_query_result_cached_audio.input_message_content,
-        encode_input_message_content,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_input_text_message_content(
-  input_text_message_content: InputTextMessageContent,
-) -> Json {
+pub fn encode_paid_media_info(paid_media_info: PaidMediaInfo) -> Json {
   json_object_filter_nulls([
-    #("message_text", json.string(input_text_message_content.message_text)),
+    #("star_count", json.int(paid_media_info.star_count)),
     #(
-      "parse_mode",
-      json.nullable(input_text_message_content.parse_mode, json.string),
+      "paid_media",
+      json.array(_, encode_paid_media)(paid_media_info.paid_media),
     ),
-    #(
-      "entities",
-      json.nullable(input_text_message_content.entities, json.array(
-        _,
-        encode_message_entity,
-      )),
-    ),
-    #(
-      "link_preview_options",
-      json.nullable(
-        input_text_message_content.link_preview_options,
-        encode_link_preview_options,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_input_location_message_content(
-  input_location_message_content: InputLocationMessageContent,
-) -> Json {
-  json_object_filter_nulls([
-    #("latitude", json.float(input_location_message_content.latitude)),
-    #("longitude", json.float(input_location_message_content.longitude)),
-    #(
-      "horizontal_accuracy",
-      json.nullable(
-        input_location_message_content.horizontal_accuracy,
-        json.float,
-      ),
-    ),
-    #(
-      "live_period",
-      json.nullable(input_location_message_content.live_period, json.int),
-    ),
-    #(
-      "heading",
-      json.nullable(input_location_message_content.heading, json.int),
-    ),
-    #(
-      "proximity_alert_radius",
-      json.nullable(
-        input_location_message_content.proximity_alert_radius,
-        json.int,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_input_venue_message_content(
-  input_venue_message_content: InputVenueMessageContent,
-) -> Json {
-  json_object_filter_nulls([
-    #("latitude", json.float(input_venue_message_content.latitude)),
-    #("longitude", json.float(input_venue_message_content.longitude)),
-    #("title", json.string(input_venue_message_content.title)),
-    #("address", json.string(input_venue_message_content.address)),
-    #(
-      "foursquare_id",
-      json.nullable(input_venue_message_content.foursquare_id, json.string),
-    ),
-    #(
-      "foursquare_type",
-      json.nullable(input_venue_message_content.foursquare_type, json.string),
-    ),
-    #(
-      "google_place_id",
-      json.nullable(input_venue_message_content.google_place_id, json.string),
-    ),
-    #(
-      "google_place_type",
-      json.nullable(input_venue_message_content.google_place_type, json.string),
-    ),
-  ])
-}
-
-pub fn encode_input_contact_message_content(
-  input_contact_message_content: InputContactMessageContent,
-) -> Json {
-  json_object_filter_nulls([
-    #("phone_number", json.string(input_contact_message_content.phone_number)),
-    #("first_name", json.string(input_contact_message_content.first_name)),
-    #(
-      "last_name",
-      json.nullable(input_contact_message_content.last_name, json.string),
-    ),
-    #("vcard", json.nullable(input_contact_message_content.vcard, json.string)),
-  ])
-}
-
-pub fn encode_input_invoice_message_content(
-  input_invoice_message_content: InputInvoiceMessageContent,
-) -> Json {
-  json_object_filter_nulls([
-    #("title", json.string(input_invoice_message_content.title)),
-    #("description", json.string(input_invoice_message_content.description)),
-    #("payload", json.string(input_invoice_message_content.payload)),
-    #(
-      "provider_token",
-      json.nullable(input_invoice_message_content.provider_token, json.string),
-    ),
-    #("currency", json.string(input_invoice_message_content.currency)),
-    #(
-      "prices",
-      json.array(_, encode_labeled_price)(input_invoice_message_content.prices),
-    ),
-    #(
-      "max_tip_amount",
-      json.nullable(input_invoice_message_content.max_tip_amount, json.int),
-    ),
-    #(
-      "suggested_tip_amounts",
-      json.nullable(
-        input_invoice_message_content.suggested_tip_amounts,
-        json.array(_, json.int),
-      ),
-    ),
-    #(
-      "provider_data",
-      json.nullable(input_invoice_message_content.provider_data, json.string),
-    ),
-    #(
-      "photo_url",
-      json.nullable(input_invoice_message_content.photo_url, json.string),
-    ),
-    #(
-      "photo_size",
-      json.nullable(input_invoice_message_content.photo_size, json.int),
-    ),
-    #(
-      "photo_width",
-      json.nullable(input_invoice_message_content.photo_width, json.int),
-    ),
-    #(
-      "photo_height",
-      json.nullable(input_invoice_message_content.photo_height, json.int),
-    ),
-    #(
-      "need_name",
-      json.nullable(input_invoice_message_content.need_name, json.bool),
-    ),
-    #(
-      "need_phone_number",
-      json.nullable(input_invoice_message_content.need_phone_number, json.bool),
-    ),
-    #(
-      "need_email",
-      json.nullable(input_invoice_message_content.need_email, json.bool),
-    ),
-    #(
-      "need_shipping_address",
-      json.nullable(
-        input_invoice_message_content.need_shipping_address,
-        json.bool,
-      ),
-    ),
-    #(
-      "send_phone_number_to_provider",
-      json.nullable(
-        input_invoice_message_content.send_phone_number_to_provider,
-        json.bool,
-      ),
-    ),
-    #(
-      "send_email_to_provider",
-      json.nullable(
-        input_invoice_message_content.send_email_to_provider,
-        json.bool,
-      ),
-    ),
-    #(
-      "is_flexible",
-      json.nullable(input_invoice_message_content.is_flexible, json.bool),
-    ),
-  ])
-}
-
-pub fn encode_chosen_inline_result(
-  chosen_inline_result: ChosenInlineResult,
-) -> Json {
-  json_object_filter_nulls([
-    #("result_id", json.string(chosen_inline_result.result_id)),
-    #("from", encode_user(chosen_inline_result.from)),
-    #("location", json.nullable(chosen_inline_result.location, encode_location)),
-    #(
-      "inline_message_id",
-      json.nullable(chosen_inline_result.inline_message_id, json.string),
-    ),
-    #("query", json.string(chosen_inline_result.query)),
-  ])
-}
-
-pub fn encode_labeled_price(labeled_price: LabeledPrice) -> Json {
-  json_object_filter_nulls([
-    #("label", json.string(labeled_price.label)),
-    #("amount", json.int(labeled_price.amount)),
-  ])
-}
-
-pub fn encode_invoice(invoice: Invoice) -> Json {
-  json_object_filter_nulls([
-    #("title", json.string(invoice.title)),
-    #("description", json.string(invoice.description)),
-    #("start_parameter", json.string(invoice.start_parameter)),
-    #("currency", json.string(invoice.currency)),
-    #("total_amount", json.int(invoice.total_amount)),
-  ])
-}
-
-pub fn encode_shipping_address(shipping_address: ShippingAddress) -> Json {
-  json_object_filter_nulls([
-    #("country_code", json.string(shipping_address.country_code)),
-    #("state", json.string(shipping_address.state)),
-    #("city", json.string(shipping_address.city)),
-    #("street_line1", json.string(shipping_address.street_line1)),
-    #("street_line2", json.string(shipping_address.street_line2)),
-    #("post_code", json.string(shipping_address.post_code)),
-  ])
-}
-
-pub fn encode_order_info(order_info: OrderInfo) -> Json {
-  json_object_filter_nulls([
-    #("name", json.nullable(order_info.name, json.string)),
-    #("phone_number", json.nullable(order_info.phone_number, json.string)),
-    #("email", json.nullable(order_info.email, json.string)),
-    #(
-      "shipping_address",
-      json.nullable(order_info.shipping_address, encode_shipping_address),
-    ),
-  ])
-}
-
-pub fn encode_shipping_option(shipping_option: ShippingOption) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(shipping_option.id)),
-    #("title", json.string(shipping_option.title)),
-    #("prices", json.array(_, encode_labeled_price)(shipping_option.prices)),
   ])
 }
 
-pub fn encode_successful_payment(
-  successful_payment: SuccessfulPayment,
+pub fn encode_paid_media_live_photo(
+  paid_media_live_photo: PaidMediaLivePhoto,
 ) -> Json {
-  json_object_filter_nulls([
-    #("currency", json.string(successful_payment.currency)),
-    #("total_amount", json.int(successful_payment.total_amount)),
-    #("invoice_payload", json.string(successful_payment.invoice_payload)),
-    #(
-      "subscription_expiration_date",
-      json.nullable(successful_payment.subscription_expiration_date, json.int),
-    ),
-    #("is_recurring", json.nullable(successful_payment.is_recurring, json.bool)),
-    #(
-      "is_first_recurring",
-      json.nullable(successful_payment.is_first_recurring, json.bool),
-    ),
-    #(
-      "shipping_option_id",
-      json.nullable(successful_payment.shipping_option_id, json.string),
-    ),
-    #(
-      "order_info",
-      json.nullable(successful_payment.order_info, encode_order_info),
-    ),
-    #(
-      "telegram_payment_charge_id",
-      json.string(successful_payment.telegram_payment_charge_id),
-    ),
-    #(
-      "provider_payment_charge_id",
-      json.string(successful_payment.provider_payment_charge_id),
-    ),
-  ])
-}
-
-pub fn encode_refunded_payment(refunded_payment: RefundedPayment) -> Json {
   json_object_filter_nulls([
-    #("currency", json.string(refunded_payment.currency)),
-    #("total_amount", json.int(refunded_payment.total_amount)),
-    #("invoice_payload", json.string(refunded_payment.invoice_payload)),
-    #(
-      "telegram_payment_charge_id",
-      json.string(refunded_payment.telegram_payment_charge_id),
-    ),
-    #(
-      "provider_payment_charge_id",
-      json.nullable(refunded_payment.provider_payment_charge_id, json.string),
-    ),
+    #("type", json.string(paid_media_live_photo.type_)),
+    #("live_photo", encode_live_photo(paid_media_live_photo.live_photo)),
   ])
 }
 
-pub fn encode_shipping_query(shipping_query: ShippingQuery) -> Json {
+pub fn encode_paid_media_photo(paid_media_photo: PaidMediaPhoto) -> Json {
   json_object_filter_nulls([
-    #("id", json.string(shipping_query.id)),
-    #("from", encode_user(shipping_query.from)),
-    #("invoice_payload", json.string(shipping_query.invoice_payload)),
-    #(
-      "shipping_address",
-      encode_shipping_address(shipping_query.shipping_address),
-    ),
+    #("type", json.string(paid_media_photo.type_)),
+    #("photo", json.array(_, encode_photo_size)(paid_media_photo.photo)),
   ])
 }
 
-pub fn encode_pre_checkout_query(pre_checkout_query: PreCheckoutQuery) -> Json {
+pub fn encode_paid_media_preview(paid_media_preview: PaidMediaPreview) -> Json {
   json_object_filter_nulls([
-    #("id", json.string(pre_checkout_query.id)),
-    #("from", encode_user(pre_checkout_query.from)),
-    #("currency", json.string(pre_checkout_query.currency)),
-    #("total_amount", json.int(pre_checkout_query.total_amount)),
-    #("invoice_payload", json.string(pre_checkout_query.invoice_payload)),
-    #(
-      "shipping_option_id",
-      json.nullable(pre_checkout_query.shipping_option_id, json.string),
-    ),
-    #(
-      "order_info",
-      json.nullable(pre_checkout_query.order_info, encode_order_info),
-    ),
+    #("type", json.string(paid_media_preview.type_)),
+    #("width", json.nullable(paid_media_preview.width, json.int)),
+    #("height", json.nullable(paid_media_preview.height, json.int)),
+    #("duration", json.nullable(paid_media_preview.duration, json.int)),
   ])
 }
 
@@ -5631,189 +4485,20 @@ pub fn encode_paid_media_purchased(
   ])
 }
 
-pub fn encode_revenue_withdrawal_state_pending(
-  revenue_withdrawal_state_pending: RevenueWithdrawalStatePending,
+pub fn encode_paid_media_video(paid_media_video: PaidMediaVideo) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(paid_media_video.type_)),
+    #("video", encode_video(paid_media_video.video)),
+  ])
+}
+
+pub fn encode_paid_message_price_changed(
+  paid_message_price_changed: PaidMessagePriceChanged,
 ) -> Json {
   json_object_filter_nulls([
-    #("type", json.string(revenue_withdrawal_state_pending.type_)),
-  ])
-}
-
-pub fn encode_revenue_withdrawal_state_succeeded(
-  revenue_withdrawal_state_succeeded: RevenueWithdrawalStateSucceeded,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(revenue_withdrawal_state_succeeded.type_)),
-    #("date", json.int(revenue_withdrawal_state_succeeded.date)),
-    #("url", json.string(revenue_withdrawal_state_succeeded.url)),
-  ])
-}
-
-pub fn encode_revenue_withdrawal_state_failed(
-  revenue_withdrawal_state_failed: RevenueWithdrawalStateFailed,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(revenue_withdrawal_state_failed.type_)),
-  ])
-}
-
-pub fn encode_affiliate_info(affiliate_info: AffiliateInfo) -> Json {
-  json_object_filter_nulls([
     #(
-      "affiliate_user",
-      json.nullable(affiliate_info.affiliate_user, encode_user),
-    ),
-    #(
-      "affiliate_chat",
-      json.nullable(affiliate_info.affiliate_chat, encode_chat),
-    ),
-    #("commission_per_mille", json.int(affiliate_info.commission_per_mille)),
-    #("amount", json.int(affiliate_info.amount)),
-    #(
-      "nanostar_amount",
-      json.nullable(affiliate_info.nanostar_amount, json.int),
-    ),
-  ])
-}
-
-pub fn encode_transaction_partner_user(
-  transaction_partner_user: TransactionPartnerUser,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_user.type_)),
-    #(
-      "transaction_type",
-      json.string(transaction_partner_user.transaction_type),
-    ),
-    #("user", encode_user(transaction_partner_user.user)),
-    #(
-      "affiliate",
-      json.nullable(transaction_partner_user.affiliate, encode_affiliate_info),
-    ),
-    #(
-      "invoice_payload",
-      json.nullable(transaction_partner_user.invoice_payload, json.string),
-    ),
-    #(
-      "subscription_period",
-      json.nullable(transaction_partner_user.subscription_period, json.int),
-    ),
-    #(
-      "paid_media",
-      json.nullable(transaction_partner_user.paid_media, json.array(
-        _,
-        encode_paid_media,
-      )),
-    ),
-    #(
-      "paid_media_payload",
-      json.nullable(transaction_partner_user.paid_media_payload, json.string),
-    ),
-    #("gift", json.nullable(transaction_partner_user.gift, encode_gift)),
-    #(
-      "premium_subscription_duration",
-      json.nullable(
-        transaction_partner_user.premium_subscription_duration,
-        json.int,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_transaction_partner_chat(
-  transaction_partner_chat: TransactionPartnerChat,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_chat.type_)),
-    #("chat", encode_chat(transaction_partner_chat.chat)),
-    #("gift", json.nullable(transaction_partner_chat.gift, encode_gift)),
-  ])
-}
-
-pub fn encode_transaction_partner_affiliate_program(
-  transaction_partner_affiliate_program: TransactionPartnerAffiliateProgram,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_affiliate_program.type_)),
-    #(
-      "sponsor_user",
-      json.nullable(
-        transaction_partner_affiliate_program.sponsor_user,
-        encode_user,
-      ),
-    ),
-    #(
-      "commission_per_mille",
-      json.int(transaction_partner_affiliate_program.commission_per_mille),
-    ),
-  ])
-}
-
-pub fn encode_transaction_partner_fragment(
-  transaction_partner_fragment: TransactionPartnerFragment,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_fragment.type_)),
-    #(
-      "withdrawal_state",
-      json.nullable(
-        transaction_partner_fragment.withdrawal_state,
-        encode_revenue_withdrawal_state,
-      ),
-    ),
-  ])
-}
-
-pub fn encode_transaction_partner_telegram_ads(
-  transaction_partner_telegram_ads: TransactionPartnerTelegramAds,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_telegram_ads.type_)),
-  ])
-}
-
-pub fn encode_transaction_partner_telegram_api(
-  transaction_partner_telegram_api: TransactionPartnerTelegramApi,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_telegram_api.type_)),
-    #("request_count", json.int(transaction_partner_telegram_api.request_count)),
-  ])
-}
-
-pub fn encode_transaction_partner_other(
-  transaction_partner_other: TransactionPartnerOther,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(transaction_partner_other.type_)),
-  ])
-}
-
-pub fn encode_star_transaction(star_transaction: StarTransaction) -> Json {
-  json_object_filter_nulls([
-    #("id", json.string(star_transaction.id)),
-    #("amount", json.int(star_transaction.amount)),
-    #(
-      "nanostar_amount",
-      json.nullable(star_transaction.nanostar_amount, json.int),
-    ),
-    #("date", json.int(star_transaction.date)),
-    #(
-      "source",
-      json.nullable(star_transaction.source, encode_transaction_partner),
-    ),
-    #(
-      "receiver",
-      json.nullable(star_transaction.receiver, encode_transaction_partner),
-    ),
-  ])
-}
-
-pub fn encode_star_transactions(star_transactions: StarTransactions) -> Json {
-  json_object_filter_nulls([
-    #(
-      "transactions",
-      json.array(_, encode_star_transaction)(star_transactions.transactions),
+      "paid_message_star_count",
+      json.int(paid_message_price_changed.paid_message_star_count),
     ),
   ])
 }
@@ -5828,69 +4513,6 @@ pub fn encode_passport_data(passport_data: PassportData) -> Json {
   ])
 }
 
-pub fn encode_passport_file(passport_file: PassportFile) -> Json {
-  json_object_filter_nulls([
-    #("file_id", json.string(passport_file.file_id)),
-    #("file_unique_id", json.string(passport_file.file_unique_id)),
-    #("file_size", json.int(passport_file.file_size)),
-    #("file_date", json.int(passport_file.file_date)),
-  ])
-}
-
-pub fn encode_encrypted_passport_element(
-  encrypted_passport_element: EncryptedPassportElement,
-) -> Json {
-  json_object_filter_nulls([
-    #("type", json.string(encrypted_passport_element.type_)),
-    #("data", json.nullable(encrypted_passport_element.data, json.string)),
-    #(
-      "phone_number",
-      json.nullable(encrypted_passport_element.phone_number, json.string),
-    ),
-    #("email", json.nullable(encrypted_passport_element.email, json.string)),
-    #(
-      "files",
-      json.nullable(encrypted_passport_element.files, json.array(
-        _,
-        encode_passport_file,
-      )),
-    ),
-    #(
-      "front_side",
-      json.nullable(encrypted_passport_element.front_side, encode_passport_file),
-    ),
-    #(
-      "reverse_side",
-      json.nullable(
-        encrypted_passport_element.reverse_side,
-        encode_passport_file,
-      ),
-    ),
-    #(
-      "selfie",
-      json.nullable(encrypted_passport_element.selfie, encode_passport_file),
-    ),
-    #(
-      "translation",
-      json.nullable(encrypted_passport_element.translation, json.array(
-        _,
-        encode_passport_file,
-      )),
-    ),
-    #("hash", json.string(encrypted_passport_element.hash)),
-  ])
-}
-
-pub fn encode_encrypted_credentials(
-  encrypted_credentials: EncryptedCredentials,
-) -> Json {
-  json_object_filter_nulls([
-    #("data", json.string(encrypted_credentials.data)),
-    #("hash", json.string(encrypted_credentials.hash)),
-    #("secret", json.string(encrypted_credentials.secret)),
-  ])
-}
-
 pub fn encode_passport_element_error_data_field(
   passport_element_error_data_field: PassportElementErrorDataField,
 ) -> Json {
@@ -5900,6 +4522,31 @@ pub fn encode_passport_element_error_data_field(
     #("field_name", json.string(passport_element_error_data_field.field_name)),
     #("data_hash", json.string(passport_element_error_data_field.data_hash)),
     #("message", json.string(passport_element_error_data_field.message)),
+  ])
+}
+
+pub fn encode_passport_element_error_file(
+  passport_element_error_file: PassportElementErrorFile,
+) -> Json {
+  json_object_filter_nulls([
+    #("source", json.string(passport_element_error_file.source)),
+    #("type", json.string(passport_element_error_file.type_)),
+    #("file_hash", json.string(passport_element_error_file.file_hash)),
+    #("message", json.string(passport_element_error_file.message)),
+  ])
+}
+
+pub fn encode_passport_element_error_files(
+  passport_element_error_files: PassportElementErrorFiles,
+) -> Json {
+  json_object_filter_nulls([
+    #("source", json.string(passport_element_error_files.source)),
+    #("type", json.string(passport_element_error_files.type_)),
+    #(
+      "file_hashes",
+      json.array(_, json.string)(passport_element_error_files.file_hashes),
+    ),
+    #("message", json.string(passport_element_error_files.message)),
   ])
 }
 
@@ -5933,31 +4580,6 @@ pub fn encode_passport_element_error_selfie(
     #("type", json.string(passport_element_error_selfie.type_)),
     #("file_hash", json.string(passport_element_error_selfie.file_hash)),
     #("message", json.string(passport_element_error_selfie.message)),
-  ])
-}
-
-pub fn encode_passport_element_error_file(
-  passport_element_error_file: PassportElementErrorFile,
-) -> Json {
-  json_object_filter_nulls([
-    #("source", json.string(passport_element_error_file.source)),
-    #("type", json.string(passport_element_error_file.type_)),
-    #("file_hash", json.string(passport_element_error_file.file_hash)),
-    #("message", json.string(passport_element_error_file.message)),
-  ])
-}
-
-pub fn encode_passport_element_error_files(
-  passport_element_error_files: PassportElementErrorFiles,
-) -> Json {
-  json_object_filter_nulls([
-    #("source", json.string(passport_element_error_files.source)),
-    #("type", json.string(passport_element_error_files.type_)),
-    #(
-      "file_hashes",
-      json.array(_, json.string)(passport_element_error_files.file_hashes),
-    ),
-    #("message", json.string(passport_element_error_files.message)),
   ])
 }
 
@@ -6005,95 +4627,1367 @@ pub fn encode_passport_element_error_unspecified(
   ])
 }
 
-pub fn encode_game(game: Game) -> Json {
+pub fn encode_passport_file(passport_file: PassportFile) -> Json {
   json_object_filter_nulls([
-    #("title", json.string(game.title)),
-    #("description", json.string(game.description)),
-    #("photo", json.array(_, encode_photo_size)(game.photo)),
-    #("text", json.nullable(game.text, json.string)),
+    #("file_id", json.string(passport_file.file_id)),
+    #("file_unique_id", json.string(passport_file.file_unique_id)),
+    #("file_size", json.int(passport_file.file_size)),
+    #("file_date", json.int(passport_file.file_date)),
+  ])
+}
+
+pub fn encode_photo_size(photo_size: PhotoSize) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(photo_size.file_id)),
+    #("file_unique_id", json.string(photo_size.file_unique_id)),
+    #("width", json.int(photo_size.width)),
+    #("height", json.int(photo_size.height)),
+    #("file_size", json.nullable(photo_size.file_size, json.int)),
+  ])
+}
+
+pub fn encode_poll(poll: Poll) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(poll.id)),
+    #("question", json.string(poll.question)),
+    #(
+      "question_entities",
+      json.nullable(poll.question_entities, json.array(_, encode_message_entity)),
+    ),
+    #("options", json.array(_, encode_poll_option)(poll.options)),
+    #("total_voter_count", json.int(poll.total_voter_count)),
+    #("is_closed", json.bool(poll.is_closed)),
+    #("is_anonymous", json.bool(poll.is_anonymous)),
+    #("type", json.string(poll.type_)),
+    #("allows_multiple_answers", json.bool(poll.allows_multiple_answers)),
+    #("allows_revoting", json.bool(poll.allows_revoting)),
+    #("members_only", json.bool(poll.members_only)),
+    #(
+      "country_codes",
+      json.nullable(poll.country_codes, json.array(_, json.string)),
+    ),
+    #(
+      "correct_option_ids",
+      json.nullable(poll.correct_option_ids, json.array(_, json.int)),
+    ),
+    #("explanation", json.nullable(poll.explanation, json.string)),
+    #(
+      "explanation_entities",
+      json.nullable(poll.explanation_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "explanation_media",
+      json.nullable(poll.explanation_media, encode_poll_media),
+    ),
+    #("open_period", json.nullable(poll.open_period, json.int)),
+    #("close_date", json.nullable(poll.close_date, json.int)),
+    #("description", json.nullable(poll.description, json.string)),
+    #(
+      "description_entities",
+      json.nullable(poll.description_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("media", json.nullable(poll.media, encode_poll_media)),
+  ])
+}
+
+pub fn encode_poll_answer(poll_answer: PollAnswer) -> Json {
+  json_object_filter_nulls([
+    #("poll_id", json.string(poll_answer.poll_id)),
+    #("voter_chat", json.nullable(poll_answer.voter_chat, encode_chat)),
+    #("user", json.nullable(poll_answer.user, encode_user)),
+    #("option_ids", json.array(_, json.int)(poll_answer.option_ids)),
+    #(
+      "option_persistent_ids",
+      json.array(_, json.string)(poll_answer.option_persistent_ids),
+    ),
+  ])
+}
+
+pub fn encode_poll_media(poll_media: PollMedia) -> Json {
+  json_object_filter_nulls([
+    #("animation", json.nullable(poll_media.animation, encode_animation)),
+    #("audio", json.nullable(poll_media.audio, encode_audio)),
+    #("document", json.nullable(poll_media.document, encode_document)),
+    #("live_photo", json.nullable(poll_media.live_photo, encode_live_photo)),
+    #("location", json.nullable(poll_media.location, encode_location)),
+    #(
+      "photo",
+      json.nullable(poll_media.photo, json.array(_, encode_photo_size)),
+    ),
+    #("sticker", json.nullable(poll_media.sticker, encode_sticker)),
+    #("venue", json.nullable(poll_media.venue, encode_venue)),
+    #("video", json.nullable(poll_media.video, encode_video)),
+  ])
+}
+
+pub fn encode_poll_option(poll_option: PollOption) -> Json {
+  json_object_filter_nulls([
+    #("persistent_id", json.string(poll_option.persistent_id)),
+    #("text", json.string(poll_option.text)),
     #(
       "text_entities",
-      json.nullable(game.text_entities, json.array(_, encode_message_entity)),
+      json.nullable(poll_option.text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
     ),
-    #("animation", json.nullable(game.animation, encode_animation)),
+    #("media", json.nullable(poll_option.media, encode_poll_media)),
+    #("voter_count", json.int(poll_option.voter_count)),
+    #("added_by_user", json.nullable(poll_option.added_by_user, encode_user)),
+    #("added_by_chat", json.nullable(poll_option.added_by_chat, encode_chat)),
+    #("addition_date", json.nullable(poll_option.addition_date, json.int)),
   ])
 }
 
-pub fn encode_callback_game(callback_game: CallbackGame) -> Json {
+pub fn encode_poll_option_added(poll_option_added: PollOptionAdded) -> Json {
   json_object_filter_nulls([
-    #("user_id", json.int(callback_game.user_id)),
-    #("score", json.int(callback_game.score)),
-    #("force", json.nullable(callback_game.force, json.bool)),
     #(
-      "disable_edit_message",
-      json.nullable(callback_game.disable_edit_message, json.bool),
+      "poll_message",
+      json.nullable(
+        poll_option_added.poll_message,
+        encode_maybe_inaccessible_message,
+      ),
     ),
-    #("chat_id", json.nullable(callback_game.chat_id, json.int)),
-    #("message_id", json.nullable(callback_game.message_id, json.int)),
+    #(
+      "option_persistent_id",
+      json.string(poll_option_added.option_persistent_id),
+    ),
+    #("option_text", json.string(poll_option_added.option_text)),
+    #(
+      "option_text_entities",
+      json.nullable(poll_option_added.option_text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+  ])
+}
+
+pub fn encode_poll_option_deleted(
+  poll_option_deleted: PollOptionDeleted,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "poll_message",
+      json.nullable(
+        poll_option_deleted.poll_message,
+        encode_maybe_inaccessible_message,
+      ),
+    ),
+    #(
+      "option_persistent_id",
+      json.string(poll_option_deleted.option_persistent_id),
+    ),
+    #("option_text", json.string(poll_option_deleted.option_text)),
+    #(
+      "option_text_entities",
+      json.nullable(poll_option_deleted.option_text_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+  ])
+}
+
+pub fn encode_pre_checkout_query(pre_checkout_query: PreCheckoutQuery) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(pre_checkout_query.id)),
+    #("from", encode_user(pre_checkout_query.from)),
+    #("currency", json.string(pre_checkout_query.currency)),
+    #("total_amount", json.int(pre_checkout_query.total_amount)),
+    #("invoice_payload", json.string(pre_checkout_query.invoice_payload)),
+    #(
+      "shipping_option_id",
+      json.nullable(pre_checkout_query.shipping_option_id, json.string),
+    ),
+    #(
+      "order_info",
+      json.nullable(pre_checkout_query.order_info, encode_order_info),
+    ),
+  ])
+}
+
+pub fn encode_prepared_inline_message(
+  prepared_inline_message: PreparedInlineMessage,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(prepared_inline_message.id)),
+    #("expiration_date", json.int(prepared_inline_message.expiration_date)),
+  ])
+}
+
+pub fn encode_prepared_keyboard_button(
+  prepared_keyboard_button: PreparedKeyboardButton,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(prepared_keyboard_button.id)),
+  ])
+}
+
+pub fn encode_proximity_alert_triggered(
+  proximity_alert_triggered: ProximityAlertTriggered,
+) -> Json {
+  json_object_filter_nulls([
+    #("traveler", encode_user(proximity_alert_triggered.traveler)),
+    #("watcher", encode_user(proximity_alert_triggered.watcher)),
+    #("distance", json.int(proximity_alert_triggered.distance)),
+  ])
+}
+
+pub fn encode_reaction_count(reaction_count: ReactionCount) -> Json {
+  json_object_filter_nulls([
+    #("type", encode_reaction_type(reaction_count.type_)),
+    #("total_count", json.int(reaction_count.total_count)),
+  ])
+}
+
+pub fn encode_reaction_type_custom_emoji(
+  reaction_type_custom_emoji: ReactionTypeCustomEmoji,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(reaction_type_custom_emoji.type_)),
+    #(
+      "custom_emoji_id",
+      json.string(reaction_type_custom_emoji.custom_emoji_id),
+    ),
+  ])
+}
+
+pub fn encode_reaction_type_emoji(
+  reaction_type_emoji: ReactionTypeEmoji,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(reaction_type_emoji.type_)),
+    #("emoji", json.string(reaction_type_emoji.emoji)),
+  ])
+}
+
+pub fn encode_reaction_type_paid(reaction_type_paid: ReactionTypePaid) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(reaction_type_paid.type_)),
+  ])
+}
+
+pub fn encode_refunded_payment(refunded_payment: RefundedPayment) -> Json {
+  json_object_filter_nulls([
+    #("currency", json.string(refunded_payment.currency)),
+    #("total_amount", json.int(refunded_payment.total_amount)),
+    #("invoice_payload", json.string(refunded_payment.invoice_payload)),
+    #(
+      "telegram_payment_charge_id",
+      json.string(refunded_payment.telegram_payment_charge_id),
+    ),
+    #(
+      "provider_payment_charge_id",
+      json.nullable(refunded_payment.provider_payment_charge_id, json.string),
+    ),
+  ])
+}
+
+pub fn encode_reply_keyboard_markup(
+  reply_keyboard_markup: ReplyKeyboardMarkup,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "keyboard",
+      fn(rows) {
+        json.array(rows, fn(row) { json.array(row, encode_keyboard_button) })
+      }(reply_keyboard_markup.keyboard),
+    ),
+    #(
+      "is_persistent",
+      json.nullable(reply_keyboard_markup.is_persistent, json.bool),
+    ),
+    #(
+      "resize_keyboard",
+      json.nullable(reply_keyboard_markup.resize_keyboard, json.bool),
+    ),
+    #(
+      "one_time_keyboard",
+      json.nullable(reply_keyboard_markup.one_time_keyboard, json.bool),
+    ),
+    #(
+      "input_field_placeholder",
+      json.nullable(reply_keyboard_markup.input_field_placeholder, json.string),
+    ),
+    #("selective", json.nullable(reply_keyboard_markup.selective, json.bool)),
+  ])
+}
+
+pub fn encode_reply_keyboard_remove(
+  reply_keyboard_remove: ReplyKeyboardRemove,
+) -> Json {
+  json_object_filter_nulls([
+    #("remove_keyboard", json.bool(reply_keyboard_remove.remove_keyboard)),
+    #("selective", json.nullable(reply_keyboard_remove.selective, json.bool)),
+  ])
+}
+
+pub fn encode_reply_parameters(reply_parameters: ReplyParameters) -> Json {
+  json_object_filter_nulls([
+    #("message_id", json.int(reply_parameters.message_id)),
+    #("chat_id", json.nullable(reply_parameters.chat_id, encode_int_or_string)),
+    #(
+      "allow_sending_without_reply",
+      json.nullable(reply_parameters.allow_sending_without_reply, json.bool),
+    ),
+    #("quote", json.nullable(reply_parameters.quote, json.string)),
+    #(
+      "quote_parse_mode",
+      json.nullable(reply_parameters.quote_parse_mode, json.string),
+    ),
+    #(
+      "quote_entities",
+      json.nullable(reply_parameters.quote_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "quote_position",
+      json.nullable(reply_parameters.quote_position, json.int),
+    ),
+    #(
+      "checklist_task_id",
+      json.nullable(reply_parameters.checklist_task_id, json.int),
+    ),
+    #(
+      "poll_option_id",
+      json.nullable(reply_parameters.poll_option_id, json.string),
+    ),
+  ])
+}
+
+pub fn encode_response_parameters(
+  response_parameters: ResponseParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "migrate_to_chat_id",
+      json.nullable(response_parameters.migrate_to_chat_id, json.int),
+    ),
+    #("retry_after", json.nullable(response_parameters.retry_after, json.int)),
+  ])
+}
+
+pub fn encode_revenue_withdrawal_state_failed(
+  revenue_withdrawal_state_failed: RevenueWithdrawalStateFailed,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(revenue_withdrawal_state_failed.type_)),
+  ])
+}
+
+pub fn encode_revenue_withdrawal_state_pending(
+  revenue_withdrawal_state_pending: RevenueWithdrawalStatePending,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(revenue_withdrawal_state_pending.type_)),
+  ])
+}
+
+pub fn encode_revenue_withdrawal_state_succeeded(
+  revenue_withdrawal_state_succeeded: RevenueWithdrawalStateSucceeded,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(revenue_withdrawal_state_succeeded.type_)),
+    #("date", json.int(revenue_withdrawal_state_succeeded.date)),
+    #("url", json.string(revenue_withdrawal_state_succeeded.url)),
+  ])
+}
+
+pub fn encode_sent_guest_message(sent_guest_message: SentGuestMessage) -> Json {
+  json_object_filter_nulls([
+    #("inline_message_id", json.string(sent_guest_message.inline_message_id)),
+  ])
+}
+
+pub fn encode_sent_web_app_message(
+  sent_web_app_message: SentWebAppMessage,
+) -> Json {
+  json_object_filter_nulls([
     #(
       "inline_message_id",
-      json.nullable(callback_game.inline_message_id, json.string),
+      json.nullable(sent_web_app_message.inline_message_id, json.string),
     ),
   ])
 }
 
-pub fn encode_game_high_score(game_high_score: GameHighScore) -> Json {
+pub fn encode_shared_user(shared_user: SharedUser) -> Json {
   json_object_filter_nulls([
-    #("position", json.int(game_high_score.position)),
-    #("user", encode_user(game_high_score.user)),
-    #("score", json.int(game_high_score.score)),
+    #("user_id", json.int(shared_user.user_id)),
+    #("first_name", json.nullable(shared_user.first_name, json.string)),
+    #("last_name", json.nullable(shared_user.last_name, json.string)),
+    #("username", json.nullable(shared_user.username, json.string)),
+    #(
+      "photo",
+      json.nullable(shared_user.photo, json.array(_, encode_photo_size)),
+    ),
   ])
 }
 
-pub fn encode_maybe_inaccessible_message(
-  value: MaybeInaccessibleMessage,
+pub fn encode_shipping_address(shipping_address: ShippingAddress) -> Json {
+  json_object_filter_nulls([
+    #("country_code", json.string(shipping_address.country_code)),
+    #("state", json.string(shipping_address.state)),
+    #("city", json.string(shipping_address.city)),
+    #("street_line1", json.string(shipping_address.street_line1)),
+    #("street_line2", json.string(shipping_address.street_line2)),
+    #("post_code", json.string(shipping_address.post_code)),
+  ])
+}
+
+pub fn encode_shipping_option(shipping_option: ShippingOption) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(shipping_option.id)),
+    #("title", json.string(shipping_option.title)),
+    #("prices", json.array(_, encode_labeled_price)(shipping_option.prices)),
+  ])
+}
+
+pub fn encode_shipping_query(shipping_query: ShippingQuery) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(shipping_query.id)),
+    #("from", encode_user(shipping_query.from)),
+    #("invoice_payload", json.string(shipping_query.invoice_payload)),
+    #(
+      "shipping_address",
+      encode_shipping_address(shipping_query.shipping_address),
+    ),
+  ])
+}
+
+pub fn encode_star_amount(star_amount: StarAmount) -> Json {
+  json_object_filter_nulls([
+    #("amount", json.int(star_amount.amount)),
+    #("nanostar_amount", json.nullable(star_amount.nanostar_amount, json.int)),
+  ])
+}
+
+pub fn encode_star_transaction(star_transaction: StarTransaction) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(star_transaction.id)),
+    #("amount", json.int(star_transaction.amount)),
+    #(
+      "nanostar_amount",
+      json.nullable(star_transaction.nanostar_amount, json.int),
+    ),
+    #("date", json.int(star_transaction.date)),
+    #(
+      "source",
+      json.nullable(star_transaction.source, encode_transaction_partner),
+    ),
+    #(
+      "receiver",
+      json.nullable(star_transaction.receiver, encode_transaction_partner),
+    ),
+  ])
+}
+
+pub fn encode_star_transactions(star_transactions: StarTransactions) -> Json {
+  json_object_filter_nulls([
+    #(
+      "transactions",
+      json.array(_, encode_star_transaction)(star_transactions.transactions),
+    ),
+  ])
+}
+
+pub fn encode_sticker(sticker: Sticker) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(sticker.file_id)),
+    #("file_unique_id", json.string(sticker.file_unique_id)),
+    #("type", json.string(sticker.type_)),
+    #("width", json.int(sticker.width)),
+    #("height", json.int(sticker.height)),
+    #("is_animated", json.bool(sticker.is_animated)),
+    #("is_video", json.bool(sticker.is_video)),
+    #("thumbnail", json.nullable(sticker.thumbnail, encode_photo_size)),
+    #("emoji", json.nullable(sticker.emoji, json.string)),
+    #("set_name", json.nullable(sticker.set_name, json.string)),
+    #(
+      "premium_animation",
+      json.nullable(sticker.premium_animation, encode_file),
+    ),
+    #(
+      "mask_position",
+      json.nullable(sticker.mask_position, encode_mask_position),
+    ),
+    #("custom_emoji_id", json.nullable(sticker.custom_emoji_id, json.string)),
+    #("needs_repainting", json.nullable(sticker.needs_repainting, json.bool)),
+    #("file_size", json.nullable(sticker.file_size, json.int)),
+  ])
+}
+
+pub fn encode_sticker_set(sticker_set: StickerSet) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(sticker_set.name)),
+    #("title", json.string(sticker_set.title)),
+    #("sticker_type", json.string(sticker_set.sticker_type)),
+    #("stickers", json.array(_, encode_sticker)(sticker_set.stickers)),
+    #("thumbnail", json.nullable(sticker_set.thumbnail, encode_photo_size)),
+  ])
+}
+
+pub fn encode_story(story: Story) -> Json {
+  json_object_filter_nulls([
+    #("chat", encode_chat(story.chat)),
+    #("id", json.int(story.id)),
+  ])
+}
+
+pub fn encode_story_area(story_area: StoryArea) -> Json {
+  json_object_filter_nulls([
+    #("position", encode_story_area_position(story_area.position)),
+    #("type", encode_story_area_type(story_area.type_)),
+  ])
+}
+
+pub fn encode_story_area_position(
+  story_area_position: StoryAreaPosition,
 ) -> Json {
-  case value {
-    MessageMaybeInaccessibleMessage(inner_value) -> encode_message(inner_value)
-
-    InaccessibleMessageMaybeInaccessibleMessage(inner_value) ->
-      encode_inaccessible_message(inner_value)
-  }
+  json_object_filter_nulls([
+    #("x_percentage", json.float(story_area_position.x_percentage)),
+    #("y_percentage", json.float(story_area_position.y_percentage)),
+    #("width_percentage", json.float(story_area_position.width_percentage)),
+    #("height_percentage", json.float(story_area_position.height_percentage)),
+    #("rotation_angle", json.float(story_area_position.rotation_angle)),
+    #(
+      "corner_radius_percentage",
+      json.float(story_area_position.corner_radius_percentage),
+    ),
+  ])
 }
 
-pub fn encode_message_origin(value: MessageOrigin) -> Json {
-  case value {
-    MessageOriginUserMessageOrigin(inner_value) ->
-      encode_message_origin_user(inner_value)
-
-    MessageOriginHiddenUserMessageOrigin(inner_value) ->
-      encode_message_origin_hidden_user(inner_value)
-
-    MessageOriginChatMessageOrigin(inner_value) ->
-      encode_message_origin_chat(inner_value)
-
-    MessageOriginChannelMessageOrigin(inner_value) ->
-      encode_message_origin_channel(inner_value)
-  }
+pub fn encode_story_area_type_link(
+  story_area_type_link: StoryAreaTypeLink,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_link.type_)),
+    #("url", json.string(story_area_type_link.url)),
+  ])
 }
 
-pub fn encode_paid_media(value: PaidMedia) -> Json {
-  case value {
-    PaidMediaPreviewPaidMedia(inner_value) ->
-      encode_paid_media_preview(inner_value)
+pub fn encode_story_area_type_location(
+  story_area_type_location: StoryAreaTypeLocation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_location.type_)),
+    #("latitude", json.float(story_area_type_location.latitude)),
+    #("longitude", json.float(story_area_type_location.longitude)),
+    #(
+      "address",
+      json.nullable(story_area_type_location.address, encode_location_address),
+    ),
+  ])
+}
 
-    PaidMediaPhotoPaidMedia(inner_value) -> encode_paid_media_photo(inner_value)
+pub fn encode_story_area_type_suggested_reaction(
+  story_area_type_suggested_reaction: StoryAreaTypeSuggestedReaction,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_suggested_reaction.type_)),
+    #(
+      "reaction_type",
+      encode_reaction_type(story_area_type_suggested_reaction.reaction_type),
+    ),
+    #(
+      "is_dark",
+      json.nullable(story_area_type_suggested_reaction.is_dark, json.bool),
+    ),
+    #(
+      "is_flipped",
+      json.nullable(story_area_type_suggested_reaction.is_flipped, json.bool),
+    ),
+  ])
+}
 
-    PaidMediaVideoPaidMedia(inner_value) -> encode_paid_media_video(inner_value)
+pub fn encode_story_area_type_unique_gift(
+  story_area_type_unique_gift: StoryAreaTypeUniqueGift,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_unique_gift.type_)),
+    #("name", json.string(story_area_type_unique_gift.name)),
+  ])
+}
 
-    PaidMediaLivePhotoPaidMedia(inner_value) ->
-      encode_paid_media_live_photo(inner_value)
-  }
+pub fn encode_story_area_type_weather(
+  story_area_type_weather: StoryAreaTypeWeather,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(story_area_type_weather.type_)),
+    #("temperature", json.float(story_area_type_weather.temperature)),
+    #("emoji", json.string(story_area_type_weather.emoji)),
+    #("background_color", json.int(story_area_type_weather.background_color)),
+  ])
+}
+
+pub fn encode_successful_payment(
+  successful_payment: SuccessfulPayment,
+) -> Json {
+  json_object_filter_nulls([
+    #("currency", json.string(successful_payment.currency)),
+    #("total_amount", json.int(successful_payment.total_amount)),
+    #("invoice_payload", json.string(successful_payment.invoice_payload)),
+    #(
+      "subscription_expiration_date",
+      json.nullable(successful_payment.subscription_expiration_date, json.int),
+    ),
+    #("is_recurring", json.nullable(successful_payment.is_recurring, json.bool)),
+    #(
+      "is_first_recurring",
+      json.nullable(successful_payment.is_first_recurring, json.bool),
+    ),
+    #(
+      "shipping_option_id",
+      json.nullable(successful_payment.shipping_option_id, json.string),
+    ),
+    #(
+      "order_info",
+      json.nullable(successful_payment.order_info, encode_order_info),
+    ),
+    #(
+      "telegram_payment_charge_id",
+      json.string(successful_payment.telegram_payment_charge_id),
+    ),
+    #(
+      "provider_payment_charge_id",
+      json.string(successful_payment.provider_payment_charge_id),
+    ),
+  ])
+}
+
+pub fn encode_suggested_post_approval_failed(
+  suggested_post_approval_failed: SuggestedPostApprovalFailed,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "suggested_post_message",
+      json.nullable(
+        suggested_post_approval_failed.suggested_post_message,
+        encode_message,
+      ),
+    ),
+    #(
+      "price",
+      encode_suggested_post_price(suggested_post_approval_failed.price),
+    ),
+  ])
+}
+
+pub fn encode_suggested_post_approved(
+  suggested_post_approved: SuggestedPostApproved,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "suggested_post_message",
+      json.nullable(
+        suggested_post_approved.suggested_post_message,
+        encode_message,
+      ),
+    ),
+    #(
+      "price",
+      json.nullable(suggested_post_approved.price, encode_suggested_post_price),
+    ),
+    #("send_date", json.int(suggested_post_approved.send_date)),
+  ])
+}
+
+pub fn encode_suggested_post_declined(
+  suggested_post_declined: SuggestedPostDeclined,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "suggested_post_message",
+      json.nullable(
+        suggested_post_declined.suggested_post_message,
+        encode_message,
+      ),
+    ),
+    #("comment", json.nullable(suggested_post_declined.comment, json.string)),
+  ])
+}
+
+pub fn encode_suggested_post_info(
+  suggested_post_info: SuggestedPostInfo,
+) -> Json {
+  json_object_filter_nulls([
+    #("state", json.string(suggested_post_info.state)),
+    #(
+      "price",
+      json.nullable(suggested_post_info.price, encode_suggested_post_price),
+    ),
+    #("send_date", json.nullable(suggested_post_info.send_date, json.int)),
+  ])
+}
+
+pub fn encode_suggested_post_paid(
+  suggested_post_paid: SuggestedPostPaid,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "suggested_post_message",
+      json.nullable(suggested_post_paid.suggested_post_message, encode_message),
+    ),
+    #("currency", json.string(suggested_post_paid.currency)),
+    #("amount", json.nullable(suggested_post_paid.amount, json.int)),
+    #(
+      "star_amount",
+      json.nullable(suggested_post_paid.star_amount, encode_star_amount),
+    ),
+  ])
+}
+
+pub fn encode_suggested_post_parameters(
+  suggested_post_parameters: SuggestedPostParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "price",
+      json.nullable(
+        suggested_post_parameters.price,
+        encode_suggested_post_price,
+      ),
+    ),
+    #("send_date", json.nullable(suggested_post_parameters.send_date, json.int)),
+  ])
+}
+
+pub fn encode_suggested_post_price(
+  suggested_post_price: SuggestedPostPrice,
+) -> Json {
+  json_object_filter_nulls([
+    #("currency", json.string(suggested_post_price.currency)),
+    #("amount", json.int(suggested_post_price.amount)),
+  ])
+}
+
+pub fn encode_suggested_post_refunded(
+  suggested_post_refunded: SuggestedPostRefunded,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "suggested_post_message",
+      json.nullable(
+        suggested_post_refunded.suggested_post_message,
+        encode_message,
+      ),
+    ),
+    #("reason", json.string(suggested_post_refunded.reason)),
+  ])
+}
+
+pub fn encode_switch_inline_query_chosen_chat(
+  switch_inline_query_chosen_chat: SwitchInlineQueryChosenChat,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "query",
+      json.nullable(switch_inline_query_chosen_chat.query, json.string),
+    ),
+    #(
+      "allow_user_chats",
+      json.nullable(switch_inline_query_chosen_chat.allow_user_chats, json.bool),
+    ),
+    #(
+      "allow_bot_chats",
+      json.nullable(switch_inline_query_chosen_chat.allow_bot_chats, json.bool),
+    ),
+    #(
+      "allow_group_chats",
+      json.nullable(
+        switch_inline_query_chosen_chat.allow_group_chats,
+        json.bool,
+      ),
+    ),
+    #(
+      "allow_channel_chats",
+      json.nullable(
+        switch_inline_query_chosen_chat.allow_channel_chats,
+        json.bool,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_text_quote(text_quote: TextQuote) -> Json {
+  json_object_filter_nulls([
+    #("text", json.string(text_quote.text)),
+    #(
+      "entities",
+      json.nullable(text_quote.entities, json.array(_, encode_message_entity)),
+    ),
+    #("position", json.int(text_quote.position)),
+    #("is_manual", json.nullable(text_quote.is_manual, json.bool)),
+  ])
+}
+
+pub fn encode_transaction_partner_affiliate_program(
+  transaction_partner_affiliate_program: TransactionPartnerAffiliateProgram,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_affiliate_program.type_)),
+    #(
+      "sponsor_user",
+      json.nullable(
+        transaction_partner_affiliate_program.sponsor_user,
+        encode_user,
+      ),
+    ),
+    #(
+      "commission_per_mille",
+      json.int(transaction_partner_affiliate_program.commission_per_mille),
+    ),
+  ])
+}
+
+pub fn encode_transaction_partner_chat(
+  transaction_partner_chat: TransactionPartnerChat,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_chat.type_)),
+    #("chat", encode_chat(transaction_partner_chat.chat)),
+    #("gift", json.nullable(transaction_partner_chat.gift, encode_gift)),
+  ])
+}
+
+pub fn encode_transaction_partner_fragment(
+  transaction_partner_fragment: TransactionPartnerFragment,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_fragment.type_)),
+    #(
+      "withdrawal_state",
+      json.nullable(
+        transaction_partner_fragment.withdrawal_state,
+        encode_revenue_withdrawal_state,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_transaction_partner_other(
+  transaction_partner_other: TransactionPartnerOther,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_other.type_)),
+  ])
+}
+
+pub fn encode_transaction_partner_telegram_ads(
+  transaction_partner_telegram_ads: TransactionPartnerTelegramAds,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_telegram_ads.type_)),
+  ])
+}
+
+pub fn encode_transaction_partner_telegram_api(
+  transaction_partner_telegram_api: TransactionPartnerTelegramApi,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_telegram_api.type_)),
+    #("request_count", json.int(transaction_partner_telegram_api.request_count)),
+  ])
+}
+
+pub fn encode_transaction_partner_user(
+  transaction_partner_user: TransactionPartnerUser,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(transaction_partner_user.type_)),
+    #(
+      "transaction_type",
+      json.string(transaction_partner_user.transaction_type),
+    ),
+    #("user", encode_user(transaction_partner_user.user)),
+    #(
+      "affiliate",
+      json.nullable(transaction_partner_user.affiliate, encode_affiliate_info),
+    ),
+    #(
+      "invoice_payload",
+      json.nullable(transaction_partner_user.invoice_payload, json.string),
+    ),
+    #(
+      "subscription_period",
+      json.nullable(transaction_partner_user.subscription_period, json.int),
+    ),
+    #(
+      "paid_media",
+      json.nullable(transaction_partner_user.paid_media, json.array(
+        _,
+        encode_paid_media,
+      )),
+    ),
+    #(
+      "paid_media_payload",
+      json.nullable(transaction_partner_user.paid_media_payload, json.string),
+    ),
+    #("gift", json.nullable(transaction_partner_user.gift, encode_gift)),
+    #(
+      "premium_subscription_duration",
+      json.nullable(
+        transaction_partner_user.premium_subscription_duration,
+        json.int,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_unique_gift(unique_gift: UniqueGift) -> Json {
+  json_object_filter_nulls([
+    #("gift_id", json.string(unique_gift.gift_id)),
+    #("base_name", json.string(unique_gift.base_name)),
+    #("name", json.string(unique_gift.name)),
+    #("number", json.int(unique_gift.number)),
+    #("model", encode_unique_gift_model(unique_gift.model)),
+    #("symbol", encode_unique_gift_symbol(unique_gift.symbol)),
+    #("backdrop", encode_unique_gift_backdrop(unique_gift.backdrop)),
+    #("is_premium", json.nullable(unique_gift.is_premium, json.bool)),
+    #("is_burned", json.nullable(unique_gift.is_burned, json.bool)),
+    #(
+      "is_from_blockchain",
+      json.nullable(unique_gift.is_from_blockchain, json.bool),
+    ),
+    #("colors", json.nullable(unique_gift.colors, encode_unique_gift_colors)),
+    #("publisher_chat", json.nullable(unique_gift.publisher_chat, encode_chat)),
+  ])
+}
+
+pub fn encode_unique_gift_backdrop(
+  unique_gift_backdrop: UniqueGiftBackdrop,
+) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_backdrop.name)),
+    #("colors", encode_unique_gift_backdrop_colors(unique_gift_backdrop.colors)),
+    #("rarity_per_mille", json.int(unique_gift_backdrop.rarity_per_mille)),
+  ])
+}
+
+pub fn encode_unique_gift_backdrop_colors(
+  unique_gift_backdrop_colors: UniqueGiftBackdropColors,
+) -> Json {
+  json_object_filter_nulls([
+    #("center_color", json.int(unique_gift_backdrop_colors.center_color)),
+    #("edge_color", json.int(unique_gift_backdrop_colors.edge_color)),
+    #("symbol_color", json.int(unique_gift_backdrop_colors.symbol_color)),
+    #("text_color", json.int(unique_gift_backdrop_colors.text_color)),
+  ])
+}
+
+pub fn encode_unique_gift_colors(unique_gift_colors: UniqueGiftColors) -> Json {
+  json_object_filter_nulls([
+    #(
+      "model_custom_emoji_id",
+      json.string(unique_gift_colors.model_custom_emoji_id),
+    ),
+    #(
+      "symbol_custom_emoji_id",
+      json.string(unique_gift_colors.symbol_custom_emoji_id),
+    ),
+    #(
+      "light_theme_main_color",
+      json.int(unique_gift_colors.light_theme_main_color),
+    ),
+    #(
+      "light_theme_other_colors",
+      json.array(_, json.int)(unique_gift_colors.light_theme_other_colors),
+    ),
+    #(
+      "dark_theme_main_color",
+      json.int(unique_gift_colors.dark_theme_main_color),
+    ),
+    #(
+      "dark_theme_other_colors",
+      json.array(_, json.int)(unique_gift_colors.dark_theme_other_colors),
+    ),
+  ])
+}
+
+pub fn encode_unique_gift_info(unique_gift_info: UniqueGiftInfo) -> Json {
+  json_object_filter_nulls([
+    #("gift", encode_unique_gift(unique_gift_info.gift)),
+    #("origin", json.string(unique_gift_info.origin)),
+    #(
+      "last_resale_currency",
+      json.nullable(unique_gift_info.last_resale_currency, json.string),
+    ),
+    #(
+      "last_resale_amount",
+      json.nullable(unique_gift_info.last_resale_amount, json.int),
+    ),
+    #(
+      "owned_gift_id",
+      json.nullable(unique_gift_info.owned_gift_id, json.string),
+    ),
+    #(
+      "transfer_star_count",
+      json.nullable(unique_gift_info.transfer_star_count, json.int),
+    ),
+    #(
+      "next_transfer_date",
+      json.nullable(unique_gift_info.next_transfer_date, json.int),
+    ),
+  ])
+}
+
+pub fn encode_unique_gift_model(unique_gift_model: UniqueGiftModel) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_model.name)),
+    #("sticker", encode_sticker(unique_gift_model.sticker)),
+    #("rarity_per_mille", json.int(unique_gift_model.rarity_per_mille)),
+    #("rarity", json.nullable(unique_gift_model.rarity, json.string)),
+  ])
+}
+
+pub fn encode_unique_gift_symbol(unique_gift_symbol: UniqueGiftSymbol) -> Json {
+  json_object_filter_nulls([
+    #("name", json.string(unique_gift_symbol.name)),
+    #("sticker", encode_sticker(unique_gift_symbol.sticker)),
+    #("rarity_per_mille", json.int(unique_gift_symbol.rarity_per_mille)),
+  ])
+}
+
+pub fn encode_update(update: Update) -> Json {
+  json_object_filter_nulls([
+    #("update_id", json.int(update.update_id)),
+    #("message", json.nullable(update.message, encode_message)),
+    #("edited_message", json.nullable(update.edited_message, encode_message)),
+    #("channel_post", json.nullable(update.channel_post, encode_message)),
+    #(
+      "edited_channel_post",
+      json.nullable(update.edited_channel_post, encode_message),
+    ),
+    #(
+      "business_connection",
+      json.nullable(update.business_connection, encode_business_connection),
+    ),
+    #(
+      "business_message",
+      json.nullable(update.business_message, encode_message),
+    ),
+    #(
+      "edited_business_message",
+      json.nullable(update.edited_business_message, encode_message),
+    ),
+    #(
+      "deleted_business_messages",
+      json.nullable(
+        update.deleted_business_messages,
+        encode_business_messages_deleted,
+      ),
+    ),
+    #("guest_message", json.nullable(update.guest_message, encode_message)),
+    #(
+      "message_reaction",
+      json.nullable(update.message_reaction, encode_message_reaction_updated),
+    ),
+    #(
+      "message_reaction_count",
+      json.nullable(
+        update.message_reaction_count,
+        encode_message_reaction_count_updated,
+      ),
+    ),
+    #("inline_query", json.nullable(update.inline_query, encode_inline_query)),
+    #(
+      "chosen_inline_result",
+      json.nullable(update.chosen_inline_result, encode_chosen_inline_result),
+    ),
+    #(
+      "callback_query",
+      json.nullable(update.callback_query, encode_callback_query),
+    ),
+    #(
+      "shipping_query",
+      json.nullable(update.shipping_query, encode_shipping_query),
+    ),
+    #(
+      "pre_checkout_query",
+      json.nullable(update.pre_checkout_query, encode_pre_checkout_query),
+    ),
+    #(
+      "purchased_paid_media",
+      json.nullable(update.purchased_paid_media, encode_paid_media_purchased),
+    ),
+    #("poll", json.nullable(update.poll, encode_poll)),
+    #("poll_answer", json.nullable(update.poll_answer, encode_poll_answer)),
+    #(
+      "my_chat_member",
+      json.nullable(update.my_chat_member, encode_chat_member_updated),
+    ),
+    #(
+      "chat_member",
+      json.nullable(update.chat_member, encode_chat_member_updated),
+    ),
+    #(
+      "chat_join_request",
+      json.nullable(update.chat_join_request, encode_chat_join_request),
+    ),
+    #("chat_boost", json.nullable(update.chat_boost, encode_chat_boost_updated)),
+    #(
+      "removed_chat_boost",
+      json.nullable(update.removed_chat_boost, encode_chat_boost_removed),
+    ),
+    #(
+      "managed_bot",
+      json.nullable(update.managed_bot, encode_managed_bot_updated),
+    ),
+  ])
+}
+
+pub fn encode_user(user: User) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(user.id)),
+    #("is_bot", json.bool(user.is_bot)),
+    #("first_name", json.string(user.first_name)),
+    #("last_name", json.nullable(user.last_name, json.string)),
+    #("username", json.nullable(user.username, json.string)),
+    #("language_code", json.nullable(user.language_code, json.string)),
+    #("is_premium", json.nullable(user.is_premium, json.bool)),
+    #(
+      "added_to_attachment_menu",
+      json.nullable(user.added_to_attachment_menu, json.bool),
+    ),
+    #("can_join_groups", json.nullable(user.can_join_groups, json.bool)),
+    #(
+      "can_read_all_group_messages",
+      json.nullable(user.can_read_all_group_messages, json.bool),
+    ),
+    #(
+      "supports_guest_queries",
+      json.nullable(user.supports_guest_queries, json.bool),
+    ),
+    #(
+      "supports_inline_queries",
+      json.nullable(user.supports_inline_queries, json.bool),
+    ),
+    #(
+      "can_connect_to_business",
+      json.nullable(user.can_connect_to_business, json.bool),
+    ),
+    #("has_main_web_app", json.nullable(user.has_main_web_app, json.bool)),
+    #("has_topics_enabled", json.nullable(user.has_topics_enabled, json.bool)),
+    #(
+      "allows_users_to_create_topics",
+      json.nullable(user.allows_users_to_create_topics, json.bool),
+    ),
+    #("can_manage_bots", json.nullable(user.can_manage_bots, json.bool)),
+  ])
+}
+
+pub fn encode_user_chat_boosts(user_chat_boosts: UserChatBoosts) -> Json {
+  json_object_filter_nulls([
+    #("boosts", json.array(_, encode_chat_boost)(user_chat_boosts.boosts)),
+  ])
+}
+
+pub fn encode_user_profile_audios(
+  user_profile_audios: UserProfileAudios,
+) -> Json {
+  json_object_filter_nulls([
+    #("total_count", json.int(user_profile_audios.total_count)),
+    #("audios", json.array(_, encode_audio)(user_profile_audios.audios)),
+  ])
+}
+
+pub fn encode_user_profile_photos(
+  user_profile_photos: UserProfilePhotos,
+) -> Json {
+  json_object_filter_nulls([
+    #("total_count", json.int(user_profile_photos.total_count)),
+    #(
+      "photos",
+      fn(rows) {
+        json.array(rows, fn(row) { json.array(row, encode_photo_size) })
+      }(user_profile_photos.photos),
+    ),
+  ])
+}
+
+pub fn encode_user_rating(user_rating: UserRating) -> Json {
+  json_object_filter_nulls([
+    #("level", json.int(user_rating.level)),
+    #("rating", json.int(user_rating.rating)),
+    #("current_level_rating", json.int(user_rating.current_level_rating)),
+    #(
+      "next_level_rating",
+      json.nullable(user_rating.next_level_rating, json.int),
+    ),
+  ])
+}
+
+pub fn encode_users_shared(users_shared: UsersShared) -> Json {
+  json_object_filter_nulls([
+    #("request_id", json.int(users_shared.request_id)),
+    #("users", json.array(_, encode_shared_user)(users_shared.users)),
+  ])
+}
+
+pub fn encode_venue(venue: Venue) -> Json {
+  json_object_filter_nulls([
+    #("location", encode_location(venue.location)),
+    #("title", json.string(venue.title)),
+    #("address", json.string(venue.address)),
+    #("foursquare_id", json.nullable(venue.foursquare_id, json.string)),
+    #("foursquare_type", json.nullable(venue.foursquare_type, json.string)),
+    #("google_place_id", json.nullable(venue.google_place_id, json.string)),
+    #("google_place_type", json.nullable(venue.google_place_type, json.string)),
+  ])
+}
+
+pub fn encode_video(video: Video) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(video.file_id)),
+    #("file_unique_id", json.string(video.file_unique_id)),
+    #("width", json.int(video.width)),
+    #("height", json.int(video.height)),
+    #("duration", json.int(video.duration)),
+    #("thumbnail", json.nullable(video.thumbnail, encode_photo_size)),
+    #("cover", json.nullable(video.cover, json.array(_, encode_photo_size))),
+    #("start_timestamp", json.nullable(video.start_timestamp, json.int)),
+    #(
+      "qualities",
+      json.nullable(video.qualities, json.array(_, encode_video_quality)),
+    ),
+    #("file_name", json.nullable(video.file_name, json.string)),
+    #("mime_type", json.nullable(video.mime_type, json.string)),
+    #("file_size", json.nullable(video.file_size, json.int)),
+  ])
+}
+
+pub fn encode_video_chat_ended(video_chat_ended: VideoChatEnded) -> Json {
+  json_object_filter_nulls([
+    #("duration", json.int(video_chat_ended.duration)),
+  ])
+}
+
+pub fn encode_video_chat_participants_invited(
+  video_chat_participants_invited: VideoChatParticipantsInvited,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "users",
+      json.array(_, encode_user)(video_chat_participants_invited.users),
+    ),
+  ])
+}
+
+pub fn encode_video_chat_scheduled(
+  video_chat_scheduled: VideoChatScheduled,
+) -> Json {
+  json_object_filter_nulls([
+    #("start_date", json.int(video_chat_scheduled.start_date)),
+  ])
+}
+
+pub fn encode_video_chat_started(
+  _video_chat_started: VideoChatStarted,
+) -> Json {
+  json_object_filter_nulls([])
+}
+
+pub fn encode_video_note(video_note: VideoNote) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(video_note.file_id)),
+    #("file_unique_id", json.string(video_note.file_unique_id)),
+    #("length", json.int(video_note.length)),
+    #("duration", json.int(video_note.duration)),
+    #("thumbnail", json.nullable(video_note.thumbnail, encode_photo_size)),
+    #("file_size", json.nullable(video_note.file_size, json.int)),
+  ])
+}
+
+pub fn encode_video_quality(video_quality: VideoQuality) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(video_quality.file_id)),
+    #("file_unique_id", json.string(video_quality.file_unique_id)),
+    #("width", json.int(video_quality.width)),
+    #("height", json.int(video_quality.height)),
+    #("codec", json.string(video_quality.codec)),
+    #("file_size", json.nullable(video_quality.file_size, json.int)),
+  ])
+}
+
+pub fn encode_voice(voice: Voice) -> Json {
+  json_object_filter_nulls([
+    #("file_id", json.string(voice.file_id)),
+    #("file_unique_id", json.string(voice.file_unique_id)),
+    #("duration", json.int(voice.duration)),
+    #("mime_type", json.nullable(voice.mime_type, json.string)),
+    #("file_size", json.nullable(voice.file_size, json.int)),
+  ])
+}
+
+pub fn encode_web_app_data(web_app_data: WebAppData) -> Json {
+  json_object_filter_nulls([
+    #("data", json.string(web_app_data.data)),
+    #("button_text", json.string(web_app_data.button_text)),
+  ])
+}
+
+pub fn encode_web_app_info(web_app_info: WebAppInfo) -> Json {
+  json_object_filter_nulls([
+    #("url", json.string(web_app_info.url)),
+  ])
+}
+
+pub fn encode_webhook_info(webhook_info: WebhookInfo) -> Json {
+  json_object_filter_nulls([
+    #("url", json.string(webhook_info.url)),
+    #("has_custom_certificate", json.bool(webhook_info.has_custom_certificate)),
+    #("pending_update_count", json.int(webhook_info.pending_update_count)),
+    #("ip_address", json.nullable(webhook_info.ip_address, json.string)),
+    #("last_error_date", json.nullable(webhook_info.last_error_date, json.int)),
+    #(
+      "last_error_message",
+      json.nullable(webhook_info.last_error_message, json.string),
+    ),
+    #(
+      "last_synchronization_error_date",
+      json.nullable(webhook_info.last_synchronization_error_date, json.int),
+    ),
+    #("max_connections", json.nullable(webhook_info.max_connections, json.int)),
+    #(
+      "allowed_updates",
+      json.nullable(webhook_info.allowed_updates, json.array(_, json.string)),
+    ),
+  ])
+}
+
+pub fn encode_write_access_allowed(
+  write_access_allowed: WriteAccessAllowed,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "from_request",
+      json.nullable(write_access_allowed.from_request, json.bool),
+    ),
+    #(
+      "web_app_name",
+      json.nullable(write_access_allowed.web_app_name, json.string),
+    ),
+    #(
+      "from_attachment_menu",
+      json.nullable(write_access_allowed.from_attachment_menu, json.bool),
+    ),
+  ])
 }
 
 pub fn encode_background_fill(value: BackgroundFill) -> Json {
   case value {
     BackgroundFillSolidBackgroundFill(inner_value) ->
       encode_background_fill_solid(inner_value)
-
     BackgroundFillGradientBackgroundFill(inner_value) ->
       encode_background_fill_gradient(inner_value)
-
     BackgroundFillFreeformGradientBackgroundFill(inner_value) ->
       encode_background_fill_freeform_gradient(inner_value)
   }
@@ -6103,50 +5997,12 @@ pub fn encode_background_type(value: BackgroundType) -> Json {
   case value {
     BackgroundTypeFillBackgroundType(inner_value) ->
       encode_background_type_fill(inner_value)
-
     BackgroundTypeWallpaperBackgroundType(inner_value) ->
       encode_background_type_wallpaper(inner_value)
-
     BackgroundTypePatternBackgroundType(inner_value) ->
       encode_background_type_pattern(inner_value)
-
     BackgroundTypeChatThemeBackgroundType(inner_value) ->
       encode_background_type_chat_theme(inner_value)
-  }
-}
-
-pub fn encode_chat_member(value: ChatMember) -> Json {
-  case value {
-    ChatMemberOwnerChatMember(inner_value) ->
-      encode_chat_member_owner(inner_value)
-
-    ChatMemberAdministratorChatMember(inner_value) ->
-      encode_chat_member_administrator(inner_value)
-
-    ChatMemberMemberChatMember(inner_value) ->
-      encode_chat_member_member(inner_value)
-
-    ChatMemberRestrictedChatMember(inner_value) ->
-      encode_chat_member_restricted(inner_value)
-
-    ChatMemberLeftChatMember(inner_value) ->
-      encode_chat_member_left(inner_value)
-
-    ChatMemberBannedChatMember(inner_value) ->
-      encode_chat_member_banned(inner_value)
-  }
-}
-
-pub fn encode_reaction_type(value: ReactionType) -> Json {
-  case value {
-    ReactionTypeEmojiReactionType(inner_value) ->
-      encode_reaction_type_emoji(inner_value)
-
-    ReactionTypeCustomEmojiReactionType(inner_value) ->
-      encode_reaction_type_custom_emoji(inner_value)
-
-    ReactionTypePaidReactionType(inner_value) ->
-      encode_reaction_type_paid(inner_value)
   }
 }
 
@@ -6154,37 +6010,18 @@ pub fn encode_bot_command_scope(value: BotCommandScope) -> Json {
   case value {
     BotCommandScopeDefaultBotCommandScope(inner_value) ->
       encode_bot_command_scope_default(inner_value)
-
     BotCommandScopeAllPrivateChatsBotCommandScope(inner_value) ->
       encode_bot_command_scope_all_private_chats(inner_value)
-
     BotCommandScopeAllGroupChatsBotCommandScope(inner_value) ->
       encode_bot_command_scope_all_group_chats(inner_value)
-
     BotCommandScopeAllChatAdministratorsBotCommandScope(inner_value) ->
       encode_bot_command_scope_all_chat_administrators(inner_value)
-
     BotCommandScopeChatBotCommandScope(inner_value) ->
       encode_bot_command_scope_chat(inner_value)
-
     BotCommandScopeChatAdministratorsBotCommandScope(inner_value) ->
       encode_bot_command_scope_chat_administrators(inner_value)
-
     BotCommandScopeChatMemberBotCommandScope(inner_value) ->
       encode_bot_command_scope_chat_member(inner_value)
-  }
-}
-
-pub fn encode_menu_button(value: MenuButton) -> Json {
-  case value {
-    MenuButtonCommandsMenuButton(inner_value) ->
-      encode_menu_button_commands(inner_value)
-
-    MenuButtonWebAppMenuButton(inner_value) ->
-      encode_menu_button_web_app(inner_value)
-
-    MenuButtonDefaultMenuButton(inner_value) ->
-      encode_menu_button_default(inner_value)
   }
 }
 
@@ -6192,115 +6029,27 @@ pub fn encode_chat_boost_source(value: ChatBoostSource) -> Json {
   case value {
     ChatBoostSourcePremiumChatBoostSource(inner_value) ->
       encode_chat_boost_source_premium(inner_value)
-
     ChatBoostSourceGiftCodeChatBoostSource(inner_value) ->
       encode_chat_boost_source_gift_code(inner_value)
-
     ChatBoostSourceGiveawayChatBoostSource(inner_value) ->
       encode_chat_boost_source_giveaway(inner_value)
   }
 }
 
-pub fn encode_input_media(value: InputMedia) -> Json {
+pub fn encode_chat_member(value: ChatMember) -> Json {
   case value {
-    InputMediaAnimationInputMedia(inner_value) ->
-      encode_input_media_animation(inner_value)
-
-    InputMediaDocumentInputMedia(inner_value) ->
-      encode_input_media_document(inner_value)
-
-    InputMediaAudioInputMedia(inner_value) ->
-      encode_input_media_audio(inner_value)
-
-    InputMediaPhotoInputMedia(inner_value) ->
-      encode_input_media_photo(inner_value)
-
-    InputMediaVideoInputMedia(inner_value) ->
-      encode_input_media_video(inner_value)
-
-    InputMediaLivePhotoInputMedia(inner_value) ->
-      encode_input_media_live_photo(inner_value)
-
-    InputMediaLocationInputMedia(inner_value) ->
-      encode_input_media_location(inner_value)
-
-    InputMediaStickerInputMedia(inner_value) ->
-      encode_input_media_sticker(inner_value)
-
-    InputMediaVenueInputMedia(inner_value) ->
-      encode_input_media_venue(inner_value)
-  }
-}
-
-pub fn encode_input_paid_media(value: InputPaidMedia) -> Json {
-  case value {
-    InputPaidMediaPhotoInputPaidMedia(inner_value) ->
-      encode_input_paid_media_photo(inner_value)
-
-    InputPaidMediaVideoInputPaidMedia(inner_value) ->
-      encode_input_paid_media_video(inner_value)
-
-    InputPaidMediaLivePhotoInputPaidMedia(inner_value) ->
-      encode_input_paid_media_live_photo(inner_value)
-  }
-}
-
-pub fn encode_input_poll_media(value: InputPollMedia) -> Json {
-  case value {
-    InputPollMediaAnimation(inner_value) ->
-      encode_input_media_animation(inner_value)
-
-    InputPollMediaAudio(inner_value) -> encode_input_media_audio(inner_value)
-
-    InputPollMediaDocument(inner_value) ->
-      encode_input_media_document(inner_value)
-
-    InputPollMediaLivePhoto(inner_value) ->
-      encode_input_media_live_photo(inner_value)
-
-    InputPollMediaLocation(inner_value) ->
-      encode_input_media_location(inner_value)
-
-    InputPollMediaPhoto(inner_value) -> encode_input_media_photo(inner_value)
-
-    InputPollMediaVenue(inner_value) -> encode_input_media_venue(inner_value)
-
-    InputPollMediaVideo(inner_value) -> encode_input_media_video(inner_value)
-  }
-}
-
-pub fn encode_input_poll_option_media(value: InputPollOptionMedia) -> Json {
-  case value {
-    InputPollOptionMediaAnimation(inner_value) ->
-      encode_input_media_animation(inner_value)
-
-    InputPollOptionMediaLivePhoto(inner_value) ->
-      encode_input_media_live_photo(inner_value)
-
-    InputPollOptionMediaLocation(inner_value) ->
-      encode_input_media_location(inner_value)
-
-    InputPollOptionMediaPhoto(inner_value) ->
-      encode_input_media_photo(inner_value)
-
-    InputPollOptionMediaSticker(inner_value) ->
-      encode_input_media_sticker(inner_value)
-
-    InputPollOptionMediaVenue(inner_value) ->
-      encode_input_media_venue(inner_value)
-
-    InputPollOptionMediaVideo(inner_value) ->
-      encode_input_media_video(inner_value)
-  }
-}
-
-pub fn encode_input_profile_photo(value: InputProfilePhoto) -> Json {
-  case value {
-    InputProfilePhotoStaticInputProfilePhoto(inner_value) ->
-      encode_input_profile_photo_static(inner_value)
-
-    InputProfilePhotoAnimatedInputProfilePhoto(inner_value) ->
-      encode_input_profile_photo_animated(inner_value)
+    ChatMemberOwnerChatMember(inner_value) ->
+      encode_chat_member_owner(inner_value)
+    ChatMemberAdministratorChatMember(inner_value) ->
+      encode_chat_member_administrator(inner_value)
+    ChatMemberMemberChatMember(inner_value) ->
+      encode_chat_member_member(inner_value)
+    ChatMemberRestrictedChatMember(inner_value) ->
+      encode_chat_member_restricted(inner_value)
+    ChatMemberLeftChatMember(inner_value) ->
+      encode_chat_member_left(inner_value)
+    ChatMemberBannedChatMember(inner_value) ->
+      encode_chat_member_banned(inner_value)
   }
 }
 
@@ -6308,61 +6057,42 @@ pub fn encode_inline_query_result(value: InlineQueryResult) -> Json {
   case value {
     InlineQueryResultCachedAudioInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_audio(inner_value)
-
     InlineQueryResultCachedDocumentInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_document(inner_value)
-
     InlineQueryResultCachedGifInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_gif(inner_value)
-
     InlineQueryResultCachedMpeg4GifInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_mpeg4_gif(inner_value)
-
     InlineQueryResultCachedPhotoInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_photo(inner_value)
-
     InlineQueryResultCachedStickerInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_sticker(inner_value)
-
     InlineQueryResultCachedVideoInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_video(inner_value)
-
     InlineQueryResultCachedVoiceInlineQueryResult(inner_value) ->
       encode_inline_query_result_cached_voice(inner_value)
-
     InlineQueryResultArticleInlineQueryResult(inner_value) ->
       encode_inline_query_result_article(inner_value)
-
     InlineQueryResultAudioInlineQueryResult(inner_value) ->
       encode_inline_query_result_audio(inner_value)
-
     InlineQueryResultContactInlineQueryResult(inner_value) ->
       encode_inline_query_result_contact(inner_value)
-
     InlineQueryResultGameInlineQueryResult(inner_value) ->
       encode_inline_query_result_game(inner_value)
-
     InlineQueryResultDocumentInlineQueryResult(inner_value) ->
       encode_inline_query_result_document(inner_value)
-
     InlineQueryResultGifInlineQueryResult(inner_value) ->
       encode_inline_query_result_gif(inner_value)
-
     InlineQueryResultLocationInlineQueryResult(inner_value) ->
       encode_inline_query_result_location(inner_value)
-
     InlineQueryResultMpeg4GifInlineQueryResult(inner_value) ->
       encode_inline_query_result_mpeg4_gif(inner_value)
-
     InlineQueryResultPhotoInlineQueryResult(inner_value) ->
       encode_inline_query_result_photo(inner_value)
-
     InlineQueryResultVenueInlineQueryResult(inner_value) ->
       encode_inline_query_result_venue(inner_value)
-
     InlineQueryResultVideoInlineQueryResult(inner_value) ->
       encode_inline_query_result_video(inner_value)
-
     InlineQueryResultVoiceInlineQueryResult(inner_value) ->
       encode_inline_query_result_voice(inner_value)
   }
@@ -6372,56 +6102,137 @@ pub fn encode_input_message_content(value: InputMessageContent) -> Json {
   case value {
     InputTextMessageContentInputMessageContent(inner_value) ->
       encode_input_text_message_content(inner_value)
-
     InputLocationMessageContentInputMessageContent(inner_value) ->
       encode_input_location_message_content(inner_value)
-
     InputVenueMessageContentInputMessageContent(inner_value) ->
       encode_input_venue_message_content(inner_value)
-
     InputContactMessageContentInputMessageContent(inner_value) ->
       encode_input_contact_message_content(inner_value)
-
     InputInvoiceMessageContentInputMessageContent(inner_value) ->
       encode_input_invoice_message_content(inner_value)
   }
 }
 
-pub fn encode_revenue_withdrawal_state(value: RevenueWithdrawalState) -> Json {
+pub fn encode_input_paid_media(value: InputPaidMedia) -> Json {
   case value {
-    RevenueWithdrawalStatePendingRevenueWithdrawalState(inner_value) ->
-      encode_revenue_withdrawal_state_pending(inner_value)
-
-    RevenueWithdrawalStateSucceededRevenueWithdrawalState(inner_value) ->
-      encode_revenue_withdrawal_state_succeeded(inner_value)
-
-    RevenueWithdrawalStateFailedRevenueWithdrawalState(inner_value) ->
-      encode_revenue_withdrawal_state_failed(inner_value)
+    InputPaidMediaLivePhotoInputPaidMedia(inner_value) ->
+      encode_input_paid_media_live_photo(inner_value)
+    InputPaidMediaPhotoInputPaidMedia(inner_value) ->
+      encode_input_paid_media_photo(inner_value)
+    InputPaidMediaVideoInputPaidMedia(inner_value) ->
+      encode_input_paid_media_video(inner_value)
   }
 }
 
-pub fn encode_transaction_partner(value: TransactionPartner) -> Json {
+pub fn encode_input_poll_media(value: InputPollMedia) -> Json {
   case value {
-    TransactionPartnerUserTransactionPartner(inner_value) ->
-      encode_transaction_partner_user(inner_value)
+    InputMediaAnimationInputPollMedia(inner_value) ->
+      encode_input_media_animation(inner_value)
+    InputMediaAudioInputPollMedia(inner_value) ->
+      encode_input_media_audio(inner_value)
+    InputMediaDocumentInputPollMedia(inner_value) ->
+      encode_input_media_document(inner_value)
+    InputMediaLivePhotoInputPollMedia(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+    InputMediaLocationInputPollMedia(inner_value) ->
+      encode_input_media_location(inner_value)
+    InputMediaPhotoInputPollMedia(inner_value) ->
+      encode_input_media_photo(inner_value)
+    InputMediaVenueInputPollMedia(inner_value) ->
+      encode_input_media_venue(inner_value)
+    InputMediaVideoInputPollMedia(inner_value) ->
+      encode_input_media_video(inner_value)
+  }
+}
 
-    TransactionPartnerChatTransactionPartner(inner_value) ->
-      encode_transaction_partner_chat(inner_value)
+pub fn encode_input_poll_option_media(value: InputPollOptionMedia) -> Json {
+  case value {
+    InputMediaAnimationInputPollOptionMedia(inner_value) ->
+      encode_input_media_animation(inner_value)
+    InputMediaLivePhotoInputPollOptionMedia(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+    InputMediaLocationInputPollOptionMedia(inner_value) ->
+      encode_input_media_location(inner_value)
+    InputMediaPhotoInputPollOptionMedia(inner_value) ->
+      encode_input_media_photo(inner_value)
+    InputMediaStickerInputPollOptionMedia(inner_value) ->
+      encode_input_media_sticker(inner_value)
+    InputMediaVenueInputPollOptionMedia(inner_value) ->
+      encode_input_media_venue(inner_value)
+    InputMediaVideoInputPollOptionMedia(inner_value) ->
+      encode_input_media_video(inner_value)
+  }
+}
 
-    TransactionPartnerAffiliateProgramTransactionPartner(inner_value) ->
-      encode_transaction_partner_affiliate_program(inner_value)
+pub fn encode_input_profile_photo(value: InputProfilePhoto) -> Json {
+  case value {
+    InputProfilePhotoStaticInputProfilePhoto(inner_value) ->
+      encode_input_profile_photo_static(inner_value)
+    InputProfilePhotoAnimatedInputProfilePhoto(inner_value) ->
+      encode_input_profile_photo_animated(inner_value)
+  }
+}
 
-    TransactionPartnerFragmentTransactionPartner(inner_value) ->
-      encode_transaction_partner_fragment(inner_value)
+pub fn encode_input_story_content(value: InputStoryContent) -> Json {
+  case value {
+    InputStoryContentPhotoInputStoryContent(inner_value) ->
+      encode_input_story_content_photo(inner_value)
+    InputStoryContentVideoInputStoryContent(inner_value) ->
+      encode_input_story_content_video(inner_value)
+  }
+}
 
-    TransactionPartnerTelegramAdsTransactionPartner(inner_value) ->
-      encode_transaction_partner_telegram_ads(inner_value)
+pub fn encode_maybe_inaccessible_message(
+  value: MaybeInaccessibleMessage,
+) -> Json {
+  case value {
+    MessageMaybeInaccessibleMessage(inner_value) -> encode_message(inner_value)
+    InaccessibleMessageMaybeInaccessibleMessage(inner_value) ->
+      encode_inaccessible_message(inner_value)
+  }
+}
 
-    TransactionPartnerTelegramApiTransactionPartner(inner_value) ->
-      encode_transaction_partner_telegram_api(inner_value)
+pub fn encode_menu_button(value: MenuButton) -> Json {
+  case value {
+    MenuButtonCommandsMenuButton(inner_value) ->
+      encode_menu_button_commands(inner_value)
+    MenuButtonWebAppMenuButton(inner_value) ->
+      encode_menu_button_web_app(inner_value)
+    MenuButtonDefaultMenuButton(inner_value) ->
+      encode_menu_button_default(inner_value)
+  }
+}
 
-    TransactionPartnerOtherTransactionPartner(inner_value) ->
-      encode_transaction_partner_other(inner_value)
+pub fn encode_message_origin(value: MessageOrigin) -> Json {
+  case value {
+    MessageOriginUserMessageOrigin(inner_value) ->
+      encode_message_origin_user(inner_value)
+    MessageOriginHiddenUserMessageOrigin(inner_value) ->
+      encode_message_origin_hidden_user(inner_value)
+    MessageOriginChatMessageOrigin(inner_value) ->
+      encode_message_origin_chat(inner_value)
+    MessageOriginChannelMessageOrigin(inner_value) ->
+      encode_message_origin_channel(inner_value)
+  }
+}
+
+pub fn encode_owned_gift(value: OwnedGift) -> Json {
+  case value {
+    OwnedGiftRegularOwnedGift(inner_value) ->
+      encode_owned_gift_regular(inner_value)
+    OwnedGiftUniqueOwnedGift(inner_value) ->
+      encode_owned_gift_unique(inner_value)
+  }
+}
+
+pub fn encode_paid_media(value: PaidMedia) -> Json {
+  case value {
+    PaidMediaLivePhotoPaidMedia(inner_value) ->
+      encode_paid_media_live_photo(inner_value)
+    PaidMediaPhotoPaidMedia(inner_value) -> encode_paid_media_photo(inner_value)
+    PaidMediaPreviewPaidMedia(inner_value) ->
+      encode_paid_media_preview(inner_value)
+    PaidMediaVideoPaidMedia(inner_value) -> encode_paid_media_video(inner_value)
   }
 }
 
@@ -6429,30 +6240,106 @@ pub fn encode_passport_element_error(value: PassportElementError) -> Json {
   case value {
     PassportElementErrorDataFieldPassportElementError(inner_value) ->
       encode_passport_element_error_data_field(inner_value)
-
     PassportElementErrorFrontSidePassportElementError(inner_value) ->
       encode_passport_element_error_front_side(inner_value)
-
     PassportElementErrorReverseSidePassportElementError(inner_value) ->
       encode_passport_element_error_reverse_side(inner_value)
-
     PassportElementErrorSelfiePassportElementError(inner_value) ->
       encode_passport_element_error_selfie(inner_value)
-
     PassportElementErrorFilePassportElementError(inner_value) ->
       encode_passport_element_error_file(inner_value)
-
     PassportElementErrorFilesPassportElementError(inner_value) ->
       encode_passport_element_error_files(inner_value)
-
     PassportElementErrorTranslationFilePassportElementError(inner_value) ->
       encode_passport_element_error_translation_file(inner_value)
-
     PassportElementErrorTranslationFilesPassportElementError(inner_value) ->
       encode_passport_element_error_translation_files(inner_value)
-
     PassportElementErrorUnspecifiedPassportElementError(inner_value) ->
       encode_passport_element_error_unspecified(inner_value)
+  }
+}
+
+pub fn encode_reaction_type(value: ReactionType) -> Json {
+  case value {
+    ReactionTypeEmojiReactionType(inner_value) ->
+      encode_reaction_type_emoji(inner_value)
+    ReactionTypeCustomEmojiReactionType(inner_value) ->
+      encode_reaction_type_custom_emoji(inner_value)
+    ReactionTypePaidReactionType(inner_value) ->
+      encode_reaction_type_paid(inner_value)
+  }
+}
+
+pub fn encode_revenue_withdrawal_state(value: RevenueWithdrawalState) -> Json {
+  case value {
+    RevenueWithdrawalStatePendingRevenueWithdrawalState(inner_value) ->
+      encode_revenue_withdrawal_state_pending(inner_value)
+    RevenueWithdrawalStateSucceededRevenueWithdrawalState(inner_value) ->
+      encode_revenue_withdrawal_state_succeeded(inner_value)
+    RevenueWithdrawalStateFailedRevenueWithdrawalState(inner_value) ->
+      encode_revenue_withdrawal_state_failed(inner_value)
+  }
+}
+
+pub fn encode_story_area_type(value: StoryAreaType) -> Json {
+  case value {
+    StoryAreaTypeLocationStoryAreaType(inner_value) ->
+      encode_story_area_type_location(inner_value)
+    StoryAreaTypeSuggestedReactionStoryAreaType(inner_value) ->
+      encode_story_area_type_suggested_reaction(inner_value)
+    StoryAreaTypeLinkStoryAreaType(inner_value) ->
+      encode_story_area_type_link(inner_value)
+    StoryAreaTypeWeatherStoryAreaType(inner_value) ->
+      encode_story_area_type_weather(inner_value)
+    StoryAreaTypeUniqueGiftStoryAreaType(inner_value) ->
+      encode_story_area_type_unique_gift(inner_value)
+  }
+}
+
+pub fn encode_transaction_partner(value: TransactionPartner) -> Json {
+  case value {
+    TransactionPartnerUserTransactionPartner(inner_value) ->
+      encode_transaction_partner_user(inner_value)
+    TransactionPartnerChatTransactionPartner(inner_value) ->
+      encode_transaction_partner_chat(inner_value)
+    TransactionPartnerAffiliateProgramTransactionPartner(inner_value) ->
+      encode_transaction_partner_affiliate_program(inner_value)
+    TransactionPartnerFragmentTransactionPartner(inner_value) ->
+      encode_transaction_partner_fragment(inner_value)
+    TransactionPartnerTelegramAdsTransactionPartner(inner_value) ->
+      encode_transaction_partner_telegram_ads(inner_value)
+    TransactionPartnerTelegramApiTransactionPartner(inner_value) ->
+      encode_transaction_partner_telegram_api(inner_value)
+    TransactionPartnerOtherTransactionPartner(inner_value) ->
+      encode_transaction_partner_other(inner_value)
+  }
+}
+
+// === MANUAL — not regenerated below (codegen) ===
+//
+// Hand-written generic encoders and method-parameter encoders. The codegen
+// tool (codegen/) preserves everything from the marker above to EOF.
+
+pub fn encode_input_media(value: InputMedia) -> Json {
+  case value {
+    InputMediaAnimationInputMedia(inner_value) ->
+      encode_input_media_animation(inner_value)
+    InputMediaDocumentInputMedia(inner_value) ->
+      encode_input_media_document(inner_value)
+    InputMediaAudioInputMedia(inner_value) ->
+      encode_input_media_audio(inner_value)
+    InputMediaPhotoInputMedia(inner_value) ->
+      encode_input_media_photo(inner_value)
+    InputMediaVideoInputMedia(inner_value) ->
+      encode_input_media_video(inner_value)
+    InputMediaLivePhotoInputMedia(inner_value) ->
+      encode_input_media_live_photo(inner_value)
+    InputMediaLocationInputMedia(inner_value) ->
+      encode_input_media_location(inner_value)
+    InputMediaStickerInputMedia(inner_value) ->
+      encode_input_media_sticker(inner_value)
+    InputMediaVenueInputMedia(inner_value) ->
+      encode_input_media_venue(inner_value)
   }
 }
 

@@ -57,11 +57,12 @@ import telega/model/types.{
   type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
   type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
   type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
-  type InputPollOptionMedia, type InputProfilePhotoAnimated,
-  type InputProfilePhotoStatic, type InputSticker, type InputStoryContent,
-  type InputStoryContentPhoto, type InputStoryContentVideo,
-  type InputTextMessageContent, type InputVenueMessageContent, type IntOrString,
-  type Invoice, type KeyboardButton, type KeyboardButtonPollType,
+  type InputPollOptionMedia, type InputProfilePhoto,
+  type InputProfilePhotoAnimated, type InputProfilePhotoStatic,
+  type InputSticker, type InputStoryContent, type InputStoryContentPhoto,
+  type InputStoryContentVideo, type InputTextMessageContent,
+  type InputVenueMessageContent, type IntOrString, type Invoice,
+  type KeyboardButton, type KeyboardButtonPollType,
   type KeyboardButtonRequestChat, type KeyboardButtonRequestManagedBot,
   type KeyboardButtonRequestUsers, type LabeledPrice, type LinkPreviewOptions,
   type LivePhoto, type Location, type LocationAddress, type LoginUrl,
@@ -179,26 +180,31 @@ import telega/model/types.{
   InputContactMessageContentInputMessageContent, InputInvoiceMessageContent,
   InputInvoiceMessageContentInputMessageContent, InputLocationMessageContent,
   InputLocationMessageContentInputMessageContent, InputMediaAnimation,
-  InputMediaAnimationInputMedia, InputMediaAudio, InputMediaAudioInputMedia,
-  InputMediaDocument, InputMediaDocumentInputMedia, InputMediaLivePhoto,
-  InputMediaLivePhotoInputMedia, InputMediaLocation,
-  InputMediaLocationInputMedia, InputMediaPhoto, InputMediaPhotoInputMedia,
-  InputMediaSticker, InputMediaStickerInputMedia, InputMediaVenue,
-  InputMediaVenueInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
-  InputPaidMediaLivePhoto, InputPaidMediaLivePhotoInputPaidMedia,
-  InputPaidMediaPhoto, InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideo,
-  InputPaidMediaVideoInputPaidMedia, InputPollMediaAnimation,
-  InputPollMediaAudio, InputPollMediaDocument, InputPollMediaLivePhoto,
-  InputPollMediaLocation, InputPollMediaPhoto, InputPollMediaVenue,
-  InputPollMediaVideo, InputPollOption, InputPollOptionMediaAnimation,
-  InputPollOptionMediaLivePhoto, InputPollOptionMediaLocation,
-  InputPollOptionMediaPhoto, InputPollOptionMediaSticker,
-  InputPollOptionMediaVenue, InputPollOptionMediaVideo,
-  InputProfilePhotoAnimated, InputProfilePhotoStatic, InputSticker,
-  InputStoryContent, InputStoryContentPhoto, InputStoryContentVideo,
-  InputTextMessageContent, InputTextMessageContentInputMessageContent,
-  InputVenueMessageContent, InputVenueMessageContentInputMessageContent, Int,
-  Invoice, KeyboardButton, KeyboardButtonPollType, KeyboardButtonRequestChat,
+  InputMediaAnimationInputMedia, InputMediaAnimationInputPollMedia,
+  InputMediaAnimationInputPollOptionMedia, InputMediaAudio,
+  InputMediaAudioInputMedia, InputMediaAudioInputPollMedia, InputMediaDocument,
+  InputMediaDocumentInputMedia, InputMediaDocumentInputPollMedia,
+  InputMediaLivePhoto, InputMediaLivePhotoInputMedia,
+  InputMediaLivePhotoInputPollMedia, InputMediaLivePhotoInputPollOptionMedia,
+  InputMediaLocation, InputMediaLocationInputMedia,
+  InputMediaLocationInputPollMedia, InputMediaLocationInputPollOptionMedia,
+  InputMediaPhoto, InputMediaPhotoInputMedia, InputMediaPhotoInputPollMedia,
+  InputMediaPhotoInputPollOptionMedia, InputMediaSticker,
+  InputMediaStickerInputMedia, InputMediaStickerInputPollOptionMedia,
+  InputMediaVenue, InputMediaVenueInputMedia, InputMediaVenueInputPollMedia,
+  InputMediaVenueInputPollOptionMedia, InputMediaVideo,
+  InputMediaVideoInputMedia, InputMediaVideoInputPollMedia,
+  InputMediaVideoInputPollOptionMedia, InputPaidMediaLivePhoto,
+  InputPaidMediaLivePhotoInputPaidMedia, InputPaidMediaPhoto,
+  InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideo,
+  InputPaidMediaVideoInputPaidMedia, InputPollOption, InputProfilePhotoAnimated,
+  InputProfilePhotoAnimatedInputProfilePhoto, InputProfilePhotoStatic,
+  InputProfilePhotoStaticInputProfilePhoto, InputSticker, InputStoryContentPhoto,
+  InputStoryContentPhotoInputStoryContent, InputStoryContentVideo,
+  InputStoryContentVideoInputStoryContent, InputTextMessageContent,
+  InputTextMessageContentInputMessageContent, InputVenueMessageContent,
+  InputVenueMessageContentInputMessageContent, Int, Invoice, KeyboardButton,
+  KeyboardButtonPollType, KeyboardButtonRequestChat,
   KeyboardButtonRequestManagedBot, KeyboardButtonRequestUsers, LabeledPrice,
   LinkPreviewOptions, LivePhoto, Location, LocationAddress, LoginUrl,
   ManagedBotCreated, ManagedBotUpdated, MaskPosition, MenuButtonCommands,
@@ -210,12 +216,12 @@ import telega/model/types.{
   MessageOriginChatMessageOrigin, MessageOriginHiddenUser,
   MessageOriginHiddenUserMessageOrigin, MessageOriginUser,
   MessageOriginUserMessageOrigin, MessageReactionCountUpdated,
-  MessageReactionUpdated, OrderInfo, OwnedGift, OwnedGiftRegular,
-  OwnedGiftUnique, OwnedGifts, PaidMediaInfo, PaidMediaLivePhoto,
-  PaidMediaLivePhotoPaidMedia, PaidMediaPhoto, PaidMediaPhotoPaidMedia,
-  PaidMediaPreview, PaidMediaPreviewPaidMedia, PaidMediaPurchased,
-  PaidMediaVideo, PaidMediaVideoPaidMedia, PaidMessagePriceChanged, PassportData,
-  PassportElementErrorDataField,
+  MessageReactionUpdated, OrderInfo, OwnedGiftRegular, OwnedGiftRegularOwnedGift,
+  OwnedGiftUnique, OwnedGiftUniqueOwnedGift, OwnedGifts, PaidMediaInfo,
+  PaidMediaLivePhoto, PaidMediaLivePhotoPaidMedia, PaidMediaPhoto,
+  PaidMediaPhotoPaidMedia, PaidMediaPreview, PaidMediaPreviewPaidMedia,
+  PaidMediaPurchased, PaidMediaVideo, PaidMediaVideoPaidMedia,
+  PaidMessagePriceChanged, PassportData, PassportElementErrorDataField,
   PassportElementErrorDataFieldPassportElementError, PassportElementErrorFile,
   PassportElementErrorFilePassportElementError, PassportElementErrorFiles,
   PassportElementErrorFilesPassportElementError, PassportElementErrorFrontSide,
@@ -243,9 +249,12 @@ import telega/model/types.{
   RevenueWithdrawalStateSucceededRevenueWithdrawalState, SentGuestMessage,
   SentWebAppMessage, SharedUser, ShippingAddress, ShippingOption, ShippingQuery,
   StarAmount, StarTransaction, StarTransactions, Sticker, StickerSet, Story,
-  StoryArea, StoryAreaPosition, StoryAreaType, StoryAreaTypeLink,
-  StoryAreaTypeLocation, StoryAreaTypeSuggestedReaction, StoryAreaTypeUniqueGift,
-  StoryAreaTypeWeather, Str, StringV, SuccessfulPayment,
+  StoryArea, StoryAreaPosition, StoryAreaTypeLink,
+  StoryAreaTypeLinkStoryAreaType, StoryAreaTypeLocation,
+  StoryAreaTypeLocationStoryAreaType, StoryAreaTypeSuggestedReaction,
+  StoryAreaTypeSuggestedReactionStoryAreaType, StoryAreaTypeUniqueGift,
+  StoryAreaTypeUniqueGiftStoryAreaType, StoryAreaTypeWeather,
+  StoryAreaTypeWeatherStoryAreaType, Str, StringV, SuccessfulPayment,
   SuggestedPostApprovalFailed, SuggestedPostApproved, SuggestedPostDeclined,
   SuggestedPostInfo, SuggestedPostPaid, SuggestedPostParameters,
   SuggestedPostPrice, SuggestedPostRefunded, SwitchInlineQueryChosenChat,
@@ -264,305 +273,550 @@ import telega/model/types.{
   VideoQuality, Voice, WebAppData, WebAppInfo, WebhookInfo, WriteAccessAllowed,
 }
 
-pub fn update_decoder() -> decode.Decoder(Update) {
-  use update_id <- decode.field("update_id", decode.int)
+// This file is auto-generated for Bot API 10.0 from the Telegram Bot API spec.
+// Do not edit above the MANUAL marker — run `task codegen` to regenerate.
+
+pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
+  use unlimited_gifts <- decode.field("unlimited_gifts", decode.bool)
+  use limited_gifts <- decode.field("limited_gifts", decode.bool)
+  use unique_gifts <- decode.field("unique_gifts", decode.bool)
+  use premium_subscription <- decode.field("premium_subscription", decode.bool)
+  use gifts_from_channels <- decode.field("gifts_from_channels", decode.bool)
+  decode.success(AcceptedGiftTypes(
+    unlimited_gifts: unlimited_gifts,
+    limited_gifts: limited_gifts,
+    unique_gifts: unique_gifts,
+    premium_subscription: premium_subscription,
+    gifts_from_channels: gifts_from_channels,
+  ))
+}
+
+pub fn affiliate_info_decoder() -> decode.Decoder(AffiliateInfo) {
+  use affiliate_user <- decode.optional_field(
+    "affiliate_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use affiliate_chat <- decode.optional_field(
+    "affiliate_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  use commission_per_mille <- decode.field("commission_per_mille", decode.int)
+  use amount <- decode.field("amount", decode.int)
+  use nanostar_amount <- decode.optional_field(
+    "nanostar_amount",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(AffiliateInfo(
+    affiliate_user: affiliate_user,
+    affiliate_chat: affiliate_chat,
+    commission_per_mille: commission_per_mille,
+    amount: amount,
+    nanostar_amount: nanostar_amount,
+  ))
+}
+
+pub fn animation_decoder() -> decode.Decoder(Animation) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use duration <- decode.field("duration", decode.int)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(photo_size_decoder()),
+  )
+  use file_name <- decode.optional_field(
+    "file_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Animation(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    duration: duration,
+    thumbnail: thumbnail,
+    file_name: file_name,
+    mime_type: mime_type,
+    file_size: file_size,
+  ))
+}
+
+pub fn audio_decoder() -> decode.Decoder(Audio) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use duration <- decode.field("duration", decode.int)
+  use performer <- decode.optional_field(
+    "performer",
+    None,
+    decode.optional(decode.string),
+  )
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_name <- decode.optional_field(
+    "file_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(photo_size_decoder()),
+  )
+  decode.success(Audio(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    duration: duration,
+    performer: performer,
+    title: title,
+    file_name: file_name,
+    mime_type: mime_type,
+    file_size: file_size,
+    thumbnail: thumbnail,
+  ))
+}
+
+pub fn background_fill_freeform_gradient_decoder() -> decode.Decoder(
+  BackgroundFillFreeformGradient,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use colors <- decode.field("colors", decode.list(decode.int))
+  decode.success(BackgroundFillFreeformGradient(type_: type_, colors: colors))
+}
+
+pub fn background_fill_gradient_decoder() -> decode.Decoder(
+  BackgroundFillGradient,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use top_color <- decode.field("top_color", decode.int)
+  use bottom_color <- decode.field("bottom_color", decode.int)
+  use rotation_angle <- decode.field("rotation_angle", decode.int)
+  decode.success(BackgroundFillGradient(
+    type_: type_,
+    top_color: top_color,
+    bottom_color: bottom_color,
+    rotation_angle: rotation_angle,
+  ))
+}
+
+pub fn background_fill_solid_decoder() -> decode.Decoder(BackgroundFillSolid) {
+  use type_ <- decode.field("type", decode.string)
+  use color <- decode.field("color", decode.int)
+  decode.success(BackgroundFillSolid(type_: type_, color: color))
+}
+
+pub fn background_type_chat_theme_decoder() -> decode.Decoder(
+  BackgroundTypeChatTheme,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use theme_name <- decode.field("theme_name", decode.string)
+  decode.success(BackgroundTypeChatTheme(type_: type_, theme_name: theme_name))
+}
+
+pub fn background_type_fill_decoder() -> decode.Decoder(BackgroundTypeFill) {
+  use type_ <- decode.field("type", decode.string)
+  use fill <- decode.field("fill", background_fill_decoder())
+  use dark_theme_dimming <- decode.field("dark_theme_dimming", decode.int)
+  decode.success(BackgroundTypeFill(
+    type_: type_,
+    fill: fill,
+    dark_theme_dimming: dark_theme_dimming,
+  ))
+}
+
+pub fn background_type_pattern_decoder() -> decode.Decoder(
+  BackgroundTypePattern,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use document <- decode.field("document", document_decoder())
+  use fill <- decode.field("fill", background_fill_decoder())
+  use intensity <- decode.field("intensity", decode.int)
+  use is_inverted <- decode.optional_field(
+    "is_inverted",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_moving <- decode.optional_field(
+    "is_moving",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(BackgroundTypePattern(
+    type_: type_,
+    document: document,
+    fill: fill,
+    intensity: intensity,
+    is_inverted: is_inverted,
+    is_moving: is_moving,
+  ))
+}
+
+pub fn background_type_wallpaper_decoder() -> decode.Decoder(
+  BackgroundTypeWallpaper,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use document <- decode.field("document", document_decoder())
+  use dark_theme_dimming <- decode.field("dark_theme_dimming", decode.int)
+  use is_blurred <- decode.optional_field(
+    "is_blurred",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_moving <- decode.optional_field(
+    "is_moving",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(BackgroundTypeWallpaper(
+    type_: type_,
+    document: document,
+    dark_theme_dimming: dark_theme_dimming,
+    is_blurred: is_blurred,
+    is_moving: is_moving,
+  ))
+}
+
+pub fn birthdate_decoder() -> decode.Decoder(Birthdate) {
+  use day <- decode.field("day", decode.int)
+  use month <- decode.field("month", decode.int)
+  use year <- decode.optional_field("year", None, decode.optional(decode.int))
+  decode.success(Birthdate(day: day, month: month, year: year))
+}
+
+pub fn bot_access_settings_decoder() -> decode.Decoder(BotAccessSettings) {
+  use is_access_restricted <- decode.field("is_access_restricted", decode.bool)
+  use added_users <- decode.optional_field(
+    "added_users",
+    None,
+    decode.optional(decode.list(user_decoder())),
+  )
+  decode.success(BotAccessSettings(
+    is_access_restricted: is_access_restricted,
+    added_users: added_users,
+  ))
+}
+
+pub fn bot_command_decoder() -> decode.Decoder(BotCommand) {
+  use command <- decode.field("command", decode.string)
+  use description <- decode.field("description", decode.string)
+  decode.success(BotCommand(command: command, description: description))
+}
+
+pub fn bot_command_scope_all_chat_administrators_decoder() -> decode.Decoder(
+  BotCommandScopeAllChatAdministrators,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(BotCommandScopeAllChatAdministrators(type_: type_))
+}
+
+pub fn bot_command_scope_all_group_chats_decoder() -> decode.Decoder(
+  BotCommandScopeAllGroupChats,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(BotCommandScopeAllGroupChats(type_: type_))
+}
+
+pub fn bot_command_scope_all_private_chats_decoder() -> decode.Decoder(
+  BotCommandScopeAllPrivateChats,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(BotCommandScopeAllPrivateChats(type_: type_))
+}
+
+pub fn bot_command_scope_chat_decoder() -> decode.Decoder(BotCommandScopeChat) {
+  use type_ <- decode.field("type", decode.string)
+  use chat_id <- decode.field("chat_id", int_or_string_decoder())
+  decode.success(BotCommandScopeChat(type_: type_, chat_id: chat_id))
+}
+
+pub fn bot_command_scope_chat_administrators_decoder() -> decode.Decoder(
+  BotCommandScopeChatAdministrators,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use chat_id <- decode.field("chat_id", int_or_string_decoder())
+  decode.success(BotCommandScopeChatAdministrators(
+    type_: type_,
+    chat_id: chat_id,
+  ))
+}
+
+pub fn bot_command_scope_chat_member_decoder() -> decode.Decoder(
+  BotCommandScopeChatMember,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use chat_id <- decode.field("chat_id", int_or_string_decoder())
+  use user_id <- decode.field("user_id", decode.int)
+  decode.success(BotCommandScopeChatMember(
+    type_: type_,
+    chat_id: chat_id,
+    user_id: user_id,
+  ))
+}
+
+pub fn bot_command_scope_default_decoder() -> decode.Decoder(
+  BotCommandScopeDefault,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(BotCommandScopeDefault(type_: type_))
+}
+
+pub fn bot_description_decoder() -> decode.Decoder(BotDescription) {
+  use description <- decode.field("description", decode.string)
+  decode.success(BotDescription(description: description))
+}
+
+pub fn bot_name_decoder() -> decode.Decoder(BotName) {
+  use name <- decode.field("name", decode.string)
+  decode.success(BotName(name: name))
+}
+
+pub fn bot_short_description_decoder() -> decode.Decoder(BotShortDescription) {
+  use short_description <- decode.field("short_description", decode.string)
+  decode.success(BotShortDescription(short_description: short_description))
+}
+
+pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
+  use can_reply <- decode.optional_field(
+    "can_reply",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_read_messages <- decode.optional_field(
+    "can_read_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_delete_sent_messages <- decode.optional_field(
+    "can_delete_sent_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_delete_all_messages <- decode.optional_field(
+    "can_delete_all_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_name <- decode.optional_field(
+    "can_edit_name",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_bio <- decode.optional_field(
+    "can_edit_bio",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_profile_photo <- decode.optional_field(
+    "can_edit_profile_photo",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_username <- decode.optional_field(
+    "can_edit_username",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_change_gift_settings <- decode.optional_field(
+    "can_change_gift_settings",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_view_gifts_and_stars <- decode.optional_field(
+    "can_view_gifts_and_stars",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_convert_gifts_to_stars <- decode.optional_field(
+    "can_convert_gifts_to_stars",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_transfer_and_upgrade_gifts <- decode.optional_field(
+    "can_transfer_and_upgrade_gifts",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_transfer_stars <- decode.optional_field(
+    "can_transfer_stars",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_stories <- decode.optional_field(
+    "can_manage_stories",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(BusinessBotRights(
+    can_reply: can_reply,
+    can_read_messages: can_read_messages,
+    can_delete_sent_messages: can_delete_sent_messages,
+    can_delete_all_messages: can_delete_all_messages,
+    can_edit_name: can_edit_name,
+    can_edit_bio: can_edit_bio,
+    can_edit_profile_photo: can_edit_profile_photo,
+    can_edit_username: can_edit_username,
+    can_change_gift_settings: can_change_gift_settings,
+    can_view_gifts_and_stars: can_view_gifts_and_stars,
+    can_convert_gifts_to_stars: can_convert_gifts_to_stars,
+    can_transfer_and_upgrade_gifts: can_transfer_and_upgrade_gifts,
+    can_transfer_stars: can_transfer_stars,
+    can_manage_stories: can_manage_stories,
+  ))
+}
+
+pub fn business_connection_decoder() -> decode.Decoder(BusinessConnection) {
+  use id <- decode.field("id", decode.string)
+  use user <- decode.field("user", user_decoder())
+  use user_chat_id <- decode.field("user_chat_id", decode.int)
+  use date <- decode.field("date", decode.int)
+  use rights <- decode.optional_field(
+    "rights",
+    None,
+    decode.optional(business_bot_rights_decoder()),
+  )
+  use is_enabled <- decode.field("is_enabled", decode.bool)
+  decode.success(BusinessConnection(
+    id: id,
+    user: user,
+    user_chat_id: user_chat_id,
+    date: date,
+    rights: rights,
+    is_enabled: is_enabled,
+  ))
+}
+
+pub fn business_intro_decoder() -> decode.Decoder(BusinessIntro) {
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
   use message <- decode.optional_field(
     "message",
     None,
-    decode.optional(message_decoder()),
+    decode.optional(decode.string),
   )
-  use edited_message <- decode.optional_field(
-    "edited_message",
+  use sticker <- decode.optional_field(
+    "sticker",
     None,
-    decode.optional(message_decoder()),
+    decode.optional(sticker_decoder()),
   )
-  use channel_post <- decode.optional_field(
-    "channel_post",
+  decode.success(BusinessIntro(title: title, message: message, sticker: sticker))
+}
+
+pub fn business_location_decoder() -> decode.Decoder(BusinessLocation) {
+  use address <- decode.field("address", decode.string)
+  use location <- decode.optional_field(
+    "location",
     None,
-    decode.optional(message_decoder()),
+    decode.optional(location_decoder()),
   )
-  use edited_channel_post <- decode.optional_field(
-    "edited_channel_post",
-    None,
-    decode.optional(message_decoder()),
+  decode.success(BusinessLocation(address: address, location: location))
+}
+
+pub fn business_messages_deleted_decoder() -> decode.Decoder(
+  BusinessMessagesDeleted,
+) {
+  use business_connection_id <- decode.field(
+    "business_connection_id",
+    decode.string,
   )
-  use business_connection <- decode.optional_field(
-    "business_connection",
-    None,
-    decode.optional(business_connection_decoder()),
-  )
-  use business_message <- decode.optional_field(
-    "business_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use edited_business_message <- decode.optional_field(
-    "edited_business_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use deleted_business_messages <- decode.optional_field(
-    "deleted_business_messages",
-    None,
-    decode.optional(business_messages_deleted_decoder()),
-  )
-  use message_reaction <- decode.optional_field(
-    "message_reaction",
-    None,
-    decode.optional(message_reaction_updated_decoder()),
-  )
-  use message_reaction_count <- decode.optional_field(
-    "message_reaction_count",
-    None,
-    decode.optional(message_reaction_count_updated_decoder()),
-  )
-  use inline_query <- decode.optional_field(
-    "inline_query",
-    None,
-    decode.optional(inline_query_decoder()),
-  )
-  use chosen_inline_result <- decode.optional_field(
-    "chosen_inline_result",
-    None,
-    decode.optional(chosen_inline_result_decoder()),
-  )
-  use callback_query <- decode.optional_field(
-    "callback_query",
-    None,
-    decode.optional(callback_query_decoder()),
-  )
-  use shipping_query <- decode.optional_field(
-    "shipping_query",
-    None,
-    decode.optional(shipping_query_decoder()),
-  )
-  use pre_checkout_query <- decode.optional_field(
-    "pre_checkout_query",
-    None,
-    decode.optional(pre_checkout_query_decoder()),
-  )
-  use purchased_paid_media <- decode.optional_field(
-    "purchased_paid_media",
-    None,
-    decode.optional(paid_media_purchased_decoder()),
-  )
-  use poll <- decode.optional_field(
-    "poll",
-    None,
-    decode.optional(poll_decoder()),
-  )
-  use poll_answer <- decode.optional_field(
-    "poll_answer",
-    None,
-    decode.optional(poll_answer_decoder()),
-  )
-  use my_chat_member <- decode.optional_field(
-    "my_chat_member",
-    None,
-    decode.optional(chat_member_updated_decoder()),
-  )
-  use chat_member <- decode.optional_field(
-    "chat_member",
-    None,
-    decode.optional(chat_member_updated_decoder()),
-  )
-  use chat_join_request <- decode.optional_field(
-    "chat_join_request",
-    None,
-    decode.optional(chat_join_request_decoder()),
-  )
-  use chat_boost <- decode.optional_field(
-    "chat_boost",
-    None,
-    decode.optional(chat_boost_updated_decoder()),
-  )
-  use removed_chat_boost <- decode.optional_field(
-    "removed_chat_boost",
-    None,
-    decode.optional(chat_boost_removed_decoder()),
-  )
-  use managed_bot <- decode.optional_field(
-    "managed_bot",
-    None,
-    decode.optional(managed_bot_updated_decoder()),
-  )
-  use guest_message <- decode.optional_field(
-    "guest_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  decode.success(Update(
-    update_id: update_id,
-    message: message,
-    edited_message: edited_message,
-    channel_post: channel_post,
-    edited_channel_post: edited_channel_post,
-    business_connection: business_connection,
-    business_message: business_message,
-    edited_business_message: edited_business_message,
-    deleted_business_messages: deleted_business_messages,
-    message_reaction: message_reaction,
-    message_reaction_count: message_reaction_count,
-    inline_query: inline_query,
-    chosen_inline_result: chosen_inline_result,
-    callback_query: callback_query,
-    shipping_query: shipping_query,
-    pre_checkout_query: pre_checkout_query,
-    purchased_paid_media: purchased_paid_media,
-    poll: poll,
-    poll_answer: poll_answer,
-    my_chat_member: my_chat_member,
-    chat_member: chat_member,
-    chat_join_request: chat_join_request,
-    chat_boost: chat_boost,
-    removed_chat_boost: removed_chat_boost,
-    managed_bot: managed_bot,
-    guest_message: guest_message,
+  use chat <- decode.field("chat", chat_decoder())
+  use message_ids <- decode.field("message_ids", decode.list(decode.int))
+  decode.success(BusinessMessagesDeleted(
+    business_connection_id: business_connection_id,
+    chat: chat,
+    message_ids: message_ids,
   ))
 }
 
-pub fn webhook_info_decoder() -> decode.Decoder(WebhookInfo) {
-  use url <- decode.field("url", decode.string)
-  use has_custom_certificate <- decode.field(
-    "has_custom_certificate",
-    decode.bool,
+pub fn business_opening_hours_decoder() -> decode.Decoder(BusinessOpeningHours) {
+  use time_zone_name <- decode.field("time_zone_name", decode.string)
+  use opening_hours <- decode.field(
+    "opening_hours",
+    decode.list(business_opening_hours_interval_decoder()),
   )
-  use pending_update_count <- decode.field("pending_update_count", decode.int)
-  use ip_address <- decode.optional_field(
-    "ip_address",
-    None,
-    decode.optional(decode.string),
-  )
-  use last_error_date <- decode.optional_field(
-    "last_error_date",
-    None,
-    decode.optional(decode.int),
-  )
-  use last_error_message <- decode.optional_field(
-    "last_error_message",
-    None,
-    decode.optional(decode.string),
-  )
-  use last_synchronization_error_date <- decode.optional_field(
-    "last_synchronization_error_date",
-    None,
-    decode.optional(decode.int),
-  )
-  use max_connections <- decode.optional_field(
-    "max_connections",
-    None,
-    decode.optional(decode.int),
-  )
-  use allowed_updates <- decode.optional_field(
-    "allowed_updates",
-    None,
-    decode.optional(decode.list(decode.string)),
-  )
-  decode.success(WebhookInfo(
-    url: url,
-    has_custom_certificate: has_custom_certificate,
-    pending_update_count: pending_update_count,
-    ip_address: ip_address,
-    last_error_date: last_error_date,
-    last_error_message: last_error_message,
-    last_synchronization_error_date: last_synchronization_error_date,
-    max_connections: max_connections,
-    allowed_updates: allowed_updates,
+  decode.success(BusinessOpeningHours(
+    time_zone_name: time_zone_name,
+    opening_hours: opening_hours,
   ))
 }
 
-pub fn user_decoder() -> decode.Decoder(User) {
-  use id <- decode.field("id", decode.int)
-  use is_bot <- decode.field("is_bot", decode.bool)
-  use first_name <- decode.field("first_name", decode.string)
-  use last_name <- decode.optional_field(
-    "last_name",
+pub fn business_opening_hours_interval_decoder() -> decode.Decoder(
+  BusinessOpeningHoursInterval,
+) {
+  use opening_minute <- decode.field("opening_minute", decode.int)
+  use closing_minute <- decode.field("closing_minute", decode.int)
+  decode.success(BusinessOpeningHoursInterval(
+    opening_minute: opening_minute,
+    closing_minute: closing_minute,
+  ))
+}
+
+pub fn callback_game_decoder() -> decode.Decoder(CallbackGame) {
+  decode.success(CallbackGame)
+}
+
+pub fn callback_query_decoder() -> decode.Decoder(CallbackQuery) {
+  use id <- decode.field("id", decode.string)
+  use from <- decode.field("from", user_decoder())
+  use message <- decode.optional_field(
+    "message",
+    None,
+    decode.optional(maybe_inaccessible_message_decoder()),
+  )
+  use inline_message_id <- decode.optional_field(
+    "inline_message_id",
     None,
     decode.optional(decode.string),
   )
-  use username <- decode.optional_field(
-    "username",
+  use chat_instance <- decode.field("chat_instance", decode.string)
+  use data <- decode.optional_field(
+    "data",
     None,
     decode.optional(decode.string),
   )
-  use language_code <- decode.optional_field(
-    "language_code",
+  use game_short_name <- decode.optional_field(
+    "game_short_name",
     None,
     decode.optional(decode.string),
   )
-  use is_premium <- decode.optional_field(
-    "is_premium",
-    None,
-    decode.optional(decode.bool),
-  )
-  use added_to_attachment_menu <- decode.optional_field(
-    "added_to_attachment_menu",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_join_groups <- decode.optional_field(
-    "can_join_groups",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_read_all_group_messages <- decode.optional_field(
-    "can_read_all_group_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use supports_inline_queries <- decode.optional_field(
-    "supports_inline_queries",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_connect_to_business <- decode.optional_field(
-    "can_connect_to_business",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_main_web_app <- decode.optional_field(
-    "has_main_web_app",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_topics_enabled <- decode.optional_field(
-    "has_topics_enabled",
-    None,
-    decode.optional(decode.bool),
-  )
-  use allows_users_to_create_topics <- decode.optional_field(
-    "allows_users_to_create_topics",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_bots <- decode.optional_field(
-    "can_manage_bots",
-    None,
-    decode.optional(decode.bool),
-  )
-  use supports_guest_queries <- decode.optional_field(
-    "supports_guest_queries",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(User(
+  decode.success(CallbackQuery(
     id: id,
-    is_bot: is_bot,
-    first_name: first_name,
-    last_name: last_name,
-    username: username,
-    language_code: language_code,
-    is_premium: is_premium,
-    added_to_attachment_menu: added_to_attachment_menu,
-    can_join_groups: can_join_groups,
-    can_read_all_group_messages: can_read_all_group_messages,
-    supports_inline_queries: supports_inline_queries,
-    can_connect_to_business: can_connect_to_business,
-    has_main_web_app: has_main_web_app,
-    has_topics_enabled: has_topics_enabled,
-    allows_users_to_create_topics: allows_users_to_create_topics,
-    can_manage_bots: can_manage_bots,
-    supports_guest_queries: supports_guest_queries,
+    from: from,
+    message: message,
+    inline_message_id: inline_message_id,
+    chat_instance: chat_instance,
+    data: data,
+    game_short_name: game_short_name,
   ))
 }
 
@@ -609,6 +863,161 @@ pub fn chat_decoder() -> decode.Decoder(Chat) {
     is_forum: is_forum,
     is_direct_messages: is_direct_messages,
   ))
+}
+
+pub fn chat_administrator_rights_decoder() -> decode.Decoder(
+  ChatAdministratorRights,
+) {
+  use is_anonymous <- decode.field("is_anonymous", decode.bool)
+  use can_manage_chat <- decode.field("can_manage_chat", decode.bool)
+  use can_delete_messages <- decode.field("can_delete_messages", decode.bool)
+  use can_manage_video_chats <- decode.field(
+    "can_manage_video_chats",
+    decode.bool,
+  )
+  use can_restrict_members <- decode.field("can_restrict_members", decode.bool)
+  use can_promote_members <- decode.field("can_promote_members", decode.bool)
+  use can_change_info <- decode.field("can_change_info", decode.bool)
+  use can_invite_users <- decode.field("can_invite_users", decode.bool)
+  use can_post_stories <- decode.field("can_post_stories", decode.bool)
+  use can_edit_stories <- decode.field("can_edit_stories", decode.bool)
+  use can_delete_stories <- decode.field("can_delete_stories", decode.bool)
+  use can_post_messages <- decode.optional_field(
+    "can_post_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_messages <- decode.optional_field(
+    "can_edit_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_pin_messages <- decode.optional_field(
+    "can_pin_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_topics <- decode.optional_field(
+    "can_manage_topics",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_direct_messages <- decode.optional_field(
+    "can_manage_direct_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_tags <- decode.optional_field(
+    "can_manage_tags",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ChatAdministratorRights(
+    is_anonymous: is_anonymous,
+    can_manage_chat: can_manage_chat,
+    can_delete_messages: can_delete_messages,
+    can_manage_video_chats: can_manage_video_chats,
+    can_restrict_members: can_restrict_members,
+    can_promote_members: can_promote_members,
+    can_change_info: can_change_info,
+    can_invite_users: can_invite_users,
+    can_post_stories: can_post_stories,
+    can_edit_stories: can_edit_stories,
+    can_delete_stories: can_delete_stories,
+    can_post_messages: can_post_messages,
+    can_edit_messages: can_edit_messages,
+    can_pin_messages: can_pin_messages,
+    can_manage_topics: can_manage_topics,
+    can_manage_direct_messages: can_manage_direct_messages,
+    can_manage_tags: can_manage_tags,
+  ))
+}
+
+pub fn chat_background_decoder() -> decode.Decoder(ChatBackground) {
+  use type_ <- decode.field("type", background_type_decoder())
+  decode.success(ChatBackground(type_: type_))
+}
+
+pub fn chat_boost_decoder() -> decode.Decoder(ChatBoost) {
+  use boost_id <- decode.field("boost_id", decode.string)
+  use add_date <- decode.field("add_date", decode.int)
+  use expiration_date <- decode.field("expiration_date", decode.int)
+  use source <- decode.field("source", chat_boost_source_decoder())
+  decode.success(ChatBoost(
+    boost_id: boost_id,
+    add_date: add_date,
+    expiration_date: expiration_date,
+    source: source,
+  ))
+}
+
+pub fn chat_boost_added_decoder() -> decode.Decoder(ChatBoostAdded) {
+  use boost_count <- decode.field("boost_count", decode.int)
+  decode.success(ChatBoostAdded(boost_count: boost_count))
+}
+
+pub fn chat_boost_removed_decoder() -> decode.Decoder(ChatBoostRemoved) {
+  use chat <- decode.field("chat", chat_decoder())
+  use boost_id <- decode.field("boost_id", decode.string)
+  use remove_date <- decode.field("remove_date", decode.int)
+  use source <- decode.field("source", chat_boost_source_decoder())
+  decode.success(ChatBoostRemoved(
+    chat: chat,
+    boost_id: boost_id,
+    remove_date: remove_date,
+    source: source,
+  ))
+}
+
+pub fn chat_boost_source_gift_code_decoder() -> decode.Decoder(
+  ChatBoostSourceGiftCode,
+) {
+  use source <- decode.field("source", decode.string)
+  use user <- decode.field("user", user_decoder())
+  decode.success(ChatBoostSourceGiftCode(source: source, user: user))
+}
+
+pub fn chat_boost_source_giveaway_decoder() -> decode.Decoder(
+  ChatBoostSourceGiveaway,
+) {
+  use source <- decode.field("source", decode.string)
+  use giveaway_message_id <- decode.field("giveaway_message_id", decode.int)
+  use user <- decode.optional_field(
+    "user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use prize_star_count <- decode.optional_field(
+    "prize_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use is_unclaimed <- decode.optional_field(
+    "is_unclaimed",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ChatBoostSourceGiveaway(
+    source: source,
+    giveaway_message_id: giveaway_message_id,
+    user: user,
+    prize_star_count: prize_star_count,
+    is_unclaimed: is_unclaimed,
+  ))
+}
+
+pub fn chat_boost_source_premium_decoder() -> decode.Decoder(
+  ChatBoostSourcePremium,
+) {
+  use source <- decode.field("source", decode.string)
+  use user <- decode.field("user", user_decoder())
+  decode.success(ChatBoostSourcePremium(source: source, user: user))
+}
+
+pub fn chat_boost_updated_decoder() -> decode.Decoder(ChatBoostUpdated) {
+  use chat <- decode.field("chat", chat_decoder())
+  use boost <- decode.field("boost", chat_boost_decoder())
+  decode.success(ChatBoostUpdated(chat: chat, boost: boost))
 }
 
 pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
@@ -901,8 +1310,3890 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
   ))
 }
 
-pub fn messages_array_decoder() -> decode.Decoder(List(Message)) {
-  decode.list(message_decoder())
+pub fn chat_invite_link_decoder() -> decode.Decoder(ChatInviteLink) {
+  use invite_link <- decode.field("invite_link", decode.string)
+  use creator <- decode.field("creator", user_decoder())
+  use creates_join_request <- decode.field("creates_join_request", decode.bool)
+  use is_primary <- decode.field("is_primary", decode.bool)
+  use is_revoked <- decode.field("is_revoked", decode.bool)
+  use name <- decode.optional_field(
+    "name",
+    None,
+    decode.optional(decode.string),
+  )
+  use expire_date <- decode.optional_field(
+    "expire_date",
+    None,
+    decode.optional(decode.int),
+  )
+  use member_limit <- decode.optional_field(
+    "member_limit",
+    None,
+    decode.optional(decode.int),
+  )
+  use pending_join_request_count <- decode.optional_field(
+    "pending_join_request_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use subscription_period <- decode.optional_field(
+    "subscription_period",
+    None,
+    decode.optional(decode.int),
+  )
+  use subscription_price <- decode.optional_field(
+    "subscription_price",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(ChatInviteLink(
+    invite_link: invite_link,
+    creator: creator,
+    creates_join_request: creates_join_request,
+    is_primary: is_primary,
+    is_revoked: is_revoked,
+    name: name,
+    expire_date: expire_date,
+    member_limit: member_limit,
+    pending_join_request_count: pending_join_request_count,
+    subscription_period: subscription_period,
+    subscription_price: subscription_price,
+  ))
+}
+
+pub fn chat_join_request_decoder() -> decode.Decoder(ChatJoinRequest) {
+  use chat <- decode.field("chat", chat_decoder())
+  use from <- decode.field("from", user_decoder())
+  use user_chat_id <- decode.field("user_chat_id", decode.int)
+  use date <- decode.field("date", decode.int)
+  use bio <- decode.optional_field("bio", None, decode.optional(decode.string))
+  use invite_link <- decode.optional_field(
+    "invite_link",
+    None,
+    decode.optional(chat_invite_link_decoder()),
+  )
+  decode.success(ChatJoinRequest(
+    chat: chat,
+    from: from,
+    user_chat_id: user_chat_id,
+    date: date,
+    bio: bio,
+    invite_link: invite_link,
+  ))
+}
+
+pub fn chat_location_decoder() -> decode.Decoder(ChatLocation) {
+  use location <- decode.field("location", location_decoder())
+  use address <- decode.field("address", decode.string)
+  decode.success(ChatLocation(location: location, address: address))
+}
+
+pub fn chat_member_administrator_decoder() -> decode.Decoder(
+  ChatMemberAdministrator,
+) {
+  use status <- decode.field("status", decode.string)
+  use user <- decode.field("user", user_decoder())
+  use can_be_edited <- decode.field("can_be_edited", decode.bool)
+  use is_anonymous <- decode.field("is_anonymous", decode.bool)
+  use can_manage_chat <- decode.field("can_manage_chat", decode.bool)
+  use can_delete_messages <- decode.field("can_delete_messages", decode.bool)
+  use can_manage_video_chats <- decode.field(
+    "can_manage_video_chats",
+    decode.bool,
+  )
+  use can_restrict_members <- decode.field("can_restrict_members", decode.bool)
+  use can_promote_members <- decode.field("can_promote_members", decode.bool)
+  use can_change_info <- decode.field("can_change_info", decode.bool)
+  use can_invite_users <- decode.field("can_invite_users", decode.bool)
+  use can_post_stories <- decode.field("can_post_stories", decode.bool)
+  use can_edit_stories <- decode.field("can_edit_stories", decode.bool)
+  use can_delete_stories <- decode.field("can_delete_stories", decode.bool)
+  use can_post_messages <- decode.optional_field(
+    "can_post_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_messages <- decode.optional_field(
+    "can_edit_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_pin_messages <- decode.optional_field(
+    "can_pin_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_topics <- decode.optional_field(
+    "can_manage_topics",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_direct_messages <- decode.optional_field(
+    "can_manage_direct_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_tags <- decode.optional_field(
+    "can_manage_tags",
+    None,
+    decode.optional(decode.bool),
+  )
+  use custom_title <- decode.optional_field(
+    "custom_title",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(ChatMemberAdministrator(
+    status: status,
+    user: user,
+    can_be_edited: can_be_edited,
+    is_anonymous: is_anonymous,
+    can_manage_chat: can_manage_chat,
+    can_delete_messages: can_delete_messages,
+    can_manage_video_chats: can_manage_video_chats,
+    can_restrict_members: can_restrict_members,
+    can_promote_members: can_promote_members,
+    can_change_info: can_change_info,
+    can_invite_users: can_invite_users,
+    can_post_stories: can_post_stories,
+    can_edit_stories: can_edit_stories,
+    can_delete_stories: can_delete_stories,
+    can_post_messages: can_post_messages,
+    can_edit_messages: can_edit_messages,
+    can_pin_messages: can_pin_messages,
+    can_manage_topics: can_manage_topics,
+    can_manage_direct_messages: can_manage_direct_messages,
+    can_manage_tags: can_manage_tags,
+    custom_title: custom_title,
+  ))
+}
+
+pub fn chat_member_banned_decoder() -> decode.Decoder(ChatMemberBanned) {
+  use status <- decode.field("status", decode.string)
+  use user <- decode.field("user", user_decoder())
+  use until_date <- decode.field("until_date", decode.int)
+  decode.success(ChatMemberBanned(
+    status: status,
+    user: user,
+    until_date: until_date,
+  ))
+}
+
+pub fn chat_member_left_decoder() -> decode.Decoder(ChatMemberLeft) {
+  use status <- decode.field("status", decode.string)
+  use user <- decode.field("user", user_decoder())
+  decode.success(ChatMemberLeft(status: status, user: user))
+}
+
+pub fn chat_member_member_decoder() -> decode.Decoder(ChatMemberMember) {
+  use status <- decode.field("status", decode.string)
+  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
+  use user <- decode.field("user", user_decoder())
+  use until_date <- decode.optional_field(
+    "until_date",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(ChatMemberMember(
+    status: status,
+    tag: tag,
+    user: user,
+    until_date: until_date,
+  ))
+}
+
+pub fn chat_member_owner_decoder() -> decode.Decoder(ChatMemberOwner) {
+  use status <- decode.field("status", decode.string)
+  use user <- decode.field("user", user_decoder())
+  use is_anonymous <- decode.field("is_anonymous", decode.bool)
+  use custom_title <- decode.optional_field(
+    "custom_title",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(ChatMemberOwner(
+    status: status,
+    user: user,
+    is_anonymous: is_anonymous,
+    custom_title: custom_title,
+  ))
+}
+
+pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) {
+  use status <- decode.field("status", decode.string)
+  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
+  use user <- decode.field("user", user_decoder())
+  use is_member <- decode.field("is_member", decode.bool)
+  use can_send_messages <- decode.field("can_send_messages", decode.bool)
+  use can_send_audios <- decode.field("can_send_audios", decode.bool)
+  use can_send_documents <- decode.field("can_send_documents", decode.bool)
+  use can_send_photos <- decode.field("can_send_photos", decode.bool)
+  use can_send_videos <- decode.field("can_send_videos", decode.bool)
+  use can_send_video_notes <- decode.field("can_send_video_notes", decode.bool)
+  use can_send_voice_notes <- decode.field("can_send_voice_notes", decode.bool)
+  use can_send_polls <- decode.field("can_send_polls", decode.bool)
+  use can_send_other_messages <- decode.field(
+    "can_send_other_messages",
+    decode.bool,
+  )
+  use can_add_web_page_previews <- decode.field(
+    "can_add_web_page_previews",
+    decode.bool,
+  )
+  use can_react_to_messages <- decode.field(
+    "can_react_to_messages",
+    decode.bool,
+  )
+  use can_edit_tag <- decode.field("can_edit_tag", decode.bool)
+  use can_change_info <- decode.field("can_change_info", decode.bool)
+  use can_invite_users <- decode.field("can_invite_users", decode.bool)
+  use can_pin_messages <- decode.field("can_pin_messages", decode.bool)
+  use can_manage_topics <- decode.field("can_manage_topics", decode.bool)
+  use until_date <- decode.field("until_date", decode.int)
+  decode.success(ChatMemberRestricted(
+    status: status,
+    tag: tag,
+    user: user,
+    is_member: is_member,
+    can_send_messages: can_send_messages,
+    can_send_audios: can_send_audios,
+    can_send_documents: can_send_documents,
+    can_send_photos: can_send_photos,
+    can_send_videos: can_send_videos,
+    can_send_video_notes: can_send_video_notes,
+    can_send_voice_notes: can_send_voice_notes,
+    can_send_polls: can_send_polls,
+    can_send_other_messages: can_send_other_messages,
+    can_add_web_page_previews: can_add_web_page_previews,
+    can_react_to_messages: can_react_to_messages,
+    can_edit_tag: can_edit_tag,
+    can_change_info: can_change_info,
+    can_invite_users: can_invite_users,
+    can_pin_messages: can_pin_messages,
+    can_manage_topics: can_manage_topics,
+    until_date: until_date,
+  ))
+}
+
+pub fn chat_member_updated_decoder() -> decode.Decoder(ChatMemberUpdated) {
+  use chat <- decode.field("chat", chat_decoder())
+  use from <- decode.field("from", user_decoder())
+  use date <- decode.field("date", decode.int)
+  use old_chat_member <- decode.field("old_chat_member", chat_member_decoder())
+  use new_chat_member <- decode.field("new_chat_member", chat_member_decoder())
+  use invite_link <- decode.optional_field(
+    "invite_link",
+    None,
+    decode.optional(chat_invite_link_decoder()),
+  )
+  use via_join_request <- decode.optional_field(
+    "via_join_request",
+    None,
+    decode.optional(decode.bool),
+  )
+  use via_chat_folder_invite_link <- decode.optional_field(
+    "via_chat_folder_invite_link",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ChatMemberUpdated(
+    chat: chat,
+    from: from,
+    date: date,
+    old_chat_member: old_chat_member,
+    new_chat_member: new_chat_member,
+    invite_link: invite_link,
+    via_join_request: via_join_request,
+    via_chat_folder_invite_link: via_chat_folder_invite_link,
+  ))
+}
+
+pub fn chat_owner_changed_decoder() -> decode.Decoder(ChatOwnerChanged) {
+  use new_owner <- decode.field("new_owner", user_decoder())
+  decode.success(ChatOwnerChanged(new_owner: new_owner))
+}
+
+pub fn chat_owner_left_decoder() -> decode.Decoder(ChatOwnerLeft) {
+  use new_owner <- decode.optional_field(
+    "new_owner",
+    None,
+    decode.optional(user_decoder()),
+  )
+  decode.success(ChatOwnerLeft(new_owner: new_owner))
+}
+
+pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
+  use can_send_messages <- decode.optional_field(
+    "can_send_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_audios <- decode.optional_field(
+    "can_send_audios",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_documents <- decode.optional_field(
+    "can_send_documents",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_photos <- decode.optional_field(
+    "can_send_photos",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_videos <- decode.optional_field(
+    "can_send_videos",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_video_notes <- decode.optional_field(
+    "can_send_video_notes",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_voice_notes <- decode.optional_field(
+    "can_send_voice_notes",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_polls <- decode.optional_field(
+    "can_send_polls",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_send_other_messages <- decode.optional_field(
+    "can_send_other_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_add_web_page_previews <- decode.optional_field(
+    "can_add_web_page_previews",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_react_to_messages <- decode.optional_field(
+    "can_react_to_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_edit_tag <- decode.optional_field(
+    "can_edit_tag",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_change_info <- decode.optional_field(
+    "can_change_info",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_invite_users <- decode.optional_field(
+    "can_invite_users",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_pin_messages <- decode.optional_field(
+    "can_pin_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_topics <- decode.optional_field(
+    "can_manage_topics",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ChatPermissions(
+    can_send_messages: can_send_messages,
+    can_send_audios: can_send_audios,
+    can_send_documents: can_send_documents,
+    can_send_photos: can_send_photos,
+    can_send_videos: can_send_videos,
+    can_send_video_notes: can_send_video_notes,
+    can_send_voice_notes: can_send_voice_notes,
+    can_send_polls: can_send_polls,
+    can_send_other_messages: can_send_other_messages,
+    can_add_web_page_previews: can_add_web_page_previews,
+    can_react_to_messages: can_react_to_messages,
+    can_edit_tag: can_edit_tag,
+    can_change_info: can_change_info,
+    can_invite_users: can_invite_users,
+    can_pin_messages: can_pin_messages,
+    can_manage_topics: can_manage_topics,
+  ))
+}
+
+pub fn chat_photo_decoder() -> decode.Decoder(ChatPhoto) {
+  use small_file_id <- decode.field("small_file_id", decode.string)
+  use small_file_unique_id <- decode.field(
+    "small_file_unique_id",
+    decode.string,
+  )
+  use big_file_id <- decode.field("big_file_id", decode.string)
+  use big_file_unique_id <- decode.field("big_file_unique_id", decode.string)
+  decode.success(ChatPhoto(
+    small_file_id: small_file_id,
+    small_file_unique_id: small_file_unique_id,
+    big_file_id: big_file_id,
+    big_file_unique_id: big_file_unique_id,
+  ))
+}
+
+pub fn chat_shared_decoder() -> decode.Decoder(ChatShared) {
+  use request_id <- decode.field("request_id", decode.int)
+  use chat_id <- decode.field("chat_id", decode.int)
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use username <- decode.optional_field(
+    "username",
+    None,
+    decode.optional(decode.string),
+  )
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  decode.success(ChatShared(
+    request_id: request_id,
+    chat_id: chat_id,
+    title: title,
+    username: username,
+    photo: photo,
+  ))
+}
+
+pub fn checklist_decoder() -> decode.Decoder(Checklist) {
+  use title <- decode.field("title", decode.string)
+  use title_entities <- decode.optional_field(
+    "title_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
+  use others_can_add_tasks <- decode.optional_field(
+    "others_can_add_tasks",
+    None,
+    decode.optional(decode.bool),
+  )
+  use others_can_mark_tasks_as_done <- decode.optional_field(
+    "others_can_mark_tasks_as_done",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(Checklist(
+    title: title,
+    title_entities: title_entities,
+    tasks: tasks,
+    others_can_add_tasks: others_can_add_tasks,
+    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
+  ))
+}
+
+pub fn checklist_task_decoder() -> decode.Decoder(ChecklistTask) {
+  use id <- decode.field("id", decode.int)
+  use text <- decode.field("text", decode.string)
+  use text_entities <- decode.optional_field(
+    "text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use completed_by_user <- decode.optional_field(
+    "completed_by_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use completed_by_chat <- decode.optional_field(
+    "completed_by_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  use completion_date <- decode.optional_field(
+    "completion_date",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(ChecklistTask(
+    id: id,
+    text: text,
+    text_entities: text_entities,
+    completed_by_user: completed_by_user,
+    completed_by_chat: completed_by_chat,
+    completion_date: completion_date,
+  ))
+}
+
+pub fn checklist_tasks_added_decoder() -> decode.Decoder(ChecklistTasksAdded) {
+  use checklist_message <- decode.optional_field(
+    "checklist_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
+  decode.success(ChecklistTasksAdded(
+    checklist_message: checklist_message,
+    tasks: tasks,
+  ))
+}
+
+pub fn checklist_tasks_done_decoder() -> decode.Decoder(ChecklistTasksDone) {
+  use checklist_message <- decode.optional_field(
+    "checklist_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use marked_as_done_task_ids <- decode.optional_field(
+    "marked_as_done_task_ids",
+    None,
+    decode.optional(decode.list(decode.int)),
+  )
+  use marked_as_not_done_task_ids <- decode.optional_field(
+    "marked_as_not_done_task_ids",
+    None,
+    decode.optional(decode.list(decode.int)),
+  )
+  decode.success(ChecklistTasksDone(
+    checklist_message: checklist_message,
+    marked_as_done_task_ids: marked_as_done_task_ids,
+    marked_as_not_done_task_ids: marked_as_not_done_task_ids,
+  ))
+}
+
+pub fn chosen_inline_result_decoder() -> decode.Decoder(ChosenInlineResult) {
+  use result_id <- decode.field("result_id", decode.string)
+  use from <- decode.field("from", user_decoder())
+  use location <- decode.optional_field(
+    "location",
+    None,
+    decode.optional(location_decoder()),
+  )
+  use inline_message_id <- decode.optional_field(
+    "inline_message_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use query <- decode.field("query", decode.string)
+  decode.success(ChosenInlineResult(
+    result_id: result_id,
+    from: from,
+    location: location,
+    inline_message_id: inline_message_id,
+    query: query,
+  ))
+}
+
+pub fn contact_decoder() -> decode.Decoder(Contact) {
+  use phone_number <- decode.field("phone_number", decode.string)
+  use first_name <- decode.field("first_name", decode.string)
+  use last_name <- decode.optional_field(
+    "last_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use user_id <- decode.optional_field(
+    "user_id",
+    None,
+    decode.optional(decode.int),
+  )
+  use vcard <- decode.optional_field(
+    "vcard",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(Contact(
+    phone_number: phone_number,
+    first_name: first_name,
+    last_name: last_name,
+    user_id: user_id,
+    vcard: vcard,
+  ))
+}
+
+pub fn copy_text_button_decoder() -> decode.Decoder(CopyTextButton) {
+  use text <- decode.field("text", decode.string)
+  decode.success(CopyTextButton(text: text))
+}
+
+pub fn dice_decoder() -> decode.Decoder(Dice) {
+  use emoji <- decode.field("emoji", decode.string)
+  use value <- decode.field("value", decode.int)
+  decode.success(Dice(emoji: emoji, value: value))
+}
+
+pub fn direct_message_price_changed_decoder() -> decode.Decoder(
+  DirectMessagePriceChanged,
+) {
+  use are_direct_messages_enabled <- decode.field(
+    "are_direct_messages_enabled",
+    decode.bool,
+  )
+  use direct_message_star_count <- decode.optional_field(
+    "direct_message_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(DirectMessagePriceChanged(
+    are_direct_messages_enabled: are_direct_messages_enabled,
+    direct_message_star_count: direct_message_star_count,
+  ))
+}
+
+pub fn direct_messages_topic_decoder() -> decode.Decoder(DirectMessagesTopic) {
+  use topic_id <- decode.field("topic_id", decode.int)
+  use user <- decode.optional_field(
+    "user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  decode.success(DirectMessagesTopic(topic_id: topic_id, user: user))
+}
+
+pub fn document_decoder() -> decode.Decoder(Document) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(photo_size_decoder()),
+  )
+  use file_name <- decode.optional_field(
+    "file_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Document(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    thumbnail: thumbnail,
+    file_name: file_name,
+    mime_type: mime_type,
+    file_size: file_size,
+  ))
+}
+
+pub fn encrypted_credentials_decoder() -> decode.Decoder(EncryptedCredentials) {
+  use data <- decode.field("data", decode.string)
+  use hash <- decode.field("hash", decode.string)
+  use secret <- decode.field("secret", decode.string)
+  decode.success(EncryptedCredentials(data: data, hash: hash, secret: secret))
+}
+
+pub fn encrypted_passport_element_decoder() -> decode.Decoder(
+  EncryptedPassportElement,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use data <- decode.optional_field(
+    "data",
+    None,
+    decode.optional(decode.string),
+  )
+  use phone_number <- decode.optional_field(
+    "phone_number",
+    None,
+    decode.optional(decode.string),
+  )
+  use email <- decode.optional_field(
+    "email",
+    None,
+    decode.optional(decode.string),
+  )
+  use files <- decode.optional_field(
+    "files",
+    None,
+    decode.optional(decode.list(passport_file_decoder())),
+  )
+  use front_side <- decode.optional_field(
+    "front_side",
+    None,
+    decode.optional(passport_file_decoder()),
+  )
+  use reverse_side <- decode.optional_field(
+    "reverse_side",
+    None,
+    decode.optional(passport_file_decoder()),
+  )
+  use selfie <- decode.optional_field(
+    "selfie",
+    None,
+    decode.optional(passport_file_decoder()),
+  )
+  use translation <- decode.optional_field(
+    "translation",
+    None,
+    decode.optional(decode.list(passport_file_decoder())),
+  )
+  use hash <- decode.field("hash", decode.string)
+  decode.success(EncryptedPassportElement(
+    type_: type_,
+    data: data,
+    phone_number: phone_number,
+    email: email,
+    files: files,
+    front_side: front_side,
+    reverse_side: reverse_side,
+    selfie: selfie,
+    translation: translation,
+    hash: hash,
+  ))
+}
+
+pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
+  use origin <- decode.field("origin", message_origin_decoder())
+  use chat <- decode.optional_field(
+    "chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  use message_id <- decode.optional_field(
+    "message_id",
+    None,
+    decode.optional(decode.int),
+  )
+  use link_preview_options <- decode.optional_field(
+    "link_preview_options",
+    None,
+    decode.optional(link_preview_options_decoder()),
+  )
+  use animation <- decode.optional_field(
+    "animation",
+    None,
+    decode.optional(animation_decoder()),
+  )
+  use audio <- decode.optional_field(
+    "audio",
+    None,
+    decode.optional(audio_decoder()),
+  )
+  use document <- decode.optional_field(
+    "document",
+    None,
+    decode.optional(document_decoder()),
+  )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
+  )
+  use paid_media <- decode.optional_field(
+    "paid_media",
+    None,
+    decode.optional(paid_media_info_decoder()),
+  )
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use sticker <- decode.optional_field(
+    "sticker",
+    None,
+    decode.optional(sticker_decoder()),
+  )
+  use story <- decode.optional_field(
+    "story",
+    None,
+    decode.optional(story_decoder()),
+  )
+  use video <- decode.optional_field(
+    "video",
+    None,
+    decode.optional(video_decoder()),
+  )
+  use video_note <- decode.optional_field(
+    "video_note",
+    None,
+    decode.optional(video_note_decoder()),
+  )
+  use voice <- decode.optional_field(
+    "voice",
+    None,
+    decode.optional(voice_decoder()),
+  )
+  use has_media_spoiler <- decode.optional_field(
+    "has_media_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  use checklist <- decode.optional_field(
+    "checklist",
+    None,
+    decode.optional(checklist_decoder()),
+  )
+  use contact <- decode.optional_field(
+    "contact",
+    None,
+    decode.optional(contact_decoder()),
+  )
+  use dice <- decode.optional_field(
+    "dice",
+    None,
+    decode.optional(dice_decoder()),
+  )
+  use game <- decode.optional_field(
+    "game",
+    None,
+    decode.optional(game_decoder()),
+  )
+  use giveaway <- decode.optional_field(
+    "giveaway",
+    None,
+    decode.optional(giveaway_decoder()),
+  )
+  use giveaway_winners <- decode.optional_field(
+    "giveaway_winners",
+    None,
+    decode.optional(giveaway_winners_decoder()),
+  )
+  use invoice <- decode.optional_field(
+    "invoice",
+    None,
+    decode.optional(invoice_decoder()),
+  )
+  use location <- decode.optional_field(
+    "location",
+    None,
+    decode.optional(location_decoder()),
+  )
+  use poll <- decode.optional_field(
+    "poll",
+    None,
+    decode.optional(poll_decoder()),
+  )
+  use venue <- decode.optional_field(
+    "venue",
+    None,
+    decode.optional(venue_decoder()),
+  )
+  decode.success(ExternalReplyInfo(
+    origin: origin,
+    chat: chat,
+    message_id: message_id,
+    link_preview_options: link_preview_options,
+    animation: animation,
+    audio: audio,
+    document: document,
+    live_photo: live_photo,
+    paid_media: paid_media,
+    photo: photo,
+    sticker: sticker,
+    story: story,
+    video: video,
+    video_note: video_note,
+    voice: voice,
+    has_media_spoiler: has_media_spoiler,
+    checklist: checklist,
+    contact: contact,
+    dice: dice,
+    game: game,
+    giveaway: giveaway,
+    giveaway_winners: giveaway_winners,
+    invoice: invoice,
+    location: location,
+    poll: poll,
+    venue: venue,
+  ))
+}
+
+pub fn file_decoder() -> decode.Decoder(File) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  use file_path <- decode.optional_field(
+    "file_path",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(File(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    file_size: file_size,
+    file_path: file_path,
+  ))
+}
+
+pub fn force_reply_decoder() -> decode.Decoder(ForceReply) {
+  use force_reply <- decode.field("force_reply", decode.bool)
+  use input_field_placeholder <- decode.optional_field(
+    "input_field_placeholder",
+    None,
+    decode.optional(decode.string),
+  )
+  use selective <- decode.optional_field(
+    "selective",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ForceReply(
+    force_reply: force_reply,
+    input_field_placeholder: input_field_placeholder,
+    selective: selective,
+  ))
+}
+
+pub fn forum_topic_decoder() -> decode.Decoder(ForumTopic) {
+  use message_thread_id <- decode.field("message_thread_id", decode.int)
+  use name <- decode.field("name", decode.string)
+  use icon_color <- decode.field("icon_color", decode.int)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use is_name_implicit <- decode.optional_field(
+    "is_name_implicit",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ForumTopic(
+    message_thread_id: message_thread_id,
+    name: name,
+    icon_color: icon_color,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    is_name_implicit: is_name_implicit,
+  ))
+}
+
+pub fn forum_topic_closed_decoder() -> decode.Decoder(ForumTopicClosed) {
+  decode.success(ForumTopicClosed)
+}
+
+pub fn forum_topic_created_decoder() -> decode.Decoder(ForumTopicCreated) {
+  use name <- decode.field("name", decode.string)
+  use icon_color <- decode.field("icon_color", decode.int)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use is_name_implicit <- decode.optional_field(
+    "is_name_implicit",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ForumTopicCreated(
+    name: name,
+    icon_color: icon_color,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    is_name_implicit: is_name_implicit,
+  ))
+}
+
+pub fn forum_topic_edited_decoder() -> decode.Decoder(ForumTopicEdited) {
+  use name <- decode.optional_field(
+    "name",
+    None,
+    decode.optional(decode.string),
+  )
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(ForumTopicEdited(
+    name: name,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+  ))
+}
+
+pub fn forum_topic_reopened_decoder() -> decode.Decoder(ForumTopicReopened) {
+  decode.success(ForumTopicReopened)
+}
+
+pub fn game_decoder() -> decode.Decoder(Game) {
+  use title <- decode.field("title", decode.string)
+  use description <- decode.field("description", decode.string)
+  use photo <- decode.field("photo", decode.list(photo_size_decoder()))
+  use text <- decode.optional_field(
+    "text",
+    None,
+    decode.optional(decode.string),
+  )
+  use text_entities <- decode.optional_field(
+    "text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use animation <- decode.optional_field(
+    "animation",
+    None,
+    decode.optional(animation_decoder()),
+  )
+  decode.success(Game(
+    title: title,
+    description: description,
+    photo: photo,
+    text: text,
+    text_entities: text_entities,
+    animation: animation,
+  ))
+}
+
+pub fn game_high_score_decoder() -> decode.Decoder(GameHighScore) {
+  use position <- decode.field("position", decode.int)
+  use user <- decode.field("user", user_decoder())
+  use score <- decode.field("score", decode.int)
+  decode.success(GameHighScore(position: position, user: user, score: score))
+}
+
+pub fn general_forum_topic_hidden_decoder() -> decode.Decoder(
+  GeneralForumTopicHidden,
+) {
+  decode.success(GeneralForumTopicHidden)
+}
+
+pub fn general_forum_topic_unhidden_decoder() -> decode.Decoder(
+  GeneralForumTopicUnhidden,
+) {
+  decode.success(GeneralForumTopicUnhidden)
+}
+
+pub fn gift_decoder() -> decode.Decoder(Gift) {
+  use id <- decode.field("id", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use star_count <- decode.field("star_count", decode.int)
+  use upgrade_star_count <- decode.optional_field(
+    "upgrade_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use is_premium <- decode.optional_field(
+    "is_premium",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_colors <- decode.optional_field(
+    "has_colors",
+    None,
+    decode.optional(decode.bool),
+  )
+  use total_count <- decode.optional_field(
+    "total_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use remaining_count <- decode.optional_field(
+    "remaining_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use personal_total_count <- decode.optional_field(
+    "personal_total_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use personal_remaining_count <- decode.optional_field(
+    "personal_remaining_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use background <- decode.optional_field(
+    "background",
+    None,
+    decode.optional(gift_background_decoder()),
+  )
+  use unique_gift_variant_count <- decode.optional_field(
+    "unique_gift_variant_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use publisher_chat <- decode.optional_field(
+    "publisher_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  decode.success(Gift(
+    id: id,
+    sticker: sticker,
+    star_count: star_count,
+    upgrade_star_count: upgrade_star_count,
+    is_premium: is_premium,
+    has_colors: has_colors,
+    total_count: total_count,
+    remaining_count: remaining_count,
+    personal_total_count: personal_total_count,
+    personal_remaining_count: personal_remaining_count,
+    background: background,
+    unique_gift_variant_count: unique_gift_variant_count,
+    publisher_chat: publisher_chat,
+  ))
+}
+
+pub fn gift_background_decoder() -> decode.Decoder(GiftBackground) {
+  use center_color <- decode.field("center_color", decode.int)
+  use edge_color <- decode.field("edge_color", decode.int)
+  use text_color <- decode.field("text_color", decode.int)
+  decode.success(GiftBackground(
+    center_color: center_color,
+    edge_color: edge_color,
+    text_color: text_color,
+  ))
+}
+
+pub fn gift_info_decoder() -> decode.Decoder(GiftInfo) {
+  use gift <- decode.field("gift", gift_decoder())
+  use owned_gift_id <- decode.optional_field(
+    "owned_gift_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use convert_star_count <- decode.optional_field(
+    "convert_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use prepaid_upgrade_star_count <- decode.optional_field(
+    "prepaid_upgrade_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use is_upgrade_separate <- decode.optional_field(
+    "is_upgrade_separate",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_be_upgraded <- decode.optional_field(
+    "can_be_upgraded",
+    None,
+    decode.optional(decode.bool),
+  )
+  use text <- decode.optional_field(
+    "text",
+    None,
+    decode.optional(decode.string),
+  )
+  use entities <- decode.optional_field(
+    "entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use is_private <- decode.optional_field(
+    "is_private",
+    None,
+    decode.optional(decode.bool),
+  )
+  use unique_gift_number <- decode.optional_field(
+    "unique_gift_number",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(GiftInfo(
+    gift: gift,
+    owned_gift_id: owned_gift_id,
+    convert_star_count: convert_star_count,
+    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
+    is_upgrade_separate: is_upgrade_separate,
+    can_be_upgraded: can_be_upgraded,
+    text: text,
+    entities: entities,
+    is_private: is_private,
+    unique_gift_number: unique_gift_number,
+  ))
+}
+
+pub fn gifts_decoder() -> decode.Decoder(Gifts) {
+  use gifts <- decode.field("gifts", decode.list(gift_decoder()))
+  decode.success(Gifts(gifts: gifts))
+}
+
+pub fn giveaway_decoder() -> decode.Decoder(Giveaway) {
+  use chats <- decode.field("chats", decode.list(chat_decoder()))
+  use winners_selection_date <- decode.field(
+    "winners_selection_date",
+    decode.int,
+  )
+  use winner_count <- decode.field("winner_count", decode.int)
+  use only_new_members <- decode.optional_field(
+    "only_new_members",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_public_winners <- decode.optional_field(
+    "has_public_winners",
+    None,
+    decode.optional(decode.bool),
+  )
+  use prize_description <- decode.optional_field(
+    "prize_description",
+    None,
+    decode.optional(decode.string),
+  )
+  use country_codes <- decode.optional_field(
+    "country_codes",
+    None,
+    decode.optional(decode.list(decode.string)),
+  )
+  use prize_star_count <- decode.optional_field(
+    "prize_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use premium_subscription_month_count <- decode.optional_field(
+    "premium_subscription_month_count",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Giveaway(
+    chats: chats,
+    winners_selection_date: winners_selection_date,
+    winner_count: winner_count,
+    only_new_members: only_new_members,
+    has_public_winners: has_public_winners,
+    prize_description: prize_description,
+    country_codes: country_codes,
+    prize_star_count: prize_star_count,
+    premium_subscription_month_count: premium_subscription_month_count,
+  ))
+}
+
+pub fn giveaway_completed_decoder() -> decode.Decoder(GiveawayCompleted) {
+  use winner_count <- decode.field("winner_count", decode.int)
+  use unclaimed_prize_count <- decode.optional_field(
+    "unclaimed_prize_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use giveaway_message <- decode.optional_field(
+    "giveaway_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use is_star_giveaway <- decode.optional_field(
+    "is_star_giveaway",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(GiveawayCompleted(
+    winner_count: winner_count,
+    unclaimed_prize_count: unclaimed_prize_count,
+    giveaway_message: giveaway_message,
+    is_star_giveaway: is_star_giveaway,
+  ))
+}
+
+pub fn giveaway_created_decoder() -> decode.Decoder(GiveawayCreated) {
+  use prize_star_count <- decode.optional_field(
+    "prize_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(GiveawayCreated(prize_star_count: prize_star_count))
+}
+
+pub fn giveaway_winners_decoder() -> decode.Decoder(GiveawayWinners) {
+  use chat <- decode.field("chat", chat_decoder())
+  use giveaway_message_id <- decode.field("giveaway_message_id", decode.int)
+  use winners_selection_date <- decode.field(
+    "winners_selection_date",
+    decode.int,
+  )
+  use winner_count <- decode.field("winner_count", decode.int)
+  use winners <- decode.field("winners", decode.list(user_decoder()))
+  use additional_chat_count <- decode.optional_field(
+    "additional_chat_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use prize_star_count <- decode.optional_field(
+    "prize_star_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use premium_subscription_month_count <- decode.optional_field(
+    "premium_subscription_month_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use unclaimed_prize_count <- decode.optional_field(
+    "unclaimed_prize_count",
+    None,
+    decode.optional(decode.int),
+  )
+  use only_new_members <- decode.optional_field(
+    "only_new_members",
+    None,
+    decode.optional(decode.bool),
+  )
+  use was_refunded <- decode.optional_field(
+    "was_refunded",
+    None,
+    decode.optional(decode.bool),
+  )
+  use prize_description <- decode.optional_field(
+    "prize_description",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(GiveawayWinners(
+    chat: chat,
+    giveaway_message_id: giveaway_message_id,
+    winners_selection_date: winners_selection_date,
+    winner_count: winner_count,
+    winners: winners,
+    additional_chat_count: additional_chat_count,
+    prize_star_count: prize_star_count,
+    premium_subscription_month_count: premium_subscription_month_count,
+    unclaimed_prize_count: unclaimed_prize_count,
+    only_new_members: only_new_members,
+    was_refunded: was_refunded,
+    prize_description: prize_description,
+  ))
+}
+
+pub fn inaccessible_message_decoder() -> decode.Decoder(InaccessibleMessage) {
+  use chat <- decode.field("chat", chat_decoder())
+  use message_id <- decode.field("message_id", decode.int)
+  use date <- decode.field("date", decode.int)
+  decode.success(InaccessibleMessage(
+    chat: chat,
+    message_id: message_id,
+    date: date,
+  ))
+}
+
+pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) {
+  use text <- decode.field("text", decode.string)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use style <- decode.optional_field(
+    "style",
+    None,
+    decode.optional(decode.string),
+  )
+  use url <- decode.optional_field("url", None, decode.optional(decode.string))
+  use callback_data <- decode.optional_field(
+    "callback_data",
+    None,
+    decode.optional(decode.string),
+  )
+  use web_app <- decode.optional_field(
+    "web_app",
+    None,
+    decode.optional(web_app_info_decoder()),
+  )
+  use login_url <- decode.optional_field(
+    "login_url",
+    None,
+    decode.optional(login_url_decoder()),
+  )
+  use switch_inline_query <- decode.optional_field(
+    "switch_inline_query",
+    None,
+    decode.optional(decode.string),
+  )
+  use switch_inline_query_current_chat <- decode.optional_field(
+    "switch_inline_query_current_chat",
+    None,
+    decode.optional(decode.string),
+  )
+  use switch_inline_query_chosen_chat <- decode.optional_field(
+    "switch_inline_query_chosen_chat",
+    None,
+    decode.optional(switch_inline_query_chosen_chat_decoder()),
+  )
+  use copy_text <- decode.optional_field(
+    "copy_text",
+    None,
+    decode.optional(copy_text_button_decoder()),
+  )
+  use callback_game <- decode.optional_field(
+    "callback_game",
+    None,
+    decode.optional(callback_game_decoder()),
+  )
+  use pay <- decode.optional_field("pay", None, decode.optional(decode.bool))
+  decode.success(InlineKeyboardButton(
+    text: text,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    style: style,
+    url: url,
+    callback_data: callback_data,
+    web_app: web_app,
+    login_url: login_url,
+    switch_inline_query: switch_inline_query,
+    switch_inline_query_current_chat: switch_inline_query_current_chat,
+    switch_inline_query_chosen_chat: switch_inline_query_chosen_chat,
+    copy_text: copy_text,
+    callback_game: callback_game,
+    pay: pay,
+  ))
+}
+
+pub fn inline_keyboard_markup_decoder() -> decode.Decoder(InlineKeyboardMarkup) {
+  use inline_keyboard <- decode.field(
+    "inline_keyboard",
+    decode.list(decode.list(inline_keyboard_button_decoder())),
+  )
+  decode.success(InlineKeyboardMarkup(inline_keyboard: inline_keyboard))
+}
+
+pub fn inline_query_decoder() -> decode.Decoder(InlineQuery) {
+  use id <- decode.field("id", decode.string)
+  use from <- decode.field("from", user_decoder())
+  use query <- decode.field("query", decode.string)
+  use offset <- decode.field("offset", decode.string)
+  use chat_type <- decode.optional_field(
+    "chat_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use location <- decode.optional_field(
+    "location",
+    None,
+    decode.optional(location_decoder()),
+  )
+  decode.success(InlineQuery(
+    id: id,
+    from: from,
+    query: query,
+    offset: offset,
+    chat_type: chat_type,
+    location: location,
+  ))
+}
+
+pub fn inline_query_result_article_decoder() -> decode.Decoder(
+  InlineQueryResultArticle,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use title <- decode.field("title", decode.string)
+  use input_message_content <- decode.field(
+    "input_message_content",
+    input_message_content_decoder(),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use url <- decode.optional_field("url", None, decode.optional(decode.string))
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_url <- decode.optional_field(
+    "thumbnail_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_width <- decode.optional_field(
+    "thumbnail_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_height <- decode.optional_field(
+    "thumbnail_height",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InlineQueryResultArticle(
+    type_: type_,
+    id: id,
+    title: title,
+    input_message_content: input_message_content,
+    reply_markup: reply_markup,
+    url: url,
+    description: description,
+    thumbnail_url: thumbnail_url,
+    thumbnail_width: thumbnail_width,
+    thumbnail_height: thumbnail_height,
+  ))
+}
+
+pub fn inline_query_result_audio_decoder() -> decode.Decoder(
+  InlineQueryResultAudio,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use audio_url <- decode.field("audio_url", decode.string)
+  use title <- decode.field("title", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use performer <- decode.optional_field(
+    "performer",
+    None,
+    decode.optional(decode.string),
+  )
+  use audio_duration <- decode.optional_field(
+    "audio_duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultAudio(
+    type_: type_,
+    id: id,
+    audio_url: audio_url,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    performer: performer,
+    audio_duration: audio_duration,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_audio_decoder() -> decode.Decoder(
+  InlineQueryResultCachedAudio,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use audio_file_id <- decode.field("audio_file_id", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedAudio(
+    type_: type_,
+    id: id,
+    audio_file_id: audio_file_id,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_document_decoder() -> decode.Decoder(
+  InlineQueryResultCachedDocument,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use title <- decode.field("title", decode.string)
+  use document_file_id <- decode.field("document_file_id", decode.string)
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedDocument(
+    type_: type_,
+    id: id,
+    title: title,
+    document_file_id: document_file_id,
+    description: description,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_gif_decoder() -> decode.Decoder(
+  InlineQueryResultCachedGif,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use gif_file_id <- decode.field("gif_file_id", decode.string)
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedGif(
+    type_: type_,
+    id: id,
+    gif_file_id: gif_file_id,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_mpeg4_gif_decoder() -> decode.Decoder(
+  InlineQueryResultCachedMpeg4Gif,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use mpeg4_file_id <- decode.field("mpeg4_file_id", decode.string)
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedMpeg4Gif(
+    type_: type_,
+    id: id,
+    mpeg4_file_id: mpeg4_file_id,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_photo_decoder() -> decode.Decoder(
+  InlineQueryResultCachedPhoto,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use photo_file_id <- decode.field("photo_file_id", decode.string)
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedPhoto(
+    type_: type_,
+    id: id,
+    photo_file_id: photo_file_id,
+    title: title,
+    description: description,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_sticker_decoder() -> decode.Decoder(
+  InlineQueryResultCachedSticker,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use sticker_file_id <- decode.field("sticker_file_id", decode.string)
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedSticker(
+    type_: type_,
+    id: id,
+    sticker_file_id: sticker_file_id,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_video_decoder() -> decode.Decoder(
+  InlineQueryResultCachedVideo,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use video_file_id <- decode.field("video_file_id", decode.string)
+  use title <- decode.field("title", decode.string)
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedVideo(
+    type_: type_,
+    id: id,
+    video_file_id: video_file_id,
+    title: title,
+    description: description,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_cached_voice_decoder() -> decode.Decoder(
+  InlineQueryResultCachedVoice,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use voice_file_id <- decode.field("voice_file_id", decode.string)
+  use title <- decode.field("title", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultCachedVoice(
+    type_: type_,
+    id: id,
+    voice_file_id: voice_file_id,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_contact_decoder() -> decode.Decoder(
+  InlineQueryResultContact,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use phone_number <- decode.field("phone_number", decode.string)
+  use first_name <- decode.field("first_name", decode.string)
+  use last_name <- decode.optional_field(
+    "last_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use vcard <- decode.optional_field(
+    "vcard",
+    None,
+    decode.optional(decode.string),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  use thumbnail_url <- decode.optional_field(
+    "thumbnail_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_width <- decode.optional_field(
+    "thumbnail_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_height <- decode.optional_field(
+    "thumbnail_height",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InlineQueryResultContact(
+    type_: type_,
+    id: id,
+    phone_number: phone_number,
+    first_name: first_name,
+    last_name: last_name,
+    vcard: vcard,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+    thumbnail_url: thumbnail_url,
+    thumbnail_width: thumbnail_width,
+    thumbnail_height: thumbnail_height,
+  ))
+}
+
+pub fn inline_query_result_document_decoder() -> decode.Decoder(
+  InlineQueryResultDocument,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use title <- decode.field("title", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use document_url <- decode.field("document_url", decode.string)
+  use mime_type <- decode.field("mime_type", decode.string)
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  use thumbnail_url <- decode.optional_field(
+    "thumbnail_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_width <- decode.optional_field(
+    "thumbnail_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_height <- decode.optional_field(
+    "thumbnail_height",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InlineQueryResultDocument(
+    type_: type_,
+    id: id,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    document_url: document_url,
+    mime_type: mime_type,
+    description: description,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+    thumbnail_url: thumbnail_url,
+    thumbnail_width: thumbnail_width,
+    thumbnail_height: thumbnail_height,
+  ))
+}
+
+pub fn inline_query_result_game_decoder() -> decode.Decoder(
+  InlineQueryResultGame,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use game_short_name <- decode.field("game_short_name", decode.string)
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  decode.success(InlineQueryResultGame(
+    type_: type_,
+    id: id,
+    game_short_name: game_short_name,
+    reply_markup: reply_markup,
+  ))
+}
+
+pub fn inline_query_result_gif_decoder() -> decode.Decoder(InlineQueryResultGif) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use gif_url <- decode.field("gif_url", decode.string)
+  use gif_width <- decode.optional_field(
+    "gif_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use gif_height <- decode.optional_field(
+    "gif_height",
+    None,
+    decode.optional(decode.int),
+  )
+  use gif_duration <- decode.optional_field(
+    "gif_duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
+  use thumbnail_mime_type <- decode.optional_field(
+    "thumbnail_mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultGif(
+    type_: type_,
+    id: id,
+    gif_url: gif_url,
+    gif_width: gif_width,
+    gif_height: gif_height,
+    gif_duration: gif_duration,
+    thumbnail_url: thumbnail_url,
+    thumbnail_mime_type: thumbnail_mime_type,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_location_decoder() -> decode.Decoder(
+  InlineQueryResultLocation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use title <- decode.field("title", decode.string)
+  use horizontal_accuracy <- decode.optional_field(
+    "horizontal_accuracy",
+    None,
+    decode.optional(decode.float),
+  )
+  use live_period <- decode.optional_field(
+    "live_period",
+    None,
+    decode.optional(decode.int),
+  )
+  use heading <- decode.optional_field(
+    "heading",
+    None,
+    decode.optional(decode.int),
+  )
+  use proximity_alert_radius <- decode.optional_field(
+    "proximity_alert_radius",
+    None,
+    decode.optional(decode.int),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  use thumbnail_url <- decode.optional_field(
+    "thumbnail_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_width <- decode.optional_field(
+    "thumbnail_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_height <- decode.optional_field(
+    "thumbnail_height",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InlineQueryResultLocation(
+    type_: type_,
+    id: id,
+    latitude: latitude,
+    longitude: longitude,
+    title: title,
+    horizontal_accuracy: horizontal_accuracy,
+    live_period: live_period,
+    heading: heading,
+    proximity_alert_radius: proximity_alert_radius,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+    thumbnail_url: thumbnail_url,
+    thumbnail_width: thumbnail_width,
+    thumbnail_height: thumbnail_height,
+  ))
+}
+
+pub fn inline_query_result_mpeg4_gif_decoder() -> decode.Decoder(
+  InlineQueryResultMpeg4Gif,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use mpeg4_url <- decode.field("mpeg4_url", decode.string)
+  use mpeg4_width <- decode.optional_field(
+    "mpeg4_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use mpeg4_height <- decode.optional_field(
+    "mpeg4_height",
+    None,
+    decode.optional(decode.int),
+  )
+  use mpeg4_duration <- decode.optional_field(
+    "mpeg4_duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
+  use thumbnail_mime_type <- decode.optional_field(
+    "thumbnail_mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultMpeg4Gif(
+    type_: type_,
+    id: id,
+    mpeg4_url: mpeg4_url,
+    mpeg4_width: mpeg4_width,
+    mpeg4_height: mpeg4_height,
+    mpeg4_duration: mpeg4_duration,
+    thumbnail_url: thumbnail_url,
+    thumbnail_mime_type: thumbnail_mime_type,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_photo_decoder() -> decode.Decoder(
+  InlineQueryResultPhoto,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use photo_url <- decode.field("photo_url", decode.string)
+  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
+  use photo_width <- decode.optional_field(
+    "photo_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use photo_height <- decode.optional_field(
+    "photo_height",
+    None,
+    decode.optional(decode.int),
+  )
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultPhoto(
+    type_: type_,
+    id: id,
+    photo_url: photo_url,
+    thumbnail_url: thumbnail_url,
+    photo_width: photo_width,
+    photo_height: photo_height,
+    title: title,
+    description: description,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_venue_decoder() -> decode.Decoder(
+  InlineQueryResultVenue,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use title <- decode.field("title", decode.string)
+  use address <- decode.field("address", decode.string)
+  use foursquare_id <- decode.optional_field(
+    "foursquare_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use foursquare_type <- decode.optional_field(
+    "foursquare_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_id <- decode.optional_field(
+    "google_place_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_type <- decode.optional_field(
+    "google_place_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  use thumbnail_url <- decode.optional_field(
+    "thumbnail_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use thumbnail_width <- decode.optional_field(
+    "thumbnail_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use thumbnail_height <- decode.optional_field(
+    "thumbnail_height",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InlineQueryResultVenue(
+    type_: type_,
+    id: id,
+    latitude: latitude,
+    longitude: longitude,
+    title: title,
+    address: address,
+    foursquare_id: foursquare_id,
+    foursquare_type: foursquare_type,
+    google_place_id: google_place_id,
+    google_place_type: google_place_type,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+    thumbnail_url: thumbnail_url,
+    thumbnail_width: thumbnail_width,
+    thumbnail_height: thumbnail_height,
+  ))
+}
+
+pub fn inline_query_result_video_decoder() -> decode.Decoder(
+  InlineQueryResultVideo,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use video_url <- decode.field("video_url", decode.string)
+  use mime_type <- decode.field("mime_type", decode.string)
+  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
+  use title <- decode.field("title", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use video_width <- decode.optional_field(
+    "video_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use video_height <- decode.optional_field(
+    "video_height",
+    None,
+    decode.optional(decode.int),
+  )
+  use video_duration <- decode.optional_field(
+    "video_duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultVideo(
+    type_: type_,
+    id: id,
+    video_url: video_url,
+    mime_type: mime_type,
+    thumbnail_url: thumbnail_url,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    video_width: video_width,
+    video_height: video_height,
+    video_duration: video_duration,
+    description: description,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_result_voice_decoder() -> decode.Decoder(
+  InlineQueryResultVoice,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use id <- decode.field("id", decode.string)
+  use voice_url <- decode.field("voice_url", decode.string)
+  use title <- decode.field("title", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use voice_duration <- decode.optional_field(
+    "voice_duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use reply_markup <- decode.optional_field(
+    "reply_markup",
+    None,
+    decode.optional(inline_keyboard_markup_decoder()),
+  )
+  use input_message_content <- decode.optional_field(
+    "input_message_content",
+    None,
+    decode.optional(input_message_content_decoder()),
+  )
+  decode.success(InlineQueryResultVoice(
+    type_: type_,
+    id: id,
+    voice_url: voice_url,
+    title: title,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    voice_duration: voice_duration,
+    reply_markup: reply_markup,
+    input_message_content: input_message_content,
+  ))
+}
+
+pub fn inline_query_results_button_decoder() -> decode.Decoder(
+  InlineQueryResultsButton,
+) {
+  use text <- decode.field("text", decode.string)
+  use web_app <- decode.optional_field(
+    "web_app",
+    None,
+    decode.optional(web_app_info_decoder()),
+  )
+  use start_parameter <- decode.optional_field(
+    "start_parameter",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InlineQueryResultsButton(
+    text: text,
+    web_app: web_app,
+    start_parameter: start_parameter,
+  ))
+}
+
+pub fn input_checklist_decoder() -> decode.Decoder(InputChecklist) {
+  use title <- decode.field("title", decode.string)
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use title_entities <- decode.optional_field(
+    "title_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use tasks <- decode.field(
+    "tasks",
+    decode.list(input_checklist_task_decoder()),
+  )
+  use others_can_add_tasks <- decode.optional_field(
+    "others_can_add_tasks",
+    None,
+    decode.optional(decode.bool),
+  )
+  use others_can_mark_tasks_as_done <- decode.optional_field(
+    "others_can_mark_tasks_as_done",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputChecklist(
+    title: title,
+    parse_mode: parse_mode,
+    title_entities: title_entities,
+    tasks: tasks,
+    others_can_add_tasks: others_can_add_tasks,
+    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
+  ))
+}
+
+pub fn input_checklist_task_decoder() -> decode.Decoder(InputChecklistTask) {
+  use id <- decode.field("id", decode.int)
+  use text <- decode.field("text", decode.string)
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use text_entities <- decode.optional_field(
+    "text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  decode.success(InputChecklistTask(
+    id: id,
+    text: text,
+    parse_mode: parse_mode,
+    text_entities: text_entities,
+  ))
+}
+
+pub fn input_contact_message_content_decoder() -> decode.Decoder(
+  InputContactMessageContent,
+) {
+  use phone_number <- decode.field("phone_number", decode.string)
+  use first_name <- decode.field("first_name", decode.string)
+  use last_name <- decode.optional_field(
+    "last_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use vcard <- decode.optional_field(
+    "vcard",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputContactMessageContent(
+    phone_number: phone_number,
+    first_name: first_name,
+    last_name: last_name,
+    vcard: vcard,
+  ))
+}
+
+pub fn input_invoice_message_content_decoder() -> decode.Decoder(
+  InputInvoiceMessageContent,
+) {
+  use title <- decode.field("title", decode.string)
+  use description <- decode.field("description", decode.string)
+  use payload <- decode.field("payload", decode.string)
+  use provider_token <- decode.optional_field(
+    "provider_token",
+    None,
+    decode.optional(decode.string),
+  )
+  use currency <- decode.field("currency", decode.string)
+  use prices <- decode.field("prices", decode.list(labeled_price_decoder()))
+  use max_tip_amount <- decode.optional_field(
+    "max_tip_amount",
+    None,
+    decode.optional(decode.int),
+  )
+  use suggested_tip_amounts <- decode.optional_field(
+    "suggested_tip_amounts",
+    None,
+    decode.optional(decode.list(decode.int)),
+  )
+  use provider_data <- decode.optional_field(
+    "provider_data",
+    None,
+    decode.optional(decode.string),
+  )
+  use photo_url <- decode.optional_field(
+    "photo_url",
+    None,
+    decode.optional(decode.string),
+  )
+  use photo_size <- decode.optional_field(
+    "photo_size",
+    None,
+    decode.optional(decode.int),
+  )
+  use photo_width <- decode.optional_field(
+    "photo_width",
+    None,
+    decode.optional(decode.int),
+  )
+  use photo_height <- decode.optional_field(
+    "photo_height",
+    None,
+    decode.optional(decode.int),
+  )
+  use need_name <- decode.optional_field(
+    "need_name",
+    None,
+    decode.optional(decode.bool),
+  )
+  use need_phone_number <- decode.optional_field(
+    "need_phone_number",
+    None,
+    decode.optional(decode.bool),
+  )
+  use need_email <- decode.optional_field(
+    "need_email",
+    None,
+    decode.optional(decode.bool),
+  )
+  use need_shipping_address <- decode.optional_field(
+    "need_shipping_address",
+    None,
+    decode.optional(decode.bool),
+  )
+  use send_phone_number_to_provider <- decode.optional_field(
+    "send_phone_number_to_provider",
+    None,
+    decode.optional(decode.bool),
+  )
+  use send_email_to_provider <- decode.optional_field(
+    "send_email_to_provider",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_flexible <- decode.optional_field(
+    "is_flexible",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputInvoiceMessageContent(
+    title: title,
+    description: description,
+    payload: payload,
+    provider_token: provider_token,
+    currency: currency,
+    prices: prices,
+    max_tip_amount: max_tip_amount,
+    suggested_tip_amounts: suggested_tip_amounts,
+    provider_data: provider_data,
+    photo_url: photo_url,
+    photo_size: photo_size,
+    photo_width: photo_width,
+    photo_height: photo_height,
+    need_name: need_name,
+    need_phone_number: need_phone_number,
+    need_email: need_email,
+    need_shipping_address: need_shipping_address,
+    send_phone_number_to_provider: send_phone_number_to_provider,
+    send_email_to_provider: send_email_to_provider,
+    is_flexible: is_flexible,
+  ))
+}
+
+pub fn input_location_message_content_decoder() -> decode.Decoder(
+  InputLocationMessageContent,
+) {
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use horizontal_accuracy <- decode.optional_field(
+    "horizontal_accuracy",
+    None,
+    decode.optional(decode.float),
+  )
+  use live_period <- decode.optional_field(
+    "live_period",
+    None,
+    decode.optional(decode.int),
+  )
+  use heading <- decode.optional_field(
+    "heading",
+    None,
+    decode.optional(decode.int),
+  )
+  use proximity_alert_radius <- decode.optional_field(
+    "proximity_alert_radius",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InputLocationMessageContent(
+    latitude: latitude,
+    longitude: longitude,
+    horizontal_accuracy: horizontal_accuracy,
+    live_period: live_period,
+    heading: heading,
+    proximity_alert_radius: proximity_alert_radius,
+  ))
+}
+
+pub fn input_media_animation_decoder() -> decode.Decoder(InputMediaAnimation) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use width <- decode.optional_field("width", None, decode.optional(decode.int))
+  use height <- decode.optional_field(
+    "height",
+    None,
+    decode.optional(decode.int),
+  )
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaAnimation(
+    type_: type_,
+    media: media,
+    thumbnail: thumbnail,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    width: width,
+    height: height,
+    duration: duration,
+    has_spoiler: has_spoiler,
+  ))
+}
+
+pub fn input_media_audio_decoder() -> decode.Decoder(InputMediaAudio) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use performer <- decode.optional_field(
+    "performer",
+    None,
+    decode.optional(decode.string),
+  )
+  use title <- decode.optional_field(
+    "title",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputMediaAudio(
+    type_: type_,
+    media: media,
+    thumbnail: thumbnail,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    duration: duration,
+    performer: performer,
+    title: title,
+  ))
+}
+
+pub fn input_media_document_decoder() -> decode.Decoder(InputMediaDocument) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use disable_content_type_detection <- decode.optional_field(
+    "disable_content_type_detection",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaDocument(
+    type_: type_,
+    media: media,
+    thumbnail: thumbnail,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    disable_content_type_detection: disable_content_type_detection,
+  ))
+}
+
+pub fn input_media_live_photo_decoder() -> decode.Decoder(InputMediaLivePhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaLivePhoto(
+    type_: type_,
+    media: media,
+    photo: photo,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    has_spoiler: has_spoiler,
+  ))
+}
+
+pub fn input_media_location_decoder() -> decode.Decoder(InputMediaLocation) {
+  use type_ <- decode.field("type", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use horizontal_accuracy <- decode.optional_field(
+    "horizontal_accuracy",
+    None,
+    decode.optional(decode.float),
+  )
+  decode.success(InputMediaLocation(
+    type_: type_,
+    latitude: latitude,
+    longitude: longitude,
+    horizontal_accuracy: horizontal_accuracy,
+  ))
+}
+
+pub fn input_media_photo_decoder() -> decode.Decoder(InputMediaPhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaPhoto(
+    type_: type_,
+    media: media,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    has_spoiler: has_spoiler,
+  ))
+}
+
+pub fn input_media_sticker_decoder() -> decode.Decoder(InputMediaSticker) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use emoji <- decode.optional_field(
+    "emoji",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputMediaSticker(type_: type_, media: media, emoji: emoji))
+}
+
+pub fn input_media_venue_decoder() -> decode.Decoder(InputMediaVenue) {
+  use type_ <- decode.field("type", decode.string)
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use title <- decode.field("title", decode.string)
+  use address <- decode.field("address", decode.string)
+  use foursquare_id <- decode.optional_field(
+    "foursquare_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use foursquare_type <- decode.optional_field(
+    "foursquare_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_id <- decode.optional_field(
+    "google_place_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_type <- decode.optional_field(
+    "google_place_type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputMediaVenue(
+    type_: type_,
+    latitude: latitude,
+    longitude: longitude,
+    title: title,
+    address: address,
+    foursquare_id: foursquare_id,
+    foursquare_type: foursquare_type,
+    google_place_id: google_place_id,
+    google_place_type: google_place_type,
+  ))
+}
+
+pub fn input_media_video_decoder() -> decode.Decoder(InputMediaVideo) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(decode.string),
+  )
+  use cover <- decode.optional_field(
+    "cover",
+    None,
+    decode.optional(decode.string),
+  )
+  use start_timestamp <- decode.optional_field(
+    "start_timestamp",
+    None,
+    decode.optional(decode.int),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use show_caption_above_media <- decode.optional_field(
+    "show_caption_above_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use width <- decode.optional_field("width", None, decode.optional(decode.int))
+  use height <- decode.optional_field(
+    "height",
+    None,
+    decode.optional(decode.int),
+  )
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use supports_streaming <- decode.optional_field(
+    "supports_streaming",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputMediaVideo(
+    type_: type_,
+    media: media,
+    thumbnail: thumbnail,
+    cover: cover,
+    start_timestamp: start_timestamp,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    show_caption_above_media: show_caption_above_media,
+    width: width,
+    height: height,
+    duration: duration,
+    supports_streaming: supports_streaming,
+    has_spoiler: has_spoiler,
+  ))
+}
+
+pub fn input_paid_media_live_photo_decoder() -> decode.Decoder(
+  InputPaidMediaLivePhoto,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  decode.success(InputPaidMediaLivePhoto(
+    type_: type_,
+    media: media,
+    photo: photo,
+  ))
+}
+
+pub fn input_paid_media_photo_decoder() -> decode.Decoder(InputPaidMediaPhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  decode.success(InputPaidMediaPhoto(type_: type_, media: media))
+}
+
+pub fn input_paid_media_video_decoder() -> decode.Decoder(InputPaidMediaVideo) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(decode.string),
+  )
+  use cover <- decode.optional_field(
+    "cover",
+    None,
+    decode.optional(decode.string),
+  )
+  use start_timestamp <- decode.optional_field(
+    "start_timestamp",
+    None,
+    decode.optional(decode.int),
+  )
+  use width <- decode.optional_field("width", None, decode.optional(decode.int))
+  use height <- decode.optional_field(
+    "height",
+    None,
+    decode.optional(decode.int),
+  )
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  use supports_streaming <- decode.optional_field(
+    "supports_streaming",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputPaidMediaVideo(
+    type_: type_,
+    media: media,
+    thumbnail: thumbnail,
+    cover: cover,
+    start_timestamp: start_timestamp,
+    width: width,
+    height: height,
+    duration: duration,
+    supports_streaming: supports_streaming,
+  ))
+}
+
+pub fn input_poll_option_decoder() -> decode.Decoder(InputPollOption) {
+  use text <- decode.field("text", decode.string)
+  use text_parse_mode <- decode.optional_field(
+    "text_parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use text_entities <- decode.optional_field(
+    "text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(input_poll_option_media_decoder()),
+  )
+  decode.success(InputPollOption(
+    text: text,
+    text_parse_mode: text_parse_mode,
+    text_entities: text_entities,
+    media: media,
+  ))
+}
+
+pub fn input_profile_photo_animated_decoder() -> decode.Decoder(
+  InputProfilePhotoAnimated,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use animation <- decode.field("animation", decode.string)
+  use main_frame_timestamp <- decode.optional_field(
+    "main_frame_timestamp",
+    None,
+    decode.optional(decode.float),
+  )
+  decode.success(InputProfilePhotoAnimated(
+    type_: type_,
+    animation: animation,
+    main_frame_timestamp: main_frame_timestamp,
+  ))
+}
+
+pub fn input_profile_photo_static_decoder() -> decode.Decoder(
+  InputProfilePhotoStatic,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  decode.success(InputProfilePhotoStatic(type_: type_, photo: photo))
+}
+
+pub fn input_sticker_decoder() -> decode.Decoder(InputSticker) {
+  use sticker <- decode.field("sticker", decode.string)
+  use format <- decode.field("format", decode.string)
+  use emoji_list <- decode.field("emoji_list", decode.list(decode.string))
+  use mask_position <- decode.optional_field(
+    "mask_position",
+    None,
+    decode.optional(mask_position_decoder()),
+  )
+  use keywords <- decode.optional_field(
+    "keywords",
+    None,
+    decode.optional(decode.list(decode.string)),
+  )
+  decode.success(InputSticker(
+    sticker: sticker,
+    format: format,
+    emoji_list: emoji_list,
+    mask_position: mask_position,
+    keywords: keywords,
+  ))
+}
+
+pub fn input_story_content_photo_decoder() -> decode.Decoder(
+  InputStoryContentPhoto,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use photo <- decode.field("photo", decode.string)
+  decode.success(InputStoryContentPhoto(type_: type_, photo: photo))
+}
+
+pub fn input_story_content_video_decoder() -> decode.Decoder(
+  InputStoryContentVideo,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use video <- decode.field("video", decode.string)
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.float),
+  )
+  use cover_frame_timestamp <- decode.optional_field(
+    "cover_frame_timestamp",
+    None,
+    decode.optional(decode.float),
+  )
+  use is_animation <- decode.optional_field(
+    "is_animation",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputStoryContentVideo(
+    type_: type_,
+    video: video,
+    duration: duration,
+    cover_frame_timestamp: cover_frame_timestamp,
+    is_animation: is_animation,
+  ))
+}
+
+pub fn input_text_message_content_decoder() -> decode.Decoder(
+  InputTextMessageContent,
+) {
+  use message_text <- decode.field("message_text", decode.string)
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use entities <- decode.optional_field(
+    "entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use link_preview_options <- decode.optional_field(
+    "link_preview_options",
+    None,
+    decode.optional(link_preview_options_decoder()),
+  )
+  decode.success(InputTextMessageContent(
+    message_text: message_text,
+    parse_mode: parse_mode,
+    entities: entities,
+    link_preview_options: link_preview_options,
+  ))
+}
+
+pub fn input_venue_message_content_decoder() -> decode.Decoder(
+  InputVenueMessageContent,
+) {
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use title <- decode.field("title", decode.string)
+  use address <- decode.field("address", decode.string)
+  use foursquare_id <- decode.optional_field(
+    "foursquare_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use foursquare_type <- decode.optional_field(
+    "foursquare_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_id <- decode.optional_field(
+    "google_place_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_type <- decode.optional_field(
+    "google_place_type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputVenueMessageContent(
+    latitude: latitude,
+    longitude: longitude,
+    title: title,
+    address: address,
+    foursquare_id: foursquare_id,
+    foursquare_type: foursquare_type,
+    google_place_id: google_place_id,
+    google_place_type: google_place_type,
+  ))
+}
+
+pub fn invoice_decoder() -> decode.Decoder(Invoice) {
+  use title <- decode.field("title", decode.string)
+  use description <- decode.field("description", decode.string)
+  use start_parameter <- decode.field("start_parameter", decode.string)
+  use currency <- decode.field("currency", decode.string)
+  use total_amount <- decode.field("total_amount", decode.int)
+  decode.success(Invoice(
+    title: title,
+    description: description,
+    start_parameter: start_parameter,
+    currency: currency,
+    total_amount: total_amount,
+  ))
+}
+
+pub fn keyboard_button_decoder() -> decode.Decoder(KeyboardButton) {
+  use text <- decode.field("text", decode.string)
+  use icon_custom_emoji_id <- decode.optional_field(
+    "icon_custom_emoji_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use style <- decode.optional_field(
+    "style",
+    None,
+    decode.optional(decode.string),
+  )
+  use request_users <- decode.optional_field(
+    "request_users",
+    None,
+    decode.optional(keyboard_button_request_users_decoder()),
+  )
+  use request_chat <- decode.optional_field(
+    "request_chat",
+    None,
+    decode.optional(keyboard_button_request_chat_decoder()),
+  )
+  use request_managed_bot <- decode.optional_field(
+    "request_managed_bot",
+    None,
+    decode.optional(keyboard_button_request_managed_bot_decoder()),
+  )
+  use request_contact <- decode.optional_field(
+    "request_contact",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_location <- decode.optional_field(
+    "request_location",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_poll <- decode.optional_field(
+    "request_poll",
+    None,
+    decode.optional(keyboard_button_poll_type_decoder()),
+  )
+  use web_app <- decode.optional_field(
+    "web_app",
+    None,
+    decode.optional(web_app_info_decoder()),
+  )
+  decode.success(KeyboardButton(
+    text: text,
+    icon_custom_emoji_id: icon_custom_emoji_id,
+    style: style,
+    request_users: request_users,
+    request_chat: request_chat,
+    request_managed_bot: request_managed_bot,
+    request_contact: request_contact,
+    request_location: request_location,
+    request_poll: request_poll,
+    web_app: web_app,
+  ))
+}
+
+pub fn keyboard_button_poll_type_decoder() -> decode.Decoder(
+  KeyboardButtonPollType,
+) {
+  use type_ <- decode.optional_field(
+    "type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(KeyboardButtonPollType(type_: type_))
+}
+
+pub fn keyboard_button_request_chat_decoder() -> decode.Decoder(
+  KeyboardButtonRequestChat,
+) {
+  use request_id <- decode.field("request_id", decode.int)
+  use chat_is_channel <- decode.field("chat_is_channel", decode.bool)
+  use chat_is_forum <- decode.optional_field(
+    "chat_is_forum",
+    None,
+    decode.optional(decode.bool),
+  )
+  use chat_has_username <- decode.optional_field(
+    "chat_has_username",
+    None,
+    decode.optional(decode.bool),
+  )
+  use chat_is_created <- decode.optional_field(
+    "chat_is_created",
+    None,
+    decode.optional(decode.bool),
+  )
+  use user_administrator_rights <- decode.optional_field(
+    "user_administrator_rights",
+    None,
+    decode.optional(chat_administrator_rights_decoder()),
+  )
+  use bot_administrator_rights <- decode.optional_field(
+    "bot_administrator_rights",
+    None,
+    decode.optional(chat_administrator_rights_decoder()),
+  )
+  use bot_is_member <- decode.optional_field(
+    "bot_is_member",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_title <- decode.optional_field(
+    "request_title",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_username <- decode.optional_field(
+    "request_username",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_photo <- decode.optional_field(
+    "request_photo",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(KeyboardButtonRequestChat(
+    request_id: request_id,
+    chat_is_channel: chat_is_channel,
+    chat_is_forum: chat_is_forum,
+    chat_has_username: chat_has_username,
+    chat_is_created: chat_is_created,
+    user_administrator_rights: user_administrator_rights,
+    bot_administrator_rights: bot_administrator_rights,
+    bot_is_member: bot_is_member,
+    request_title: request_title,
+    request_username: request_username,
+    request_photo: request_photo,
+  ))
+}
+
+pub fn keyboard_button_request_managed_bot_decoder() -> decode.Decoder(
+  KeyboardButtonRequestManagedBot,
+) {
+  use request_id <- decode.field("request_id", decode.int)
+  use suggested_name <- decode.optional_field(
+    "suggested_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use suggested_username <- decode.optional_field(
+    "suggested_username",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(KeyboardButtonRequestManagedBot(
+    request_id: request_id,
+    suggested_name: suggested_name,
+    suggested_username: suggested_username,
+  ))
+}
+
+pub fn keyboard_button_request_users_decoder() -> decode.Decoder(
+  KeyboardButtonRequestUsers,
+) {
+  use request_id <- decode.field("request_id", decode.int)
+  use user_is_bot <- decode.optional_field(
+    "user_is_bot",
+    None,
+    decode.optional(decode.bool),
+  )
+  use user_is_premium <- decode.optional_field(
+    "user_is_premium",
+    None,
+    decode.optional(decode.bool),
+  )
+  use max_quantity <- decode.optional_field(
+    "max_quantity",
+    None,
+    decode.optional(decode.int),
+  )
+  use request_name <- decode.optional_field(
+    "request_name",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_username <- decode.optional_field(
+    "request_username",
+    None,
+    decode.optional(decode.bool),
+  )
+  use request_photo <- decode.optional_field(
+    "request_photo",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(KeyboardButtonRequestUsers(
+    request_id: request_id,
+    user_is_bot: user_is_bot,
+    user_is_premium: user_is_premium,
+    max_quantity: max_quantity,
+    request_name: request_name,
+    request_username: request_username,
+    request_photo: request_photo,
+  ))
+}
+
+pub fn labeled_price_decoder() -> decode.Decoder(LabeledPrice) {
+  use label <- decode.field("label", decode.string)
+  use amount <- decode.field("amount", decode.int)
+  decode.success(LabeledPrice(label: label, amount: amount))
+}
+
+pub fn link_preview_options_decoder() -> decode.Decoder(LinkPreviewOptions) {
+  use is_disabled <- decode.optional_field(
+    "is_disabled",
+    None,
+    decode.optional(decode.bool),
+  )
+  use url <- decode.optional_field("url", None, decode.optional(decode.string))
+  use prefer_small_media <- decode.optional_field(
+    "prefer_small_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use prefer_large_media <- decode.optional_field(
+    "prefer_large_media",
+    None,
+    decode.optional(decode.bool),
+  )
+  use show_above_text <- decode.optional_field(
+    "show_above_text",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(LinkPreviewOptions(
+    is_disabled: is_disabled,
+    url: url,
+    prefer_small_media: prefer_small_media,
+    prefer_large_media: prefer_large_media,
+    show_above_text: show_above_text,
+  ))
+}
+
+pub fn live_photo_decoder() -> decode.Decoder(LivePhoto) {
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use duration <- decode.field("duration", decode.int)
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(LivePhoto(
+    photo: photo,
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    duration: duration,
+    mime_type: mime_type,
+    file_size: file_size,
+  ))
+}
+
+pub fn location_decoder() -> decode.Decoder(Location) {
+  use latitude <- decode.field("latitude", decode.float)
+  use longitude <- decode.field("longitude", decode.float)
+  use horizontal_accuracy <- decode.optional_field(
+    "horizontal_accuracy",
+    None,
+    decode.optional(decode.float),
+  )
+  use live_period <- decode.optional_field(
+    "live_period",
+    None,
+    decode.optional(decode.int),
+  )
+  use heading <- decode.optional_field(
+    "heading",
+    None,
+    decode.optional(decode.int),
+  )
+  use proximity_alert_radius <- decode.optional_field(
+    "proximity_alert_radius",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Location(
+    latitude: latitude,
+    longitude: longitude,
+    horizontal_accuracy: horizontal_accuracy,
+    live_period: live_period,
+    heading: heading,
+    proximity_alert_radius: proximity_alert_radius,
+  ))
+}
+
+pub fn location_address_decoder() -> decode.Decoder(LocationAddress) {
+  use country_code <- decode.field("country_code", decode.string)
+  use state <- decode.optional_field(
+    "state",
+    None,
+    decode.optional(decode.string),
+  )
+  use city <- decode.optional_field(
+    "city",
+    None,
+    decode.optional(decode.string),
+  )
+  use street <- decode.optional_field(
+    "street",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(LocationAddress(
+    country_code: country_code,
+    state: state,
+    city: city,
+    street: street,
+  ))
+}
+
+pub fn login_url_decoder() -> decode.Decoder(LoginUrl) {
+  use url <- decode.field("url", decode.string)
+  use forward_text <- decode.optional_field(
+    "forward_text",
+    None,
+    decode.optional(decode.string),
+  )
+  use bot_username <- decode.optional_field(
+    "bot_username",
+    None,
+    decode.optional(decode.string),
+  )
+  use request_write_access <- decode.optional_field(
+    "request_write_access",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(LoginUrl(
+    url: url,
+    forward_text: forward_text,
+    bot_username: bot_username,
+    request_write_access: request_write_access,
+  ))
+}
+
+pub fn managed_bot_created_decoder() -> decode.Decoder(ManagedBotCreated) {
+  use bot <- decode.field("bot", user_decoder())
+  decode.success(ManagedBotCreated(bot: bot))
+}
+
+pub fn managed_bot_updated_decoder() -> decode.Decoder(ManagedBotUpdated) {
+  use user <- decode.field("user", user_decoder())
+  use bot <- decode.field("bot", user_decoder())
+  decode.success(ManagedBotUpdated(user: user, bot: bot))
+}
+
+pub fn mask_position_decoder() -> decode.Decoder(MaskPosition) {
+  use point <- decode.field("point", decode.string)
+  use x_shift <- decode.field("x_shift", decode.float)
+  use y_shift <- decode.field("y_shift", decode.float)
+  use scale <- decode.field("scale", decode.float)
+  decode.success(MaskPosition(
+    point: point,
+    x_shift: x_shift,
+    y_shift: y_shift,
+    scale: scale,
+  ))
+}
+
+pub fn menu_button_commands_decoder() -> decode.Decoder(MenuButtonCommands) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(MenuButtonCommands(type_: type_))
+}
+
+pub fn menu_button_default_decoder() -> decode.Decoder(MenuButtonDefault) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(MenuButtonDefault(type_: type_))
+}
+
+pub fn menu_button_web_app_decoder() -> decode.Decoder(MenuButtonWebApp) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", decode.string)
+  use web_app <- decode.field("web_app", web_app_info_decoder())
+  decode.success(MenuButtonWebApp(type_: type_, text: text, web_app: web_app))
 }
 
 pub fn message_decoder() -> decode.Decoder(Message) {
@@ -937,29 +5228,19 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(user_decoder()),
   )
-  use guest_bot_caller_user <- decode.optional_field(
-    "guest_bot_caller_user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use guest_bot_caller_chat <- decode.optional_field(
-    "guest_bot_caller_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
   use sender_tag <- decode.optional_field(
     "sender_tag",
     None,
     decode.optional(decode.string),
   )
   use date <- decode.field("date", decode.int)
-  use business_connection_id <- decode.optional_field(
-    "business_connection_id",
+  use guest_query_id <- decode.optional_field(
+    "guest_query_id",
     None,
     decode.optional(decode.string),
   )
-  use guest_query_id <- decode.optional_field(
-    "guest_query_id",
+  use business_connection_id <- decode.optional_field(
+    "business_connection_id",
     None,
     decode.optional(decode.string),
   )
@@ -1013,6 +5294,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "via_bot",
     None,
     decode.optional(user_decoder()),
+  )
+  use guest_bot_caller_user <- decode.optional_field(
+    "guest_bot_caller_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use guest_bot_caller_chat <- decode.optional_field(
+    "guest_bot_caller_chat",
+    None,
+    decode.optional(chat_decoder()),
   )
   use edit_date <- decode.optional_field(
     "edit_date",
@@ -1089,6 +5380,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(document_decoder()),
   )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
+  )
   use paid_media <- decode.optional_field(
     "paid_media",
     None,
@@ -1108,11 +5404,6 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "story",
     None,
     decode.optional(story_decoder()),
-  )
-  use live_photo <- decode.optional_field(
-    "live_photo",
-    None,
-    decode.optional(live_photo_decoder()),
   )
   use video <- decode.optional_field(
     "video",
@@ -1472,12 +5763,10 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     sender_chat: sender_chat,
     sender_boost_count: sender_boost_count,
     sender_business_bot: sender_business_bot,
-    guest_bot_caller_user: guest_bot_caller_user,
-    guest_bot_caller_chat: guest_bot_caller_chat,
     sender_tag: sender_tag,
     date: date,
-    business_connection_id: business_connection_id,
     guest_query_id: guest_query_id,
+    business_connection_id: business_connection_id,
     chat: chat,
     forward_origin: forward_origin,
     is_topic_message: is_topic_message,
@@ -1489,6 +5778,8 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     reply_to_checklist_task_id: reply_to_checklist_task_id,
     reply_to_poll_option_id: reply_to_poll_option_id,
     via_bot: via_bot,
+    guest_bot_caller_user: guest_bot_caller_user,
+    guest_bot_caller_chat: guest_bot_caller_chat,
     edit_date: edit_date,
     has_protected_content: has_protected_content,
     is_from_offline: is_from_offline,
@@ -1504,11 +5795,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     animation: animation,
     audio: audio,
     document: document,
+    live_photo: live_photo,
     paid_media: paid_media,
     photo: photo,
     sticker: sticker,
     story: story,
-    live_photo: live_photo,
     video: video,
     video_note: video_note,
     voice: voice,
@@ -1582,19 +5873,15 @@ pub fn message_decoder() -> decode.Decoder(Message) {
   ))
 }
 
-pub fn message_id_decoder() -> decode.Decoder(MessageId) {
-  use message_id <- decode.field("message_id", decode.int)
-  decode.success(MessageId(message_id: message_id))
-}
-
-pub fn inaccessible_message_decoder() -> decode.Decoder(InaccessibleMessage) {
-  use chat <- decode.field("chat", chat_decoder())
-  use message_id <- decode.field("message_id", decode.int)
-  use date <- decode.field("date", decode.int)
-  decode.success(InaccessibleMessage(
-    chat: chat,
-    message_id: message_id,
-    date: date,
+pub fn message_auto_delete_timer_changed_decoder() -> decode.Decoder(
+  MessageAutoDeleteTimerChanged,
+) {
+  use message_auto_delete_time <- decode.field(
+    "message_auto_delete_time",
+    decode.int,
+  )
+  decode.success(MessageAutoDeleteTimerChanged(
+    message_auto_delete_time: message_auto_delete_time,
   ))
 }
 
@@ -1641,278 +5928,9 @@ pub fn message_entity_decoder() -> decode.Decoder(MessageEntity) {
   ))
 }
 
-pub fn text_quote_decoder() -> decode.Decoder(TextQuote) {
-  use text <- decode.field("text", decode.string)
-  use entities <- decode.optional_field(
-    "entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use position <- decode.field("position", decode.int)
-  use is_manual <- decode.optional_field(
-    "is_manual",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(TextQuote(
-    text: text,
-    entities: entities,
-    position: position,
-    is_manual: is_manual,
-  ))
-}
-
-pub fn external_reply_info_decoder() -> decode.Decoder(ExternalReplyInfo) {
-  use origin <- decode.field("origin", message_origin_decoder())
-  use chat <- decode.optional_field(
-    "chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  use message_id <- decode.optional_field(
-    "message_id",
-    None,
-    decode.optional(decode.int),
-  )
-  use link_preview_options <- decode.optional_field(
-    "link_preview_options",
-    None,
-    decode.optional(link_preview_options_decoder()),
-  )
-  use animation <- decode.optional_field(
-    "animation",
-    None,
-    decode.optional(animation_decoder()),
-  )
-  use audio <- decode.optional_field(
-    "audio",
-    None,
-    decode.optional(audio_decoder()),
-  )
-  use document <- decode.optional_field(
-    "document",
-    None,
-    decode.optional(document_decoder()),
-  )
-  use paid_media <- decode.optional_field(
-    "paid_media",
-    None,
-    decode.optional(paid_media_info_decoder()),
-  )
-  use photo <- decode.optional_field(
-    "photo",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  use sticker <- decode.optional_field(
-    "sticker",
-    None,
-    decode.optional(sticker_decoder()),
-  )
-  use story <- decode.optional_field(
-    "story",
-    None,
-    decode.optional(story_decoder()),
-  )
-  use live_photo <- decode.optional_field(
-    "live_photo",
-    None,
-    decode.optional(live_photo_decoder()),
-  )
-  use video <- decode.optional_field(
-    "video",
-    None,
-    decode.optional(video_decoder()),
-  )
-  use video_note <- decode.optional_field(
-    "video_note",
-    None,
-    decode.optional(video_note_decoder()),
-  )
-  use voice <- decode.optional_field(
-    "voice",
-    None,
-    decode.optional(voice_decoder()),
-  )
-  use has_media_spoiler <- decode.optional_field(
-    "has_media_spoiler",
-    None,
-    decode.optional(decode.bool),
-  )
-  use checklist <- decode.optional_field(
-    "checklist",
-    None,
-    decode.optional(checklist_decoder()),
-  )
-  use contact <- decode.optional_field(
-    "contact",
-    None,
-    decode.optional(contact_decoder()),
-  )
-  use dice <- decode.optional_field(
-    "dice",
-    None,
-    decode.optional(dice_decoder()),
-  )
-  use game <- decode.optional_field(
-    "game",
-    None,
-    decode.optional(game_decoder()),
-  )
-  use giveaway <- decode.optional_field(
-    "giveaway",
-    None,
-    decode.optional(giveaway_decoder()),
-  )
-  use giveaway_winners <- decode.optional_field(
-    "giveaway_winners",
-    None,
-    decode.optional(giveaway_winners_decoder()),
-  )
-  use invoice <- decode.optional_field(
-    "invoice",
-    None,
-    decode.optional(invoice_decoder()),
-  )
-  use location <- decode.optional_field(
-    "location",
-    None,
-    decode.optional(location_decoder()),
-  )
-  use poll <- decode.optional_field(
-    "poll",
-    None,
-    decode.optional(poll_decoder()),
-  )
-  use venue <- decode.optional_field(
-    "venue",
-    None,
-    decode.optional(venue_decoder()),
-  )
-  decode.success(ExternalReplyInfo(
-    origin: origin,
-    chat: chat,
-    message_id: message_id,
-    link_preview_options: link_preview_options,
-    animation: animation,
-    audio: audio,
-    document: document,
-    paid_media: paid_media,
-    photo: photo,
-    sticker: sticker,
-    story: story,
-    live_photo: live_photo,
-    video: video,
-    video_note: video_note,
-    voice: voice,
-    has_media_spoiler: has_media_spoiler,
-    checklist: checklist,
-    contact: contact,
-    dice: dice,
-    game: game,
-    giveaway: giveaway,
-    giveaway_winners: giveaway_winners,
-    invoice: invoice,
-    location: location,
-    poll: poll,
-    venue: venue,
-  ))
-}
-
-pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
+pub fn message_id_decoder() -> decode.Decoder(MessageId) {
   use message_id <- decode.field("message_id", decode.int)
-  use chat_id <- decode.optional_field(
-    "chat_id",
-    None,
-    decode.optional(int_or_string_decoder()),
-  )
-  use allow_sending_without_reply <- decode.optional_field(
-    "allow_sending_without_reply",
-    None,
-    decode.optional(decode.bool),
-  )
-  use quote <- decode.optional_field(
-    "quote",
-    None,
-    decode.optional(decode.string),
-  )
-  use quote_parse_mode <- decode.optional_field(
-    "quote_parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use quote_entities <- decode.optional_field(
-    "quote_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use quote_position <- decode.optional_field(
-    "quote_position",
-    None,
-    decode.optional(decode.int),
-  )
-  use checklist_task_id <- decode.optional_field(
-    "checklist_task_id",
-    None,
-    decode.optional(decode.int),
-  )
-  use poll_option_id <- decode.optional_field(
-    "poll_option_id",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(ReplyParameters(
-    message_id: message_id,
-    chat_id: chat_id,
-    allow_sending_without_reply: allow_sending_without_reply,
-    quote: quote,
-    quote_parse_mode: quote_parse_mode,
-    quote_entities: quote_entities,
-    quote_position: quote_position,
-    checklist_task_id: checklist_task_id,
-    poll_option_id: poll_option_id,
-  ))
-}
-
-pub fn message_origin_user_decoder() -> decode.Decoder(MessageOriginUser) {
-  use type_ <- decode.field("type", decode.string)
-  use date <- decode.field("date", decode.int)
-  use sender_user <- decode.field("sender_user", user_decoder())
-  decode.success(MessageOriginUser(
-    type_: type_,
-    date: date,
-    sender_user: sender_user,
-  ))
-}
-
-pub fn message_origin_hidden_user_decoder() -> decode.Decoder(
-  MessageOriginHiddenUser,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use date <- decode.field("date", decode.int)
-  use sender_user_name <- decode.field("sender_user_name", decode.string)
-  decode.success(MessageOriginHiddenUser(
-    type_: type_,
-    date: date,
-    sender_user_name: sender_user_name,
-  ))
-}
-
-pub fn message_origin_chat_decoder() -> decode.Decoder(MessageOriginChat) {
-  use type_ <- decode.field("type", decode.string)
-  use date <- decode.field("date", decode.int)
-  use sender_chat <- decode.field("sender_chat", chat_decoder())
-  use author_signature <- decode.optional_field(
-    "author_signature",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(MessageOriginChat(
-    type_: type_,
-    date: date,
-    sender_chat: sender_chat,
-    author_signature: author_signature,
-  ))
+  decode.success(MessageId(message_id: message_id))
 }
 
 pub fn message_origin_channel_decoder() -> decode.Decoder(MessageOriginChannel) {
@@ -1934,2792 +5952,63 @@ pub fn message_origin_channel_decoder() -> decode.Decoder(MessageOriginChannel) 
   ))
 }
 
-pub fn photo_size_decoder() -> decode.Decoder(PhotoSize) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(PhotoSize(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    width: width,
-    height: height,
-    file_size: file_size,
-  ))
-}
-
-pub fn animation_decoder() -> decode.Decoder(Animation) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
-  use duration <- decode.field("duration", decode.int)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(photo_size_decoder()),
-  )
-  use file_name <- decode.optional_field(
-    "file_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Animation(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    width: width,
-    height: height,
-    duration: duration,
-    thumbnail: thumbnail,
-    file_name: file_name,
-    mime_type: mime_type,
-    file_size: file_size,
-  ))
-}
-
-pub fn audio_decoder() -> decode.Decoder(Audio) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use duration <- decode.field("duration", decode.int)
-  use performer <- decode.optional_field(
-    "performer",
-    None,
-    decode.optional(decode.string),
-  )
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_name <- decode.optional_field(
-    "file_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(photo_size_decoder()),
-  )
-  decode.success(Audio(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    duration: duration,
-    performer: performer,
-    title: title,
-    file_name: file_name,
-    mime_type: mime_type,
-    file_size: file_size,
-    thumbnail: thumbnail,
-  ))
-}
-
-pub fn document_decoder() -> decode.Decoder(Document) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(photo_size_decoder()),
-  )
-  use file_name <- decode.optional_field(
-    "file_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Document(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    thumbnail: thumbnail,
-    file_name: file_name,
-    mime_type: mime_type,
-    file_size: file_size,
-  ))
-}
-
-pub fn story_decoder() -> decode.Decoder(Story) {
-  use chat <- decode.field("chat", chat_decoder())
-  use id <- decode.field("id", decode.int)
-  decode.success(Story(chat: chat, id: id))
-}
-
-pub fn video_quality_decoder() -> decode.Decoder(VideoQuality) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
-  use codec <- decode.field("codec", decode.string)
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(VideoQuality(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    width: width,
-    height: height,
-    codec: codec,
-    file_size: file_size,
-  ))
-}
-
-pub fn video_decoder() -> decode.Decoder(Video) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
-  use duration <- decode.field("duration", decode.int)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(photo_size_decoder()),
-  )
-  use cover <- decode.optional_field(
-    "cover",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  use start_timestamp <- decode.optional_field(
-    "start_timestamp",
-    None,
-    decode.optional(decode.int),
-  )
-  use qualities <- decode.optional_field(
-    "qualities",
-    None,
-    decode.optional(decode.list(video_quality_decoder())),
-  )
-  use file_name <- decode.optional_field(
-    "file_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Video(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    width: width,
-    height: height,
-    duration: duration,
-    thumbnail: thumbnail,
-    cover: cover,
-    start_timestamp: start_timestamp,
-    qualities: qualities,
-    file_name: file_name,
-    mime_type: mime_type,
-    file_size: file_size,
-  ))
-}
-
-pub fn video_note_decoder() -> decode.Decoder(VideoNote) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use length <- decode.field("length", decode.int)
-  use duration <- decode.field("duration", decode.int)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(photo_size_decoder()),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(VideoNote(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    length: length,
-    duration: duration,
-    thumbnail: thumbnail,
-    file_size: file_size,
-  ))
-}
-
-pub fn voice_decoder() -> decode.Decoder(Voice) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use duration <- decode.field("duration", decode.int)
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Voice(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    duration: duration,
-    mime_type: mime_type,
-    file_size: file_size,
-  ))
-}
-
-pub fn paid_media_info_decoder() -> decode.Decoder(PaidMediaInfo) {
-  use star_count <- decode.field("star_count", decode.int)
-  use paid_media <- decode.field(
-    "paid_media",
-    decode.list(paid_media_decoder()),
-  )
-  decode.success(PaidMediaInfo(star_count: star_count, paid_media: paid_media))
-}
-
-pub fn paid_media_preview_decoder() -> decode.Decoder(PaidMediaPreview) {
+pub fn message_origin_chat_decoder() -> decode.Decoder(MessageOriginChat) {
   use type_ <- decode.field("type", decode.string)
-  use width <- decode.optional_field("width", None, decode.optional(decode.int))
-  use height <- decode.optional_field(
-    "height",
-    None,
-    decode.optional(decode.int),
-  )
-  use duration <- decode.optional_field(
-    "duration",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(PaidMediaPreview(
-    type_: type_,
-    width: width,
-    height: height,
-    duration: duration,
-  ))
-}
-
-pub fn paid_media_photo_decoder() -> decode.Decoder(PaidMediaPhoto) {
-  use type_ <- decode.field("type", decode.string)
-  use photo <- decode.field("photo", decode.list(photo_size_decoder()))
-  decode.success(PaidMediaPhoto(type_: type_, photo: photo))
-}
-
-pub fn paid_media_video_decoder() -> decode.Decoder(PaidMediaVideo) {
-  use type_ <- decode.field("type", decode.string)
-  use video <- decode.field("video", video_decoder())
-  decode.success(PaidMediaVideo(type_: type_, video: video))
-}
-
-pub fn live_photo_decoder() -> decode.Decoder(LivePhoto) {
-  use photo <- decode.optional_field(
-    "photo",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
-  use duration <- decode.field("duration", decode.int)
-  use mime_type <- decode.optional_field(
-    "mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(LivePhoto(
-    photo: photo,
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    width: width,
-    height: height,
-    duration: duration,
-    mime_type: mime_type,
-    file_size: file_size,
-  ))
-}
-
-pub fn paid_media_live_photo_decoder() -> decode.Decoder(PaidMediaLivePhoto) {
-  use type_ <- decode.field("type", decode.string)
-  use live_photo <- decode.field("live_photo", live_photo_decoder())
-  decode.success(PaidMediaLivePhoto(type_: type_, live_photo: live_photo))
-}
-
-pub fn poll_media_decoder() -> decode.Decoder(PollMedia) {
-  use animation <- decode.optional_field(
-    "animation",
-    None,
-    decode.optional(animation_decoder()),
-  )
-  use audio <- decode.optional_field(
-    "audio",
-    None,
-    decode.optional(audio_decoder()),
-  )
-  use document <- decode.optional_field(
-    "document",
-    None,
-    decode.optional(document_decoder()),
-  )
-  use live_photo <- decode.optional_field(
-    "live_photo",
-    None,
-    decode.optional(live_photo_decoder()),
-  )
-  use location <- decode.optional_field(
-    "location",
-    None,
-    decode.optional(location_decoder()),
-  )
-  use photo <- decode.optional_field(
-    "photo",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  use sticker <- decode.optional_field(
-    "sticker",
-    None,
-    decode.optional(sticker_decoder()),
-  )
-  use venue <- decode.optional_field(
-    "venue",
-    None,
-    decode.optional(venue_decoder()),
-  )
-  use video <- decode.optional_field(
-    "video",
-    None,
-    decode.optional(video_decoder()),
-  )
-  decode.success(PollMedia(
-    animation: animation,
-    audio: audio,
-    document: document,
-    live_photo: live_photo,
-    location: location,
-    photo: photo,
-    sticker: sticker,
-    venue: venue,
-    video: video,
-  ))
-}
-
-pub fn contact_decoder() -> decode.Decoder(Contact) {
-  use phone_number <- decode.field("phone_number", decode.string)
-  use first_name <- decode.field("first_name", decode.string)
-  use last_name <- decode.optional_field(
-    "last_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use user_id <- decode.optional_field(
-    "user_id",
-    None,
-    decode.optional(decode.int),
-  )
-  use vcard <- decode.optional_field(
-    "vcard",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(Contact(
-    phone_number: phone_number,
-    first_name: first_name,
-    last_name: last_name,
-    user_id: user_id,
-    vcard: vcard,
-  ))
-}
-
-pub fn dice_decoder() -> decode.Decoder(Dice) {
-  use emoji <- decode.field("emoji", decode.string)
-  use value <- decode.field("value", decode.int)
-  decode.success(Dice(emoji: emoji, value: value))
-}
-
-pub fn poll_option_decoder() -> decode.Decoder(PollOption) {
-  use persistent_id <- decode.field("persistent_id", decode.string)
-  use text <- decode.field("text", decode.string)
-  use text_entities <- decode.optional_field(
-    "text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use media <- decode.optional_field(
-    "media",
-    None,
-    decode.optional(poll_media_decoder()),
-  )
-  use voter_count <- decode.field("voter_count", decode.int)
-  use added_by_user <- decode.optional_field(
-    "added_by_user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use added_by_chat <- decode.optional_field(
-    "added_by_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  use addition_date <- decode.optional_field(
-    "addition_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(PollOption(
-    persistent_id: persistent_id,
-    text: text,
-    text_entities: text_entities,
-    media: media,
-    voter_count: voter_count,
-    added_by_user: added_by_user,
-    added_by_chat: added_by_chat,
-    addition_date: addition_date,
-  ))
-}
-
-pub fn input_poll_option_decoder() -> decode.Decoder(InputPollOption) {
-  use text <- decode.field("text", decode.string)
-  use text_parse_mode <- decode.optional_field(
-    "text_parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use text_entities <- decode.optional_field(
-    "text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use media <- decode.optional_field(
-    "media",
-    None,
-    decode.optional(input_poll_option_media_decoder()),
-  )
-  decode.success(InputPollOption(
-    text: text,
-    text_parse_mode: text_parse_mode,
-    text_entities: text_entities,
-    media: media,
-  ))
-}
-
-pub fn poll_answer_decoder() -> decode.Decoder(PollAnswer) {
-  use poll_id <- decode.field("poll_id", decode.string)
-  use voter_chat <- decode.optional_field(
-    "voter_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  use user <- decode.optional_field(
-    "user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use option_ids <- decode.field("option_ids", decode.list(decode.int))
-  use option_persistent_ids <- decode.field(
-    "option_persistent_ids",
-    decode.list(decode.string),
-  )
-  decode.success(PollAnswer(
-    poll_id: poll_id,
-    voter_chat: voter_chat,
-    user: user,
-    option_ids: option_ids,
-    option_persistent_ids: option_persistent_ids,
-  ))
-}
-
-pub fn poll_decoder() -> decode.Decoder(Poll) {
-  use id <- decode.field("id", decode.string)
-  use question <- decode.field("question", decode.string)
-  use question_entities <- decode.optional_field(
-    "question_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use options <- decode.field("options", decode.list(poll_option_decoder()))
-  use total_voter_count <- decode.field("total_voter_count", decode.int)
-  use is_closed <- decode.field("is_closed", decode.bool)
-  use is_anonymous <- decode.field("is_anonymous", decode.bool)
-  use type_ <- decode.field("type", decode.string)
-  use allows_multiple_answers <- decode.field(
-    "allows_multiple_answers",
-    decode.bool,
-  )
-  use allows_revoting <- decode.field("allows_revoting", decode.bool)
-  use members_only <- decode.field("members_only", decode.bool)
-  use country_codes <- decode.optional_field(
-    "country_codes",
-    None,
-    decode.optional(decode.list(decode.string)),
-  )
-  use correct_option_ids <- decode.optional_field(
-    "correct_option_ids",
-    None,
-    decode.optional(decode.list(decode.int)),
-  )
-  use explanation <- decode.optional_field(
-    "explanation",
-    None,
-    decode.optional(decode.string),
-  )
-  use explanation_entities <- decode.optional_field(
-    "explanation_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use explanation_media <- decode.optional_field(
-    "explanation_media",
-    None,
-    decode.optional(poll_media_decoder()),
-  )
-  use open_period <- decode.optional_field(
-    "open_period",
-    None,
-    decode.optional(decode.int),
-  )
-  use close_date <- decode.optional_field(
-    "close_date",
-    None,
-    decode.optional(decode.int),
-  )
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use description_entities <- decode.optional_field(
-    "description_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use media <- decode.optional_field(
-    "media",
-    None,
-    decode.optional(poll_media_decoder()),
-  )
-  decode.success(Poll(
-    id: id,
-    question: question,
-    question_entities: question_entities,
-    options: options,
-    total_voter_count: total_voter_count,
-    is_closed: is_closed,
-    is_anonymous: is_anonymous,
-    type_: type_,
-    allows_multiple_answers: allows_multiple_answers,
-    allows_revoting: allows_revoting,
-    members_only: members_only,
-    country_codes: country_codes,
-    correct_option_ids: correct_option_ids,
-    explanation: explanation,
-    explanation_entities: explanation_entities,
-    explanation_media: explanation_media,
-    open_period: open_period,
-    close_date: close_date,
-    description: description,
-    description_entities: description_entities,
-    media: media,
-  ))
-}
-
-pub fn checklist_task_decoder() -> decode.Decoder(ChecklistTask) {
-  use id <- decode.field("id", decode.int)
-  use text <- decode.field("text", decode.string)
-  use text_entities <- decode.optional_field(
-    "text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use completed_by_user <- decode.optional_field(
-    "completed_by_user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use completed_by_chat <- decode.optional_field(
-    "completed_by_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  use completion_date <- decode.optional_field(
-    "completion_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(ChecklistTask(
-    id: id,
-    text: text,
-    text_entities: text_entities,
-    completed_by_user: completed_by_user,
-    completed_by_chat: completed_by_chat,
-    completion_date: completion_date,
-  ))
-}
-
-pub fn checklist_decoder() -> decode.Decoder(Checklist) {
-  use title <- decode.field("title", decode.string)
-  use title_entities <- decode.optional_field(
-    "title_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
-  use others_can_add_tasks <- decode.optional_field(
-    "others_can_add_tasks",
-    None,
-    decode.optional(decode.bool),
-  )
-  use others_can_mark_tasks_as_done <- decode.optional_field(
-    "others_can_mark_tasks_as_done",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(Checklist(
-    title: title,
-    title_entities: title_entities,
-    tasks: tasks,
-    others_can_add_tasks: others_can_add_tasks,
-    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
-  ))
-}
-
-pub fn input_checklist_task_decoder() -> decode.Decoder(InputChecklistTask) {
-  use id <- decode.field("id", decode.int)
-  use text <- decode.field("text", decode.string)
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use text_entities <- decode.optional_field(
-    "text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  decode.success(InputChecklistTask(
-    id: id,
-    text: text,
-    parse_mode: parse_mode,
-    text_entities: text_entities,
-  ))
-}
-
-pub fn input_checklist_decoder() -> decode.Decoder(InputChecklist) {
-  use title <- decode.field("title", decode.string)
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use title_entities <- decode.optional_field(
-    "title_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use tasks <- decode.field(
-    "tasks",
-    decode.list(input_checklist_task_decoder()),
-  )
-  use others_can_add_tasks <- decode.optional_field(
-    "others_can_add_tasks",
-    None,
-    decode.optional(decode.bool),
-  )
-  use others_can_mark_tasks_as_done <- decode.optional_field(
-    "others_can_mark_tasks_as_done",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputChecklist(
-    title: title,
-    parse_mode: parse_mode,
-    title_entities: title_entities,
-    tasks: tasks,
-    others_can_add_tasks: others_can_add_tasks,
-    others_can_mark_tasks_as_done: others_can_mark_tasks_as_done,
-  ))
-}
-
-pub fn checklist_tasks_done_decoder() -> decode.Decoder(ChecklistTasksDone) {
-  use checklist_message <- decode.optional_field(
-    "checklist_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use marked_as_done_task_ids <- decode.optional_field(
-    "marked_as_done_task_ids",
-    None,
-    decode.optional(decode.list(decode.int)),
-  )
-  use marked_as_not_done_task_ids <- decode.optional_field(
-    "marked_as_not_done_task_ids",
-    None,
-    decode.optional(decode.list(decode.int)),
-  )
-  decode.success(ChecklistTasksDone(
-    checklist_message: checklist_message,
-    marked_as_done_task_ids: marked_as_done_task_ids,
-    marked_as_not_done_task_ids: marked_as_not_done_task_ids,
-  ))
-}
-
-pub fn checklist_tasks_added_decoder() -> decode.Decoder(ChecklistTasksAdded) {
-  use checklist_message <- decode.optional_field(
-    "checklist_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use tasks <- decode.field("tasks", decode.list(checklist_task_decoder()))
-  decode.success(ChecklistTasksAdded(
-    checklist_message: checklist_message,
-    tasks: tasks,
-  ))
-}
-
-pub fn location_decoder() -> decode.Decoder(Location) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use horizontal_accuracy <- decode.optional_field(
-    "horizontal_accuracy",
-    None,
-    decode.optional(decode.float),
-  )
-  use live_period <- decode.optional_field(
-    "live_period",
-    None,
-    decode.optional(decode.int),
-  )
-  use heading <- decode.optional_field(
-    "heading",
-    None,
-    decode.optional(decode.int),
-  )
-  use proximity_alert_radius <- decode.optional_field(
-    "proximity_alert_radius",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Location(
-    latitude: latitude,
-    longitude: longitude,
-    horizontal_accuracy: horizontal_accuracy,
-    live_period: live_period,
-    heading: heading,
-    proximity_alert_radius: proximity_alert_radius,
-  ))
-}
-
-pub fn venue_decoder() -> decode.Decoder(Venue) {
-  use location <- decode.field("location", location_decoder())
-  use title <- decode.field("title", decode.string)
-  use address <- decode.field("address", decode.string)
-  use foursquare_id <- decode.optional_field(
-    "foursquare_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use foursquare_type <- decode.optional_field(
-    "foursquare_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_id <- decode.optional_field(
-    "google_place_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_type <- decode.optional_field(
-    "google_place_type",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(Venue(
-    location: location,
-    title: title,
-    address: address,
-    foursquare_id: foursquare_id,
-    foursquare_type: foursquare_type,
-    google_place_id: google_place_id,
-    google_place_type: google_place_type,
-  ))
-}
-
-pub fn web_app_data_decoder() -> decode.Decoder(WebAppData) {
-  use data <- decode.field("data", decode.string)
-  use button_text <- decode.field("button_text", decode.string)
-  decode.success(WebAppData(data: data, button_text: button_text))
-}
-
-pub fn proximity_alert_triggered_decoder() -> decode.Decoder(
-  ProximityAlertTriggered,
-) {
-  use traveler <- decode.field("traveler", user_decoder())
-  use watcher <- decode.field("watcher", user_decoder())
-  use distance <- decode.field("distance", decode.int)
-  decode.success(ProximityAlertTriggered(
-    traveler: traveler,
-    watcher: watcher,
-    distance: distance,
-  ))
-}
-
-pub fn message_auto_delete_timer_changed_decoder() -> decode.Decoder(
-  MessageAutoDeleteTimerChanged,
-) {
-  use message_auto_delete_time <- decode.field(
-    "message_auto_delete_time",
-    decode.int,
-  )
-  decode.success(MessageAutoDeleteTimerChanged(
-    message_auto_delete_time: message_auto_delete_time,
-  ))
-}
-
-pub fn managed_bot_created_decoder() -> decode.Decoder(ManagedBotCreated) {
-  use bot <- decode.field("bot", user_decoder())
-  decode.success(ManagedBotCreated(bot: bot))
-}
-
-pub fn managed_bot_updated_decoder() -> decode.Decoder(ManagedBotUpdated) {
-  use user <- decode.field("user", user_decoder())
-  use bot <- decode.field("bot", user_decoder())
-  decode.success(ManagedBotUpdated(user: user, bot: bot))
-}
-
-pub fn poll_option_added_decoder() -> decode.Decoder(PollOptionAdded) {
-  use poll_message <- decode.optional_field(
-    "poll_message",
-    None,
-    decode.optional(maybe_inaccessible_message_decoder()),
-  )
-  use option_persistent_id <- decode.field(
-    "option_persistent_id",
-    decode.string,
-  )
-  use option_text <- decode.field("option_text", decode.string)
-  use option_text_entities <- decode.optional_field(
-    "option_text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  decode.success(PollOptionAdded(
-    poll_message: poll_message,
-    option_persistent_id: option_persistent_id,
-    option_text: option_text,
-    option_text_entities: option_text_entities,
-  ))
-}
-
-pub fn poll_option_deleted_decoder() -> decode.Decoder(PollOptionDeleted) {
-  use poll_message <- decode.optional_field(
-    "poll_message",
-    None,
-    decode.optional(maybe_inaccessible_message_decoder()),
-  )
-  use option_persistent_id <- decode.field(
-    "option_persistent_id",
-    decode.string,
-  )
-  use option_text <- decode.field("option_text", decode.string)
-  use option_text_entities <- decode.optional_field(
-    "option_text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  decode.success(PollOptionDeleted(
-    poll_message: poll_message,
-    option_persistent_id: option_persistent_id,
-    option_text: option_text,
-    option_text_entities: option_text_entities,
-  ))
-}
-
-pub fn chat_boost_added_decoder() -> decode.Decoder(ChatBoostAdded) {
-  use boost_count <- decode.field("boost_count", decode.int)
-  decode.success(ChatBoostAdded(boost_count: boost_count))
-}
-
-pub fn background_fill_solid_decoder() -> decode.Decoder(BackgroundFillSolid) {
-  use type_ <- decode.field("type", decode.string)
-  use color <- decode.field("color", decode.int)
-  decode.success(BackgroundFillSolid(type_: type_, color: color))
-}
-
-pub fn background_fill_gradient_decoder() -> decode.Decoder(
-  BackgroundFillGradient,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use top_color <- decode.field("top_color", decode.int)
-  use bottom_color <- decode.field("bottom_color", decode.int)
-  use rotation_angle <- decode.field("rotation_angle", decode.int)
-  decode.success(BackgroundFillGradient(
-    type_: type_,
-    top_color: top_color,
-    bottom_color: bottom_color,
-    rotation_angle: rotation_angle,
-  ))
-}
-
-pub fn background_fill_freeform_gradient_decoder() -> decode.Decoder(
-  BackgroundFillFreeformGradient,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use colors <- decode.field("colors", decode.list(decode.int))
-  decode.success(BackgroundFillFreeformGradient(type_: type_, colors: colors))
-}
-
-pub fn background_type_fill_decoder() -> decode.Decoder(BackgroundTypeFill) {
-  use type_ <- decode.field("type", decode.string)
-  use fill <- decode.field("fill", background_fill_decoder())
-  use dark_theme_dimming <- decode.field("dark_theme_dimming", decode.int)
-  decode.success(BackgroundTypeFill(
-    type_: type_,
-    fill: fill,
-    dark_theme_dimming: dark_theme_dimming,
-  ))
-}
-
-pub fn background_type_wallpaper_decoder() -> decode.Decoder(
-  BackgroundTypeWallpaper,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use document <- decode.field("document", document_decoder())
-  use dark_theme_dimming <- decode.field("dark_theme_dimming", decode.int)
-  use is_blurred <- decode.optional_field(
-    "is_blurred",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_moving <- decode.optional_field(
-    "is_moving",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(BackgroundTypeWallpaper(
-    type_: type_,
-    document: document,
-    dark_theme_dimming: dark_theme_dimming,
-    is_blurred: is_blurred,
-    is_moving: is_moving,
-  ))
-}
-
-pub fn background_type_pattern_decoder() -> decode.Decoder(
-  BackgroundTypePattern,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use document <- decode.field("document", document_decoder())
-  use fill <- decode.field("fill", background_fill_decoder())
-  use intensity <- decode.field("intensity", decode.int)
-  use is_inverted <- decode.optional_field(
-    "is_inverted",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_moving <- decode.optional_field(
-    "is_moving",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(BackgroundTypePattern(
-    type_: type_,
-    document: document,
-    fill: fill,
-    intensity: intensity,
-    is_inverted: is_inverted,
-    is_moving: is_moving,
-  ))
-}
-
-pub fn background_type_chat_theme_decoder() -> decode.Decoder(
-  BackgroundTypeChatTheme,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use theme_name <- decode.field("theme_name", decode.string)
-  decode.success(BackgroundTypeChatTheme(type_: type_, theme_name: theme_name))
-}
-
-pub fn chat_background_decoder() -> decode.Decoder(ChatBackground) {
-  use type_ <- decode.field("type", background_type_decoder())
-  decode.success(ChatBackground(type_: type_))
-}
-
-pub fn forum_topic_created_decoder() -> decode.Decoder(ForumTopicCreated) {
-  use name <- decode.field("name", decode.string)
-  use icon_color <- decode.field("icon_color", decode.int)
-  use icon_custom_emoji_id <- decode.optional_field(
-    "icon_custom_emoji_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use is_name_implicit <- decode.optional_field(
-    "is_name_implicit",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ForumTopicCreated(
-    name: name,
-    icon_color: icon_color,
-    icon_custom_emoji_id: icon_custom_emoji_id,
-    is_name_implicit: is_name_implicit,
-  ))
-}
-
-pub fn forum_topic_closed_decoder() -> decode.Decoder(ForumTopicClosed) {
-  decode.success(ForumTopicClosed)
-}
-
-pub fn forum_topic_edited_decoder() -> decode.Decoder(ForumTopicEdited) {
-  use name <- decode.optional_field(
-    "name",
-    None,
-    decode.optional(decode.string),
-  )
-  use icon_custom_emoji_id <- decode.optional_field(
-    "icon_custom_emoji_id",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(ForumTopicEdited(
-    name: name,
-    icon_custom_emoji_id: icon_custom_emoji_id,
-  ))
-}
-
-pub fn forum_topic_reopened_decoder() -> decode.Decoder(ForumTopicReopened) {
-  decode.success(ForumTopicReopened)
-}
-
-pub fn general_forum_topic_hidden_decoder() -> decode.Decoder(
-  GeneralForumTopicHidden,
-) {
-  decode.success(GeneralForumTopicHidden)
-}
-
-pub fn general_forum_topic_unhidden_decoder() -> decode.Decoder(
-  GeneralForumTopicUnhidden,
-) {
-  decode.success(GeneralForumTopicUnhidden)
-}
-
-pub fn shared_user_decoder() -> decode.Decoder(SharedUser) {
-  use user_id <- decode.field("user_id", decode.int)
-  use first_name <- decode.optional_field(
-    "first_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use last_name <- decode.optional_field(
-    "last_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use username <- decode.optional_field(
-    "username",
-    None,
-    decode.optional(decode.string),
-  )
-  use photo <- decode.optional_field(
-    "photo",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  decode.success(SharedUser(
-    user_id: user_id,
-    first_name: first_name,
-    last_name: last_name,
-    username: username,
-    photo: photo,
-  ))
-}
-
-pub fn users_shared_decoder() -> decode.Decoder(UsersShared) {
-  use request_id <- decode.field("request_id", decode.int)
-  use users <- decode.field("users", decode.list(shared_user_decoder()))
-  decode.success(UsersShared(request_id: request_id, users: users))
-}
-
-pub fn chat_shared_decoder() -> decode.Decoder(ChatShared) {
-  use request_id <- decode.field("request_id", decode.int)
-  use chat_id <- decode.field("chat_id", decode.int)
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use username <- decode.optional_field(
-    "username",
-    None,
-    decode.optional(decode.string),
-  )
-  use photo <- decode.optional_field(
-    "photo",
-    None,
-    decode.optional(decode.list(photo_size_decoder())),
-  )
-  decode.success(ChatShared(
-    request_id: request_id,
-    chat_id: chat_id,
-    title: title,
-    username: username,
-    photo: photo,
-  ))
-}
-
-pub fn write_access_allowed_decoder() -> decode.Decoder(WriteAccessAllowed) {
-  use from_request <- decode.optional_field(
-    "from_request",
-    None,
-    decode.optional(decode.bool),
-  )
-  use web_app_name <- decode.optional_field(
-    "web_app_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use from_attachment_menu <- decode.optional_field(
-    "from_attachment_menu",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(WriteAccessAllowed(
-    from_request: from_request,
-    web_app_name: web_app_name,
-    from_attachment_menu: from_attachment_menu,
-  ))
-}
-
-pub fn video_chat_scheduled_decoder() -> decode.Decoder(VideoChatScheduled) {
-  use start_date <- decode.field("start_date", decode.int)
-  decode.success(VideoChatScheduled(start_date: start_date))
-}
-
-pub fn video_chat_started_decoder() -> decode.Decoder(VideoChatStarted) {
-  decode.success(VideoChatStarted)
-}
-
-pub fn video_chat_ended_decoder() -> decode.Decoder(VideoChatEnded) {
-  use duration <- decode.field("duration", decode.int)
-  decode.success(VideoChatEnded(duration: duration))
-}
-
-pub fn video_chat_participants_invited_decoder() -> decode.Decoder(
-  VideoChatParticipantsInvited,
-) {
-  use users <- decode.field("users", decode.list(user_decoder()))
-  decode.success(VideoChatParticipantsInvited(users: users))
-}
-
-pub fn paid_message_price_changed_decoder() -> decode.Decoder(
-  PaidMessagePriceChanged,
-) {
-  use paid_message_star_count <- decode.field(
-    "paid_message_star_count",
-    decode.int,
-  )
-  decode.success(PaidMessagePriceChanged(
-    paid_message_star_count: paid_message_star_count,
-  ))
-}
-
-pub fn direct_message_price_changed_decoder() -> decode.Decoder(
-  DirectMessagePriceChanged,
-) {
-  use are_direct_messages_enabled <- decode.field(
-    "are_direct_messages_enabled",
-    decode.bool,
-  )
-  use direct_message_star_count <- decode.optional_field(
-    "direct_message_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(DirectMessagePriceChanged(
-    are_direct_messages_enabled: are_direct_messages_enabled,
-    direct_message_star_count: direct_message_star_count,
-  ))
-}
-
-pub fn suggested_post_approved_decoder() -> decode.Decoder(
-  SuggestedPostApproved,
-) {
-  use suggested_post_message <- decode.optional_field(
-    "suggested_post_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use price <- decode.optional_field(
-    "price",
-    None,
-    decode.optional(suggested_post_price_decoder()),
-  )
-  use send_date <- decode.field("send_date", decode.int)
-  decode.success(SuggestedPostApproved(
-    suggested_post_message: suggested_post_message,
-    price: price,
-    send_date: send_date,
-  ))
-}
-
-pub fn suggested_post_approval_failed_decoder() -> decode.Decoder(
-  SuggestedPostApprovalFailed,
-) {
-  use suggested_post_message <- decode.optional_field(
-    "suggested_post_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use price <- decode.field("price", suggested_post_price_decoder())
-  decode.success(SuggestedPostApprovalFailed(
-    suggested_post_message: suggested_post_message,
-    price: price,
-  ))
-}
-
-pub fn suggested_post_declined_decoder() -> decode.Decoder(
-  SuggestedPostDeclined,
-) {
-  use suggested_post_message <- decode.optional_field(
-    "suggested_post_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use comment <- decode.optional_field(
-    "comment",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(SuggestedPostDeclined(
-    suggested_post_message: suggested_post_message,
-    comment: comment,
-  ))
-}
-
-pub fn suggested_post_paid_decoder() -> decode.Decoder(SuggestedPostPaid) {
-  use suggested_post_message <- decode.optional_field(
-    "suggested_post_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use currency <- decode.field("currency", decode.string)
-  use amount <- decode.optional_field(
-    "amount",
-    None,
-    decode.optional(decode.int),
-  )
-  use star_amount <- decode.optional_field(
-    "star_amount",
-    None,
-    decode.optional(star_amount_decoder()),
-  )
-  decode.success(SuggestedPostPaid(
-    suggested_post_message: suggested_post_message,
-    currency: currency,
-    amount: amount,
-    star_amount: star_amount,
-  ))
-}
-
-pub fn suggested_post_refunded_decoder() -> decode.Decoder(
-  SuggestedPostRefunded,
-) {
-  use suggested_post_message <- decode.optional_field(
-    "suggested_post_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use reason <- decode.field("reason", decode.string)
-  decode.success(SuggestedPostRefunded(
-    suggested_post_message: suggested_post_message,
-    reason: reason,
-  ))
-}
-
-pub fn giveaway_created_decoder() -> decode.Decoder(GiveawayCreated) {
-  use prize_star_count <- decode.optional_field(
-    "prize_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(GiveawayCreated(prize_star_count: prize_star_count))
-}
-
-pub fn giveaway_decoder() -> decode.Decoder(Giveaway) {
-  use chats <- decode.field("chats", decode.list(chat_decoder()))
-  use winners_selection_date <- decode.field(
-    "winners_selection_date",
-    decode.int,
-  )
-  use winner_count <- decode.field("winner_count", decode.int)
-  use only_new_members <- decode.optional_field(
-    "only_new_members",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_public_winners <- decode.optional_field(
-    "has_public_winners",
-    None,
-    decode.optional(decode.bool),
-  )
-  use prize_description <- decode.optional_field(
-    "prize_description",
-    None,
-    decode.optional(decode.string),
-  )
-  use country_codes <- decode.optional_field(
-    "country_codes",
-    None,
-    decode.optional(decode.list(decode.string)),
-  )
-  use prize_star_count <- decode.optional_field(
-    "prize_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use premium_subscription_month_count <- decode.optional_field(
-    "premium_subscription_month_count",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(Giveaway(
-    chats: chats,
-    winners_selection_date: winners_selection_date,
-    winner_count: winner_count,
-    only_new_members: only_new_members,
-    has_public_winners: has_public_winners,
-    prize_description: prize_description,
-    country_codes: country_codes,
-    prize_star_count: prize_star_count,
-    premium_subscription_month_count: premium_subscription_month_count,
-  ))
-}
-
-pub fn giveaway_winners_decoder() -> decode.Decoder(GiveawayWinners) {
-  use chat <- decode.field("chat", chat_decoder())
-  use giveaway_message_id <- decode.field("giveaway_message_id", decode.int)
-  use winners_selection_date <- decode.field(
-    "winners_selection_date",
-    decode.int,
-  )
-  use winner_count <- decode.field("winner_count", decode.int)
-  use winners <- decode.field("winners", decode.list(user_decoder()))
-  use additional_chat_count <- decode.optional_field(
-    "additional_chat_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use prize_star_count <- decode.optional_field(
-    "prize_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use premium_subscription_month_count <- decode.optional_field(
-    "premium_subscription_month_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use unclaimed_prize_count <- decode.optional_field(
-    "unclaimed_prize_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use only_new_members <- decode.optional_field(
-    "only_new_members",
-    None,
-    decode.optional(decode.bool),
-  )
-  use was_refunded <- decode.optional_field(
-    "was_refunded",
-    None,
-    decode.optional(decode.bool),
-  )
-  use prize_description <- decode.optional_field(
-    "prize_description",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(GiveawayWinners(
-    chat: chat,
-    giveaway_message_id: giveaway_message_id,
-    winners_selection_date: winners_selection_date,
-    winner_count: winner_count,
-    winners: winners,
-    additional_chat_count: additional_chat_count,
-    prize_star_count: prize_star_count,
-    premium_subscription_month_count: premium_subscription_month_count,
-    unclaimed_prize_count: unclaimed_prize_count,
-    only_new_members: only_new_members,
-    was_refunded: was_refunded,
-    prize_description: prize_description,
-  ))
-}
-
-pub fn giveaway_completed_decoder() -> decode.Decoder(GiveawayCompleted) {
-  use winner_count <- decode.field("winner_count", decode.int)
-  use unclaimed_prize_count <- decode.optional_field(
-    "unclaimed_prize_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use giveaway_message <- decode.optional_field(
-    "giveaway_message",
-    None,
-    decode.optional(message_decoder()),
-  )
-  use is_star_giveaway <- decode.optional_field(
-    "is_star_giveaway",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(GiveawayCompleted(
-    winner_count: winner_count,
-    unclaimed_prize_count: unclaimed_prize_count,
-    giveaway_message: giveaway_message,
-    is_star_giveaway: is_star_giveaway,
-  ))
-}
-
-pub fn link_preview_options_decoder() -> decode.Decoder(LinkPreviewOptions) {
-  use is_disabled <- decode.optional_field(
-    "is_disabled",
-    None,
-    decode.optional(decode.bool),
-  )
-  use url <- decode.optional_field("url", None, decode.optional(decode.string))
-  use prefer_small_media <- decode.optional_field(
-    "prefer_small_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use prefer_large_media <- decode.optional_field(
-    "prefer_large_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use show_above_text <- decode.optional_field(
-    "show_above_text",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(LinkPreviewOptions(
-    is_disabled: is_disabled,
-    url: url,
-    prefer_small_media: prefer_small_media,
-    prefer_large_media: prefer_large_media,
-    show_above_text: show_above_text,
-  ))
-}
-
-pub fn suggested_post_price_decoder() -> decode.Decoder(SuggestedPostPrice) {
-  use currency <- decode.field("currency", decode.string)
-  use amount <- decode.field("amount", decode.int)
-  decode.success(SuggestedPostPrice(currency: currency, amount: amount))
-}
-
-pub fn suggested_post_info_decoder() -> decode.Decoder(SuggestedPostInfo) {
-  use state <- decode.field("state", decode.string)
-  use price <- decode.optional_field(
-    "price",
-    None,
-    decode.optional(suggested_post_price_decoder()),
-  )
-  use send_date <- decode.optional_field(
-    "send_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(SuggestedPostInfo(
-    state: state,
-    price: price,
-    send_date: send_date,
-  ))
-}
-
-pub fn suggested_post_parameters_decoder() -> decode.Decoder(
-  SuggestedPostParameters,
-) {
-  use price <- decode.optional_field(
-    "price",
-    None,
-    decode.optional(suggested_post_price_decoder()),
-  )
-  use send_date <- decode.optional_field(
-    "send_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(SuggestedPostParameters(price: price, send_date: send_date))
-}
-
-pub fn direct_messages_topic_decoder() -> decode.Decoder(DirectMessagesTopic) {
-  use topic_id <- decode.field("topic_id", decode.int)
-  use user <- decode.optional_field(
-    "user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  decode.success(DirectMessagesTopic(topic_id: topic_id, user: user))
-}
-
-pub fn user_profile_photos_decoder() -> decode.Decoder(UserProfilePhotos) {
-  use total_count <- decode.field("total_count", decode.int)
-  use photos <- decode.field(
-    "photos",
-    decode.list(decode.list(photo_size_decoder())),
-  )
-  decode.success(UserProfilePhotos(total_count: total_count, photos: photos))
-}
-
-pub fn user_profile_audios_decoder() -> decode.Decoder(UserProfileAudios) {
-  use total_count <- decode.field("total_count", decode.int)
-  use audios <- decode.field("audios", decode.list(audio_decoder()))
-  decode.success(UserProfileAudios(total_count: total_count, audios: audios))
-}
-
-pub fn file_decoder() -> decode.Decoder(File) {
-  use file_id <- decode.field("file_id", decode.string)
-  use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use file_size <- decode.optional_field(
-    "file_size",
-    None,
-    decode.optional(decode.int),
-  )
-  use file_path <- decode.optional_field(
-    "file_path",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(File(
-    file_id: file_id,
-    file_unique_id: file_unique_id,
-    file_size: file_size,
-    file_path: file_path,
-  ))
-}
-
-pub fn web_app_info_decoder() -> decode.Decoder(WebAppInfo) {
-  use url <- decode.field("url", decode.string)
-  decode.success(WebAppInfo(url: url))
-}
-
-pub fn reply_keyboard_markup_decoder() -> decode.Decoder(ReplyKeyboardMarkup) {
-  use keyboard <- decode.field(
-    "keyboard",
-    decode.list(decode.list(keyboard_button_decoder())),
-  )
-  use is_persistent <- decode.optional_field(
-    "is_persistent",
-    None,
-    decode.optional(decode.bool),
-  )
-  use resize_keyboard <- decode.optional_field(
-    "resize_keyboard",
-    None,
-    decode.optional(decode.bool),
-  )
-  use one_time_keyboard <- decode.optional_field(
-    "one_time_keyboard",
-    None,
-    decode.optional(decode.bool),
-  )
-  use input_field_placeholder <- decode.optional_field(
-    "input_field_placeholder",
-    None,
-    decode.optional(decode.string),
-  )
-  use selective <- decode.optional_field(
-    "selective",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ReplyKeyboardMarkup(
-    keyboard: keyboard,
-    is_persistent: is_persistent,
-    resize_keyboard: resize_keyboard,
-    one_time_keyboard: one_time_keyboard,
-    input_field_placeholder: input_field_placeholder,
-    selective: selective,
-  ))
-}
-
-pub fn keyboard_button_decoder() -> decode.Decoder(KeyboardButton) {
-  use text <- decode.field("text", decode.string)
-  use icon_custom_emoji_id <- decode.optional_field(
-    "icon_custom_emoji_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use style <- decode.optional_field(
-    "style",
-    None,
-    decode.optional(decode.string),
-  )
-  use request_users <- decode.optional_field(
-    "request_users",
-    None,
-    decode.optional(keyboard_button_request_users_decoder()),
-  )
-  use request_chat <- decode.optional_field(
-    "request_chat",
-    None,
-    decode.optional(keyboard_button_request_chat_decoder()),
-  )
-  use request_managed_bot <- decode.optional_field(
-    "request_managed_bot",
-    None,
-    decode.optional(keyboard_button_request_managed_bot_decoder()),
-  )
-  use request_contact <- decode.optional_field(
-    "request_contact",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_location <- decode.optional_field(
-    "request_location",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_poll <- decode.optional_field(
-    "request_poll",
-    None,
-    decode.optional(keyboard_button_poll_type_decoder()),
-  )
-  use web_app <- decode.optional_field(
-    "web_app",
-    None,
-    decode.optional(web_app_info_decoder()),
-  )
-  decode.success(KeyboardButton(
-    text: text,
-    icon_custom_emoji_id: icon_custom_emoji_id,
-    style: style,
-    request_users: request_users,
-    request_chat: request_chat,
-    request_managed_bot: request_managed_bot,
-    request_contact: request_contact,
-    request_location: request_location,
-    request_poll: request_poll,
-    web_app: web_app,
-  ))
-}
-
-pub fn keyboard_button_request_users_decoder() -> decode.Decoder(
-  KeyboardButtonRequestUsers,
-) {
-  use request_id <- decode.field("request_id", decode.int)
-  use user_is_bot <- decode.optional_field(
-    "user_is_bot",
-    None,
-    decode.optional(decode.bool),
-  )
-  use user_is_premium <- decode.optional_field(
-    "user_is_premium",
-    None,
-    decode.optional(decode.bool),
-  )
-  use max_quantity <- decode.optional_field(
-    "max_quantity",
-    None,
-    decode.optional(decode.int),
-  )
-  use request_name <- decode.optional_field(
-    "request_name",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_username <- decode.optional_field(
-    "request_username",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_photo <- decode.optional_field(
-    "request_photo",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(KeyboardButtonRequestUsers(
-    request_id: request_id,
-    user_is_bot: user_is_bot,
-    user_is_premium: user_is_premium,
-    max_quantity: max_quantity,
-    request_name: request_name,
-    request_username: request_username,
-    request_photo: request_photo,
-  ))
-}
-
-pub fn keyboard_button_request_chat_decoder() -> decode.Decoder(
-  KeyboardButtonRequestChat,
-) {
-  use request_id <- decode.field("request_id", decode.int)
-  use chat_is_channel <- decode.field("chat_is_channel", decode.bool)
-  use chat_is_forum <- decode.optional_field(
-    "chat_is_forum",
-    None,
-    decode.optional(decode.bool),
-  )
-  use chat_has_username <- decode.optional_field(
-    "chat_has_username",
-    None,
-    decode.optional(decode.bool),
-  )
-  use chat_is_created <- decode.optional_field(
-    "chat_is_created",
-    None,
-    decode.optional(decode.bool),
-  )
-  use user_administrator_rights <- decode.optional_field(
-    "user_administrator_rights",
-    None,
-    decode.optional(chat_administrator_rights_decoder()),
-  )
-  use bot_administrator_rights <- decode.optional_field(
-    "bot_administrator_rights",
-    None,
-    decode.optional(chat_administrator_rights_decoder()),
-  )
-  use bot_is_member <- decode.optional_field(
-    "bot_is_member",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_title <- decode.optional_field(
-    "request_title",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_username <- decode.optional_field(
-    "request_username",
-    None,
-    decode.optional(decode.bool),
-  )
-  use request_photo <- decode.optional_field(
-    "request_photo",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(KeyboardButtonRequestChat(
-    request_id: request_id,
-    chat_is_channel: chat_is_channel,
-    chat_is_forum: chat_is_forum,
-    chat_has_username: chat_has_username,
-    chat_is_created: chat_is_created,
-    user_administrator_rights: user_administrator_rights,
-    bot_administrator_rights: bot_administrator_rights,
-    bot_is_member: bot_is_member,
-    request_title: request_title,
-    request_username: request_username,
-    request_photo: request_photo,
-  ))
-}
-
-pub fn keyboard_button_request_managed_bot_decoder() -> decode.Decoder(
-  KeyboardButtonRequestManagedBot,
-) {
-  use request_id <- decode.field("request_id", decode.int)
-  use suggested_name <- decode.optional_field(
-    "suggested_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use suggested_username <- decode.optional_field(
-    "suggested_username",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(KeyboardButtonRequestManagedBot(
-    request_id: request_id,
-    suggested_name: suggested_name,
-    suggested_username: suggested_username,
-  ))
-}
-
-pub fn keyboard_button_poll_type_decoder() -> decode.Decoder(
-  KeyboardButtonPollType,
-) {
-  use type_ <- decode.optional_field(
-    "type",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(KeyboardButtonPollType(type_: type_))
-}
-
-pub fn reply_keyboard_remove_decoder() -> decode.Decoder(ReplyKeyboardRemove) {
-  use remove_keyboard <- decode.field("remove_keyboard", decode.bool)
-  use selective <- decode.optional_field(
-    "selective",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ReplyKeyboardRemove(
-    remove_keyboard: remove_keyboard,
-    selective: selective,
-  ))
-}
-
-pub fn inline_keyboard_markup_decoder() -> decode.Decoder(InlineKeyboardMarkup) {
-  use inline_keyboard <- decode.field(
-    "inline_keyboard",
-    decode.list(decode.list(inline_keyboard_button_decoder())),
-  )
-  decode.success(InlineKeyboardMarkup(inline_keyboard: inline_keyboard))
-}
-
-pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) {
-  use text <- decode.field("text", decode.string)
-  use icon_custom_emoji_id <- decode.optional_field(
-    "icon_custom_emoji_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use style <- decode.optional_field(
-    "style",
-    None,
-    decode.optional(decode.string),
-  )
-  use url <- decode.optional_field("url", None, decode.optional(decode.string))
-  use callback_data <- decode.optional_field(
-    "callback_data",
-    None,
-    decode.optional(decode.string),
-  )
-  use web_app <- decode.optional_field(
-    "web_app",
-    None,
-    decode.optional(web_app_info_decoder()),
-  )
-  use login_url <- decode.optional_field(
-    "login_url",
-    None,
-    decode.optional(login_url_decoder()),
-  )
-  use switch_inline_query <- decode.optional_field(
-    "switch_inline_query",
-    None,
-    decode.optional(decode.string),
-  )
-  use switch_inline_query_current_chat <- decode.optional_field(
-    "switch_inline_query_current_chat",
-    None,
-    decode.optional(decode.string),
-  )
-  use switch_inline_query_chosen_chat <- decode.optional_field(
-    "switch_inline_query_chosen_chat",
-    None,
-    decode.optional(switch_inline_query_chosen_chat_decoder()),
-  )
-  use copy_text <- decode.optional_field(
-    "copy_text",
-    None,
-    decode.optional(copy_text_button_decoder()),
-  )
-  use callback_game <- decode.optional_field(
-    "callback_game",
-    None,
-    decode.optional(callback_game_decoder()),
-  )
-  use pay <- decode.optional_field("pay", None, decode.optional(decode.bool))
-  decode.success(InlineKeyboardButton(
-    text: text,
-    icon_custom_emoji_id: icon_custom_emoji_id,
-    style: style,
-    url: url,
-    callback_data: callback_data,
-    web_app: web_app,
-    login_url: login_url,
-    switch_inline_query: switch_inline_query,
-    switch_inline_query_current_chat: switch_inline_query_current_chat,
-    switch_inline_query_chosen_chat: switch_inline_query_chosen_chat,
-    copy_text: copy_text,
-    callback_game: callback_game,
-    pay: pay,
-  ))
-}
-
-pub fn login_url_decoder() -> decode.Decoder(LoginUrl) {
-  use url <- decode.field("url", decode.string)
-  use forward_text <- decode.optional_field(
-    "forward_text",
-    None,
-    decode.optional(decode.string),
-  )
-  use bot_username <- decode.optional_field(
-    "bot_username",
-    None,
-    decode.optional(decode.string),
-  )
-  use request_write_access <- decode.optional_field(
-    "request_write_access",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(LoginUrl(
-    url: url,
-    forward_text: forward_text,
-    bot_username: bot_username,
-    request_write_access: request_write_access,
-  ))
-}
-
-pub fn switch_inline_query_chosen_chat_decoder() -> decode.Decoder(
-  SwitchInlineQueryChosenChat,
-) {
-  use query <- decode.optional_field(
-    "query",
-    None,
-    decode.optional(decode.string),
-  )
-  use allow_user_chats <- decode.optional_field(
-    "allow_user_chats",
-    None,
-    decode.optional(decode.bool),
-  )
-  use allow_bot_chats <- decode.optional_field(
-    "allow_bot_chats",
-    None,
-    decode.optional(decode.bool),
-  )
-  use allow_group_chats <- decode.optional_field(
-    "allow_group_chats",
-    None,
-    decode.optional(decode.bool),
-  )
-  use allow_channel_chats <- decode.optional_field(
-    "allow_channel_chats",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(SwitchInlineQueryChosenChat(
-    query: query,
-    allow_user_chats: allow_user_chats,
-    allow_bot_chats: allow_bot_chats,
-    allow_group_chats: allow_group_chats,
-    allow_channel_chats: allow_channel_chats,
-  ))
-}
-
-pub fn copy_text_button_decoder() -> decode.Decoder(CopyTextButton) {
-  use text <- decode.field("text", decode.string)
-  decode.success(CopyTextButton(text: text))
-}
-
-pub fn callback_query_decoder() -> decode.Decoder(CallbackQuery) {
-  use id <- decode.field("id", decode.string)
-  use from <- decode.field("from", user_decoder())
-  use message <- decode.optional_field(
-    "message",
-    None,
-    decode.optional(maybe_inaccessible_message_decoder()),
-  )
-  use inline_message_id <- decode.optional_field(
-    "inline_message_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use chat_instance <- decode.field("chat_instance", decode.string)
-  use data <- decode.optional_field(
-    "data",
-    None,
-    decode.optional(decode.string),
-  )
-  use game_short_name <- decode.optional_field(
-    "game_short_name",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(CallbackQuery(
-    id: id,
-    from: from,
-    message: message,
-    inline_message_id: inline_message_id,
-    chat_instance: chat_instance,
-    data: data,
-    game_short_name: game_short_name,
-  ))
-}
-
-pub fn force_reply_decoder() -> decode.Decoder(ForceReply) {
-  use force_reply <- decode.field("force_reply", decode.bool)
-  use input_field_placeholder <- decode.optional_field(
-    "input_field_placeholder",
-    None,
-    decode.optional(decode.string),
-  )
-  use selective <- decode.optional_field(
-    "selective",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ForceReply(
-    force_reply: force_reply,
-    input_field_placeholder: input_field_placeholder,
-    selective: selective,
-  ))
-}
-
-pub fn chat_photo_decoder() -> decode.Decoder(ChatPhoto) {
-  use small_file_id <- decode.field("small_file_id", decode.string)
-  use small_file_unique_id <- decode.field(
-    "small_file_unique_id",
-    decode.string,
-  )
-  use big_file_id <- decode.field("big_file_id", decode.string)
-  use big_file_unique_id <- decode.field("big_file_unique_id", decode.string)
-  decode.success(ChatPhoto(
-    small_file_id: small_file_id,
-    small_file_unique_id: small_file_unique_id,
-    big_file_id: big_file_id,
-    big_file_unique_id: big_file_unique_id,
-  ))
-}
-
-pub fn chat_invite_link_decoder() -> decode.Decoder(ChatInviteLink) {
-  use invite_link <- decode.field("invite_link", decode.string)
-  use creator <- decode.field("creator", user_decoder())
-  use creates_join_request <- decode.field("creates_join_request", decode.bool)
-  use is_primary <- decode.field("is_primary", decode.bool)
-  use is_revoked <- decode.field("is_revoked", decode.bool)
-  use name <- decode.optional_field(
-    "name",
-    None,
-    decode.optional(decode.string),
-  )
-  use expire_date <- decode.optional_field(
-    "expire_date",
-    None,
-    decode.optional(decode.int),
-  )
-  use member_limit <- decode.optional_field(
-    "member_limit",
-    None,
-    decode.optional(decode.int),
-  )
-  use pending_join_request_count <- decode.optional_field(
-    "pending_join_request_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use subscription_period <- decode.optional_field(
-    "subscription_period",
-    None,
-    decode.optional(decode.int),
-  )
-  use subscription_price <- decode.optional_field(
-    "subscription_price",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(ChatInviteLink(
-    invite_link: invite_link,
-    creator: creator,
-    creates_join_request: creates_join_request,
-    is_primary: is_primary,
-    is_revoked: is_revoked,
-    name: name,
-    expire_date: expire_date,
-    member_limit: member_limit,
-    pending_join_request_count: pending_join_request_count,
-    subscription_period: subscription_period,
-    subscription_price: subscription_price,
-  ))
-}
-
-pub fn chat_administrator_rights_decoder() -> decode.Decoder(
-  ChatAdministratorRights,
-) {
-  use is_anonymous <- decode.field("is_anonymous", decode.bool)
-  use can_manage_chat <- decode.field("can_manage_chat", decode.bool)
-  use can_delete_messages <- decode.field("can_delete_messages", decode.bool)
-  use can_manage_video_chats <- decode.field(
-    "can_manage_video_chats",
-    decode.bool,
-  )
-  use can_restrict_members <- decode.field("can_restrict_members", decode.bool)
-  use can_promote_members <- decode.field("can_promote_members", decode.bool)
-  use can_change_info <- decode.field("can_change_info", decode.bool)
-  use can_invite_users <- decode.field("can_invite_users", decode.bool)
-  use can_post_stories <- decode.field("can_post_stories", decode.bool)
-  use can_edit_stories <- decode.field("can_edit_stories", decode.bool)
-  use can_delete_stories <- decode.field("can_delete_stories", decode.bool)
-  use can_post_messages <- decode.optional_field(
-    "can_post_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_messages <- decode.optional_field(
-    "can_edit_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_pin_messages <- decode.optional_field(
-    "can_pin_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_topics <- decode.optional_field(
-    "can_manage_topics",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_direct_messages <- decode.optional_field(
-    "can_manage_direct_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_tags <- decode.optional_field(
-    "can_manage_tags",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ChatAdministratorRights(
-    is_anonymous: is_anonymous,
-    can_manage_chat: can_manage_chat,
-    can_delete_messages: can_delete_messages,
-    can_manage_video_chats: can_manage_video_chats,
-    can_restrict_members: can_restrict_members,
-    can_promote_members: can_promote_members,
-    can_change_info: can_change_info,
-    can_invite_users: can_invite_users,
-    can_post_stories: can_post_stories,
-    can_edit_stories: can_edit_stories,
-    can_delete_stories: can_delete_stories,
-    can_post_messages: can_post_messages,
-    can_edit_messages: can_edit_messages,
-    can_pin_messages: can_pin_messages,
-    can_manage_topics: can_manage_topics,
-    can_manage_direct_messages: can_manage_direct_messages,
-    can_manage_tags: can_manage_tags,
-  ))
-}
-
-pub fn chat_member_updated_decoder() -> decode.Decoder(ChatMemberUpdated) {
-  use chat <- decode.field("chat", chat_decoder())
-  use from <- decode.field("from", user_decoder())
   use date <- decode.field("date", decode.int)
-  use old_chat_member <- decode.field("old_chat_member", chat_member_decoder())
-  use new_chat_member <- decode.field("new_chat_member", chat_member_decoder())
-  use invite_link <- decode.optional_field(
-    "invite_link",
+  use sender_chat <- decode.field("sender_chat", chat_decoder())
+  use author_signature <- decode.optional_field(
+    "author_signature",
     None,
-    decode.optional(chat_invite_link_decoder()),
+    decode.optional(decode.string),
   )
-  use via_join_request <- decode.optional_field(
-    "via_join_request",
-    None,
-    decode.optional(decode.bool),
-  )
-  use via_chat_folder_invite_link <- decode.optional_field(
-    "via_chat_folder_invite_link",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ChatMemberUpdated(
-    chat: chat,
-    from: from,
+  decode.success(MessageOriginChat(
+    type_: type_,
     date: date,
-    old_chat_member: old_chat_member,
-    new_chat_member: new_chat_member,
-    invite_link: invite_link,
-    via_join_request: via_join_request,
-    via_chat_folder_invite_link: via_chat_folder_invite_link,
+    sender_chat: sender_chat,
+    author_signature: author_signature,
   ))
 }
 
-pub fn chat_member_owner_decoder() -> decode.Decoder(ChatMemberOwner) {
-  use status <- decode.field("status", decode.string)
-  use user <- decode.field("user", user_decoder())
-  use is_anonymous <- decode.field("is_anonymous", decode.bool)
-  use custom_title <- decode.optional_field(
-    "custom_title",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(ChatMemberOwner(
-    status: status,
-    user: user,
-    is_anonymous: is_anonymous,
-    custom_title: custom_title,
-  ))
-}
-
-pub fn chat_member_administrator_decoder() -> decode.Decoder(
-  ChatMemberAdministrator,
+pub fn message_origin_hidden_user_decoder() -> decode.Decoder(
+  MessageOriginHiddenUser,
 ) {
-  use status <- decode.field("status", decode.string)
-  use user <- decode.field("user", user_decoder())
-  use can_be_edited <- decode.field("can_be_edited", decode.bool)
-  use is_anonymous <- decode.field("is_anonymous", decode.bool)
-  use can_manage_chat <- decode.field("can_manage_chat", decode.bool)
-  use can_delete_messages <- decode.field("can_delete_messages", decode.bool)
-  use can_manage_video_chats <- decode.field(
-    "can_manage_video_chats",
-    decode.bool,
-  )
-  use can_restrict_members <- decode.field("can_restrict_members", decode.bool)
-  use can_promote_members <- decode.field("can_promote_members", decode.bool)
-  use can_change_info <- decode.field("can_change_info", decode.bool)
-  use can_invite_users <- decode.field("can_invite_users", decode.bool)
-  use can_post_stories <- decode.field("can_post_stories", decode.bool)
-  use can_edit_stories <- decode.field("can_edit_stories", decode.bool)
-  use can_delete_stories <- decode.field("can_delete_stories", decode.bool)
-  use can_post_messages <- decode.optional_field(
-    "can_post_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_messages <- decode.optional_field(
-    "can_edit_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_pin_messages <- decode.optional_field(
-    "can_pin_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_topics <- decode.optional_field(
-    "can_manage_topics",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_direct_messages <- decode.optional_field(
-    "can_manage_direct_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_tags <- decode.optional_field(
-    "can_manage_tags",
-    None,
-    decode.optional(decode.bool),
-  )
-  use custom_title <- decode.optional_field(
-    "custom_title",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(ChatMemberAdministrator(
-    status: status,
-    user: user,
-    can_be_edited: can_be_edited,
-    is_anonymous: is_anonymous,
-    can_manage_chat: can_manage_chat,
-    can_delete_messages: can_delete_messages,
-    can_manage_video_chats: can_manage_video_chats,
-    can_restrict_members: can_restrict_members,
-    can_promote_members: can_promote_members,
-    can_change_info: can_change_info,
-    can_invite_users: can_invite_users,
-    can_post_stories: can_post_stories,
-    can_edit_stories: can_edit_stories,
-    can_delete_stories: can_delete_stories,
-    can_post_messages: can_post_messages,
-    can_edit_messages: can_edit_messages,
-    can_pin_messages: can_pin_messages,
-    can_manage_topics: can_manage_topics,
-    can_manage_direct_messages: can_manage_direct_messages,
-    can_manage_tags: can_manage_tags,
-    custom_title: custom_title,
-  ))
-}
-
-pub fn chat_member_member_decoder() -> decode.Decoder(ChatMemberMember) {
-  use status <- decode.field("status", decode.string)
-  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
-  use user <- decode.field("user", user_decoder())
-  use until_date <- decode.optional_field(
-    "until_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(ChatMemberMember(
-    status: status,
-    tag: tag,
-    user: user,
-    until_date: until_date,
-  ))
-}
-
-pub fn chat_member_restricted_decoder() -> decode.Decoder(ChatMemberRestricted) {
-  use status <- decode.field("status", decode.string)
-  use tag <- decode.optional_field("tag", None, decode.optional(decode.string))
-  use user <- decode.field("user", user_decoder())
-  use is_member <- decode.field("is_member", decode.bool)
-  use can_send_messages <- decode.field("can_send_messages", decode.bool)
-  use can_send_audios <- decode.field("can_send_audios", decode.bool)
-  use can_send_documents <- decode.field("can_send_documents", decode.bool)
-  use can_send_photos <- decode.field("can_send_photos", decode.bool)
-  use can_send_videos <- decode.field("can_send_videos", decode.bool)
-  use can_send_video_notes <- decode.field("can_send_video_notes", decode.bool)
-  use can_send_voice_notes <- decode.field("can_send_voice_notes", decode.bool)
-  use can_send_polls <- decode.field("can_send_polls", decode.bool)
-  use can_send_other_messages <- decode.field(
-    "can_send_other_messages",
-    decode.bool,
-  )
-  use can_add_web_page_previews <- decode.field(
-    "can_add_web_page_previews",
-    decode.bool,
-  )
-  use can_react_to_messages <- decode.field(
-    "can_react_to_messages",
-    decode.bool,
-  )
-  use can_edit_tag <- decode.field("can_edit_tag", decode.bool)
-  use can_change_info <- decode.field("can_change_info", decode.bool)
-  use can_invite_users <- decode.field("can_invite_users", decode.bool)
-  use can_pin_messages <- decode.field("can_pin_messages", decode.bool)
-  use can_manage_topics <- decode.field("can_manage_topics", decode.bool)
-  use until_date <- decode.field("until_date", decode.int)
-  decode.success(ChatMemberRestricted(
-    status: status,
-    tag: tag,
-    user: user,
-    is_member: is_member,
-    can_send_messages: can_send_messages,
-    can_send_audios: can_send_audios,
-    can_send_documents: can_send_documents,
-    can_send_photos: can_send_photos,
-    can_send_videos: can_send_videos,
-    can_send_video_notes: can_send_video_notes,
-    can_send_voice_notes: can_send_voice_notes,
-    can_send_polls: can_send_polls,
-    can_send_other_messages: can_send_other_messages,
-    can_add_web_page_previews: can_add_web_page_previews,
-    can_react_to_messages: can_react_to_messages,
-    can_edit_tag: can_edit_tag,
-    can_change_info: can_change_info,
-    can_invite_users: can_invite_users,
-    can_pin_messages: can_pin_messages,
-    can_manage_topics: can_manage_topics,
-    until_date: until_date,
-  ))
-}
-
-pub fn chat_member_left_decoder() -> decode.Decoder(ChatMemberLeft) {
-  use status <- decode.field("status", decode.string)
-  use user <- decode.field("user", user_decoder())
-  decode.success(ChatMemberLeft(status: status, user: user))
-}
-
-pub fn chat_member_banned_decoder() -> decode.Decoder(ChatMemberBanned) {
-  use status <- decode.field("status", decode.string)
-  use user <- decode.field("user", user_decoder())
-  use until_date <- decode.field("until_date", decode.int)
-  decode.success(ChatMemberBanned(
-    status: status,
-    user: user,
-    until_date: until_date,
-  ))
-}
-
-pub fn chat_join_request_decoder() -> decode.Decoder(ChatJoinRequest) {
-  use chat <- decode.field("chat", chat_decoder())
-  use from <- decode.field("from", user_decoder())
-  use user_chat_id <- decode.field("user_chat_id", decode.int)
+  use type_ <- decode.field("type", decode.string)
   use date <- decode.field("date", decode.int)
-  use bio <- decode.optional_field("bio", None, decode.optional(decode.string))
-  use invite_link <- decode.optional_field(
-    "invite_link",
-    None,
-    decode.optional(chat_invite_link_decoder()),
-  )
-  decode.success(ChatJoinRequest(
-    chat: chat,
-    from: from,
-    user_chat_id: user_chat_id,
+  use sender_user_name <- decode.field("sender_user_name", decode.string)
+  decode.success(MessageOriginHiddenUser(
+    type_: type_,
     date: date,
-    bio: bio,
-    invite_link: invite_link,
+    sender_user_name: sender_user_name,
   ))
 }
 
-pub fn chat_permissions_decoder() -> decode.Decoder(ChatPermissions) {
-  use can_send_messages <- decode.optional_field(
-    "can_send_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_audios <- decode.optional_field(
-    "can_send_audios",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_documents <- decode.optional_field(
-    "can_send_documents",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_photos <- decode.optional_field(
-    "can_send_photos",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_videos <- decode.optional_field(
-    "can_send_videos",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_video_notes <- decode.optional_field(
-    "can_send_video_notes",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_voice_notes <- decode.optional_field(
-    "can_send_voice_notes",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_polls <- decode.optional_field(
-    "can_send_polls",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_send_other_messages <- decode.optional_field(
-    "can_send_other_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_add_web_page_previews <- decode.optional_field(
-    "can_add_web_page_previews",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_react_to_messages <- decode.optional_field(
-    "can_react_to_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_tag <- decode.optional_field(
-    "can_edit_tag",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_change_info <- decode.optional_field(
-    "can_change_info",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_invite_users <- decode.optional_field(
-    "can_invite_users",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_pin_messages <- decode.optional_field(
-    "can_pin_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_topics <- decode.optional_field(
-    "can_manage_topics",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ChatPermissions(
-    can_send_messages: can_send_messages,
-    can_send_audios: can_send_audios,
-    can_send_documents: can_send_documents,
-    can_send_photos: can_send_photos,
-    can_send_videos: can_send_videos,
-    can_send_video_notes: can_send_video_notes,
-    can_send_voice_notes: can_send_voice_notes,
-    can_send_polls: can_send_polls,
-    can_send_other_messages: can_send_other_messages,
-    can_add_web_page_previews: can_add_web_page_previews,
-    can_react_to_messages: can_react_to_messages,
-    can_edit_tag: can_edit_tag,
-    can_change_info: can_change_info,
-    can_invite_users: can_invite_users,
-    can_pin_messages: can_pin_messages,
-    can_manage_topics: can_manage_topics,
-  ))
-}
-
-pub fn birthdate_decoder() -> decode.Decoder(Birthdate) {
-  use day <- decode.field("day", decode.int)
-  use month <- decode.field("month", decode.int)
-  use year <- decode.optional_field("year", None, decode.optional(decode.int))
-  decode.success(Birthdate(day: day, month: month, year: year))
-}
-
-pub fn business_intro_decoder() -> decode.Decoder(BusinessIntro) {
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use message <- decode.optional_field(
-    "message",
-    None,
-    decode.optional(decode.string),
-  )
-  use sticker <- decode.optional_field(
-    "sticker",
-    None,
-    decode.optional(sticker_decoder()),
-  )
-  decode.success(BusinessIntro(title: title, message: message, sticker: sticker))
-}
-
-pub fn business_location_decoder() -> decode.Decoder(BusinessLocation) {
-  use address <- decode.field("address", decode.string)
-  use location <- decode.optional_field(
-    "location",
-    None,
-    decode.optional(location_decoder()),
-  )
-  decode.success(BusinessLocation(address: address, location: location))
-}
-
-pub fn business_opening_hours_interval_decoder() -> decode.Decoder(
-  BusinessOpeningHoursInterval,
-) {
-  use opening_minute <- decode.field("opening_minute", decode.int)
-  use closing_minute <- decode.field("closing_minute", decode.int)
-  decode.success(BusinessOpeningHoursInterval(
-    opening_minute: opening_minute,
-    closing_minute: closing_minute,
-  ))
-}
-
-pub fn business_opening_hours_decoder() -> decode.Decoder(BusinessOpeningHours) {
-  use time_zone_name <- decode.field("time_zone_name", decode.string)
-  use opening_hours <- decode.field(
-    "opening_hours",
-    decode.list(business_opening_hours_interval_decoder()),
-  )
-  decode.success(BusinessOpeningHours(
-    time_zone_name: time_zone_name,
-    opening_hours: opening_hours,
-  ))
-}
-
-pub fn user_rating_decoder() -> decode.Decoder(UserRating) {
-  use level <- decode.field("level", decode.int)
-  use rating <- decode.field("rating", decode.int)
-  use current_level_rating <- decode.field("current_level_rating", decode.int)
-  use next_level_rating <- decode.optional_field(
-    "next_level_rating",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(UserRating(
-    level: level,
-    rating: rating,
-    current_level_rating: current_level_rating,
-    next_level_rating: next_level_rating,
-  ))
-}
-
-pub fn story_area_position_decoder() -> decode.Decoder(StoryAreaPosition) {
-  use x_percentage <- decode.field("x_percentage", decode.float)
-  use y_percentage <- decode.field("y_percentage", decode.float)
-  use width_percentage <- decode.field("width_percentage", decode.float)
-  use height_percentage <- decode.field("height_percentage", decode.float)
-  use rotation_angle <- decode.field("rotation_angle", decode.float)
-  use corner_radius_percentage <- decode.field(
-    "corner_radius_percentage",
-    decode.float,
-  )
-  decode.success(StoryAreaPosition(
-    x_percentage: x_percentage,
-    y_percentage: y_percentage,
-    width_percentage: width_percentage,
-    height_percentage: height_percentage,
-    rotation_angle: rotation_angle,
-    corner_radius_percentage: corner_radius_percentage,
-  ))
-}
-
-pub fn location_address_decoder() -> decode.Decoder(LocationAddress) {
-  use country_code <- decode.field("country_code", decode.string)
-  use state <- decode.optional_field(
-    "state",
-    None,
-    decode.optional(decode.string),
-  )
-  use city <- decode.optional_field(
-    "city",
-    None,
-    decode.optional(decode.string),
-  )
-  use street <- decode.optional_field(
-    "street",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(LocationAddress(
-    country_code: country_code,
-    state: state,
-    city: city,
-    street: street,
-  ))
-}
-
-pub fn story_area_type_decoder() -> decode.Decoder(StoryAreaType) {
+pub fn message_origin_user_decoder() -> decode.Decoder(MessageOriginUser) {
   use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use address <- decode.optional_field(
-    "address",
-    None,
-    decode.optional(location_address_decoder()),
-  )
-  decode.success(StoryAreaType(
+  use date <- decode.field("date", decode.int)
+  use sender_user <- decode.field("sender_user", user_decoder())
+  decode.success(MessageOriginUser(
     type_: type_,
-    latitude: latitude,
-    longitude: longitude,
-    address: address,
+    date: date,
+    sender_user: sender_user,
   ))
 }
 
-pub fn story_area_type_location_decoder() -> decode.Decoder(
-  StoryAreaTypeLocation,
+pub fn message_reaction_count_updated_decoder() -> decode.Decoder(
+  MessageReactionCountUpdated,
 ) {
-  use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use address <- decode.optional_field(
-    "address",
-    None,
-    decode.optional(location_address_decoder()),
+  use chat <- decode.field("chat", chat_decoder())
+  use message_id <- decode.field("message_id", decode.int)
+  use date <- decode.field("date", decode.int)
+  use reactions <- decode.field(
+    "reactions",
+    decode.list(reaction_count_decoder()),
   )
-  decode.success(StoryAreaTypeLocation(
-    type_: type_,
-    latitude: latitude,
-    longitude: longitude,
-    address: address,
+  decode.success(MessageReactionCountUpdated(
+    chat: chat,
+    message_id: message_id,
+    date: date,
+    reactions: reactions,
   ))
-}
-
-pub fn story_area_type_suggested_reaction_decoder() -> decode.Decoder(
-  StoryAreaTypeSuggestedReaction,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use reaction_type <- decode.field("reaction_type", reaction_type_decoder())
-  use is_dark <- decode.optional_field(
-    "is_dark",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_flipped <- decode.optional_field(
-    "is_flipped",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(StoryAreaTypeSuggestedReaction(
-    type_: type_,
-    reaction_type: reaction_type,
-    is_dark: is_dark,
-    is_flipped: is_flipped,
-  ))
-}
-
-pub fn story_area_type_link_decoder() -> decode.Decoder(StoryAreaTypeLink) {
-  use type_ <- decode.field("type", decode.string)
-  use url <- decode.field("url", decode.string)
-  decode.success(StoryAreaTypeLink(type_: type_, url: url))
-}
-
-pub fn story_area_type_weather_decoder() -> decode.Decoder(StoryAreaTypeWeather) {
-  use type_ <- decode.field("type", decode.string)
-  use temperature <- decode.field("temperature", decode.float)
-  use emoji <- decode.field("emoji", decode.string)
-  use background_color <- decode.field("background_color", decode.int)
-  decode.success(StoryAreaTypeWeather(
-    type_: type_,
-    temperature: temperature,
-    emoji: emoji,
-    background_color: background_color,
-  ))
-}
-
-pub fn story_area_type_unique_gift_decoder() -> decode.Decoder(
-  StoryAreaTypeUniqueGift,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use name <- decode.field("name", decode.string)
-  decode.success(StoryAreaTypeUniqueGift(type_: type_, name: name))
-}
-
-pub fn story_area_decoder() -> decode.Decoder(StoryArea) {
-  use position <- decode.field("position", story_area_position_decoder())
-  use type_ <- decode.field("type", story_area_type_decoder())
-  decode.success(StoryArea(position: position, type_: type_))
-}
-
-pub fn chat_location_decoder() -> decode.Decoder(ChatLocation) {
-  use location <- decode.field("location", location_decoder())
-  use address <- decode.field("address", decode.string)
-  decode.success(ChatLocation(location: location, address: address))
-}
-
-pub fn reaction_type_emoji_decoder() -> decode.Decoder(ReactionTypeEmoji) {
-  use type_ <- decode.field("type", decode.string)
-  use emoji <- decode.field("emoji", decode.string)
-  decode.success(ReactionTypeEmoji(type_: type_, emoji: emoji))
-}
-
-pub fn reaction_type_custom_emoji_decoder() -> decode.Decoder(
-  ReactionTypeCustomEmoji,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use custom_emoji_id <- decode.field("custom_emoji_id", decode.string)
-  decode.success(ReactionTypeCustomEmoji(
-    type_: type_,
-    custom_emoji_id: custom_emoji_id,
-  ))
-}
-
-pub fn reaction_type_paid_decoder() -> decode.Decoder(ReactionTypePaid) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(ReactionTypePaid(type_: type_))
-}
-
-pub fn reaction_count_decoder() -> decode.Decoder(ReactionCount) {
-  use type_ <- decode.field("type", reaction_type_decoder())
-  use total_count <- decode.field("total_count", decode.int)
-  decode.success(ReactionCount(type_: type_, total_count: total_count))
 }
 
 pub fn message_reaction_updated_decoder() -> decode.Decoder(
@@ -4757,449 +6046,32 @@ pub fn message_reaction_updated_decoder() -> decode.Decoder(
   ))
 }
 
-pub fn message_reaction_count_updated_decoder() -> decode.Decoder(
-  MessageReactionCountUpdated,
-) {
-  use chat <- decode.field("chat", chat_decoder())
-  use message_id <- decode.field("message_id", decode.int)
-  use date <- decode.field("date", decode.int)
-  use reactions <- decode.field(
-    "reactions",
-    decode.list(reaction_count_decoder()),
-  )
-  decode.success(MessageReactionCountUpdated(
-    chat: chat,
-    message_id: message_id,
-    date: date,
-    reactions: reactions,
-  ))
-}
-
-pub fn forum_topic_decoder() -> decode.Decoder(ForumTopic) {
-  use message_thread_id <- decode.field("message_thread_id", decode.int)
-  use name <- decode.field("name", decode.string)
-  use icon_color <- decode.field("icon_color", decode.int)
-  use icon_custom_emoji_id <- decode.optional_field(
-    "icon_custom_emoji_id",
+pub fn order_info_decoder() -> decode.Decoder(OrderInfo) {
+  use name <- decode.optional_field(
+    "name",
     None,
     decode.optional(decode.string),
   )
-  use is_name_implicit <- decode.optional_field(
-    "is_name_implicit",
+  use phone_number <- decode.optional_field(
+    "phone_number",
     None,
-    decode.optional(decode.bool),
+    decode.optional(decode.string),
   )
-  decode.success(ForumTopic(
-    message_thread_id: message_thread_id,
+  use email <- decode.optional_field(
+    "email",
+    None,
+    decode.optional(decode.string),
+  )
+  use shipping_address <- decode.optional_field(
+    "shipping_address",
+    None,
+    decode.optional(shipping_address_decoder()),
+  )
+  decode.success(OrderInfo(
     name: name,
-    icon_color: icon_color,
-    icon_custom_emoji_id: icon_custom_emoji_id,
-    is_name_implicit: is_name_implicit,
-  ))
-}
-
-pub fn gift_background_decoder() -> decode.Decoder(GiftBackground) {
-  use center_color <- decode.field("center_color", decode.int)
-  use edge_color <- decode.field("edge_color", decode.int)
-  use text_color <- decode.field("text_color", decode.int)
-  decode.success(GiftBackground(
-    center_color: center_color,
-    edge_color: edge_color,
-    text_color: text_color,
-  ))
-}
-
-pub fn gift_decoder() -> decode.Decoder(Gift) {
-  use id <- decode.field("id", decode.string)
-  use sticker <- decode.field("sticker", sticker_decoder())
-  use star_count <- decode.field("star_count", decode.int)
-  use upgrade_star_count <- decode.optional_field(
-    "upgrade_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use is_premium <- decode.optional_field(
-    "is_premium",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_colors <- decode.optional_field(
-    "has_colors",
-    None,
-    decode.optional(decode.bool),
-  )
-  use total_count <- decode.optional_field(
-    "total_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use remaining_count <- decode.optional_field(
-    "remaining_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use personal_total_count <- decode.optional_field(
-    "personal_total_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use personal_remaining_count <- decode.optional_field(
-    "personal_remaining_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use background <- decode.optional_field(
-    "background",
-    None,
-    decode.optional(gift_background_decoder()),
-  )
-  use unique_gift_variant_count <- decode.optional_field(
-    "unique_gift_variant_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use publisher_chat <- decode.optional_field(
-    "publisher_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  decode.success(Gift(
-    id: id,
-    sticker: sticker,
-    star_count: star_count,
-    upgrade_star_count: upgrade_star_count,
-    is_premium: is_premium,
-    has_colors: has_colors,
-    total_count: total_count,
-    remaining_count: remaining_count,
-    personal_total_count: personal_total_count,
-    personal_remaining_count: personal_remaining_count,
-    background: background,
-    unique_gift_variant_count: unique_gift_variant_count,
-    publisher_chat: publisher_chat,
-  ))
-}
-
-pub fn gifts_decoder() -> decode.Decoder(Gifts) {
-  use gifts <- decode.field("gifts", decode.list(gift_decoder()))
-  decode.success(Gifts(gifts: gifts))
-}
-
-pub fn unique_gift_model_decoder() -> decode.Decoder(UniqueGiftModel) {
-  use name <- decode.field("name", decode.string)
-  use sticker <- decode.field("sticker", sticker_decoder())
-  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
-  use rarity <- decode.optional_field(
-    "rarity",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(UniqueGiftModel(
-    name: name,
-    sticker: sticker,
-    rarity_per_mille: rarity_per_mille,
-    rarity: rarity,
-  ))
-}
-
-pub fn unique_gift_symbol_decoder() -> decode.Decoder(UniqueGiftSymbol) {
-  use name <- decode.field("name", decode.string)
-  use sticker <- decode.field("sticker", sticker_decoder())
-  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
-  decode.success(UniqueGiftSymbol(
-    name: name,
-    sticker: sticker,
-    rarity_per_mille: rarity_per_mille,
-  ))
-}
-
-pub fn unique_gift_backdrop_colors_decoder() -> decode.Decoder(
-  UniqueGiftBackdropColors,
-) {
-  use center_color <- decode.field("center_color", decode.int)
-  use edge_color <- decode.field("edge_color", decode.int)
-  use symbol_color <- decode.field("symbol_color", decode.int)
-  use text_color <- decode.field("text_color", decode.int)
-  decode.success(UniqueGiftBackdropColors(
-    center_color: center_color,
-    edge_color: edge_color,
-    symbol_color: symbol_color,
-    text_color: text_color,
-  ))
-}
-
-pub fn unique_gift_backdrop_decoder() -> decode.Decoder(UniqueGiftBackdrop) {
-  use name <- decode.field("name", decode.string)
-  use colors <- decode.field("colors", unique_gift_backdrop_colors_decoder())
-  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
-  decode.success(UniqueGiftBackdrop(
-    name: name,
-    colors: colors,
-    rarity_per_mille: rarity_per_mille,
-  ))
-}
-
-pub fn unique_gift_colors_decoder() -> decode.Decoder(UniqueGiftColors) {
-  use model_custom_emoji_id <- decode.field(
-    "model_custom_emoji_id",
-    decode.string,
-  )
-  use symbol_custom_emoji_id <- decode.field(
-    "symbol_custom_emoji_id",
-    decode.string,
-  )
-  use light_theme_main_color <- decode.field(
-    "light_theme_main_color",
-    decode.int,
-  )
-  use light_theme_other_colors <- decode.field(
-    "light_theme_other_colors",
-    decode.list(decode.int),
-  )
-  use dark_theme_main_color <- decode.field("dark_theme_main_color", decode.int)
-  use dark_theme_other_colors <- decode.field(
-    "dark_theme_other_colors",
-    decode.list(decode.int),
-  )
-  decode.success(UniqueGiftColors(
-    model_custom_emoji_id: model_custom_emoji_id,
-    symbol_custom_emoji_id: symbol_custom_emoji_id,
-    light_theme_main_color: light_theme_main_color,
-    light_theme_other_colors: light_theme_other_colors,
-    dark_theme_main_color: dark_theme_main_color,
-    dark_theme_other_colors: dark_theme_other_colors,
-  ))
-}
-
-pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
-  use gift_id <- decode.field("gift_id", decode.string)
-  use base_name <- decode.field("base_name", decode.string)
-  use name <- decode.field("name", decode.string)
-  use number <- decode.field("number", decode.int)
-  use model <- decode.field("model", unique_gift_model_decoder())
-  use symbol <- decode.field("symbol", unique_gift_symbol_decoder())
-  use backdrop <- decode.field("backdrop", unique_gift_backdrop_decoder())
-  use is_premium <- decode.optional_field(
-    "is_premium",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_burned <- decode.optional_field(
-    "is_burned",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_from_blockchain <- decode.optional_field(
-    "is_from_blockchain",
-    None,
-    decode.optional(decode.bool),
-  )
-  use colors <- decode.optional_field(
-    "colors",
-    None,
-    decode.optional(unique_gift_colors_decoder()),
-  )
-  use publisher_chat <- decode.optional_field(
-    "publisher_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  decode.success(UniqueGift(
-    gift_id: gift_id,
-    base_name: base_name,
-    name: name,
-    number: number,
-    model: model,
-    symbol: symbol,
-    backdrop: backdrop,
-    is_premium: is_premium,
-    is_burned: is_burned,
-    is_from_blockchain: is_from_blockchain,
-    colors: colors,
-    publisher_chat: publisher_chat,
-  ))
-}
-
-pub fn gift_info_decoder() -> decode.Decoder(GiftInfo) {
-  use gift <- decode.field("gift", gift_decoder())
-  use owned_gift_id <- decode.optional_field(
-    "owned_gift_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use convert_star_count <- decode.optional_field(
-    "convert_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use prepaid_upgrade_star_count <- decode.optional_field(
-    "prepaid_upgrade_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use is_upgrade_separate <- decode.optional_field(
-    "is_upgrade_separate",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_be_upgraded <- decode.optional_field(
-    "can_be_upgraded",
-    None,
-    decode.optional(decode.bool),
-  )
-  use text <- decode.optional_field(
-    "text",
-    None,
-    decode.optional(decode.string),
-  )
-  use entities <- decode.optional_field(
-    "entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use is_private <- decode.optional_field(
-    "is_private",
-    None,
-    decode.optional(decode.bool),
-  )
-  use unique_gift_number <- decode.optional_field(
-    "unique_gift_number",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(GiftInfo(
-    gift: gift,
-    owned_gift_id: owned_gift_id,
-    convert_star_count: convert_star_count,
-    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
-    is_upgrade_separate: is_upgrade_separate,
-    can_be_upgraded: can_be_upgraded,
-    text: text,
-    entities: entities,
-    is_private: is_private,
-    unique_gift_number: unique_gift_number,
-  ))
-}
-
-pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
-  use gift <- decode.field("gift", unique_gift_decoder())
-  use origin <- decode.field("origin", decode.string)
-  use last_resale_currency <- decode.optional_field(
-    "last_resale_currency",
-    None,
-    decode.optional(decode.string),
-  )
-  use last_resale_amount <- decode.optional_field(
-    "last_resale_amount",
-    None,
-    decode.optional(decode.int),
-  )
-  use owned_gift_id <- decode.optional_field(
-    "owned_gift_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use transfer_star_count <- decode.optional_field(
-    "transfer_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use next_transfer_date <- decode.optional_field(
-    "next_transfer_date",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(UniqueGiftInfo(
-    gift: gift,
-    origin: origin,
-    last_resale_currency: last_resale_currency,
-    last_resale_amount: last_resale_amount,
-    owned_gift_id: owned_gift_id,
-    transfer_star_count: transfer_star_count,
-    next_transfer_date: next_transfer_date,
-  ))
-}
-
-pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
-  use type_ <- decode.field("type", decode.string)
-  use gift <- decode.field("gift", gift_decoder())
-  use owned_gift_id <- decode.optional_field(
-    "owned_gift_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use sender_user <- decode.optional_field(
-    "sender_user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use send_date <- decode.field("send_date", decode.int)
-  use text <- decode.optional_field(
-    "text",
-    None,
-    decode.optional(decode.string),
-  )
-  use entities <- decode.optional_field(
-    "entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use is_private <- decode.optional_field(
-    "is_private",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_saved <- decode.optional_field(
-    "is_saved",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_be_upgraded <- decode.optional_field(
-    "can_be_upgraded",
-    None,
-    decode.optional(decode.bool),
-  )
-  use was_refunded <- decode.optional_field(
-    "was_refunded",
-    None,
-    decode.optional(decode.bool),
-  )
-  use convert_star_count <- decode.optional_field(
-    "convert_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use prepaid_upgrade_star_count <- decode.optional_field(
-    "prepaid_upgrade_star_count",
-    None,
-    decode.optional(decode.int),
-  )
-  use is_upgrade_separate <- decode.optional_field(
-    "is_upgrade_separate",
-    None,
-    decode.optional(decode.bool),
-  )
-  use unique_gift_number <- decode.optional_field(
-    "unique_gift_number",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(OwnedGift(
-    type_: type_,
-    gift: gift,
-    owned_gift_id: owned_gift_id,
-    sender_user: sender_user,
-    send_date: send_date,
-    text: text,
-    entities: entities,
-    is_private: is_private,
-    is_saved: is_saved,
-    can_be_upgraded: can_be_upgraded,
-    was_refunded: was_refunded,
-    convert_star_count: convert_star_count,
-    prepaid_upgrade_star_count: prepaid_upgrade_star_count,
-    is_upgrade_separate: is_upgrade_separate,
-    unique_gift_number: unique_gift_number,
+    phone_number: phone_number,
+    email: email,
+    shipping_address: shipping_address,
   ))
 }
 
@@ -5348,374 +6220,549 @@ pub fn owned_gifts_decoder() -> decode.Decoder(OwnedGifts) {
   ))
 }
 
-pub fn bot_access_settings_decoder() -> decode.Decoder(BotAccessSettings) {
-  use is_access_restricted <- decode.field("is_access_restricted", decode.bool)
-  use added_users <- decode.optional_field(
-    "added_users",
-    None,
-    decode.optional(decode.list(user_decoder())),
+pub fn paid_media_info_decoder() -> decode.Decoder(PaidMediaInfo) {
+  use star_count <- decode.field("star_count", decode.int)
+  use paid_media <- decode.field(
+    "paid_media",
+    decode.list(paid_media_decoder()),
   )
-  decode.success(BotAccessSettings(
-    is_access_restricted: is_access_restricted,
-    added_users: added_users,
-  ))
+  decode.success(PaidMediaInfo(star_count: star_count, paid_media: paid_media))
 }
 
-pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
-  use unlimited_gifts <- decode.field("unlimited_gifts", decode.bool)
-  use limited_gifts <- decode.field("limited_gifts", decode.bool)
-  use unique_gifts <- decode.field("unique_gifts", decode.bool)
-  use premium_subscription <- decode.field("premium_subscription", decode.bool)
-  use gifts_from_channels <- decode.field("gifts_from_channels", decode.bool)
-  decode.success(AcceptedGiftTypes(
-    unlimited_gifts: unlimited_gifts,
-    limited_gifts: limited_gifts,
-    unique_gifts: unique_gifts,
-    premium_subscription: premium_subscription,
-    gifts_from_channels: gifts_from_channels,
-  ))
+pub fn paid_media_live_photo_decoder() -> decode.Decoder(PaidMediaLivePhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use live_photo <- decode.field("live_photo", live_photo_decoder())
+  decode.success(PaidMediaLivePhoto(type_: type_, live_photo: live_photo))
 }
 
-pub fn star_amount_decoder() -> decode.Decoder(StarAmount) {
-  use amount <- decode.field("amount", decode.int)
-  use nanostar_amount <- decode.optional_field(
-    "nanostar_amount",
+pub fn paid_media_photo_decoder() -> decode.Decoder(PaidMediaPhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use photo <- decode.field("photo", decode.list(photo_size_decoder()))
+  decode.success(PaidMediaPhoto(type_: type_, photo: photo))
+}
+
+pub fn paid_media_preview_decoder() -> decode.Decoder(PaidMediaPreview) {
+  use type_ <- decode.field("type", decode.string)
+  use width <- decode.optional_field("width", None, decode.optional(decode.int))
+  use height <- decode.optional_field(
+    "height",
     None,
     decode.optional(decode.int),
   )
-  decode.success(StarAmount(amount: amount, nanostar_amount: nanostar_amount))
-}
-
-pub fn bot_command_decoder() -> decode.Decoder(BotCommand) {
-  use command <- decode.field("command", decode.string)
-  use description <- decode.field("description", decode.string)
-  decode.success(BotCommand(command: command, description: description))
-}
-
-pub fn bot_command_scope_default_decoder() -> decode.Decoder(
-  BotCommandScopeDefault,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(BotCommandScopeDefault(type_: type_))
-}
-
-pub fn bot_command_scope_all_private_chats_decoder() -> decode.Decoder(
-  BotCommandScopeAllPrivateChats,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(BotCommandScopeAllPrivateChats(type_: type_))
-}
-
-pub fn bot_command_scope_all_group_chats_decoder() -> decode.Decoder(
-  BotCommandScopeAllGroupChats,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(BotCommandScopeAllGroupChats(type_: type_))
-}
-
-pub fn bot_command_scope_all_chat_administrators_decoder() -> decode.Decoder(
-  BotCommandScopeAllChatAdministrators,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(BotCommandScopeAllChatAdministrators(type_: type_))
-}
-
-pub fn bot_command_scope_chat_decoder() -> decode.Decoder(BotCommandScopeChat) {
-  use type_ <- decode.field("type", decode.string)
-  use chat_id <- decode.field("chat_id", int_or_string_decoder())
-  decode.success(BotCommandScopeChat(type_: type_, chat_id: chat_id))
-}
-
-pub fn bot_command_scope_chat_administrators_decoder() -> decode.Decoder(
-  BotCommandScopeChatAdministrators,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use chat_id <- decode.field("chat_id", int_or_string_decoder())
-  decode.success(BotCommandScopeChatAdministrators(
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(PaidMediaPreview(
     type_: type_,
-    chat_id: chat_id,
+    width: width,
+    height: height,
+    duration: duration,
   ))
 }
 
-pub fn bot_command_scope_chat_member_decoder() -> decode.Decoder(
-  BotCommandScopeChatMember,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use chat_id <- decode.field("chat_id", int_or_string_decoder())
-  use user_id <- decode.field("user_id", decode.int)
-  decode.success(BotCommandScopeChatMember(
-    type_: type_,
-    chat_id: chat_id,
-    user_id: user_id,
+pub fn paid_media_purchased_decoder() -> decode.Decoder(PaidMediaPurchased) {
+  use from <- decode.field("from", user_decoder())
+  use paid_media_payload <- decode.field("paid_media_payload", decode.string)
+  decode.success(PaidMediaPurchased(
+    from: from,
+    paid_media_payload: paid_media_payload,
   ))
 }
 
-pub fn bot_name_decoder() -> decode.Decoder(BotName) {
-  use name <- decode.field("name", decode.string)
-  decode.success(BotName(name: name))
-}
-
-pub fn bot_description_decoder() -> decode.Decoder(BotDescription) {
-  use description <- decode.field("description", decode.string)
-  decode.success(BotDescription(description: description))
-}
-
-pub fn bot_short_description_decoder() -> decode.Decoder(BotShortDescription) {
-  use short_description <- decode.field("short_description", decode.string)
-  decode.success(BotShortDescription(short_description: short_description))
-}
-
-pub fn menu_button_commands_decoder() -> decode.Decoder(MenuButtonCommands) {
+pub fn paid_media_video_decoder() -> decode.Decoder(PaidMediaVideo) {
   use type_ <- decode.field("type", decode.string)
-  decode.success(MenuButtonCommands(type_: type_))
+  use video <- decode.field("video", video_decoder())
+  decode.success(PaidMediaVideo(type_: type_, video: video))
 }
 
-pub fn menu_button_web_app_decoder() -> decode.Decoder(MenuButtonWebApp) {
-  use type_ <- decode.field("type", decode.string)
-  use text <- decode.field("text", decode.string)
-  use web_app <- decode.field("web_app", web_app_info_decoder())
-  decode.success(MenuButtonWebApp(type_: type_, text: text, web_app: web_app))
+pub fn paid_message_price_changed_decoder() -> decode.Decoder(
+  PaidMessagePriceChanged,
+) {
+  use paid_message_star_count <- decode.field(
+    "paid_message_star_count",
+    decode.int,
+  )
+  decode.success(PaidMessagePriceChanged(
+    paid_message_star_count: paid_message_star_count,
+  ))
 }
 
-pub fn menu_button_default_decoder() -> decode.Decoder(MenuButtonDefault) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(MenuButtonDefault(type_: type_))
+pub fn passport_data_decoder() -> decode.Decoder(PassportData) {
+  use data <- decode.field(
+    "data",
+    decode.list(encrypted_passport_element_decoder()),
+  )
+  use credentials <- decode.field(
+    "credentials",
+    encrypted_credentials_decoder(),
+  )
+  decode.success(PassportData(data: data, credentials: credentials))
 }
 
-pub fn chat_boost_source_premium_decoder() -> decode.Decoder(
-  ChatBoostSourcePremium,
+pub fn passport_element_error_data_field_decoder() -> decode.Decoder(
+  PassportElementErrorDataField,
 ) {
   use source <- decode.field("source", decode.string)
-  use user <- decode.field("user", user_decoder())
-  decode.success(ChatBoostSourcePremium(source: source, user: user))
+  use type_ <- decode.field("type", decode.string)
+  use field_name <- decode.field("field_name", decode.string)
+  use data_hash <- decode.field("data_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorDataField(
+    source: source,
+    type_: type_,
+    field_name: field_name,
+    data_hash: data_hash,
+    message: message,
+  ))
 }
 
-pub fn chat_boost_source_gift_code_decoder() -> decode.Decoder(
-  ChatBoostSourceGiftCode,
+pub fn passport_element_error_file_decoder() -> decode.Decoder(
+  PassportElementErrorFile,
 ) {
   use source <- decode.field("source", decode.string)
-  use user <- decode.field("user", user_decoder())
-  decode.success(ChatBoostSourceGiftCode(source: source, user: user))
+  use type_ <- decode.field("type", decode.string)
+  use file_hash <- decode.field("file_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorFile(
+    source: source,
+    type_: type_,
+    file_hash: file_hash,
+    message: message,
+  ))
 }
 
-pub fn chat_boost_source_giveaway_decoder() -> decode.Decoder(
-  ChatBoostSourceGiveaway,
+pub fn passport_element_error_files_decoder() -> decode.Decoder(
+  PassportElementErrorFiles,
 ) {
   use source <- decode.field("source", decode.string)
-  use giveaway_message_id <- decode.field("giveaway_message_id", decode.int)
+  use type_ <- decode.field("type", decode.string)
+  use file_hashes <- decode.field("file_hashes", decode.list(decode.string))
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorFiles(
+    source: source,
+    type_: type_,
+    file_hashes: file_hashes,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_front_side_decoder() -> decode.Decoder(
+  PassportElementErrorFrontSide,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use file_hash <- decode.field("file_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorFrontSide(
+    source: source,
+    type_: type_,
+    file_hash: file_hash,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_reverse_side_decoder() -> decode.Decoder(
+  PassportElementErrorReverseSide,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use file_hash <- decode.field("file_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorReverseSide(
+    source: source,
+    type_: type_,
+    file_hash: file_hash,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_selfie_decoder() -> decode.Decoder(
+  PassportElementErrorSelfie,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use file_hash <- decode.field("file_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorSelfie(
+    source: source,
+    type_: type_,
+    file_hash: file_hash,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_translation_file_decoder() -> decode.Decoder(
+  PassportElementErrorTranslationFile,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use file_hash <- decode.field("file_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorTranslationFile(
+    source: source,
+    type_: type_,
+    file_hash: file_hash,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_translation_files_decoder() -> decode.Decoder(
+  PassportElementErrorTranslationFiles,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use file_hashes <- decode.field("file_hashes", decode.list(decode.string))
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorTranslationFiles(
+    source: source,
+    type_: type_,
+    file_hashes: file_hashes,
+    message: message,
+  ))
+}
+
+pub fn passport_element_error_unspecified_decoder() -> decode.Decoder(
+  PassportElementErrorUnspecified,
+) {
+  use source <- decode.field("source", decode.string)
+  use type_ <- decode.field("type", decode.string)
+  use element_hash <- decode.field("element_hash", decode.string)
+  use message <- decode.field("message", decode.string)
+  decode.success(PassportElementErrorUnspecified(
+    source: source,
+    type_: type_,
+    element_hash: element_hash,
+    message: message,
+  ))
+}
+
+pub fn passport_file_decoder() -> decode.Decoder(PassportFile) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use file_size <- decode.field("file_size", decode.int)
+  use file_date <- decode.field("file_date", decode.int)
+  decode.success(PassportFile(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    file_size: file_size,
+    file_date: file_date,
+  ))
+}
+
+pub fn photo_size_decoder() -> decode.Decoder(PhotoSize) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(PhotoSize(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    file_size: file_size,
+  ))
+}
+
+pub fn poll_decoder() -> decode.Decoder(Poll) {
+  use id <- decode.field("id", decode.string)
+  use question <- decode.field("question", decode.string)
+  use question_entities <- decode.optional_field(
+    "question_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use options <- decode.field("options", decode.list(poll_option_decoder()))
+  use total_voter_count <- decode.field("total_voter_count", decode.int)
+  use is_closed <- decode.field("is_closed", decode.bool)
+  use is_anonymous <- decode.field("is_anonymous", decode.bool)
+  use type_ <- decode.field("type", decode.string)
+  use allows_multiple_answers <- decode.field(
+    "allows_multiple_answers",
+    decode.bool,
+  )
+  use allows_revoting <- decode.field("allows_revoting", decode.bool)
+  use members_only <- decode.field("members_only", decode.bool)
+  use country_codes <- decode.optional_field(
+    "country_codes",
+    None,
+    decode.optional(decode.list(decode.string)),
+  )
+  use correct_option_ids <- decode.optional_field(
+    "correct_option_ids",
+    None,
+    decode.optional(decode.list(decode.int)),
+  )
+  use explanation <- decode.optional_field(
+    "explanation",
+    None,
+    decode.optional(decode.string),
+  )
+  use explanation_entities <- decode.optional_field(
+    "explanation_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use explanation_media <- decode.optional_field(
+    "explanation_media",
+    None,
+    decode.optional(poll_media_decoder()),
+  )
+  use open_period <- decode.optional_field(
+    "open_period",
+    None,
+    decode.optional(decode.int),
+  )
+  use close_date <- decode.optional_field(
+    "close_date",
+    None,
+    decode.optional(decode.int),
+  )
+  use description <- decode.optional_field(
+    "description",
+    None,
+    decode.optional(decode.string),
+  )
+  use description_entities <- decode.optional_field(
+    "description_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(poll_media_decoder()),
+  )
+  decode.success(Poll(
+    id: id,
+    question: question,
+    question_entities: question_entities,
+    options: options,
+    total_voter_count: total_voter_count,
+    is_closed: is_closed,
+    is_anonymous: is_anonymous,
+    type_: type_,
+    allows_multiple_answers: allows_multiple_answers,
+    allows_revoting: allows_revoting,
+    members_only: members_only,
+    country_codes: country_codes,
+    correct_option_ids: correct_option_ids,
+    explanation: explanation,
+    explanation_entities: explanation_entities,
+    explanation_media: explanation_media,
+    open_period: open_period,
+    close_date: close_date,
+    description: description,
+    description_entities: description_entities,
+    media: media,
+  ))
+}
+
+pub fn poll_answer_decoder() -> decode.Decoder(PollAnswer) {
+  use poll_id <- decode.field("poll_id", decode.string)
+  use voter_chat <- decode.optional_field(
+    "voter_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
   use user <- decode.optional_field(
     "user",
     None,
     decode.optional(user_decoder()),
   )
-  use prize_star_count <- decode.optional_field(
-    "prize_star_count",
-    None,
-    decode.optional(decode.int),
+  use option_ids <- decode.field("option_ids", decode.list(decode.int))
+  use option_persistent_ids <- decode.field(
+    "option_persistent_ids",
+    decode.list(decode.string),
   )
-  use is_unclaimed <- decode.optional_field(
-    "is_unclaimed",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(ChatBoostSourceGiveaway(
-    source: source,
-    giveaway_message_id: giveaway_message_id,
+  decode.success(PollAnswer(
+    poll_id: poll_id,
+    voter_chat: voter_chat,
     user: user,
-    prize_star_count: prize_star_count,
-    is_unclaimed: is_unclaimed,
+    option_ids: option_ids,
+    option_persistent_ids: option_persistent_ids,
   ))
 }
 
-pub fn chat_boost_decoder() -> decode.Decoder(ChatBoost) {
-  use boost_id <- decode.field("boost_id", decode.string)
-  use add_date <- decode.field("add_date", decode.int)
-  use expiration_date <- decode.field("expiration_date", decode.int)
-  use source <- decode.field("source", chat_boost_source_decoder())
-  decode.success(ChatBoost(
-    boost_id: boost_id,
-    add_date: add_date,
-    expiration_date: expiration_date,
-    source: source,
+pub fn poll_media_decoder() -> decode.Decoder(PollMedia) {
+  use animation <- decode.optional_field(
+    "animation",
+    None,
+    decode.optional(animation_decoder()),
+  )
+  use audio <- decode.optional_field(
+    "audio",
+    None,
+    decode.optional(audio_decoder()),
+  )
+  use document <- decode.optional_field(
+    "document",
+    None,
+    decode.optional(document_decoder()),
+  )
+  use live_photo <- decode.optional_field(
+    "live_photo",
+    None,
+    decode.optional(live_photo_decoder()),
+  )
+  use location <- decode.optional_field(
+    "location",
+    None,
+    decode.optional(location_decoder()),
+  )
+  use photo <- decode.optional_field(
+    "photo",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use sticker <- decode.optional_field(
+    "sticker",
+    None,
+    decode.optional(sticker_decoder()),
+  )
+  use venue <- decode.optional_field(
+    "venue",
+    None,
+    decode.optional(venue_decoder()),
+  )
+  use video <- decode.optional_field(
+    "video",
+    None,
+    decode.optional(video_decoder()),
+  )
+  decode.success(PollMedia(
+    animation: animation,
+    audio: audio,
+    document: document,
+    live_photo: live_photo,
+    location: location,
+    photo: photo,
+    sticker: sticker,
+    venue: venue,
+    video: video,
   ))
 }
 
-pub fn chat_boost_updated_decoder() -> decode.Decoder(ChatBoostUpdated) {
-  use chat <- decode.field("chat", chat_decoder())
-  use boost <- decode.field("boost", chat_boost_decoder())
-  decode.success(ChatBoostUpdated(chat: chat, boost: boost))
-}
-
-pub fn chat_boost_removed_decoder() -> decode.Decoder(ChatBoostRemoved) {
-  use chat <- decode.field("chat", chat_decoder())
-  use boost_id <- decode.field("boost_id", decode.string)
-  use remove_date <- decode.field("remove_date", decode.int)
-  use source <- decode.field("source", chat_boost_source_decoder())
-  decode.success(ChatBoostRemoved(
-    chat: chat,
-    boost_id: boost_id,
-    remove_date: remove_date,
-    source: source,
-  ))
-}
-
-pub fn chat_owner_left_decoder() -> decode.Decoder(ChatOwnerLeft) {
-  use new_owner <- decode.optional_field(
-    "new_owner",
+pub fn poll_option_decoder() -> decode.Decoder(PollOption) {
+  use persistent_id <- decode.field("persistent_id", decode.string)
+  use text <- decode.field("text", decode.string)
+  use text_entities <- decode.optional_field(
+    "text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(poll_media_decoder()),
+  )
+  use voter_count <- decode.field("voter_count", decode.int)
+  use added_by_user <- decode.optional_field(
+    "added_by_user",
     None,
     decode.optional(user_decoder()),
   )
-  decode.success(ChatOwnerLeft(new_owner: new_owner))
-}
-
-pub fn chat_owner_changed_decoder() -> decode.Decoder(ChatOwnerChanged) {
-  use new_owner <- decode.field("new_owner", user_decoder())
-  decode.success(ChatOwnerChanged(new_owner: new_owner))
-}
-
-pub fn user_chat_boosts_decoder() -> decode.Decoder(UserChatBoosts) {
-  use boosts <- decode.field("boosts", decode.list(chat_boost_decoder()))
-  decode.success(UserChatBoosts(boosts: boosts))
-}
-
-pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
-  use can_reply <- decode.optional_field(
-    "can_reply",
+  use added_by_chat <- decode.optional_field(
+    "added_by_chat",
     None,
-    decode.optional(decode.bool),
+    decode.optional(chat_decoder()),
   )
-  use can_read_messages <- decode.optional_field(
-    "can_read_messages",
+  use addition_date <- decode.optional_field(
+    "addition_date",
     None,
-    decode.optional(decode.bool),
+    decode.optional(decode.int),
   )
-  use can_delete_sent_messages <- decode.optional_field(
-    "can_delete_sent_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_delete_all_messages <- decode.optional_field(
-    "can_delete_all_messages",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_name <- decode.optional_field(
-    "can_edit_name",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_bio <- decode.optional_field(
-    "can_edit_bio",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_profile_photo <- decode.optional_field(
-    "can_edit_profile_photo",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_edit_username <- decode.optional_field(
-    "can_edit_username",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_change_gift_settings <- decode.optional_field(
-    "can_change_gift_settings",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_view_gifts_and_stars <- decode.optional_field(
-    "can_view_gifts_and_stars",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_convert_gifts_to_stars <- decode.optional_field(
-    "can_convert_gifts_to_stars",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_transfer_and_upgrade_gifts <- decode.optional_field(
-    "can_transfer_and_upgrade_gifts",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_transfer_stars <- decode.optional_field(
-    "can_transfer_stars",
-    None,
-    decode.optional(decode.bool),
-  )
-  use can_manage_stories <- decode.optional_field(
-    "can_manage_stories",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(BusinessBotRights(
-    can_reply: can_reply,
-    can_read_messages: can_read_messages,
-    can_delete_sent_messages: can_delete_sent_messages,
-    can_delete_all_messages: can_delete_all_messages,
-    can_edit_name: can_edit_name,
-    can_edit_bio: can_edit_bio,
-    can_edit_profile_photo: can_edit_profile_photo,
-    can_edit_username: can_edit_username,
-    can_change_gift_settings: can_change_gift_settings,
-    can_view_gifts_and_stars: can_view_gifts_and_stars,
-    can_convert_gifts_to_stars: can_convert_gifts_to_stars,
-    can_transfer_and_upgrade_gifts: can_transfer_and_upgrade_gifts,
-    can_transfer_stars: can_transfer_stars,
-    can_manage_stories: can_manage_stories,
+  decode.success(PollOption(
+    persistent_id: persistent_id,
+    text: text,
+    text_entities: text_entities,
+    media: media,
+    voter_count: voter_count,
+    added_by_user: added_by_user,
+    added_by_chat: added_by_chat,
+    addition_date: addition_date,
   ))
 }
 
-pub fn business_connection_decoder() -> decode.Decoder(BusinessConnection) {
-  use id <- decode.field("id", decode.string)
-  use user <- decode.field("user", user_decoder())
-  use user_chat_id <- decode.field("user_chat_id", decode.int)
-  use date <- decode.field("date", decode.int)
-  use rights <- decode.optional_field(
-    "rights",
+pub fn poll_option_added_decoder() -> decode.Decoder(PollOptionAdded) {
+  use poll_message <- decode.optional_field(
+    "poll_message",
     None,
-    decode.optional(business_bot_rights_decoder()),
+    decode.optional(maybe_inaccessible_message_decoder()),
   )
-  use is_enabled <- decode.field("is_enabled", decode.bool)
-  decode.success(BusinessConnection(
-    id: id,
-    user: user,
-    user_chat_id: user_chat_id,
-    date: date,
-    rights: rights,
-    is_enabled: is_enabled,
-  ))
-}
-
-pub fn business_messages_deleted_decoder() -> decode.Decoder(
-  BusinessMessagesDeleted,
-) {
-  use business_connection_id <- decode.field(
-    "business_connection_id",
+  use option_persistent_id <- decode.field(
+    "option_persistent_id",
     decode.string,
   )
-  use chat <- decode.field("chat", chat_decoder())
-  use message_ids <- decode.field("message_ids", decode.list(decode.int))
-  decode.success(BusinessMessagesDeleted(
-    business_connection_id: business_connection_id,
-    chat: chat,
-    message_ids: message_ids,
+  use option_text <- decode.field("option_text", decode.string)
+  use option_text_entities <- decode.optional_field(
+    "option_text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  decode.success(PollOptionAdded(
+    poll_message: poll_message,
+    option_persistent_id: option_persistent_id,
+    option_text: option_text,
+    option_text_entities: option_text_entities,
   ))
 }
 
-pub fn sent_web_app_message_decoder() -> decode.Decoder(SentWebAppMessage) {
-  use inline_message_id <- decode.optional_field(
-    "inline_message_id",
+pub fn poll_option_deleted_decoder() -> decode.Decoder(PollOptionDeleted) {
+  use poll_message <- decode.optional_field(
+    "poll_message",
+    None,
+    decode.optional(maybe_inaccessible_message_decoder()),
+  )
+  use option_persistent_id <- decode.field(
+    "option_persistent_id",
+    decode.string,
+  )
+  use option_text <- decode.field("option_text", decode.string)
+  use option_text_entities <- decode.optional_field(
+    "option_text_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  decode.success(PollOptionDeleted(
+    poll_message: poll_message,
+    option_persistent_id: option_persistent_id,
+    option_text: option_text,
+    option_text_entities: option_text_entities,
+  ))
+}
+
+pub fn pre_checkout_query_decoder() -> decode.Decoder(PreCheckoutQuery) {
+  use id <- decode.field("id", decode.string)
+  use from <- decode.field("from", user_decoder())
+  use currency <- decode.field("currency", decode.string)
+  use total_amount <- decode.field("total_amount", decode.int)
+  use invoice_payload <- decode.field("invoice_payload", decode.string)
+  use shipping_option_id <- decode.optional_field(
+    "shipping_option_id",
     None,
     decode.optional(decode.string),
   )
-  decode.success(SentWebAppMessage(inline_message_id: inline_message_id))
-}
-
-pub fn sent_guest_message_decoder() -> decode.Decoder(SentGuestMessage) {
-  use inline_message_id <- decode.field("inline_message_id", decode.string)
-  decode.success(SentGuestMessage(inline_message_id: inline_message_id))
+  use order_info <- decode.optional_field(
+    "order_info",
+    None,
+    decode.optional(order_info_decoder()),
+  )
+  decode.success(PreCheckoutQuery(
+    id: id,
+    from: from,
+    currency: currency,
+    total_amount: total_amount,
+    invoice_payload: invoice_payload,
+    shipping_option_id: shipping_option_id,
+    order_info: order_info,
+  ))
 }
 
 pub fn prepared_inline_message_decoder() -> decode.Decoder(
@@ -5731,6 +6778,177 @@ pub fn prepared_keyboard_button_decoder() -> decode.Decoder(
 ) {
   use id <- decode.field("id", decode.string)
   decode.success(PreparedKeyboardButton(id: id))
+}
+
+pub fn proximity_alert_triggered_decoder() -> decode.Decoder(
+  ProximityAlertTriggered,
+) {
+  use traveler <- decode.field("traveler", user_decoder())
+  use watcher <- decode.field("watcher", user_decoder())
+  use distance <- decode.field("distance", decode.int)
+  decode.success(ProximityAlertTriggered(
+    traveler: traveler,
+    watcher: watcher,
+    distance: distance,
+  ))
+}
+
+pub fn reaction_count_decoder() -> decode.Decoder(ReactionCount) {
+  use type_ <- decode.field("type", reaction_type_decoder())
+  use total_count <- decode.field("total_count", decode.int)
+  decode.success(ReactionCount(type_: type_, total_count: total_count))
+}
+
+pub fn reaction_type_custom_emoji_decoder() -> decode.Decoder(
+  ReactionTypeCustomEmoji,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use custom_emoji_id <- decode.field("custom_emoji_id", decode.string)
+  decode.success(ReactionTypeCustomEmoji(
+    type_: type_,
+    custom_emoji_id: custom_emoji_id,
+  ))
+}
+
+pub fn reaction_type_emoji_decoder() -> decode.Decoder(ReactionTypeEmoji) {
+  use type_ <- decode.field("type", decode.string)
+  use emoji <- decode.field("emoji", decode.string)
+  decode.success(ReactionTypeEmoji(type_: type_, emoji: emoji))
+}
+
+pub fn reaction_type_paid_decoder() -> decode.Decoder(ReactionTypePaid) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(ReactionTypePaid(type_: type_))
+}
+
+pub fn refunded_payment_decoder() -> decode.Decoder(RefundedPayment) {
+  use currency <- decode.field("currency", decode.string)
+  use total_amount <- decode.field("total_amount", decode.int)
+  use invoice_payload <- decode.field("invoice_payload", decode.string)
+  use telegram_payment_charge_id <- decode.field(
+    "telegram_payment_charge_id",
+    decode.string,
+  )
+  use provider_payment_charge_id <- decode.optional_field(
+    "provider_payment_charge_id",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(RefundedPayment(
+    currency: currency,
+    total_amount: total_amount,
+    invoice_payload: invoice_payload,
+    telegram_payment_charge_id: telegram_payment_charge_id,
+    provider_payment_charge_id: provider_payment_charge_id,
+  ))
+}
+
+pub fn reply_keyboard_markup_decoder() -> decode.Decoder(ReplyKeyboardMarkup) {
+  use keyboard <- decode.field(
+    "keyboard",
+    decode.list(decode.list(keyboard_button_decoder())),
+  )
+  use is_persistent <- decode.optional_field(
+    "is_persistent",
+    None,
+    decode.optional(decode.bool),
+  )
+  use resize_keyboard <- decode.optional_field(
+    "resize_keyboard",
+    None,
+    decode.optional(decode.bool),
+  )
+  use one_time_keyboard <- decode.optional_field(
+    "one_time_keyboard",
+    None,
+    decode.optional(decode.bool),
+  )
+  use input_field_placeholder <- decode.optional_field(
+    "input_field_placeholder",
+    None,
+    decode.optional(decode.string),
+  )
+  use selective <- decode.optional_field(
+    "selective",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ReplyKeyboardMarkup(
+    keyboard: keyboard,
+    is_persistent: is_persistent,
+    resize_keyboard: resize_keyboard,
+    one_time_keyboard: one_time_keyboard,
+    input_field_placeholder: input_field_placeholder,
+    selective: selective,
+  ))
+}
+
+pub fn reply_keyboard_remove_decoder() -> decode.Decoder(ReplyKeyboardRemove) {
+  use remove_keyboard <- decode.field("remove_keyboard", decode.bool)
+  use selective <- decode.optional_field(
+    "selective",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(ReplyKeyboardRemove(
+    remove_keyboard: remove_keyboard,
+    selective: selective,
+  ))
+}
+
+pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
+  use message_id <- decode.field("message_id", decode.int)
+  use chat_id <- decode.optional_field(
+    "chat_id",
+    None,
+    decode.optional(int_or_string_decoder()),
+  )
+  use allow_sending_without_reply <- decode.optional_field(
+    "allow_sending_without_reply",
+    None,
+    decode.optional(decode.bool),
+  )
+  use quote <- decode.optional_field(
+    "quote",
+    None,
+    decode.optional(decode.string),
+  )
+  use quote_parse_mode <- decode.optional_field(
+    "quote_parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use quote_entities <- decode.optional_field(
+    "quote_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use quote_position <- decode.optional_field(
+    "quote_position",
+    None,
+    decode.optional(decode.int),
+  )
+  use checklist_task_id <- decode.optional_field(
+    "checklist_task_id",
+    None,
+    decode.optional(decode.int),
+  )
+  use poll_option_id <- decode.optional_field(
+    "poll_option_id",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(ReplyParameters(
+    message_id: message_id,
+    chat_id: chat_id,
+    allow_sending_without_reply: allow_sending_without_reply,
+    quote: quote,
+    quote_parse_mode: quote_parse_mode,
+    quote_entities: quote_entities,
+    quote_position: quote_position,
+    checklist_task_id: checklist_task_id,
+    poll_option_id: poll_option_id,
+  ))
 }
 
 pub fn response_parameters_decoder() -> decode.Decoder(ResponseParameters) {
@@ -5750,511 +6968,163 @@ pub fn response_parameters_decoder() -> decode.Decoder(ResponseParameters) {
   ))
 }
 
-pub fn input_media_photo_decoder() -> decode.Decoder(InputMediaPhoto) {
+pub fn revenue_withdrawal_state_failed_decoder() -> decode.Decoder(
+  RevenueWithdrawalStateFailed,
+) {
   use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_spoiler <- decode.optional_field(
-    "has_spoiler",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputMediaPhoto(
+  decode.success(RevenueWithdrawalStateFailed(type_: type_))
+}
+
+pub fn revenue_withdrawal_state_pending_decoder() -> decode.Decoder(
+  RevenueWithdrawalStatePending,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(RevenueWithdrawalStatePending(type_: type_))
+}
+
+pub fn revenue_withdrawal_state_succeeded_decoder() -> decode.Decoder(
+  RevenueWithdrawalStateSucceeded,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use date <- decode.field("date", decode.int)
+  use url <- decode.field("url", decode.string)
+  decode.success(RevenueWithdrawalStateSucceeded(
     type_: type_,
-    media: media,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    has_spoiler: has_spoiler,
+    date: date,
+    url: url,
   ))
 }
 
-pub fn input_media_video_decoder() -> decode.Decoder(InputMediaVideo) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(decode.string),
-  )
-  use cover <- decode.optional_field(
-    "cover",
-    None,
-    decode.optional(decode.string),
-  )
-  use start_timestamp <- decode.optional_field(
-    "start_timestamp",
-    None,
-    decode.optional(decode.int),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use width <- decode.optional_field("width", None, decode.optional(decode.int))
-  use height <- decode.optional_field(
-    "height",
-    None,
-    decode.optional(decode.int),
-  )
-  use duration <- decode.optional_field(
-    "duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use supports_streaming <- decode.optional_field(
-    "supports_streaming",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_spoiler <- decode.optional_field(
-    "has_spoiler",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputMediaVideo(
-    type_: type_,
-    media: media,
-    thumbnail: thumbnail,
-    cover: cover,
-    start_timestamp: start_timestamp,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    width: width,
-    height: height,
-    duration: duration,
-    supports_streaming: supports_streaming,
-    has_spoiler: has_spoiler,
-  ))
+pub fn sent_guest_message_decoder() -> decode.Decoder(SentGuestMessage) {
+  use inline_message_id <- decode.field("inline_message_id", decode.string)
+  decode.success(SentGuestMessage(inline_message_id: inline_message_id))
 }
 
-pub fn input_media_animation_decoder() -> decode.Decoder(InputMediaAnimation) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
+pub fn sent_web_app_message_decoder() -> decode.Decoder(SentWebAppMessage) {
+  use inline_message_id <- decode.optional_field(
+    "inline_message_id",
     None,
     decode.optional(decode.string),
   )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use width <- decode.optional_field("width", None, decode.optional(decode.int))
-  use height <- decode.optional_field(
-    "height",
-    None,
-    decode.optional(decode.int),
-  )
-  use duration <- decode.optional_field(
-    "duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use has_spoiler <- decode.optional_field(
-    "has_spoiler",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputMediaAnimation(
-    type_: type_,
-    media: media,
-    thumbnail: thumbnail,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    width: width,
-    height: height,
-    duration: duration,
-    has_spoiler: has_spoiler,
-  ))
+  decode.success(SentWebAppMessage(inline_message_id: inline_message_id))
 }
 
-pub fn input_media_audio_decoder() -> decode.Decoder(InputMediaAudio) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
+pub fn shared_user_decoder() -> decode.Decoder(SharedUser) {
+  use user_id <- decode.field("user_id", decode.int)
+  use first_name <- decode.optional_field(
+    "first_name",
     None,
     decode.optional(decode.string),
   )
-  use caption <- decode.optional_field(
-    "caption",
+  use last_name <- decode.optional_field(
+    "last_name",
     None,
     decode.optional(decode.string),
   )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
+  use username <- decode.optional_field(
+    "username",
     None,
     decode.optional(decode.string),
   )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
+  use photo <- decode.optional_field(
+    "photo",
     None,
-    decode.optional(decode.list(message_entity_decoder())),
+    decode.optional(decode.list(photo_size_decoder())),
   )
-  use duration <- decode.optional_field(
-    "duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use performer <- decode.optional_field(
-    "performer",
-    None,
-    decode.optional(decode.string),
-  )
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InputMediaAudio(
-    type_: type_,
-    media: media,
-    thumbnail: thumbnail,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    duration: duration,
-    performer: performer,
-    title: title,
-  ))
-}
-
-pub fn input_media_document_decoder() -> decode.Decoder(InputMediaDocument) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use disable_content_type_detection <- decode.optional_field(
-    "disable_content_type_detection",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputMediaDocument(
-    type_: type_,
-    media: media,
-    thumbnail: thumbnail,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    disable_content_type_detection: disable_content_type_detection,
-  ))
-}
-
-pub fn input_media_live_photo_decoder() -> decode.Decoder(InputMediaLivePhoto) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use photo <- decode.field("photo", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use has_spoiler <- decode.optional_field(
-    "has_spoiler",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputMediaLivePhoto(
-    type_: type_,
-    media: media,
+  decode.success(SharedUser(
+    user_id: user_id,
+    first_name: first_name,
+    last_name: last_name,
+    username: username,
     photo: photo,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    has_spoiler: has_spoiler,
   ))
 }
 
-pub fn input_media_location_decoder() -> decode.Decoder(InputMediaLocation) {
-  use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use horizontal_accuracy <- decode.optional_field(
-    "horizontal_accuracy",
-    None,
-    decode.optional(decode.float),
-  )
-  decode.success(InputMediaLocation(
-    type_: type_,
-    latitude: latitude,
-    longitude: longitude,
-    horizontal_accuracy: horizontal_accuracy,
+pub fn shipping_address_decoder() -> decode.Decoder(ShippingAddress) {
+  use country_code <- decode.field("country_code", decode.string)
+  use state <- decode.field("state", decode.string)
+  use city <- decode.field("city", decode.string)
+  use street_line1 <- decode.field("street_line1", decode.string)
+  use street_line2 <- decode.field("street_line2", decode.string)
+  use post_code <- decode.field("post_code", decode.string)
+  decode.success(ShippingAddress(
+    country_code: country_code,
+    state: state,
+    city: city,
+    street_line1: street_line1,
+    street_line2: street_line2,
+    post_code: post_code,
   ))
 }
 
-pub fn input_media_sticker_decoder() -> decode.Decoder(InputMediaSticker) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use emoji <- decode.optional_field(
-    "emoji",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InputMediaSticker(type_: type_, media: media, emoji: emoji))
-}
-
-pub fn input_media_venue_decoder() -> decode.Decoder(InputMediaVenue) {
-  use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+pub fn shipping_option_decoder() -> decode.Decoder(ShippingOption) {
+  use id <- decode.field("id", decode.string)
   use title <- decode.field("title", decode.string)
-  use address <- decode.field("address", decode.string)
-  use foursquare_id <- decode.optional_field(
-    "foursquare_id",
-    None,
-    decode.optional(decode.string),
+  use prices <- decode.field("prices", decode.list(labeled_price_decoder()))
+  decode.success(ShippingOption(id: id, title: title, prices: prices))
+}
+
+pub fn shipping_query_decoder() -> decode.Decoder(ShippingQuery) {
+  use id <- decode.field("id", decode.string)
+  use from <- decode.field("from", user_decoder())
+  use invoice_payload <- decode.field("invoice_payload", decode.string)
+  use shipping_address <- decode.field(
+    "shipping_address",
+    shipping_address_decoder(),
   )
-  use foursquare_type <- decode.optional_field(
-    "foursquare_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_id <- decode.optional_field(
-    "google_place_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_type <- decode.optional_field(
-    "google_place_type",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InputMediaVenue(
-    type_: type_,
-    latitude: latitude,
-    longitude: longitude,
-    title: title,
-    address: address,
-    foursquare_id: foursquare_id,
-    foursquare_type: foursquare_type,
-    google_place_id: google_place_id,
-    google_place_type: google_place_type,
+  decode.success(ShippingQuery(
+    id: id,
+    from: from,
+    invoice_payload: invoice_payload,
+    shipping_address: shipping_address,
   ))
 }
 
-pub fn input_paid_media_live_photo_decoder() -> decode.Decoder(
-  InputPaidMediaLivePhoto,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use photo <- decode.field("photo", decode.string)
-  decode.success(InputPaidMediaLivePhoto(
-    type_: type_,
-    media: media,
-    photo: photo,
-  ))
-}
-
-pub fn input_paid_media_photo_decoder() -> decode.Decoder(InputPaidMediaPhoto) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  decode.success(InputPaidMediaPhoto(type_: type_, media: media))
-}
-
-pub fn input_paid_media_video_decoder() -> decode.Decoder(InputPaidMediaVideo) {
-  use type_ <- decode.field("type", decode.string)
-  use media <- decode.field("media", decode.string)
-  use thumbnail <- decode.optional_field(
-    "thumbnail",
-    None,
-    decode.optional(decode.string),
-  )
-  use cover <- decode.optional_field(
-    "cover",
-    None,
-    decode.optional(decode.string),
-  )
-  use start_timestamp <- decode.optional_field(
-    "start_timestamp",
+pub fn star_amount_decoder() -> decode.Decoder(StarAmount) {
+  use amount <- decode.field("amount", decode.int)
+  use nanostar_amount <- decode.optional_field(
+    "nanostar_amount",
     None,
     decode.optional(decode.int),
   )
-  use width <- decode.optional_field("width", None, decode.optional(decode.int))
-  use height <- decode.optional_field(
-    "height",
+  decode.success(StarAmount(amount: amount, nanostar_amount: nanostar_amount))
+}
+
+pub fn star_transaction_decoder() -> decode.Decoder(StarTransaction) {
+  use id <- decode.field("id", decode.string)
+  use amount <- decode.field("amount", decode.int)
+  use nanostar_amount <- decode.optional_field(
+    "nanostar_amount",
     None,
     decode.optional(decode.int),
   )
-  use duration <- decode.optional_field(
-    "duration",
+  use date <- decode.field("date", decode.int)
+  use source <- decode.optional_field(
+    "source",
     None,
-    decode.optional(decode.int),
+    decode.optional(transaction_partner_decoder()),
   )
-  use supports_streaming <- decode.optional_field(
-    "supports_streaming",
+  use receiver <- decode.optional_field(
+    "receiver",
     None,
-    decode.optional(decode.bool),
+    decode.optional(transaction_partner_decoder()),
   )
-  decode.success(InputPaidMediaVideo(
-    type_: type_,
-    media: media,
-    thumbnail: thumbnail,
-    cover: cover,
-    start_timestamp: start_timestamp,
-    width: width,
-    height: height,
-    duration: duration,
-    supports_streaming: supports_streaming,
+  decode.success(StarTransaction(
+    id: id,
+    amount: amount,
+    nanostar_amount: nanostar_amount,
+    date: date,
+    source: source,
+    receiver: receiver,
   ))
 }
 
-pub fn input_profile_photo_static_decoder() -> decode.Decoder(
-  InputProfilePhotoStatic,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use photo <- decode.field("photo", decode.string)
-  decode.success(InputProfilePhotoStatic(type_: type_, photo: photo))
-}
-
-pub fn input_profile_photo_animated_decoder() -> decode.Decoder(
-  InputProfilePhotoAnimated,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use animation <- decode.field("animation", decode.string)
-  use main_frame_timestamp <- decode.optional_field(
-    "main_frame_timestamp",
-    None,
-    decode.optional(decode.float),
+pub fn star_transactions_decoder() -> decode.Decoder(StarTransactions) {
+  use transactions <- decode.field(
+    "transactions",
+    decode.list(star_transaction_decoder()),
   )
-  decode.success(InputProfilePhotoAnimated(
-    type_: type_,
-    animation: animation,
-    main_frame_timestamp: main_frame_timestamp,
-  ))
-}
-
-pub fn input_story_content_decoder() -> decode.Decoder(InputStoryContent) {
-  use type_ <- decode.field("type", decode.string)
-  use photo <- decode.field("photo", decode.string)
-  decode.success(InputStoryContent(type_: type_, photo: photo))
-}
-
-pub fn input_story_content_photo_decoder() -> decode.Decoder(
-  InputStoryContentPhoto,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use photo <- decode.field("photo", decode.string)
-  decode.success(InputStoryContentPhoto(type_: type_, photo: photo))
-}
-
-pub fn input_story_content_video_decoder() -> decode.Decoder(
-  InputStoryContentVideo,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use video <- decode.field("video", decode.string)
-  use duration <- decode.optional_field(
-    "duration",
-    None,
-    decode.optional(decode.float),
-  )
-  use cover_frame_timestamp <- decode.optional_field(
-    "cover_frame_timestamp",
-    None,
-    decode.optional(decode.float),
-  )
-  use is_animation <- decode.optional_field(
-    "is_animation",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputStoryContentVideo(
-    type_: type_,
-    video: video,
-    duration: duration,
-    cover_frame_timestamp: cover_frame_timestamp,
-    is_animation: is_animation,
-  ))
+  decode.success(StarTransactions(transactions: transactions))
 }
 
 pub fn sticker_decoder() -> decode.Decoder(Sticker) {
@@ -6343,1569 +7213,105 @@ pub fn sticker_set_decoder() -> decode.Decoder(StickerSet) {
   ))
 }
 
-pub fn mask_position_decoder() -> decode.Decoder(MaskPosition) {
-  use point <- decode.field("point", decode.string)
-  use x_shift <- decode.field("x_shift", decode.float)
-  use y_shift <- decode.field("y_shift", decode.float)
-  use scale <- decode.field("scale", decode.float)
-  decode.success(MaskPosition(
-    point: point,
-    x_shift: x_shift,
-    y_shift: y_shift,
-    scale: scale,
+pub fn story_decoder() -> decode.Decoder(Story) {
+  use chat <- decode.field("chat", chat_decoder())
+  use id <- decode.field("id", decode.int)
+  decode.success(Story(chat: chat, id: id))
+}
+
+pub fn story_area_decoder() -> decode.Decoder(StoryArea) {
+  use position <- decode.field("position", story_area_position_decoder())
+  use type_ <- decode.field("type", story_area_type_decoder())
+  decode.success(StoryArea(position: position, type_: type_))
+}
+
+pub fn story_area_position_decoder() -> decode.Decoder(StoryAreaPosition) {
+  use x_percentage <- decode.field("x_percentage", decode.float)
+  use y_percentage <- decode.field("y_percentage", decode.float)
+  use width_percentage <- decode.field("width_percentage", decode.float)
+  use height_percentage <- decode.field("height_percentage", decode.float)
+  use rotation_angle <- decode.field("rotation_angle", decode.float)
+  use corner_radius_percentage <- decode.field(
+    "corner_radius_percentage",
+    decode.float,
+  )
+  decode.success(StoryAreaPosition(
+    x_percentage: x_percentage,
+    y_percentage: y_percentage,
+    width_percentage: width_percentage,
+    height_percentage: height_percentage,
+    rotation_angle: rotation_angle,
+    corner_radius_percentage: corner_radius_percentage,
   ))
 }
 
-pub fn input_sticker_decoder() -> decode.Decoder(InputSticker) {
-  use sticker <- decode.field("sticker", decode.string)
-  use format <- decode.field("format", decode.string)
-  use emoji_list <- decode.field("emoji_list", decode.list(decode.string))
-  use mask_position <- decode.optional_field(
-    "mask_position",
-    None,
-    decode.optional(mask_position_decoder()),
-  )
-  use keywords <- decode.optional_field(
-    "keywords",
-    None,
-    decode.optional(decode.list(decode.string)),
-  )
-  decode.success(InputSticker(
-    sticker: sticker,
-    format: format,
-    emoji_list: emoji_list,
-    mask_position: mask_position,
-    keywords: keywords,
-  ))
+pub fn story_area_type_link_decoder() -> decode.Decoder(StoryAreaTypeLink) {
+  use type_ <- decode.field("type", decode.string)
+  use url <- decode.field("url", decode.string)
+  decode.success(StoryAreaTypeLink(type_: type_, url: url))
 }
 
-pub fn inline_query_decoder() -> decode.Decoder(InlineQuery) {
-  use id <- decode.field("id", decode.string)
-  use from <- decode.field("from", user_decoder())
-  use query <- decode.field("query", decode.string)
-  use offset <- decode.field("offset", decode.string)
-  use chat_type <- decode.optional_field(
-    "chat_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use location <- decode.optional_field(
-    "location",
-    None,
-    decode.optional(location_decoder()),
-  )
-  decode.success(InlineQuery(
-    id: id,
-    from: from,
-    query: query,
-    offset: offset,
-    chat_type: chat_type,
-    location: location,
-  ))
-}
-
-pub fn inline_query_results_button_decoder() -> decode.Decoder(
-  InlineQueryResultsButton,
-) {
-  use text <- decode.field("text", decode.string)
-  use web_app <- decode.optional_field(
-    "web_app",
-    None,
-    decode.optional(web_app_info_decoder()),
-  )
-  use start_parameter <- decode.optional_field(
-    "start_parameter",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InlineQueryResultsButton(
-    text: text,
-    web_app: web_app,
-    start_parameter: start_parameter,
-  ))
-}
-
-pub fn inline_query_result_article_decoder() -> decode.Decoder(
-  InlineQueryResultArticle,
+pub fn story_area_type_location_decoder() -> decode.Decoder(
+  StoryAreaTypeLocation,
 ) {
   use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use input_message_content <- decode.field(
-    "input_message_content",
-    input_message_content_decoder(),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use url <- decode.optional_field("url", None, decode.optional(decode.string))
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_url <- decode.optional_field(
-    "thumbnail_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_width <- decode.optional_field(
-    "thumbnail_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_height <- decode.optional_field(
-    "thumbnail_height",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InlineQueryResultArticle(
-    type_: type_,
-    id: id,
-    title: title,
-    input_message_content: input_message_content,
-    reply_markup: reply_markup,
-    url: url,
-    description: description,
-    thumbnail_url: thumbnail_url,
-    thumbnail_width: thumbnail_width,
-    thumbnail_height: thumbnail_height,
-  ))
-}
-
-pub fn inline_query_result_photo_decoder() -> decode.Decoder(
-  InlineQueryResultPhoto,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use photo_url <- decode.field("photo_url", decode.string)
-  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
-  use photo_width <- decode.optional_field(
-    "photo_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use photo_height <- decode.optional_field(
-    "photo_height",
-    None,
-    decode.optional(decode.int),
-  )
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultPhoto(
-    type_: type_,
-    id: id,
-    photo_url: photo_url,
-    thumbnail_url: thumbnail_url,
-    photo_width: photo_width,
-    photo_height: photo_height,
-    title: title,
-    description: description,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_gif_decoder() -> decode.Decoder(InlineQueryResultGif) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use gif_url <- decode.field("gif_url", decode.string)
-  use gif_width <- decode.optional_field(
-    "gif_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use gif_height <- decode.optional_field(
-    "gif_height",
-    None,
-    decode.optional(decode.int),
-  )
-  use gif_duration <- decode.optional_field(
-    "gif_duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
-  use thumbnail_mime_type <- decode.optional_field(
-    "thumbnail_mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultGif(
-    type_: type_,
-    id: id,
-    gif_url: gif_url,
-    gif_width: gif_width,
-    gif_height: gif_height,
-    gif_duration: gif_duration,
-    thumbnail_url: thumbnail_url,
-    thumbnail_mime_type: thumbnail_mime_type,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_mpeg4_gif_decoder() -> decode.Decoder(
-  InlineQueryResultMpeg4Gif,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use mpeg4_url <- decode.field("mpeg4_url", decode.string)
-  use mpeg4_width <- decode.optional_field(
-    "mpeg4_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use mpeg4_height <- decode.optional_field(
-    "mpeg4_height",
-    None,
-    decode.optional(decode.int),
-  )
-  use mpeg4_duration <- decode.optional_field(
-    "mpeg4_duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
-  use thumbnail_mime_type <- decode.optional_field(
-    "thumbnail_mime_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultMpeg4Gif(
-    type_: type_,
-    id: id,
-    mpeg4_url: mpeg4_url,
-    mpeg4_width: mpeg4_width,
-    mpeg4_height: mpeg4_height,
-    mpeg4_duration: mpeg4_duration,
-    thumbnail_url: thumbnail_url,
-    thumbnail_mime_type: thumbnail_mime_type,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_video_decoder() -> decode.Decoder(
-  InlineQueryResultVideo,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use video_url <- decode.field("video_url", decode.string)
-  use mime_type <- decode.field("mime_type", decode.string)
-  use thumbnail_url <- decode.field("thumbnail_url", decode.string)
-  use title <- decode.field("title", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use video_width <- decode.optional_field(
-    "video_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use video_height <- decode.optional_field(
-    "video_height",
-    None,
-    decode.optional(decode.int),
-  )
-  use video_duration <- decode.optional_field(
-    "video_duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultVideo(
-    type_: type_,
-    id: id,
-    video_url: video_url,
-    mime_type: mime_type,
-    thumbnail_url: thumbnail_url,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    video_width: video_width,
-    video_height: video_height,
-    video_duration: video_duration,
-    description: description,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_audio_decoder() -> decode.Decoder(
-  InlineQueryResultAudio,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use audio_url <- decode.field("audio_url", decode.string)
-  use title <- decode.field("title", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use performer <- decode.optional_field(
-    "performer",
-    None,
-    decode.optional(decode.string),
-  )
-  use audio_duration <- decode.optional_field(
-    "audio_duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultAudio(
-    type_: type_,
-    id: id,
-    audio_url: audio_url,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    performer: performer,
-    audio_duration: audio_duration,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_voice_decoder() -> decode.Decoder(
-  InlineQueryResultVoice,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use voice_url <- decode.field("voice_url", decode.string)
-  use title <- decode.field("title", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use voice_duration <- decode.optional_field(
-    "voice_duration",
-    None,
-    decode.optional(decode.int),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultVoice(
-    type_: type_,
-    id: id,
-    voice_url: voice_url,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    voice_duration: voice_duration,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_document_decoder() -> decode.Decoder(
-  InlineQueryResultDocument,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use document_url <- decode.field("document_url", decode.string)
-  use mime_type <- decode.field("mime_type", decode.string)
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  use thumbnail_url <- decode.optional_field(
-    "thumbnail_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_width <- decode.optional_field(
-    "thumbnail_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_height <- decode.optional_field(
-    "thumbnail_height",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InlineQueryResultDocument(
-    type_: type_,
-    id: id,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    document_url: document_url,
-    mime_type: mime_type,
-    description: description,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-    thumbnail_url: thumbnail_url,
-    thumbnail_width: thumbnail_width,
-    thumbnail_height: thumbnail_height,
-  ))
-}
-
-pub fn inline_query_result_location_decoder() -> decode.Decoder(
-  InlineQueryResultLocation,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
   use latitude <- decode.field("latitude", decode.float)
   use longitude <- decode.field("longitude", decode.float)
-  use title <- decode.field("title", decode.string)
-  use horizontal_accuracy <- decode.optional_field(
-    "horizontal_accuracy",
+  use address <- decode.optional_field(
+    "address",
     None,
-    decode.optional(decode.float),
+    decode.optional(location_address_decoder()),
   )
-  use live_period <- decode.optional_field(
-    "live_period",
-    None,
-    decode.optional(decode.int),
-  )
-  use heading <- decode.optional_field(
-    "heading",
-    None,
-    decode.optional(decode.int),
-  )
-  use proximity_alert_radius <- decode.optional_field(
-    "proximity_alert_radius",
-    None,
-    decode.optional(decode.int),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  use thumbnail_url <- decode.optional_field(
-    "thumbnail_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_width <- decode.optional_field(
-    "thumbnail_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_height <- decode.optional_field(
-    "thumbnail_height",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InlineQueryResultLocation(
+  decode.success(StoryAreaTypeLocation(
     type_: type_,
-    id: id,
     latitude: latitude,
     longitude: longitude,
-    title: title,
-    horizontal_accuracy: horizontal_accuracy,
-    live_period: live_period,
-    heading: heading,
-    proximity_alert_radius: proximity_alert_radius,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-    thumbnail_url: thumbnail_url,
-    thumbnail_width: thumbnail_width,
-    thumbnail_height: thumbnail_height,
-  ))
-}
-
-pub fn inline_query_result_venue_decoder() -> decode.Decoder(
-  InlineQueryResultVenue,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use title <- decode.field("title", decode.string)
-  use address <- decode.field("address", decode.string)
-  use foursquare_id <- decode.optional_field(
-    "foursquare_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use foursquare_type <- decode.optional_field(
-    "foursquare_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_id <- decode.optional_field(
-    "google_place_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_type <- decode.optional_field(
-    "google_place_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  use thumbnail_url <- decode.optional_field(
-    "thumbnail_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_width <- decode.optional_field(
-    "thumbnail_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_height <- decode.optional_field(
-    "thumbnail_height",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InlineQueryResultVenue(
-    type_: type_,
-    id: id,
-    latitude: latitude,
-    longitude: longitude,
-    title: title,
     address: address,
-    foursquare_id: foursquare_id,
-    foursquare_type: foursquare_type,
-    google_place_id: google_place_id,
-    google_place_type: google_place_type,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-    thumbnail_url: thumbnail_url,
-    thumbnail_width: thumbnail_width,
-    thumbnail_height: thumbnail_height,
   ))
 }
 
-pub fn inline_query_result_contact_decoder() -> decode.Decoder(
-  InlineQueryResultContact,
+pub fn story_area_type_suggested_reaction_decoder() -> decode.Decoder(
+  StoryAreaTypeSuggestedReaction,
 ) {
   use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use phone_number <- decode.field("phone_number", decode.string)
-  use first_name <- decode.field("first_name", decode.string)
-  use last_name <- decode.optional_field(
-    "last_name",
+  use reaction_type <- decode.field("reaction_type", reaction_type_decoder())
+  use is_dark <- decode.optional_field(
+    "is_dark",
     None,
-    decode.optional(decode.string),
+    decode.optional(decode.bool),
   )
-  use vcard <- decode.optional_field(
-    "vcard",
+  use is_flipped <- decode.optional_field(
+    "is_flipped",
     None,
-    decode.optional(decode.string),
+    decode.optional(decode.bool),
   )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  use thumbnail_url <- decode.optional_field(
-    "thumbnail_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use thumbnail_width <- decode.optional_field(
-    "thumbnail_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use thumbnail_height <- decode.optional_field(
-    "thumbnail_height",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InlineQueryResultContact(
+  decode.success(StoryAreaTypeSuggestedReaction(
     type_: type_,
-    id: id,
-    phone_number: phone_number,
-    first_name: first_name,
-    last_name: last_name,
-    vcard: vcard,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-    thumbnail_url: thumbnail_url,
-    thumbnail_width: thumbnail_width,
-    thumbnail_height: thumbnail_height,
+    reaction_type: reaction_type,
+    is_dark: is_dark,
+    is_flipped: is_flipped,
   ))
 }
 
-pub fn inline_query_result_game_decoder() -> decode.Decoder(
-  InlineQueryResultGame,
+pub fn story_area_type_unique_gift_decoder() -> decode.Decoder(
+  StoryAreaTypeUniqueGift,
 ) {
   use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use game_short_name <- decode.field("game_short_name", decode.string)
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  decode.success(InlineQueryResultGame(
-    type_: type_,
-    id: id,
-    game_short_name: game_short_name,
-    reply_markup: reply_markup,
-  ))
+  use name <- decode.field("name", decode.string)
+  decode.success(StoryAreaTypeUniqueGift(type_: type_, name: name))
 }
 
-pub fn inline_query_result_cached_photo_decoder() -> decode.Decoder(
-  InlineQueryResultCachedPhoto,
-) {
+pub fn story_area_type_weather_decoder() -> decode.Decoder(StoryAreaTypeWeather) {
   use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use photo_file_id <- decode.field("photo_file_id", decode.string)
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedPhoto(
+  use temperature <- decode.field("temperature", decode.float)
+  use emoji <- decode.field("emoji", decode.string)
+  use background_color <- decode.field("background_color", decode.int)
+  decode.success(StoryAreaTypeWeather(
     type_: type_,
-    id: id,
-    photo_file_id: photo_file_id,
-    title: title,
-    description: description,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
+    temperature: temperature,
+    emoji: emoji,
+    background_color: background_color,
   ))
-}
-
-pub fn inline_query_result_cached_gif_decoder() -> decode.Decoder(
-  InlineQueryResultCachedGif,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use gif_file_id <- decode.field("gif_file_id", decode.string)
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedGif(
-    type_: type_,
-    id: id,
-    gif_file_id: gif_file_id,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_mpeg4_gif_decoder() -> decode.Decoder(
-  InlineQueryResultCachedMpeg4Gif,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use mpeg4_file_id <- decode.field("mpeg4_file_id", decode.string)
-  use title <- decode.optional_field(
-    "title",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedMpeg4Gif(
-    type_: type_,
-    id: id,
-    mpeg4_file_id: mpeg4_file_id,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_sticker_decoder() -> decode.Decoder(
-  InlineQueryResultCachedSticker,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use sticker_file_id <- decode.field("sticker_file_id", decode.string)
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedSticker(
-    type_: type_,
-    id: id,
-    sticker_file_id: sticker_file_id,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_document_decoder() -> decode.Decoder(
-  InlineQueryResultCachedDocument,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use document_file_id <- decode.field("document_file_id", decode.string)
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedDocument(
-    type_: type_,
-    id: id,
-    title: title,
-    document_file_id: document_file_id,
-    description: description,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_video_decoder() -> decode.Decoder(
-  InlineQueryResultCachedVideo,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use video_file_id <- decode.field("video_file_id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use description <- decode.optional_field(
-    "description",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use show_caption_above_media <- decode.optional_field(
-    "show_caption_above_media",
-    None,
-    decode.optional(decode.bool),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedVideo(
-    type_: type_,
-    id: id,
-    video_file_id: video_file_id,
-    title: title,
-    description: description,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    show_caption_above_media: show_caption_above_media,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_voice_decoder() -> decode.Decoder(
-  InlineQueryResultCachedVoice,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use voice_file_id <- decode.field("voice_file_id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedVoice(
-    type_: type_,
-    id: id,
-    voice_file_id: voice_file_id,
-    title: title,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn inline_query_result_cached_audio_decoder() -> decode.Decoder(
-  InlineQueryResultCachedAudio,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use id <- decode.field("id", decode.string)
-  use audio_file_id <- decode.field("audio_file_id", decode.string)
-  use caption <- decode.optional_field(
-    "caption",
-    None,
-    decode.optional(decode.string),
-  )
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use caption_entities <- decode.optional_field(
-    "caption_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use reply_markup <- decode.optional_field(
-    "reply_markup",
-    None,
-    decode.optional(inline_keyboard_markup_decoder()),
-  )
-  use input_message_content <- decode.optional_field(
-    "input_message_content",
-    None,
-    decode.optional(input_message_content_decoder()),
-  )
-  decode.success(InlineQueryResultCachedAudio(
-    type_: type_,
-    id: id,
-    audio_file_id: audio_file_id,
-    caption: caption,
-    parse_mode: parse_mode,
-    caption_entities: caption_entities,
-    reply_markup: reply_markup,
-    input_message_content: input_message_content,
-  ))
-}
-
-pub fn input_text_message_content_decoder() -> decode.Decoder(
-  InputTextMessageContent,
-) {
-  use message_text <- decode.field("message_text", decode.string)
-  use parse_mode <- decode.optional_field(
-    "parse_mode",
-    None,
-    decode.optional(decode.string),
-  )
-  use entities <- decode.optional_field(
-    "entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use link_preview_options <- decode.optional_field(
-    "link_preview_options",
-    None,
-    decode.optional(link_preview_options_decoder()),
-  )
-  decode.success(InputTextMessageContent(
-    message_text: message_text,
-    parse_mode: parse_mode,
-    entities: entities,
-    link_preview_options: link_preview_options,
-  ))
-}
-
-pub fn input_location_message_content_decoder() -> decode.Decoder(
-  InputLocationMessageContent,
-) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use horizontal_accuracy <- decode.optional_field(
-    "horizontal_accuracy",
-    None,
-    decode.optional(decode.float),
-  )
-  use live_period <- decode.optional_field(
-    "live_period",
-    None,
-    decode.optional(decode.int),
-  )
-  use heading <- decode.optional_field(
-    "heading",
-    None,
-    decode.optional(decode.int),
-  )
-  use proximity_alert_radius <- decode.optional_field(
-    "proximity_alert_radius",
-    None,
-    decode.optional(decode.int),
-  )
-  decode.success(InputLocationMessageContent(
-    latitude: latitude,
-    longitude: longitude,
-    horizontal_accuracy: horizontal_accuracy,
-    live_period: live_period,
-    heading: heading,
-    proximity_alert_radius: proximity_alert_radius,
-  ))
-}
-
-pub fn input_venue_message_content_decoder() -> decode.Decoder(
-  InputVenueMessageContent,
-) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
-  use title <- decode.field("title", decode.string)
-  use address <- decode.field("address", decode.string)
-  use foursquare_id <- decode.optional_field(
-    "foursquare_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use foursquare_type <- decode.optional_field(
-    "foursquare_type",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_id <- decode.optional_field(
-    "google_place_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use google_place_type <- decode.optional_field(
-    "google_place_type",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InputVenueMessageContent(
-    latitude: latitude,
-    longitude: longitude,
-    title: title,
-    address: address,
-    foursquare_id: foursquare_id,
-    foursquare_type: foursquare_type,
-    google_place_id: google_place_id,
-    google_place_type: google_place_type,
-  ))
-}
-
-pub fn input_contact_message_content_decoder() -> decode.Decoder(
-  InputContactMessageContent,
-) {
-  use phone_number <- decode.field("phone_number", decode.string)
-  use first_name <- decode.field("first_name", decode.string)
-  use last_name <- decode.optional_field(
-    "last_name",
-    None,
-    decode.optional(decode.string),
-  )
-  use vcard <- decode.optional_field(
-    "vcard",
-    None,
-    decode.optional(decode.string),
-  )
-  decode.success(InputContactMessageContent(
-    phone_number: phone_number,
-    first_name: first_name,
-    last_name: last_name,
-    vcard: vcard,
-  ))
-}
-
-pub fn input_invoice_message_content_decoder() -> decode.Decoder(
-  InputInvoiceMessageContent,
-) {
-  use title <- decode.field("title", decode.string)
-  use description <- decode.field("description", decode.string)
-  use payload <- decode.field("payload", decode.string)
-  use provider_token <- decode.optional_field(
-    "provider_token",
-    None,
-    decode.optional(decode.string),
-  )
-  use currency <- decode.field("currency", decode.string)
-  use prices <- decode.field("prices", decode.list(labeled_price_decoder()))
-  use max_tip_amount <- decode.optional_field(
-    "max_tip_amount",
-    None,
-    decode.optional(decode.int),
-  )
-  use suggested_tip_amounts <- decode.optional_field(
-    "suggested_tip_amounts",
-    None,
-    decode.optional(decode.list(decode.int)),
-  )
-  use provider_data <- decode.optional_field(
-    "provider_data",
-    None,
-    decode.optional(decode.string),
-  )
-  use photo_url <- decode.optional_field(
-    "photo_url",
-    None,
-    decode.optional(decode.string),
-  )
-  use photo_size <- decode.optional_field(
-    "photo_size",
-    None,
-    decode.optional(decode.int),
-  )
-  use photo_width <- decode.optional_field(
-    "photo_width",
-    None,
-    decode.optional(decode.int),
-  )
-  use photo_height <- decode.optional_field(
-    "photo_height",
-    None,
-    decode.optional(decode.int),
-  )
-  use need_name <- decode.optional_field(
-    "need_name",
-    None,
-    decode.optional(decode.bool),
-  )
-  use need_phone_number <- decode.optional_field(
-    "need_phone_number",
-    None,
-    decode.optional(decode.bool),
-  )
-  use need_email <- decode.optional_field(
-    "need_email",
-    None,
-    decode.optional(decode.bool),
-  )
-  use need_shipping_address <- decode.optional_field(
-    "need_shipping_address",
-    None,
-    decode.optional(decode.bool),
-  )
-  use send_phone_number_to_provider <- decode.optional_field(
-    "send_phone_number_to_provider",
-    None,
-    decode.optional(decode.bool),
-  )
-  use send_email_to_provider <- decode.optional_field(
-    "send_email_to_provider",
-    None,
-    decode.optional(decode.bool),
-  )
-  use is_flexible <- decode.optional_field(
-    "is_flexible",
-    None,
-    decode.optional(decode.bool),
-  )
-  decode.success(InputInvoiceMessageContent(
-    title: title,
-    description: description,
-    payload: payload,
-    provider_token: provider_token,
-    currency: currency,
-    prices: prices,
-    max_tip_amount: max_tip_amount,
-    suggested_tip_amounts: suggested_tip_amounts,
-    provider_data: provider_data,
-    photo_url: photo_url,
-    photo_size: photo_size,
-    photo_width: photo_width,
-    photo_height: photo_height,
-    need_name: need_name,
-    need_phone_number: need_phone_number,
-    need_email: need_email,
-    need_shipping_address: need_shipping_address,
-    send_phone_number_to_provider: send_phone_number_to_provider,
-    send_email_to_provider: send_email_to_provider,
-    is_flexible: is_flexible,
-  ))
-}
-
-pub fn chosen_inline_result_decoder() -> decode.Decoder(ChosenInlineResult) {
-  use result_id <- decode.field("result_id", decode.string)
-  use from <- decode.field("from", user_decoder())
-  use location <- decode.optional_field(
-    "location",
-    None,
-    decode.optional(location_decoder()),
-  )
-  use inline_message_id <- decode.optional_field(
-    "inline_message_id",
-    None,
-    decode.optional(decode.string),
-  )
-  use query <- decode.field("query", decode.string)
-  decode.success(ChosenInlineResult(
-    result_id: result_id,
-    from: from,
-    location: location,
-    inline_message_id: inline_message_id,
-    query: query,
-  ))
-}
-
-pub fn labeled_price_decoder() -> decode.Decoder(LabeledPrice) {
-  use label <- decode.field("label", decode.string)
-  use amount <- decode.field("amount", decode.int)
-  decode.success(LabeledPrice(label: label, amount: amount))
-}
-
-pub fn invoice_decoder() -> decode.Decoder(Invoice) {
-  use title <- decode.field("title", decode.string)
-  use description <- decode.field("description", decode.string)
-  use start_parameter <- decode.field("start_parameter", decode.string)
-  use currency <- decode.field("currency", decode.string)
-  use total_amount <- decode.field("total_amount", decode.int)
-  decode.success(Invoice(
-    title: title,
-    description: description,
-    start_parameter: start_parameter,
-    currency: currency,
-    total_amount: total_amount,
-  ))
-}
-
-pub fn shipping_address_decoder() -> decode.Decoder(ShippingAddress) {
-  use country_code <- decode.field("country_code", decode.string)
-  use state <- decode.field("state", decode.string)
-  use city <- decode.field("city", decode.string)
-  use street_line1 <- decode.field("street_line1", decode.string)
-  use street_line2 <- decode.field("street_line2", decode.string)
-  use post_code <- decode.field("post_code", decode.string)
-  decode.success(ShippingAddress(
-    country_code: country_code,
-    state: state,
-    city: city,
-    street_line1: street_line1,
-    street_line2: street_line2,
-    post_code: post_code,
-  ))
-}
-
-pub fn order_info_decoder() -> decode.Decoder(OrderInfo) {
-  use name <- decode.optional_field(
-    "name",
-    None,
-    decode.optional(decode.string),
-  )
-  use phone_number <- decode.optional_field(
-    "phone_number",
-    None,
-    decode.optional(decode.string),
-  )
-  use email <- decode.optional_field(
-    "email",
-    None,
-    decode.optional(decode.string),
-  )
-  use shipping_address <- decode.optional_field(
-    "shipping_address",
-    None,
-    decode.optional(shipping_address_decoder()),
-  )
-  decode.success(OrderInfo(
-    name: name,
-    phone_number: phone_number,
-    email: email,
-    shipping_address: shipping_address,
-  ))
-}
-
-pub fn shipping_option_decoder() -> decode.Decoder(ShippingOption) {
-  use id <- decode.field("id", decode.string)
-  use title <- decode.field("title", decode.string)
-  use prices <- decode.field("prices", decode.list(labeled_price_decoder()))
-  decode.success(ShippingOption(id: id, title: title, prices: prices))
 }
 
 pub fn successful_payment_decoder() -> decode.Decoder(SuccessfulPayment) {
@@ -7959,131 +7365,267 @@ pub fn successful_payment_decoder() -> decode.Decoder(SuccessfulPayment) {
   ))
 }
 
-pub fn refunded_payment_decoder() -> decode.Decoder(RefundedPayment) {
-  use currency <- decode.field("currency", decode.string)
-  use total_amount <- decode.field("total_amount", decode.int)
-  use invoice_payload <- decode.field("invoice_payload", decode.string)
-  use telegram_payment_charge_id <- decode.field(
-    "telegram_payment_charge_id",
-    decode.string,
+pub fn suggested_post_approval_failed_decoder() -> decode.Decoder(
+  SuggestedPostApprovalFailed,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
   )
-  use provider_payment_charge_id <- decode.optional_field(
-    "provider_payment_charge_id",
+  use price <- decode.field("price", suggested_post_price_decoder())
+  decode.success(SuggestedPostApprovalFailed(
+    suggested_post_message: suggested_post_message,
+    price: price,
+  ))
+}
+
+pub fn suggested_post_approved_decoder() -> decode.Decoder(
+  SuggestedPostApproved,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use price <- decode.optional_field(
+    "price",
+    None,
+    decode.optional(suggested_post_price_decoder()),
+  )
+  use send_date <- decode.field("send_date", decode.int)
+  decode.success(SuggestedPostApproved(
+    suggested_post_message: suggested_post_message,
+    price: price,
+    send_date: send_date,
+  ))
+}
+
+pub fn suggested_post_declined_decoder() -> decode.Decoder(
+  SuggestedPostDeclined,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use comment <- decode.optional_field(
+    "comment",
     None,
     decode.optional(decode.string),
   )
-  decode.success(RefundedPayment(
-    currency: currency,
-    total_amount: total_amount,
-    invoice_payload: invoice_payload,
-    telegram_payment_charge_id: telegram_payment_charge_id,
-    provider_payment_charge_id: provider_payment_charge_id,
+  decode.success(SuggestedPostDeclined(
+    suggested_post_message: suggested_post_message,
+    comment: comment,
   ))
 }
 
-pub fn shipping_query_decoder() -> decode.Decoder(ShippingQuery) {
-  use id <- decode.field("id", decode.string)
-  use from <- decode.field("from", user_decoder())
-  use invoice_payload <- decode.field("invoice_payload", decode.string)
-  use shipping_address <- decode.field(
-    "shipping_address",
-    shipping_address_decoder(),
-  )
-  decode.success(ShippingQuery(
-    id: id,
-    from: from,
-    invoice_payload: invoice_payload,
-    shipping_address: shipping_address,
-  ))
-}
-
-pub fn pre_checkout_query_decoder() -> decode.Decoder(PreCheckoutQuery) {
-  use id <- decode.field("id", decode.string)
-  use from <- decode.field("from", user_decoder())
-  use currency <- decode.field("currency", decode.string)
-  use total_amount <- decode.field("total_amount", decode.int)
-  use invoice_payload <- decode.field("invoice_payload", decode.string)
-  use shipping_option_id <- decode.optional_field(
-    "shipping_option_id",
+pub fn suggested_post_info_decoder() -> decode.Decoder(SuggestedPostInfo) {
+  use state <- decode.field("state", decode.string)
+  use price <- decode.optional_field(
+    "price",
     None,
-    decode.optional(decode.string),
+    decode.optional(suggested_post_price_decoder()),
   )
-  use order_info <- decode.optional_field(
-    "order_info",
-    None,
-    decode.optional(order_info_decoder()),
-  )
-  decode.success(PreCheckoutQuery(
-    id: id,
-    from: from,
-    currency: currency,
-    total_amount: total_amount,
-    invoice_payload: invoice_payload,
-    shipping_option_id: shipping_option_id,
-    order_info: order_info,
-  ))
-}
-
-pub fn paid_media_purchased_decoder() -> decode.Decoder(PaidMediaPurchased) {
-  use from <- decode.field("from", user_decoder())
-  use paid_media_payload <- decode.field("paid_media_payload", decode.string)
-  decode.success(PaidMediaPurchased(
-    from: from,
-    paid_media_payload: paid_media_payload,
-  ))
-}
-
-pub fn revenue_withdrawal_state_pending_decoder() -> decode.Decoder(
-  RevenueWithdrawalStatePending,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(RevenueWithdrawalStatePending(type_: type_))
-}
-
-pub fn revenue_withdrawal_state_succeeded_decoder() -> decode.Decoder(
-  RevenueWithdrawalStateSucceeded,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use date <- decode.field("date", decode.int)
-  use url <- decode.field("url", decode.string)
-  decode.success(RevenueWithdrawalStateSucceeded(
-    type_: type_,
-    date: date,
-    url: url,
-  ))
-}
-
-pub fn revenue_withdrawal_state_failed_decoder() -> decode.Decoder(
-  RevenueWithdrawalStateFailed,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(RevenueWithdrawalStateFailed(type_: type_))
-}
-
-pub fn affiliate_info_decoder() -> decode.Decoder(AffiliateInfo) {
-  use affiliate_user <- decode.optional_field(
-    "affiliate_user",
-    None,
-    decode.optional(user_decoder()),
-  )
-  use affiliate_chat <- decode.optional_field(
-    "affiliate_chat",
-    None,
-    decode.optional(chat_decoder()),
-  )
-  use commission_per_mille <- decode.field("commission_per_mille", decode.int)
-  use amount <- decode.field("amount", decode.int)
-  use nanostar_amount <- decode.optional_field(
-    "nanostar_amount",
+  use send_date <- decode.optional_field(
+    "send_date",
     None,
     decode.optional(decode.int),
   )
-  decode.success(AffiliateInfo(
-    affiliate_user: affiliate_user,
-    affiliate_chat: affiliate_chat,
-    commission_per_mille: commission_per_mille,
+  decode.success(SuggestedPostInfo(
+    state: state,
+    price: price,
+    send_date: send_date,
+  ))
+}
+
+pub fn suggested_post_paid_decoder() -> decode.Decoder(SuggestedPostPaid) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use currency <- decode.field("currency", decode.string)
+  use amount <- decode.optional_field(
+    "amount",
+    None,
+    decode.optional(decode.int),
+  )
+  use star_amount <- decode.optional_field(
+    "star_amount",
+    None,
+    decode.optional(star_amount_decoder()),
+  )
+  decode.success(SuggestedPostPaid(
+    suggested_post_message: suggested_post_message,
+    currency: currency,
     amount: amount,
-    nanostar_amount: nanostar_amount,
+    star_amount: star_amount,
+  ))
+}
+
+pub fn suggested_post_parameters_decoder() -> decode.Decoder(
+  SuggestedPostParameters,
+) {
+  use price <- decode.optional_field(
+    "price",
+    None,
+    decode.optional(suggested_post_price_decoder()),
+  )
+  use send_date <- decode.optional_field(
+    "send_date",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(SuggestedPostParameters(price: price, send_date: send_date))
+}
+
+pub fn suggested_post_price_decoder() -> decode.Decoder(SuggestedPostPrice) {
+  use currency <- decode.field("currency", decode.string)
+  use amount <- decode.field("amount", decode.int)
+  decode.success(SuggestedPostPrice(currency: currency, amount: amount))
+}
+
+pub fn suggested_post_refunded_decoder() -> decode.Decoder(
+  SuggestedPostRefunded,
+) {
+  use suggested_post_message <- decode.optional_field(
+    "suggested_post_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use reason <- decode.field("reason", decode.string)
+  decode.success(SuggestedPostRefunded(
+    suggested_post_message: suggested_post_message,
+    reason: reason,
+  ))
+}
+
+pub fn switch_inline_query_chosen_chat_decoder() -> decode.Decoder(
+  SwitchInlineQueryChosenChat,
+) {
+  use query <- decode.optional_field(
+    "query",
+    None,
+    decode.optional(decode.string),
+  )
+  use allow_user_chats <- decode.optional_field(
+    "allow_user_chats",
+    None,
+    decode.optional(decode.bool),
+  )
+  use allow_bot_chats <- decode.optional_field(
+    "allow_bot_chats",
+    None,
+    decode.optional(decode.bool),
+  )
+  use allow_group_chats <- decode.optional_field(
+    "allow_group_chats",
+    None,
+    decode.optional(decode.bool),
+  )
+  use allow_channel_chats <- decode.optional_field(
+    "allow_channel_chats",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(SwitchInlineQueryChosenChat(
+    query: query,
+    allow_user_chats: allow_user_chats,
+    allow_bot_chats: allow_bot_chats,
+    allow_group_chats: allow_group_chats,
+    allow_channel_chats: allow_channel_chats,
+  ))
+}
+
+pub fn text_quote_decoder() -> decode.Decoder(TextQuote) {
+  use text <- decode.field("text", decode.string)
+  use entities <- decode.optional_field(
+    "entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use position <- decode.field("position", decode.int)
+  use is_manual <- decode.optional_field(
+    "is_manual",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(TextQuote(
+    text: text,
+    entities: entities,
+    position: position,
+    is_manual: is_manual,
+  ))
+}
+
+pub fn transaction_partner_affiliate_program_decoder() -> decode.Decoder(
+  TransactionPartnerAffiliateProgram,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use sponsor_user <- decode.optional_field(
+    "sponsor_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use commission_per_mille <- decode.field("commission_per_mille", decode.int)
+  decode.success(TransactionPartnerAffiliateProgram(
+    type_: type_,
+    sponsor_user: sponsor_user,
+    commission_per_mille: commission_per_mille,
+  ))
+}
+
+pub fn transaction_partner_chat_decoder() -> decode.Decoder(
+  TransactionPartnerChat,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use chat <- decode.field("chat", chat_decoder())
+  use gift <- decode.optional_field(
+    "gift",
+    None,
+    decode.optional(gift_decoder()),
+  )
+  decode.success(TransactionPartnerChat(type_: type_, chat: chat, gift: gift))
+}
+
+pub fn transaction_partner_fragment_decoder() -> decode.Decoder(
+  TransactionPartnerFragment,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use withdrawal_state <- decode.optional_field(
+    "withdrawal_state",
+    None,
+    decode.optional(revenue_withdrawal_state_decoder()),
+  )
+  decode.success(TransactionPartnerFragment(
+    type_: type_,
+    withdrawal_state: withdrawal_state,
+  ))
+}
+
+pub fn transaction_partner_other_decoder() -> decode.Decoder(
+  TransactionPartnerOther,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(TransactionPartnerOther(type_: type_))
+}
+
+pub fn transaction_partner_telegram_ads_decoder() -> decode.Decoder(
+  TransactionPartnerTelegramAds,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(TransactionPartnerTelegramAds(type_: type_))
+}
+
+pub fn transaction_partner_telegram_api_decoder() -> decode.Decoder(
+  TransactionPartnerTelegramApi,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use request_count <- decode.field("request_count", decode.int)
+  decode.success(TransactionPartnerTelegramApi(
+    type_: type_,
+    request_count: request_count,
   ))
 }
 
@@ -8142,478 +7684,739 @@ pub fn transaction_partner_user_decoder() -> decode.Decoder(
   ))
 }
 
-pub fn transaction_partner_chat_decoder() -> decode.Decoder(
-  TransactionPartnerChat,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use chat <- decode.field("chat", chat_decoder())
-  use gift <- decode.optional_field(
-    "gift",
+pub fn unique_gift_decoder() -> decode.Decoder(UniqueGift) {
+  use gift_id <- decode.field("gift_id", decode.string)
+  use base_name <- decode.field("base_name", decode.string)
+  use name <- decode.field("name", decode.string)
+  use number <- decode.field("number", decode.int)
+  use model <- decode.field("model", unique_gift_model_decoder())
+  use symbol <- decode.field("symbol", unique_gift_symbol_decoder())
+  use backdrop <- decode.field("backdrop", unique_gift_backdrop_decoder())
+  use is_premium <- decode.optional_field(
+    "is_premium",
     None,
-    decode.optional(gift_decoder()),
+    decode.optional(decode.bool),
   )
-  decode.success(TransactionPartnerChat(type_: type_, chat: chat, gift: gift))
-}
-
-pub fn transaction_partner_affiliate_program_decoder() -> decode.Decoder(
-  TransactionPartnerAffiliateProgram,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use sponsor_user <- decode.optional_field(
-    "sponsor_user",
+  use is_burned <- decode.optional_field(
+    "is_burned",
     None,
-    decode.optional(user_decoder()),
+    decode.optional(decode.bool),
   )
-  use commission_per_mille <- decode.field("commission_per_mille", decode.int)
-  decode.success(TransactionPartnerAffiliateProgram(
-    type_: type_,
-    sponsor_user: sponsor_user,
-    commission_per_mille: commission_per_mille,
+  use is_from_blockchain <- decode.optional_field(
+    "is_from_blockchain",
+    None,
+    decode.optional(decode.bool),
+  )
+  use colors <- decode.optional_field(
+    "colors",
+    None,
+    decode.optional(unique_gift_colors_decoder()),
+  )
+  use publisher_chat <- decode.optional_field(
+    "publisher_chat",
+    None,
+    decode.optional(chat_decoder()),
+  )
+  decode.success(UniqueGift(
+    gift_id: gift_id,
+    base_name: base_name,
+    name: name,
+    number: number,
+    model: model,
+    symbol: symbol,
+    backdrop: backdrop,
+    is_premium: is_premium,
+    is_burned: is_burned,
+    is_from_blockchain: is_from_blockchain,
+    colors: colors,
+    publisher_chat: publisher_chat,
   ))
 }
 
-pub fn transaction_partner_fragment_decoder() -> decode.Decoder(
-  TransactionPartnerFragment,
+pub fn unique_gift_backdrop_decoder() -> decode.Decoder(UniqueGiftBackdrop) {
+  use name <- decode.field("name", decode.string)
+  use colors <- decode.field("colors", unique_gift_backdrop_colors_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  decode.success(UniqueGiftBackdrop(
+    name: name,
+    colors: colors,
+    rarity_per_mille: rarity_per_mille,
+  ))
+}
+
+pub fn unique_gift_backdrop_colors_decoder() -> decode.Decoder(
+  UniqueGiftBackdropColors,
 ) {
-  use type_ <- decode.field("type", decode.string)
-  use withdrawal_state <- decode.optional_field(
-    "withdrawal_state",
-    None,
-    decode.optional(revenue_withdrawal_state_decoder()),
+  use center_color <- decode.field("center_color", decode.int)
+  use edge_color <- decode.field("edge_color", decode.int)
+  use symbol_color <- decode.field("symbol_color", decode.int)
+  use text_color <- decode.field("text_color", decode.int)
+  decode.success(UniqueGiftBackdropColors(
+    center_color: center_color,
+    edge_color: edge_color,
+    symbol_color: symbol_color,
+    text_color: text_color,
+  ))
+}
+
+pub fn unique_gift_colors_decoder() -> decode.Decoder(UniqueGiftColors) {
+  use model_custom_emoji_id <- decode.field(
+    "model_custom_emoji_id",
+    decode.string,
   )
-  decode.success(TransactionPartnerFragment(
-    type_: type_,
-    withdrawal_state: withdrawal_state,
+  use symbol_custom_emoji_id <- decode.field(
+    "symbol_custom_emoji_id",
+    decode.string,
+  )
+  use light_theme_main_color <- decode.field(
+    "light_theme_main_color",
+    decode.int,
+  )
+  use light_theme_other_colors <- decode.field(
+    "light_theme_other_colors",
+    decode.list(decode.int),
+  )
+  use dark_theme_main_color <- decode.field("dark_theme_main_color", decode.int)
+  use dark_theme_other_colors <- decode.field(
+    "dark_theme_other_colors",
+    decode.list(decode.int),
+  )
+  decode.success(UniqueGiftColors(
+    model_custom_emoji_id: model_custom_emoji_id,
+    symbol_custom_emoji_id: symbol_custom_emoji_id,
+    light_theme_main_color: light_theme_main_color,
+    light_theme_other_colors: light_theme_other_colors,
+    dark_theme_main_color: dark_theme_main_color,
+    dark_theme_other_colors: dark_theme_other_colors,
   ))
 }
 
-pub fn transaction_partner_telegram_ads_decoder() -> decode.Decoder(
-  TransactionPartnerTelegramAds,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(TransactionPartnerTelegramAds(type_: type_))
-}
-
-pub fn transaction_partner_telegram_api_decoder() -> decode.Decoder(
-  TransactionPartnerTelegramApi,
-) {
-  use type_ <- decode.field("type", decode.string)
-  use request_count <- decode.field("request_count", decode.int)
-  decode.success(TransactionPartnerTelegramApi(
-    type_: type_,
-    request_count: request_count,
-  ))
-}
-
-pub fn transaction_partner_other_decoder() -> decode.Decoder(
-  TransactionPartnerOther,
-) {
-  use type_ <- decode.field("type", decode.string)
-  decode.success(TransactionPartnerOther(type_: type_))
-}
-
-pub fn star_transaction_decoder() -> decode.Decoder(StarTransaction) {
-  use id <- decode.field("id", decode.string)
-  use amount <- decode.field("amount", decode.int)
-  use nanostar_amount <- decode.optional_field(
-    "nanostar_amount",
+pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
+  use gift <- decode.field("gift", unique_gift_decoder())
+  use origin <- decode.field("origin", decode.string)
+  use last_resale_currency <- decode.optional_field(
+    "last_resale_currency",
+    None,
+    decode.optional(decode.string),
+  )
+  use last_resale_amount <- decode.optional_field(
+    "last_resale_amount",
     None,
     decode.optional(decode.int),
   )
-  use date <- decode.field("date", decode.int)
-  use source <- decode.optional_field(
-    "source",
+  use owned_gift_id <- decode.optional_field(
+    "owned_gift_id",
     None,
-    decode.optional(transaction_partner_decoder()),
+    decode.optional(decode.string),
   )
-  use receiver <- decode.optional_field(
-    "receiver",
+  use transfer_star_count <- decode.optional_field(
+    "transfer_star_count",
     None,
-    decode.optional(transaction_partner_decoder()),
+    decode.optional(decode.int),
   )
-  decode.success(StarTransaction(
-    id: id,
-    amount: amount,
-    nanostar_amount: nanostar_amount,
-    date: date,
-    source: source,
-    receiver: receiver,
+  use next_transfer_date <- decode.optional_field(
+    "next_transfer_date",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(UniqueGiftInfo(
+    gift: gift,
+    origin: origin,
+    last_resale_currency: last_resale_currency,
+    last_resale_amount: last_resale_amount,
+    owned_gift_id: owned_gift_id,
+    transfer_star_count: transfer_star_count,
+    next_transfer_date: next_transfer_date,
   ))
 }
 
-pub fn star_transactions_decoder() -> decode.Decoder(StarTransactions) {
-  use transactions <- decode.field(
-    "transactions",
-    decode.list(star_transaction_decoder()),
+pub fn unique_gift_model_decoder() -> decode.Decoder(UniqueGiftModel) {
+  use name <- decode.field("name", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  use rarity <- decode.optional_field(
+    "rarity",
+    None,
+    decode.optional(decode.string),
   )
-  decode.success(StarTransactions(transactions: transactions))
+  decode.success(UniqueGiftModel(
+    name: name,
+    sticker: sticker,
+    rarity_per_mille: rarity_per_mille,
+    rarity: rarity,
+  ))
 }
 
-pub fn passport_data_decoder() -> decode.Decoder(PassportData) {
-  use data <- decode.field(
-    "data",
-    decode.list(encrypted_passport_element_decoder()),
-  )
-  use credentials <- decode.field(
-    "credentials",
-    encrypted_credentials_decoder(),
-  )
-  decode.success(PassportData(data: data, credentials: credentials))
+pub fn unique_gift_symbol_decoder() -> decode.Decoder(UniqueGiftSymbol) {
+  use name <- decode.field("name", decode.string)
+  use sticker <- decode.field("sticker", sticker_decoder())
+  use rarity_per_mille <- decode.field("rarity_per_mille", decode.int)
+  decode.success(UniqueGiftSymbol(
+    name: name,
+    sticker: sticker,
+    rarity_per_mille: rarity_per_mille,
+  ))
 }
 
-pub fn passport_file_decoder() -> decode.Decoder(PassportFile) {
+pub fn update_decoder() -> decode.Decoder(Update) {
+  use update_id <- decode.field("update_id", decode.int)
+  use message <- decode.optional_field(
+    "message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use edited_message <- decode.optional_field(
+    "edited_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use channel_post <- decode.optional_field(
+    "channel_post",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use edited_channel_post <- decode.optional_field(
+    "edited_channel_post",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use business_connection <- decode.optional_field(
+    "business_connection",
+    None,
+    decode.optional(business_connection_decoder()),
+  )
+  use business_message <- decode.optional_field(
+    "business_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use edited_business_message <- decode.optional_field(
+    "edited_business_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use deleted_business_messages <- decode.optional_field(
+    "deleted_business_messages",
+    None,
+    decode.optional(business_messages_deleted_decoder()),
+  )
+  use guest_message <- decode.optional_field(
+    "guest_message",
+    None,
+    decode.optional(message_decoder()),
+  )
+  use message_reaction <- decode.optional_field(
+    "message_reaction",
+    None,
+    decode.optional(message_reaction_updated_decoder()),
+  )
+  use message_reaction_count <- decode.optional_field(
+    "message_reaction_count",
+    None,
+    decode.optional(message_reaction_count_updated_decoder()),
+  )
+  use inline_query <- decode.optional_field(
+    "inline_query",
+    None,
+    decode.optional(inline_query_decoder()),
+  )
+  use chosen_inline_result <- decode.optional_field(
+    "chosen_inline_result",
+    None,
+    decode.optional(chosen_inline_result_decoder()),
+  )
+  use callback_query <- decode.optional_field(
+    "callback_query",
+    None,
+    decode.optional(callback_query_decoder()),
+  )
+  use shipping_query <- decode.optional_field(
+    "shipping_query",
+    None,
+    decode.optional(shipping_query_decoder()),
+  )
+  use pre_checkout_query <- decode.optional_field(
+    "pre_checkout_query",
+    None,
+    decode.optional(pre_checkout_query_decoder()),
+  )
+  use purchased_paid_media <- decode.optional_field(
+    "purchased_paid_media",
+    None,
+    decode.optional(paid_media_purchased_decoder()),
+  )
+  use poll <- decode.optional_field(
+    "poll",
+    None,
+    decode.optional(poll_decoder()),
+  )
+  use poll_answer <- decode.optional_field(
+    "poll_answer",
+    None,
+    decode.optional(poll_answer_decoder()),
+  )
+  use my_chat_member <- decode.optional_field(
+    "my_chat_member",
+    None,
+    decode.optional(chat_member_updated_decoder()),
+  )
+  use chat_member <- decode.optional_field(
+    "chat_member",
+    None,
+    decode.optional(chat_member_updated_decoder()),
+  )
+  use chat_join_request <- decode.optional_field(
+    "chat_join_request",
+    None,
+    decode.optional(chat_join_request_decoder()),
+  )
+  use chat_boost <- decode.optional_field(
+    "chat_boost",
+    None,
+    decode.optional(chat_boost_updated_decoder()),
+  )
+  use removed_chat_boost <- decode.optional_field(
+    "removed_chat_boost",
+    None,
+    decode.optional(chat_boost_removed_decoder()),
+  )
+  use managed_bot <- decode.optional_field(
+    "managed_bot",
+    None,
+    decode.optional(managed_bot_updated_decoder()),
+  )
+  decode.success(Update(
+    update_id: update_id,
+    message: message,
+    edited_message: edited_message,
+    channel_post: channel_post,
+    edited_channel_post: edited_channel_post,
+    business_connection: business_connection,
+    business_message: business_message,
+    edited_business_message: edited_business_message,
+    deleted_business_messages: deleted_business_messages,
+    guest_message: guest_message,
+    message_reaction: message_reaction,
+    message_reaction_count: message_reaction_count,
+    inline_query: inline_query,
+    chosen_inline_result: chosen_inline_result,
+    callback_query: callback_query,
+    shipping_query: shipping_query,
+    pre_checkout_query: pre_checkout_query,
+    purchased_paid_media: purchased_paid_media,
+    poll: poll,
+    poll_answer: poll_answer,
+    my_chat_member: my_chat_member,
+    chat_member: chat_member,
+    chat_join_request: chat_join_request,
+    chat_boost: chat_boost,
+    removed_chat_boost: removed_chat_boost,
+    managed_bot: managed_bot,
+  ))
+}
+
+pub fn user_decoder() -> decode.Decoder(User) {
+  use id <- decode.field("id", decode.int)
+  use is_bot <- decode.field("is_bot", decode.bool)
+  use first_name <- decode.field("first_name", decode.string)
+  use last_name <- decode.optional_field(
+    "last_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use username <- decode.optional_field(
+    "username",
+    None,
+    decode.optional(decode.string),
+  )
+  use language_code <- decode.optional_field(
+    "language_code",
+    None,
+    decode.optional(decode.string),
+  )
+  use is_premium <- decode.optional_field(
+    "is_premium",
+    None,
+    decode.optional(decode.bool),
+  )
+  use added_to_attachment_menu <- decode.optional_field(
+    "added_to_attachment_menu",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_join_groups <- decode.optional_field(
+    "can_join_groups",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_read_all_group_messages <- decode.optional_field(
+    "can_read_all_group_messages",
+    None,
+    decode.optional(decode.bool),
+  )
+  use supports_guest_queries <- decode.optional_field(
+    "supports_guest_queries",
+    None,
+    decode.optional(decode.bool),
+  )
+  use supports_inline_queries <- decode.optional_field(
+    "supports_inline_queries",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_connect_to_business <- decode.optional_field(
+    "can_connect_to_business",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_main_web_app <- decode.optional_field(
+    "has_main_web_app",
+    None,
+    decode.optional(decode.bool),
+  )
+  use has_topics_enabled <- decode.optional_field(
+    "has_topics_enabled",
+    None,
+    decode.optional(decode.bool),
+  )
+  use allows_users_to_create_topics <- decode.optional_field(
+    "allows_users_to_create_topics",
+    None,
+    decode.optional(decode.bool),
+  )
+  use can_manage_bots <- decode.optional_field(
+    "can_manage_bots",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(User(
+    id: id,
+    is_bot: is_bot,
+    first_name: first_name,
+    last_name: last_name,
+    username: username,
+    language_code: language_code,
+    is_premium: is_premium,
+    added_to_attachment_menu: added_to_attachment_menu,
+    can_join_groups: can_join_groups,
+    can_read_all_group_messages: can_read_all_group_messages,
+    supports_guest_queries: supports_guest_queries,
+    supports_inline_queries: supports_inline_queries,
+    can_connect_to_business: can_connect_to_business,
+    has_main_web_app: has_main_web_app,
+    has_topics_enabled: has_topics_enabled,
+    allows_users_to_create_topics: allows_users_to_create_topics,
+    can_manage_bots: can_manage_bots,
+  ))
+}
+
+pub fn user_chat_boosts_decoder() -> decode.Decoder(UserChatBoosts) {
+  use boosts <- decode.field("boosts", decode.list(chat_boost_decoder()))
+  decode.success(UserChatBoosts(boosts: boosts))
+}
+
+pub fn user_profile_audios_decoder() -> decode.Decoder(UserProfileAudios) {
+  use total_count <- decode.field("total_count", decode.int)
+  use audios <- decode.field("audios", decode.list(audio_decoder()))
+  decode.success(UserProfileAudios(total_count: total_count, audios: audios))
+}
+
+pub fn user_profile_photos_decoder() -> decode.Decoder(UserProfilePhotos) {
+  use total_count <- decode.field("total_count", decode.int)
+  use photos <- decode.field(
+    "photos",
+    decode.list(decode.list(photo_size_decoder())),
+  )
+  decode.success(UserProfilePhotos(total_count: total_count, photos: photos))
+}
+
+pub fn user_rating_decoder() -> decode.Decoder(UserRating) {
+  use level <- decode.field("level", decode.int)
+  use rating <- decode.field("rating", decode.int)
+  use current_level_rating <- decode.field("current_level_rating", decode.int)
+  use next_level_rating <- decode.optional_field(
+    "next_level_rating",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(UserRating(
+    level: level,
+    rating: rating,
+    current_level_rating: current_level_rating,
+    next_level_rating: next_level_rating,
+  ))
+}
+
+pub fn users_shared_decoder() -> decode.Decoder(UsersShared) {
+  use request_id <- decode.field("request_id", decode.int)
+  use users <- decode.field("users", decode.list(shared_user_decoder()))
+  decode.success(UsersShared(request_id: request_id, users: users))
+}
+
+pub fn venue_decoder() -> decode.Decoder(Venue) {
+  use location <- decode.field("location", location_decoder())
+  use title <- decode.field("title", decode.string)
+  use address <- decode.field("address", decode.string)
+  use foursquare_id <- decode.optional_field(
+    "foursquare_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use foursquare_type <- decode.optional_field(
+    "foursquare_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_id <- decode.optional_field(
+    "google_place_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use google_place_type <- decode.optional_field(
+    "google_place_type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(Venue(
+    location: location,
+    title: title,
+    address: address,
+    foursquare_id: foursquare_id,
+    foursquare_type: foursquare_type,
+    google_place_id: google_place_id,
+    google_place_type: google_place_type,
+  ))
+}
+
+pub fn video_decoder() -> decode.Decoder(Video) {
   use file_id <- decode.field("file_id", decode.string)
   use file_unique_id <- decode.field("file_unique_id", decode.string)
-  use file_size <- decode.field("file_size", decode.int)
-  use file_date <- decode.field("file_date", decode.int)
-  decode.success(PassportFile(
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use duration <- decode.field("duration", decode.int)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
+    None,
+    decode.optional(photo_size_decoder()),
+  )
+  use cover <- decode.optional_field(
+    "cover",
+    None,
+    decode.optional(decode.list(photo_size_decoder())),
+  )
+  use start_timestamp <- decode.optional_field(
+    "start_timestamp",
+    None,
+    decode.optional(decode.int),
+  )
+  use qualities <- decode.optional_field(
+    "qualities",
+    None,
+    decode.optional(decode.list(video_quality_decoder())),
+  )
+  use file_name <- decode.optional_field(
+    "file_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Video(
     file_id: file_id,
     file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    duration: duration,
+    thumbnail: thumbnail,
+    cover: cover,
+    start_timestamp: start_timestamp,
+    qualities: qualities,
+    file_name: file_name,
+    mime_type: mime_type,
     file_size: file_size,
-    file_date: file_date,
   ))
 }
 
-pub fn encrypted_passport_element_decoder() -> decode.Decoder(
-  EncryptedPassportElement,
+pub fn video_chat_ended_decoder() -> decode.Decoder(VideoChatEnded) {
+  use duration <- decode.field("duration", decode.int)
+  decode.success(VideoChatEnded(duration: duration))
+}
+
+pub fn video_chat_participants_invited_decoder() -> decode.Decoder(
+  VideoChatParticipantsInvited,
 ) {
-  use type_ <- decode.field("type", decode.string)
-  use data <- decode.optional_field(
-    "data",
+  use users <- decode.field("users", decode.list(user_decoder()))
+  decode.success(VideoChatParticipantsInvited(users: users))
+}
+
+pub fn video_chat_scheduled_decoder() -> decode.Decoder(VideoChatScheduled) {
+  use start_date <- decode.field("start_date", decode.int)
+  decode.success(VideoChatScheduled(start_date: start_date))
+}
+
+pub fn video_chat_started_decoder() -> decode.Decoder(VideoChatStarted) {
+  decode.success(VideoChatStarted)
+}
+
+pub fn video_note_decoder() -> decode.Decoder(VideoNote) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use length <- decode.field("length", decode.int)
+  use duration <- decode.field("duration", decode.int)
+  use thumbnail <- decode.optional_field(
+    "thumbnail",
     None,
-    decode.optional(decode.string),
+    decode.optional(photo_size_decoder()),
   )
-  use phone_number <- decode.optional_field(
-    "phone_number",
+  use file_size <- decode.optional_field(
+    "file_size",
     None,
-    decode.optional(decode.string),
+    decode.optional(decode.int),
   )
-  use email <- decode.optional_field(
-    "email",
-    None,
-    decode.optional(decode.string),
-  )
-  use files <- decode.optional_field(
-    "files",
-    None,
-    decode.optional(decode.list(passport_file_decoder())),
-  )
-  use front_side <- decode.optional_field(
-    "front_side",
-    None,
-    decode.optional(passport_file_decoder()),
-  )
-  use reverse_side <- decode.optional_field(
-    "reverse_side",
-    None,
-    decode.optional(passport_file_decoder()),
-  )
-  use selfie <- decode.optional_field(
-    "selfie",
-    None,
-    decode.optional(passport_file_decoder()),
-  )
-  use translation <- decode.optional_field(
-    "translation",
-    None,
-    decode.optional(decode.list(passport_file_decoder())),
-  )
-  use hash <- decode.field("hash", decode.string)
-  decode.success(EncryptedPassportElement(
-    type_: type_,
-    data: data,
-    phone_number: phone_number,
-    email: email,
-    files: files,
-    front_side: front_side,
-    reverse_side: reverse_side,
-    selfie: selfie,
-    translation: translation,
-    hash: hash,
+  decode.success(VideoNote(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    length: length,
+    duration: duration,
+    thumbnail: thumbnail,
+    file_size: file_size,
   ))
 }
 
-pub fn encrypted_credentials_decoder() -> decode.Decoder(EncryptedCredentials) {
+pub fn video_quality_decoder() -> decode.Decoder(VideoQuality) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use codec <- decode.field("codec", decode.string)
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(VideoQuality(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    width: width,
+    height: height,
+    codec: codec,
+    file_size: file_size,
+  ))
+}
+
+pub fn voice_decoder() -> decode.Decoder(Voice) {
+  use file_id <- decode.field("file_id", decode.string)
+  use file_unique_id <- decode.field("file_unique_id", decode.string)
+  use duration <- decode.field("duration", decode.int)
+  use mime_type <- decode.optional_field(
+    "mime_type",
+    None,
+    decode.optional(decode.string),
+  )
+  use file_size <- decode.optional_field(
+    "file_size",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(Voice(
+    file_id: file_id,
+    file_unique_id: file_unique_id,
+    duration: duration,
+    mime_type: mime_type,
+    file_size: file_size,
+  ))
+}
+
+pub fn web_app_data_decoder() -> decode.Decoder(WebAppData) {
   use data <- decode.field("data", decode.string)
-  use hash <- decode.field("hash", decode.string)
-  use secret <- decode.field("secret", decode.string)
-  decode.success(EncryptedCredentials(data: data, hash: hash, secret: secret))
+  use button_text <- decode.field("button_text", decode.string)
+  decode.success(WebAppData(data: data, button_text: button_text))
 }
 
-pub fn passport_element_error_data_field_decoder() -> decode.Decoder(
-  PassportElementErrorDataField,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use field_name <- decode.field("field_name", decode.string)
-  use data_hash <- decode.field("data_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorDataField(
-    source: source,
-    type_: type_,
-    field_name: field_name,
-    data_hash: data_hash,
-    message: message,
-  ))
+pub fn web_app_info_decoder() -> decode.Decoder(WebAppInfo) {
+  use url <- decode.field("url", decode.string)
+  decode.success(WebAppInfo(url: url))
 }
 
-pub fn passport_element_error_front_side_decoder() -> decode.Decoder(
-  PassportElementErrorFrontSide,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hash <- decode.field("file_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorFrontSide(
-    source: source,
-    type_: type_,
-    file_hash: file_hash,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_reverse_side_decoder() -> decode.Decoder(
-  PassportElementErrorReverseSide,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hash <- decode.field("file_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorReverseSide(
-    source: source,
-    type_: type_,
-    file_hash: file_hash,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_selfie_decoder() -> decode.Decoder(
-  PassportElementErrorSelfie,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hash <- decode.field("file_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorSelfie(
-    source: source,
-    type_: type_,
-    file_hash: file_hash,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_file_decoder() -> decode.Decoder(
-  PassportElementErrorFile,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hash <- decode.field("file_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorFile(
-    source: source,
-    type_: type_,
-    file_hash: file_hash,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_files_decoder() -> decode.Decoder(
-  PassportElementErrorFiles,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hashes <- decode.field("file_hashes", decode.list(decode.string))
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorFiles(
-    source: source,
-    type_: type_,
-    file_hashes: file_hashes,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_translation_file_decoder() -> decode.Decoder(
-  PassportElementErrorTranslationFile,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hash <- decode.field("file_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorTranslationFile(
-    source: source,
-    type_: type_,
-    file_hash: file_hash,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_translation_files_decoder() -> decode.Decoder(
-  PassportElementErrorTranslationFiles,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use file_hashes <- decode.field("file_hashes", decode.list(decode.string))
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorTranslationFiles(
-    source: source,
-    type_: type_,
-    file_hashes: file_hashes,
-    message: message,
-  ))
-}
-
-pub fn passport_element_error_unspecified_decoder() -> decode.Decoder(
-  PassportElementErrorUnspecified,
-) {
-  use source <- decode.field("source", decode.string)
-  use type_ <- decode.field("type", decode.string)
-  use element_hash <- decode.field("element_hash", decode.string)
-  use message <- decode.field("message", decode.string)
-  decode.success(PassportElementErrorUnspecified(
-    source: source,
-    type_: type_,
-    element_hash: element_hash,
-    message: message,
-  ))
-}
-
-pub fn game_decoder() -> decode.Decoder(Game) {
-  use title <- decode.field("title", decode.string)
-  use description <- decode.field("description", decode.string)
-  use photo <- decode.field("photo", decode.list(photo_size_decoder()))
-  use text <- decode.optional_field(
-    "text",
+pub fn webhook_info_decoder() -> decode.Decoder(WebhookInfo) {
+  use url <- decode.field("url", decode.string)
+  use has_custom_certificate <- decode.field(
+    "has_custom_certificate",
+    decode.bool,
+  )
+  use pending_update_count <- decode.field("pending_update_count", decode.int)
+  use ip_address <- decode.optional_field(
+    "ip_address",
     None,
     decode.optional(decode.string),
   )
-  use text_entities <- decode.optional_field(
-    "text_entities",
-    None,
-    decode.optional(decode.list(message_entity_decoder())),
-  )
-  use animation <- decode.optional_field(
-    "animation",
-    None,
-    decode.optional(animation_decoder()),
-  )
-  decode.success(Game(
-    title: title,
-    description: description,
-    photo: photo,
-    text: text,
-    text_entities: text_entities,
-    animation: animation,
-  ))
-}
-
-pub fn callback_game_decoder() -> decode.Decoder(CallbackGame) {
-  use user_id <- decode.field("user_id", decode.int)
-  use score <- decode.field("score", decode.int)
-  use force <- decode.optional_field(
-    "force",
-    None,
-    decode.optional(decode.bool),
-  )
-  use disable_edit_message <- decode.optional_field(
-    "disable_edit_message",
-    None,
-    decode.optional(decode.bool),
-  )
-  use chat_id <- decode.optional_field(
-    "chat_id",
+  use last_error_date <- decode.optional_field(
+    "last_error_date",
     None,
     decode.optional(decode.int),
   )
-  use message_id <- decode.optional_field(
-    "message_id",
-    None,
-    decode.optional(decode.int),
-  )
-  use inline_message_id <- decode.optional_field(
-    "inline_message_id",
+  use last_error_message <- decode.optional_field(
+    "last_error_message",
     None,
     decode.optional(decode.string),
   )
-  decode.success(CallbackGame(
-    user_id: user_id,
-    score: score,
-    force: force,
-    disable_edit_message: disable_edit_message,
-    chat_id: chat_id,
-    message_id: message_id,
-    inline_message_id: inline_message_id,
+  use last_synchronization_error_date <- decode.optional_field(
+    "last_synchronization_error_date",
+    None,
+    decode.optional(decode.int),
+  )
+  use max_connections <- decode.optional_field(
+    "max_connections",
+    None,
+    decode.optional(decode.int),
+  )
+  use allowed_updates <- decode.optional_field(
+    "allowed_updates",
+    None,
+    decode.optional(decode.list(decode.string)),
+  )
+  decode.success(WebhookInfo(
+    url: url,
+    has_custom_certificate: has_custom_certificate,
+    pending_update_count: pending_update_count,
+    ip_address: ip_address,
+    last_error_date: last_error_date,
+    last_error_message: last_error_message,
+    last_synchronization_error_date: last_synchronization_error_date,
+    max_connections: max_connections,
+    allowed_updates: allowed_updates,
   ))
 }
 
-pub fn game_high_score_decoder() -> decode.Decoder(GameHighScore) {
-  use position <- decode.field("position", decode.int)
-  use user <- decode.field("user", user_decoder())
-  use score <- decode.field("score", decode.int)
-  decode.success(GameHighScore(position: position, user: user, score: score))
-}
-
-fn maybe_inaccessible_message_message_decoder() {
-  use message <- decode.then(message_decoder())
-  decode.success(MessageMaybeInaccessibleMessage(message))
-}
-
-fn maybe_inaccessible_message_inaccessible_message_decoder() {
-  use value <- decode.then(inaccessible_message_decoder())
-  decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
-}
-
-pub fn maybe_inaccessible_message_decoder() -> decode.Decoder(
-  MaybeInaccessibleMessage,
-) {
-  decode.one_of(maybe_inaccessible_message_message_decoder(), [
-    maybe_inaccessible_message_inaccessible_message_decoder(),
-  ])
-}
-
-pub fn message_origin_decoder() -> decode.Decoder(MessageOrigin) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "user" -> {
-      use value <- decode.then(message_origin_user_decoder())
-      decode.success(MessageOriginUserMessageOrigin(value))
-    }
-    "hidden_user" -> {
-      use value <- decode.then(message_origin_hidden_user_decoder())
-      decode.success(MessageOriginHiddenUserMessageOrigin(value))
-    }
-    "chat" -> {
-      use value <- decode.then(message_origin_chat_decoder())
-      decode.success(MessageOriginChatMessageOrigin(value))
-    }
-    "channel" -> {
-      use value <- decode.then(message_origin_channel_decoder())
-      decode.success(MessageOriginChannelMessageOrigin(value))
-    }
-    _ -> panic as "Invalid variant for MessageOrigin"
-  }
-}
-
-pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "preview" -> {
-      use value <- decode.then(paid_media_preview_decoder())
-      decode.success(PaidMediaPreviewPaidMedia(value))
-    }
-    "photo" -> {
-      use value <- decode.then(paid_media_photo_decoder())
-      decode.success(PaidMediaPhotoPaidMedia(value))
-    }
-    "video" -> {
-      use value <- decode.then(paid_media_video_decoder())
-      decode.success(PaidMediaVideoPaidMedia(value))
-    }
-    "live_photo" -> {
-      use value <- decode.then(paid_media_live_photo_decoder())
-      decode.success(PaidMediaLivePhotoPaidMedia(value))
-    }
-    _ -> panic as "Invalid variant for PaidMedia"
-  }
+pub fn write_access_allowed_decoder() -> decode.Decoder(WriteAccessAllowed) {
+  use from_request <- decode.optional_field(
+    "from_request",
+    None,
+    decode.optional(decode.bool),
+  )
+  use web_app_name <- decode.optional_field(
+    "web_app_name",
+    None,
+    decode.optional(decode.string),
+  )
+  use from_attachment_menu <- decode.optional_field(
+    "from_attachment_menu",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(WriteAccessAllowed(
+    from_request: from_request,
+    web_app_name: web_app_name,
+    from_attachment_menu: from_attachment_menu,
+  ))
 }
 
 pub fn background_fill_decoder() -> decode.Decoder(BackgroundFill) {
@@ -8658,56 +8461,6 @@ pub fn background_type_decoder() -> decode.Decoder(BackgroundType) {
   }
 }
 
-pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
-  use variant <- decode.field("status", decode.string)
-  case variant {
-    "creator" -> {
-      use value <- decode.then(chat_member_owner_decoder())
-      decode.success(ChatMemberOwnerChatMember(value))
-    }
-    "administrator" -> {
-      use value <- decode.then(chat_member_administrator_decoder())
-      decode.success(ChatMemberAdministratorChatMember(value))
-    }
-    "member" -> {
-      use value <- decode.then(chat_member_member_decoder())
-      decode.success(ChatMemberMemberChatMember(value))
-    }
-    "restricted" -> {
-      use value <- decode.then(chat_member_restricted_decoder())
-      decode.success(ChatMemberRestrictedChatMember(value))
-    }
-    "left" -> {
-      use value <- decode.then(chat_member_left_decoder())
-      decode.success(ChatMemberLeftChatMember(value))
-    }
-    "kicked" -> {
-      use value <- decode.then(chat_member_banned_decoder())
-      decode.success(ChatMemberBannedChatMember(value))
-    }
-    _ -> panic as "Invalid variant for ChatMember"
-  }
-}
-
-pub fn reaction_type_decoder() -> decode.Decoder(ReactionType) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "emoji" -> {
-      use value <- decode.then(reaction_type_emoji_decoder())
-      decode.success(ReactionTypeEmojiReactionType(value))
-    }
-    "custom_emoji" -> {
-      use value <- decode.then(reaction_type_custom_emoji_decoder())
-      decode.success(ReactionTypeCustomEmojiReactionType(value))
-    }
-    "paid" -> {
-      use value <- decode.then(reaction_type_paid_decoder())
-      decode.success(ReactionTypePaidReactionType(value))
-    }
-    _ -> panic as "Invalid variant for ReactionType"
-  }
-}
-
 pub fn bot_command_scope_decoder() -> decode.Decoder(BotCommandScope) {
   use variant <- decode.field("type", decode.string)
   case variant {
@@ -8745,6 +8498,179 @@ pub fn bot_command_scope_decoder() -> decode.Decoder(BotCommandScope) {
   }
 }
 
+pub fn chat_boost_source_decoder() -> decode.Decoder(ChatBoostSource) {
+  use variant <- decode.field("source", decode.string)
+  case variant {
+    "premium" -> {
+      use value <- decode.then(chat_boost_source_premium_decoder())
+      decode.success(ChatBoostSourcePremiumChatBoostSource(value))
+    }
+    "gift_code" -> {
+      use value <- decode.then(chat_boost_source_gift_code_decoder())
+      decode.success(ChatBoostSourceGiftCodeChatBoostSource(value))
+    }
+    "giveaway" -> {
+      use value <- decode.then(chat_boost_source_giveaway_decoder())
+      decode.success(ChatBoostSourceGiveawayChatBoostSource(value))
+    }
+    _ -> panic as "Invalid variant for ChatBoostSource"
+  }
+}
+
+pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
+  use variant <- decode.field("status", decode.string)
+  case variant {
+    "creator" -> {
+      use value <- decode.then(chat_member_owner_decoder())
+      decode.success(ChatMemberOwnerChatMember(value))
+    }
+    "administrator" -> {
+      use value <- decode.then(chat_member_administrator_decoder())
+      decode.success(ChatMemberAdministratorChatMember(value))
+    }
+    "member" -> {
+      use value <- decode.then(chat_member_member_decoder())
+      decode.success(ChatMemberMemberChatMember(value))
+    }
+    "restricted" -> {
+      use value <- decode.then(chat_member_restricted_decoder())
+      decode.success(ChatMemberRestrictedChatMember(value))
+    }
+    "left" -> {
+      use value <- decode.then(chat_member_left_decoder())
+      decode.success(ChatMemberLeftChatMember(value))
+    }
+    "kicked" -> {
+      use value <- decode.then(chat_member_banned_decoder())
+      decode.success(ChatMemberBannedChatMember(value))
+    }
+    _ -> panic as "Invalid variant for ChatMember"
+  }
+}
+
+pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "live_photo" -> {
+      use value <- decode.then(input_paid_media_live_photo_decoder())
+      decode.success(InputPaidMediaLivePhotoInputPaidMedia(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_paid_media_photo_decoder())
+      decode.success(InputPaidMediaPhotoInputPaidMedia(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_paid_media_video_decoder())
+      decode.success(InputPaidMediaVideoInputPaidMedia(value))
+    }
+    _ -> panic as "Invalid variant for InputPaidMedia"
+  }
+}
+
+pub fn input_poll_media_decoder() -> decode.Decoder(InputPollMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "animation" -> {
+      use value <- decode.then(input_media_animation_decoder())
+      decode.success(InputMediaAnimationInputPollMedia(value))
+    }
+    "audio" -> {
+      use value <- decode.then(input_media_audio_decoder())
+      decode.success(InputMediaAudioInputPollMedia(value))
+    }
+    "document" -> {
+      use value <- decode.then(input_media_document_decoder())
+      decode.success(InputMediaDocumentInputPollMedia(value))
+    }
+    "live_photo" -> {
+      use value <- decode.then(input_media_live_photo_decoder())
+      decode.success(InputMediaLivePhotoInputPollMedia(value))
+    }
+    "location" -> {
+      use value <- decode.then(input_media_location_decoder())
+      decode.success(InputMediaLocationInputPollMedia(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_media_photo_decoder())
+      decode.success(InputMediaPhotoInputPollMedia(value))
+    }
+    "venue" -> {
+      use value <- decode.then(input_media_venue_decoder())
+      decode.success(InputMediaVenueInputPollMedia(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_media_video_decoder())
+      decode.success(InputMediaVideoInputPollMedia(value))
+    }
+    _ -> panic as "Invalid variant for InputPollMedia"
+  }
+}
+
+pub fn input_poll_option_media_decoder() -> decode.Decoder(InputPollOptionMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "animation" -> {
+      use value <- decode.then(input_media_animation_decoder())
+      decode.success(InputMediaAnimationInputPollOptionMedia(value))
+    }
+    "live_photo" -> {
+      use value <- decode.then(input_media_live_photo_decoder())
+      decode.success(InputMediaLivePhotoInputPollOptionMedia(value))
+    }
+    "location" -> {
+      use value <- decode.then(input_media_location_decoder())
+      decode.success(InputMediaLocationInputPollOptionMedia(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_media_photo_decoder())
+      decode.success(InputMediaPhotoInputPollOptionMedia(value))
+    }
+    "sticker" -> {
+      use value <- decode.then(input_media_sticker_decoder())
+      decode.success(InputMediaStickerInputPollOptionMedia(value))
+    }
+    "venue" -> {
+      use value <- decode.then(input_media_venue_decoder())
+      decode.success(InputMediaVenueInputPollOptionMedia(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_media_video_decoder())
+      decode.success(InputMediaVideoInputPollOptionMedia(value))
+    }
+    _ -> panic as "Invalid variant for InputPollOptionMedia"
+  }
+}
+
+pub fn input_profile_photo_decoder() -> decode.Decoder(InputProfilePhoto) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "static" -> {
+      use value <- decode.then(input_profile_photo_static_decoder())
+      decode.success(InputProfilePhotoStaticInputProfilePhoto(value))
+    }
+    "animated" -> {
+      use value <- decode.then(input_profile_photo_animated_decoder())
+      decode.success(InputProfilePhotoAnimatedInputProfilePhoto(value))
+    }
+    _ -> panic as "Invalid variant for InputProfilePhoto"
+  }
+}
+
+pub fn input_story_content_decoder() -> decode.Decoder(InputStoryContent) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "photo" -> {
+      use value <- decode.then(input_story_content_photo_decoder())
+      decode.success(InputStoryContentPhotoInputStoryContent(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_story_content_video_decoder())
+      decode.success(InputStoryContentVideoInputStoryContent(value))
+    }
+    _ -> panic as "Invalid variant for InputStoryContent"
+  }
+}
+
 pub fn menu_button_decoder() -> decode.Decoder(MenuButton) {
   use variant <- decode.field("type", decode.string)
   case variant {
@@ -8764,23 +8690,231 @@ pub fn menu_button_decoder() -> decode.Decoder(MenuButton) {
   }
 }
 
-pub fn chat_boost_source_decoder() -> decode.Decoder(ChatBoostSource) {
+pub fn message_origin_decoder() -> decode.Decoder(MessageOrigin) {
   use variant <- decode.field("type", decode.string)
   case variant {
-    "premium" -> {
-      use value <- decode.then(chat_boost_source_premium_decoder())
-      decode.success(ChatBoostSourcePremiumChatBoostSource(value))
+    "user" -> {
+      use value <- decode.then(message_origin_user_decoder())
+      decode.success(MessageOriginUserMessageOrigin(value))
     }
-    "gift_code" -> {
-      use value <- decode.then(chat_boost_source_gift_code_decoder())
-      decode.success(ChatBoostSourceGiftCodeChatBoostSource(value))
+    "hidden_user" -> {
+      use value <- decode.then(message_origin_hidden_user_decoder())
+      decode.success(MessageOriginHiddenUserMessageOrigin(value))
     }
-    "giveaway" -> {
-      use value <- decode.then(chat_boost_source_giveaway_decoder())
-      decode.success(ChatBoostSourceGiveawayChatBoostSource(value))
+    "chat" -> {
+      use value <- decode.then(message_origin_chat_decoder())
+      decode.success(MessageOriginChatMessageOrigin(value))
     }
-    _ -> panic as "Invalid variant for ChatBoostSource"
+    "channel" -> {
+      use value <- decode.then(message_origin_channel_decoder())
+      decode.success(MessageOriginChannelMessageOrigin(value))
+    }
+    _ -> panic as "Invalid variant for MessageOrigin"
   }
+}
+
+pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "regular" -> {
+      use value <- decode.then(owned_gift_regular_decoder())
+      decode.success(OwnedGiftRegularOwnedGift(value))
+    }
+    "unique" -> {
+      use value <- decode.then(owned_gift_unique_decoder())
+      decode.success(OwnedGiftUniqueOwnedGift(value))
+    }
+    _ -> panic as "Invalid variant for OwnedGift"
+  }
+}
+
+pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "live_photo" -> {
+      use value <- decode.then(paid_media_live_photo_decoder())
+      decode.success(PaidMediaLivePhotoPaidMedia(value))
+    }
+    "photo" -> {
+      use value <- decode.then(paid_media_photo_decoder())
+      decode.success(PaidMediaPhotoPaidMedia(value))
+    }
+    "preview" -> {
+      use value <- decode.then(paid_media_preview_decoder())
+      decode.success(PaidMediaPreviewPaidMedia(value))
+    }
+    "video" -> {
+      use value <- decode.then(paid_media_video_decoder())
+      decode.success(PaidMediaVideoPaidMedia(value))
+    }
+    _ -> panic as "Invalid variant for PaidMedia"
+  }
+}
+
+pub fn passport_element_error_decoder() -> decode.Decoder(PassportElementError) {
+  use variant <- decode.field("source", decode.string)
+  case variant {
+    "data" -> {
+      use value <- decode.then(passport_element_error_data_field_decoder())
+      decode.success(PassportElementErrorDataFieldPassportElementError(value))
+    }
+    "front_side" -> {
+      use value <- decode.then(passport_element_error_front_side_decoder())
+      decode.success(PassportElementErrorFrontSidePassportElementError(value))
+    }
+    "reverse_side" -> {
+      use value <- decode.then(passport_element_error_reverse_side_decoder())
+      decode.success(PassportElementErrorReverseSidePassportElementError(value))
+    }
+    "selfie" -> {
+      use value <- decode.then(passport_element_error_selfie_decoder())
+      decode.success(PassportElementErrorSelfiePassportElementError(value))
+    }
+    "file" -> {
+      use value <- decode.then(passport_element_error_file_decoder())
+      decode.success(PassportElementErrorFilePassportElementError(value))
+    }
+    "files" -> {
+      use value <- decode.then(passport_element_error_files_decoder())
+      decode.success(PassportElementErrorFilesPassportElementError(value))
+    }
+    "translation_file" -> {
+      use value <- decode.then(
+        passport_element_error_translation_file_decoder(),
+      )
+      decode.success(PassportElementErrorTranslationFilePassportElementError(
+        value,
+      ))
+    }
+    "translation_files" -> {
+      use value <- decode.then(
+        passport_element_error_translation_files_decoder(),
+      )
+      decode.success(PassportElementErrorTranslationFilesPassportElementError(
+        value,
+      ))
+    }
+    "unspecified" -> {
+      use value <- decode.then(passport_element_error_unspecified_decoder())
+      decode.success(PassportElementErrorUnspecifiedPassportElementError(value))
+    }
+    _ -> panic as "Invalid variant for PassportElementError"
+  }
+}
+
+pub fn reaction_type_decoder() -> decode.Decoder(ReactionType) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "emoji" -> {
+      use value <- decode.then(reaction_type_emoji_decoder())
+      decode.success(ReactionTypeEmojiReactionType(value))
+    }
+    "custom_emoji" -> {
+      use value <- decode.then(reaction_type_custom_emoji_decoder())
+      decode.success(ReactionTypeCustomEmojiReactionType(value))
+    }
+    "paid" -> {
+      use value <- decode.then(reaction_type_paid_decoder())
+      decode.success(ReactionTypePaidReactionType(value))
+    }
+    _ -> panic as "Invalid variant for ReactionType"
+  }
+}
+
+pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
+  RevenueWithdrawalState,
+) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "pending" -> {
+      use value <- decode.then(revenue_withdrawal_state_pending_decoder())
+      decode.success(RevenueWithdrawalStatePendingRevenueWithdrawalState(value))
+    }
+    "succeeded" -> {
+      use value <- decode.then(revenue_withdrawal_state_succeeded_decoder())
+      decode.success(RevenueWithdrawalStateSucceededRevenueWithdrawalState(
+        value,
+      ))
+    }
+    "failed" -> {
+      use value <- decode.then(revenue_withdrawal_state_failed_decoder())
+      decode.success(RevenueWithdrawalStateFailedRevenueWithdrawalState(value))
+    }
+    _ -> panic as "Invalid variant for RevenueWithdrawalState"
+  }
+}
+
+pub fn story_area_type_decoder() -> decode.Decoder(StoryAreaType) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "location" -> {
+      use value <- decode.then(story_area_type_location_decoder())
+      decode.success(StoryAreaTypeLocationStoryAreaType(value))
+    }
+    "suggested_reaction" -> {
+      use value <- decode.then(story_area_type_suggested_reaction_decoder())
+      decode.success(StoryAreaTypeSuggestedReactionStoryAreaType(value))
+    }
+    "link" -> {
+      use value <- decode.then(story_area_type_link_decoder())
+      decode.success(StoryAreaTypeLinkStoryAreaType(value))
+    }
+    "weather" -> {
+      use value <- decode.then(story_area_type_weather_decoder())
+      decode.success(StoryAreaTypeWeatherStoryAreaType(value))
+    }
+    "unique_gift" -> {
+      use value <- decode.then(story_area_type_unique_gift_decoder())
+      decode.success(StoryAreaTypeUniqueGiftStoryAreaType(value))
+    }
+    _ -> panic as "Invalid variant for StoryAreaType"
+  }
+}
+
+pub fn transaction_partner_decoder() -> decode.Decoder(TransactionPartner) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "user" -> {
+      use value <- decode.then(transaction_partner_user_decoder())
+      decode.success(TransactionPartnerUserTransactionPartner(value))
+    }
+    "chat" -> {
+      use value <- decode.then(transaction_partner_chat_decoder())
+      decode.success(TransactionPartnerChatTransactionPartner(value))
+    }
+    "affiliate_program" -> {
+      use value <- decode.then(transaction_partner_affiliate_program_decoder())
+      decode.success(TransactionPartnerAffiliateProgramTransactionPartner(value))
+    }
+    "fragment" -> {
+      use value <- decode.then(transaction_partner_fragment_decoder())
+      decode.success(TransactionPartnerFragmentTransactionPartner(value))
+    }
+    "telegram_ads" -> {
+      use value <- decode.then(transaction_partner_telegram_ads_decoder())
+      decode.success(TransactionPartnerTelegramAdsTransactionPartner(value))
+    }
+    "telegram_api" -> {
+      use value <- decode.then(transaction_partner_telegram_api_decoder())
+      decode.success(TransactionPartnerTelegramApiTransactionPartner(value))
+    }
+    "other" -> {
+      use value <- decode.then(transaction_partner_other_decoder())
+      decode.success(TransactionPartnerOtherTransactionPartner(value))
+    }
+    _ -> panic as "Invalid variant for TransactionPartner"
+  }
+}
+
+// === MANUAL — not regenerated below (codegen) ===
+//
+// Hand-written decoders for unions whose discriminator cannot be derived
+// mechanically (colliding or missing type tags) plus the generic
+// IntOrString / FileOrString decoders. The codegen tool (codegen/) preserves
+// everything from the marker above to EOF.
+
+pub fn messages_array_decoder() -> decode.Decoder(List(Message)) {
+  decode.list(message_decoder())
 }
 
 pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
@@ -8826,97 +8960,22 @@ pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
   }
 }
 
-pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "photo" -> {
-      use value <- decode.then(input_paid_media_photo_decoder())
-      decode.success(InputPaidMediaPhotoInputPaidMedia(value))
-    }
-    "video" -> {
-      use value <- decode.then(input_paid_media_video_decoder())
-      decode.success(InputPaidMediaVideoInputPaidMedia(value))
-    }
-    "live_photo" -> {
-      use value <- decode.then(input_paid_media_live_photo_decoder())
-      decode.success(InputPaidMediaLivePhotoInputPaidMedia(value))
-    }
-    _ -> panic as "Invalid variant for InputPaidMedia"
-  }
+fn maybe_inaccessible_message_message_decoder() {
+  use message <- decode.then(message_decoder())
+  decode.success(MessageMaybeInaccessibleMessage(message))
 }
 
-pub fn input_poll_media_decoder() -> decode.Decoder(InputPollMedia) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "animation" -> {
-      use value <- decode.then(input_media_animation_decoder())
-      decode.success(InputPollMediaAnimation(value))
-    }
-    "audio" -> {
-      use value <- decode.then(input_media_audio_decoder())
-      decode.success(InputPollMediaAudio(value))
-    }
-    "document" -> {
-      use value <- decode.then(input_media_document_decoder())
-      decode.success(InputPollMediaDocument(value))
-    }
-    "live_photo" -> {
-      use value <- decode.then(input_media_live_photo_decoder())
-      decode.success(InputPollMediaLivePhoto(value))
-    }
-    "location" -> {
-      use value <- decode.then(input_media_location_decoder())
-      decode.success(InputPollMediaLocation(value))
-    }
-    "photo" -> {
-      use value <- decode.then(input_media_photo_decoder())
-      decode.success(InputPollMediaPhoto(value))
-    }
-    "venue" -> {
-      use value <- decode.then(input_media_venue_decoder())
-      decode.success(InputPollMediaVenue(value))
-    }
-    "video" -> {
-      use value <- decode.then(input_media_video_decoder())
-      decode.success(InputPollMediaVideo(value))
-    }
-    _ -> panic as "Invalid variant for InputPollMedia"
-  }
+fn maybe_inaccessible_message_inaccessible_message_decoder() {
+  use value <- decode.then(inaccessible_message_decoder())
+  decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
 }
 
-pub fn input_poll_option_media_decoder() -> decode.Decoder(InputPollOptionMedia) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "animation" -> {
-      use value <- decode.then(input_media_animation_decoder())
-      decode.success(InputPollOptionMediaAnimation(value))
-    }
-    "live_photo" -> {
-      use value <- decode.then(input_media_live_photo_decoder())
-      decode.success(InputPollOptionMediaLivePhoto(value))
-    }
-    "location" -> {
-      use value <- decode.then(input_media_location_decoder())
-      decode.success(InputPollOptionMediaLocation(value))
-    }
-    "photo" -> {
-      use value <- decode.then(input_media_photo_decoder())
-      decode.success(InputPollOptionMediaPhoto(value))
-    }
-    "sticker" -> {
-      use value <- decode.then(input_media_sticker_decoder())
-      decode.success(InputPollOptionMediaSticker(value))
-    }
-    "venue" -> {
-      use value <- decode.then(input_media_venue_decoder())
-      decode.success(InputPollOptionMediaVenue(value))
-    }
-    "video" -> {
-      use value <- decode.then(input_media_video_decoder())
-      decode.success(InputPollOptionMediaVideo(value))
-    }
-    _ -> panic as "Invalid variant for InputPollOptionMedia"
-  }
+pub fn maybe_inaccessible_message_decoder() -> decode.Decoder(
+  MaybeInaccessibleMessage,
+) {
+  decode.one_of(maybe_inaccessible_message_message_decoder(), [
+    maybe_inaccessible_message_inaccessible_message_decoder(),
+  ])
 }
 
 pub fn inline_query_result_decoder() -> decode.Decoder(InlineQueryResult) {
@@ -9081,115 +9140,6 @@ pub fn input_message_content_decoder() -> decode.Decoder(InputMessageContent) {
       decode.success(InputInvoiceMessageContentInputMessageContent(value))
     }
     _ -> panic as "Invalid variant for InputMessageContent"
-  }
-}
-
-pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
-  RevenueWithdrawalState,
-) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "pending" -> {
-      use value <- decode.then(revenue_withdrawal_state_pending_decoder())
-      decode.success(RevenueWithdrawalStatePendingRevenueWithdrawalState(value))
-    }
-    "succeeded" -> {
-      use value <- decode.then(revenue_withdrawal_state_succeeded_decoder())
-      decode.success(RevenueWithdrawalStateSucceededRevenueWithdrawalState(
-        value,
-      ))
-    }
-    "failed" -> {
-      use value <- decode.then(revenue_withdrawal_state_failed_decoder())
-      decode.success(RevenueWithdrawalStateFailedRevenueWithdrawalState(value))
-    }
-    _ -> panic as "Invalid variant for RevenueWithdrawalState"
-  }
-}
-
-pub fn transaction_partner_decoder() -> decode.Decoder(TransactionPartner) {
-  use variant <- decode.field("type", decode.string)
-  case variant {
-    "user" -> {
-      use value <- decode.then(transaction_partner_user_decoder())
-      decode.success(TransactionPartnerUserTransactionPartner(value))
-    }
-    "chat" -> {
-      use value <- decode.then(transaction_partner_chat_decoder())
-      decode.success(TransactionPartnerChatTransactionPartner(value))
-    }
-    "affiliate_program" -> {
-      use value <- decode.then(transaction_partner_affiliate_program_decoder())
-      decode.success(TransactionPartnerAffiliateProgramTransactionPartner(value))
-    }
-    "fragment" -> {
-      use value <- decode.then(transaction_partner_fragment_decoder())
-      decode.success(TransactionPartnerFragmentTransactionPartner(value))
-    }
-    "telegram_ads" -> {
-      use value <- decode.then(transaction_partner_telegram_ads_decoder())
-      decode.success(TransactionPartnerTelegramAdsTransactionPartner(value))
-    }
-    "telegram_api" -> {
-      use value <- decode.then(transaction_partner_telegram_api_decoder())
-      decode.success(TransactionPartnerTelegramApiTransactionPartner(value))
-    }
-    "other" -> {
-      use value <- decode.then(transaction_partner_other_decoder())
-      decode.success(TransactionPartnerOtherTransactionPartner(value))
-    }
-    _ -> panic as "Invalid variant for TransactionPartner"
-  }
-}
-
-pub fn passport_element_error_decoder() -> decode.Decoder(PassportElementError) {
-  use variant <- decode.field("sourse", decode.string)
-  case variant {
-    "data" -> {
-      use value <- decode.then(passport_element_error_data_field_decoder())
-      decode.success(PassportElementErrorDataFieldPassportElementError(value))
-    }
-    "front_side" -> {
-      use value <- decode.then(passport_element_error_front_side_decoder())
-      decode.success(PassportElementErrorFrontSidePassportElementError(value))
-    }
-    "reverse_side" -> {
-      use value <- decode.then(passport_element_error_reverse_side_decoder())
-      decode.success(PassportElementErrorReverseSidePassportElementError(value))
-    }
-    "selfie" -> {
-      use value <- decode.then(passport_element_error_selfie_decoder())
-      decode.success(PassportElementErrorSelfiePassportElementError(value))
-    }
-    "file" -> {
-      use value <- decode.then(passport_element_error_file_decoder())
-      decode.success(PassportElementErrorFilePassportElementError(value))
-    }
-    "files" -> {
-      use value <- decode.then(passport_element_error_files_decoder())
-      decode.success(PassportElementErrorFilesPassportElementError(value))
-    }
-    "translation_file" -> {
-      use value <- decode.then(
-        passport_element_error_translation_file_decoder(),
-      )
-      decode.success(PassportElementErrorTranslationFilePassportElementError(
-        value,
-      ))
-    }
-    "translation_files" -> {
-      use value <- decode.then(
-        passport_element_error_translation_files_decoder(),
-      )
-      decode.success(PassportElementErrorTranslationFilesPassportElementError(
-        value,
-      ))
-    }
-    "unspecified" -> {
-      use value <- decode.then(passport_element_error_unspecified_decoder())
-      decode.success(PassportElementErrorUnspecifiedPassportElementError(value))
-    }
-    _ -> panic as "Invalid variant for PassportElementError"
   }
 }
 
