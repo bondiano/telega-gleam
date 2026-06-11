@@ -63,6 +63,7 @@ import telega/model/types.{
   type Audio, type ChatMemberUpdated, type Message, type PhotoSize, type User,
   type Video, type Voice, type WebAppData,
 }
+import telega/telemetry
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
   CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
@@ -199,6 +200,10 @@ fn handle_update_bot_message(
       |> Ok
     }
     None -> {
+      telemetry.execute(["telega", "chat_instance", "spawn"], [#("count", 1)], [
+        #("chat_id", telemetry.IntValue(update.chat_id)),
+        #("from_id", telemetry.IntValue(update.from_id)),
+      ])
       let args =
         ChatInstanceArgs(
           key:,
@@ -366,7 +371,13 @@ fn do_handle_new_chat_instance_message(
           )
       }
     None ->
-      case chat.router_handler(context, update) {
+      case
+        telemetry.span(
+          event: ["telega", "update"],
+          metadata: update_telemetry_metadata(update),
+          run: fn() { chat.router_handler(context, update) },
+        )
+      {
         Ok(Context(session: new_session, ..)) -> {
           case chat.session_settings.persist_session(chat.key, new_session) {
             Ok(persisted_session) -> {
@@ -381,7 +392,7 @@ fn do_handle_new_chat_instance_message(
                 }
                 Error(e) -> {
                   log.error_d("Error in session persistence: ", e)
-                  actor.stop()
+                  stop_chat_instance(chat, "session_persist_failed")
                 }
               }
             }
@@ -395,12 +406,28 @@ fn do_handle_new_chat_instance_message(
             }
             Error(e) -> {
               log.error_d("Error in catch handler: ", e)
-              actor.stop()
+              stop_chat_instance(chat, "catch_handler_failed")
             }
           }
         }
       }
   }
+}
+
+fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
+  [
+    #("update_type", telemetry.StringValue(update.type_to_string(upd))),
+    #("chat_id", telemetry.IntValue(upd.chat_id)),
+    #("from_id", telemetry.IntValue(upd.from_id)),
+  ]
+}
+
+fn stop_chat_instance(chat: ChatInstance(session, error), reason: String) {
+  telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
+    #("key", telemetry.StringValue(chat.key)),
+    #("reason", telemetry.StringValue(reason)),
+  ])
+  actor.stop()
 }
 
 fn do_handle_continuation(
@@ -410,7 +437,9 @@ fn do_handle_continuation(
   reply_with reply_with: Subject(Bool),
   chat chat: ChatInstance(session, error),
 ) {
-  case do_handle(context:, update:, handler: continuation.handler) {
+  case
+    do_handle_with_telemetry(context:, update:, handler: continuation.handler)
+  {
     Some(Ok(Context(session: new_session, ..))) -> {
       // Persist the new session after continuation completes
       case chat.session_settings.persist_session(chat.key, new_session) {
@@ -431,7 +460,7 @@ fn do_handle_continuation(
                 "Error in session persistence after continuation: ",
                 e,
               )
-              actor.stop()
+              stop_chat_instance(chat, "session_persist_failed")
             }
           }
         }
@@ -445,7 +474,7 @@ fn do_handle_continuation(
         }
         Error(e) -> {
           log.error_d("Error in catch handler: ", e)
-          actor.stop()
+          stop_chat_instance(chat, "catch_handler_failed")
         }
       }
     }
@@ -474,7 +503,7 @@ fn do_handle_continuation(
                         "Error in session persistence after handle_else: ",
                         e,
                       )
-                      actor.stop()
+                      stop_chat_instance(chat, "session_persist_failed")
                     }
                   }
                 }
@@ -488,7 +517,7 @@ fn do_handle_continuation(
                 }
                 Error(e) -> {
                   log.error_d("Error in catch else handler: ", e)
-                  actor.stop()
+                  stop_chat_instance(chat, "catch_handler_failed")
                 }
               }
             }
@@ -681,6 +710,43 @@ pub fn wait_handler(
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
   )
   Ok(ctx)
+}
+
+/// Same as `do_handle`, but wraps the handler invocation in a
+/// `telega.update` start/stop/exception telemetry span.
+/// A handler that did not match the update (`None`) emits `stop`.
+fn do_handle_with_telemetry(
+  context context: Context(session, error),
+  update upd: Update,
+  handler handler: Handler(session, error),
+) {
+  let metadata = update_telemetry_metadata(upd)
+  let started_at = telemetry.monotonic_time()
+  telemetry.execute(
+    ["telega", "update", "start"],
+    [#("system_time", telemetry.system_time())],
+    metadata,
+  )
+
+  let result = do_handle(context:, update: upd, handler:)
+
+  let duration = telemetry.monotonic_time() - started_at
+  case result {
+    Some(Error(error)) ->
+      telemetry.execute(
+        ["telega", "update", "exception"],
+        [#("duration", duration)],
+        [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
+      )
+    _ ->
+      telemetry.execute(
+        ["telega", "update", "stop"],
+        [#("duration", duration)],
+        metadata,
+      )
+  }
+
+  result
 }
 
 fn do_handle(context context, update update, handler handler) {

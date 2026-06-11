@@ -300,6 +300,7 @@ fn run_timeout_and_cleanup(
 ) -> #(Bool, Result(Context(session, error), error)) {
   case instance.is_expired(inst, flow.ttl_ms) {
     True -> {
+      engine.emit_flow_event("timeout", inst, [#("count", 1)])
       let ctx_result = case flow.on_timeout {
         Some(timeout_fn) ->
           case timeout_fn(ctx, inst) {

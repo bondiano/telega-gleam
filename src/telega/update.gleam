@@ -506,6 +506,46 @@ pub fn to_string(update: Update) -> String {
   }
 }
 
+/// Returns a short snake_case tag for the update variant,
+/// e.g. `"text"`, `"command"`, `"callback_query"`.
+/// Used as the `update_type` metadata in telemetry events.
+pub fn type_to_string(update: Update) -> String {
+  case update {
+    TextUpdate(..) -> "text"
+    CommandUpdate(..) -> "command"
+    PhotoUpdate(..) -> "photo"
+    VideoUpdate(..) -> "video"
+    AudioUpdate(..) -> "audio"
+    VoiceUpdate(..) -> "voice"
+    MediaGroupUpdate(..) -> "media_group"
+    WebAppUpdate(..) -> "web_app"
+    MessageUpdate(..) -> "message"
+    ChannelPostUpdate(..) -> "channel_post"
+    EditedMessageUpdate(..) -> "edited_message"
+    EditedChannelPostUpdate(..) -> "edited_channel_post"
+    BusinessConnectionUpdate(..) -> "business_connection"
+    BusinessMessageUpdate(..) -> "business_message"
+    EditedBusinessMessageUpdate(..) -> "edited_business_message"
+    DeletedBusinessMessageUpdate(..) -> "deleted_business_message"
+    MessageReactionUpdate(..) -> "message_reaction"
+    MessageReactionCountUpdate(..) -> "message_reaction_count"
+    InlineQueryUpdate(..) -> "inline_query"
+    ChosenInlineResultUpdate(..) -> "chosen_inline_result"
+    CallbackQueryUpdate(..) -> "callback_query"
+    ShippingQueryUpdate(..) -> "shipping_query"
+    PreCheckoutQueryUpdate(..) -> "pre_checkout_query"
+    PaidMediaPurchaseUpdate(..) -> "paid_media_purchase"
+    PollUpdate(..) -> "poll"
+    PollAnswerUpdate(..) -> "poll_answer"
+    MyChatMemberUpdate(..) -> "my_chat_member"
+    ChatMemberUpdate(..) -> "chat_member"
+    ChatJoinRequestUpdate(..) -> "chat_join_request"
+    RemovedChatBoost(..) -> "removed_chat_boost"
+    ManagedBotUpdate(..) -> "managed_bot"
+    GuestMessageUpdate(..) -> "guest_message"
+  }
+}
+
 // When we receive update with `callback_query` field
 fn new_callback_query_update(raw: ModelUpdate, callback_query: CallbackQuery) {
   CallbackQueryUpdate(

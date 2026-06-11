@@ -16,7 +16,8 @@ packages = [
   { name = "logging", version = "1.5.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "logging", source = "hex", outer_checksum = "BC5F18CE5DD9686100229FE5409BDC3DD5C46D5A7DF2F804AD2D8F0DD6C5060E" },
   { name = "mug", version = "3.1.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_stdlib"], otp_app = "mug", source = "hex", outer_checksum = "C01279D98E40371DA23461774B63F0E3581B8F1396049D881B0C7EB32799D93F" },
   { name = "simplifile", version = "2.4.0", build_tools = ["gleam"], requirements = ["filepath", "gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "7C18AFA4FED0B4CE1FA5B0B4BAC1FA1744427054EA993565F6F3F82E5453170D" },
-  { name = "telega", version = "1.2.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_http", "gleam_json", "gleam_otp", "gleam_regexp", "gleam_stdlib", "gleam_time", "logging", "simplifile"], source = "local", path = ".." },
+  { name = "telega", version = "1.2.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_http", "gleam_json", "gleam_otp", "gleam_regexp", "gleam_stdlib", "gleam_time", "logging", "simplifile", "telemetry"], source = "local", path = ".." },
+  { name = "telemetry", version = "1.4.2", build_tools = ["rebar3"], requirements = [], otp_app = "telemetry", source = "hex", outer_checksum = "928F6495066506077862C0D1646609EED891A4326BEE3126BA54B60AF61FEBB1" },
   { name = "valkyrie", version = "4.2.0", build_tools = ["gleam"], requirements = ["bath", "gleam_erlang", "gleam_otp", "gleam_stdlib", "gleam_time", "mug"], otp_app = "valkyrie", source = "hex", outer_checksum = "0860695B375E5784A1A3DEA74623704EEA16AC32AA44EDA9764719610FEB8FDA" },
 ]
 

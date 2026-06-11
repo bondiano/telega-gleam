@@ -9,6 +9,7 @@ import gleam/result
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
+import telega/telemetry
 
 pub opaque type RequestQueue {
   RequestQueue(actor: Subject(Message))
@@ -290,6 +291,13 @@ fn handle_message(
   }
 }
 
+fn emit_queue_depth(rule: Rule, depth: Int) {
+  telemetry.execute(["telega", "request_queue", "depth"], [#("depth", depth)], [
+    #("rule_id", telemetry.StringValue(rule.id)),
+    #("priority", telemetry.IntValue(rule.priority)),
+  ])
+}
+
 fn add_to_queue(state: State, request: QueuedRequest) -> State {
   case dict.get(state.rule_states, request.rule_id) {
     Ok(rule_state) -> {
@@ -298,6 +306,7 @@ fn add_to_queue(state: State, request: QueuedRequest) -> State {
       let new_rule_states =
         dict.insert(state.rule_states, request.rule_id, new_rule_state)
 
+      emit_queue_depth(rule_state.rule, list.length(new_queue))
       State(..state, rule_states: new_rule_states)
     }
     Error(_) -> {
@@ -309,6 +318,7 @@ fn add_to_queue(state: State, request: QueuedRequest) -> State {
           let new_rule_states =
             dict.insert(state.rule_states, "default", new_rule_state)
 
+          emit_queue_depth(rule_state.rule, list.length(new_queue))
           State(..state, rule_states: new_rule_states)
         }
         Error(_) -> {
@@ -355,6 +365,7 @@ fn process_rule_queue(
         True -> {
           execute_request(request, state.self, state.config.max_retries)
 
+          emit_queue_depth(rule_state.rule, list.length(rest))
           let new_rule_state =
             RuleState(
               ..rule_state,

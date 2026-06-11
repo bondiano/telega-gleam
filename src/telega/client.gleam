@@ -22,10 +22,12 @@ import gleam/http/response.{type Response}
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/string
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
 import telega/internal/request_queue.{type RequestQueue}
+import telega/telemetry
 
 const default_retry_delay = 1000
 
@@ -91,13 +93,16 @@ pub fn fetch(
   request api_request: TelegramApiRequest,
   client client: TelegramClient,
 ) -> Result(Response(String), TelegaError) {
+  let method = api_request.method
   use api_request <- result.try(api_to_request(api_request))
 
+  use <- fetch_with_telemetry(method)
   case client.request_queue {
     Some(queue) ->
       request_queue.execute(queue, fn() { send_request(client, api_request) })
 
-    None -> send_with_retry(client, api_request, client.max_retry_attempts)
+    None ->
+      send_with_retry(client, method, api_request, client.max_retry_attempts)
   }
 }
 
@@ -315,16 +320,19 @@ pub fn fetch_with_rule(
   client client: TelegramClient,
   rule_id rule_id: String,
 ) -> Result(Response(String), TelegaError) {
+  let method = api_request.method
   use api_request <- result.try(api_to_request(api_request))
   let request_id = utils.random_string(32)
 
+  use <- fetch_with_telemetry(method)
   case client.request_queue {
     Some(queue) ->
       request_queue.execute_with_rule(queue, request_id, rule_id, fn() {
         send_request(client, api_request)
       })
 
-    None -> send_with_retry(client, api_request, client.max_retry_attempts)
+    None ->
+      send_with_retry(client, method, api_request, client.max_retry_attempts)
   }
 }
 
@@ -335,8 +343,54 @@ fn send_request(
   client.fetch_client(api_request)
 }
 
+/// Wraps a request execution in `telega.api_call` start/stop/exception events.
+fn fetch_with_telemetry(
+  method: String,
+  run: fn() -> Result(Response(String), TelegaError),
+) -> Result(Response(String), TelegaError) {
+  let metadata = [#("method", telemetry.StringValue(method))]
+  let started_at = telemetry.monotonic_time()
+  telemetry.execute(
+    ["telega", "api_call", "start"],
+    [#("system_time", telemetry.system_time())],
+    metadata,
+  )
+
+  let result = run()
+
+  let duration = telemetry.monotonic_time() - started_at
+  case result {
+    Ok(response) ->
+      telemetry.execute(
+        ["telega", "api_call", "stop"],
+        [#("duration", duration)],
+        [#("status", telemetry.IntValue(response.status)), ..metadata],
+      )
+    Error(error) ->
+      telemetry.execute(
+        ["telega", "api_call", "exception"],
+        [#("duration", duration)],
+        [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
+      )
+  }
+
+  result
+}
+
+fn emit_api_retry(method: String, attempt: Int) {
+  telemetry.execute(
+    ["telega", "api_call", "retry"],
+    [#("retry_after", default_retry_delay)],
+    [
+      #("method", telemetry.StringValue(method)),
+      #("attempt", telemetry.IntValue(attempt)),
+    ],
+  )
+}
+
 fn send_with_retry(
   client: TelegramClient,
+  method: String,
   api_request: Request(String),
   retries: Int,
 ) -> Result(Response(String), TelegaError) {
@@ -350,15 +404,17 @@ fn send_with_retry(
           case response.status {
             429 -> {
               // Rate limited, wait and retry
+              emit_api_retry(method, client.max_retry_attempts - retries + 1)
               process.sleep(default_retry_delay)
-              send_with_retry(client, api_request, retries - 1)
+              send_with_retry(client, method, api_request, retries - 1)
             }
             _ -> Ok(response)
           }
         }
         Error(_) -> {
+          emit_api_retry(method, client.max_retry_attempts - retries + 1)
           process.sleep(default_retry_delay)
-          send_with_retry(client, api_request, retries - 1)
+          send_with_retry(client, method, api_request, retries - 1)
         }
       }
     }
@@ -367,7 +423,7 @@ fn send_with_retry(
 
 fn api_to_request(api_request) {
   case api_request {
-    TelegramApiGetRequest(url: url, query: query) -> {
+    TelegramApiGetRequest(url:, query:, ..) -> {
       request.to(url)
       |> result.map(fn(req) {
         req
@@ -375,7 +431,7 @@ fn api_to_request(api_request) {
         |> set_query(query)
       })
     }
-    TelegramApiPostRequest(url: url, body: body) -> {
+    TelegramApiPostRequest(url:, body:, ..) -> {
       request.to(url)
       |> result.map(fn(req) {
         req
@@ -400,8 +456,12 @@ pub fn get_api_url(client client: TelegramClient) -> String {
 }
 
 pub opaque type TelegramApiRequest {
-  TelegramApiPostRequest(url: String, body: String)
-  TelegramApiGetRequest(url: String, query: Option(List(#(String, String))))
+  TelegramApiPostRequest(url: String, body: String, method: String)
+  TelegramApiGetRequest(
+    url: String,
+    query: Option(List(#(String, String))),
+    method: String,
+  )
 }
 
 pub fn new_post_request(
@@ -409,7 +469,7 @@ pub fn new_post_request(
   path path: String,
   body body: String,
 ) -> TelegramApiRequest {
-  TelegramApiPostRequest(url: build_url(client, path), body:)
+  TelegramApiPostRequest(url: build_url(client, path), body:, method: path)
 }
 
 pub fn new_get_request(
@@ -417,7 +477,7 @@ pub fn new_get_request(
   path path: String,
   query query: Option(List(#(String, String))),
 ) -> TelegramApiRequest {
-  TelegramApiGetRequest(url: build_url(client, path), query:)
+  TelegramApiGetRequest(url: build_url(client, path), query:, method: path)
 }
 
 fn build_url(client client: TelegramClient, path path: String) {

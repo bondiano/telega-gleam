@@ -14,6 +14,7 @@ pages = [
     { title = "Conversation", path="docs/conversation.html", source="docs/conversation.md" },
     { title = "Conversation Flows", path="docs/conversation-flows.html", source="docs/conversation-flows.md" },
     { title = "Session Serialization", path="docs/session-serialization.html", source="docs/session-serialization.md" },
+    { title = "Observability", path="docs/observability.html", source="docs/observability.md" },
     { title = "Testing", path="docs/testing.html", source="docs/testing.md" },
 ]
 
@@ -30,6 +31,7 @@ gleam_regexp = ">= 1.1.1 and < 2.0.0"
 gleam_time = ">= 1.2.0 and < 2.0.0"
 logging = ">= 1.3.0 and < 2.0.0"
 simplifile = ">= 2.3.0 and < 3.0.0"
+telemetry = ">= 1.2.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.2.0 and < 2.0.0"

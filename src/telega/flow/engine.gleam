@@ -18,6 +18,21 @@ import telega/flow/types.{
   WaitCallbackWithTimeout, WaitWithTimeout,
 }
 import telega/internal/utils
+import telega/telemetry
+
+/// Emit a `telega.flow` telemetry event (`step`, `timeout` or `cancel`)
+/// with `flow_name` and `step` metadata.
+@internal
+pub fn emit_flow_event(
+  event event: String,
+  instance instance: FlowInstance,
+  measurements measurements: List(#(String, Int)),
+) -> Nil {
+  telemetry.execute(["telega", "flow", event], measurements, [
+    #("flow_name", telemetry.StringValue(instance.flow_name)),
+    #("step", telemetry.StringValue(instance.state.current_step)),
+  ])
+}
 
 /// Start or resume a flow for a given user/chat
 @internal
@@ -173,6 +188,7 @@ pub fn execute_step(
                       let handler_fn = fn() {
                         config.handler(ctx_after_enter, instance_after_enter)
                       }
+                      let started_at = telemetry.monotonic_time()
                       let result =
                         apply_middlewares(
                           ctx_after_enter,
@@ -183,6 +199,9 @@ pub fn execute_step(
                             config.middlewares,
                           ),
                         )
+                      emit_flow_event("step", instance, [
+                        #("duration", telemetry.monotonic_time() - started_at),
+                      ])
                       case result {
                         Ok(#(new_ctx, action, new_instance)) ->
                           process_action_with_leave_hook(
@@ -526,6 +545,7 @@ fn process_action(
     }
 
     Cancel -> {
+      emit_flow_event("cancel", instance, [#("count", 1)])
       case run_flow_exit_hook(flow.on_flow_exit, ctx, instance) {
         Ok(final_ctx) -> {
           let _ = flow.storage.delete(instance.id)
@@ -855,6 +875,7 @@ pub fn execute_subflow_step(
   case dict.get(flow.steps, instance.state.current_step) {
     Ok(step_config) -> {
       let handler_fn = fn() { step_config.handler(ctx, instance) }
+      let started_at = telemetry.monotonic_time()
       let result =
         apply_middlewares(
           ctx,
@@ -862,6 +883,9 @@ pub fn execute_subflow_step(
           handler_fn,
           list.append(flow.global_middlewares, step_config.middlewares),
         )
+      emit_flow_event("step", instance, [
+        #("duration", telemetry.monotonic_time() - started_at),
+      ])
       case result {
         Ok(#(new_ctx, action, new_instance)) ->
           process_subflow_action(flow, new_ctx, action, new_instance, config)
@@ -894,6 +918,7 @@ fn process_subflow_action(
     }
 
     Cancel -> {
+      emit_flow_event("cancel", instance, [#("count", 1)])
       let _ = flow.storage.delete(instance.id)
       Ok(ctx)
     }
