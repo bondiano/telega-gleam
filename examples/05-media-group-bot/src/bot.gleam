@@ -9,11 +9,11 @@ import gleam/result
 import telega
 import telega/error
 import telega/format as fmt
-import telega_httpc
 import telega/model/types
 import telega/reply
 import telega/router
 import telega/update
+import telega_httpc
 
 import utils
 

@@ -21,6 +21,65 @@ pub type SessionSettings(session, error) {
 
 If `get_session` returns an `Error`, Telega logs a warning and falls back to `default_session()` instead of crashing. This keeps the bot running during transient storage failures.
 
+## Unified Storage Interface
+
+`SessionSettings` (sessions) and `FlowStorage` (flows) are both *derived* from a single low-level contract, `telega/storage.KeyValueStorage`. Wire up one backend and use it for both:
+
+```gleam
+pub type KeyValueStorage(error) {
+  KeyValueStorage(
+    get: fn(String) -> Result(Option(String), error),
+    set: fn(String, String) -> Result(Nil, error),
+    set_with_ttl: fn(String, String, Int) -> Result(Nil, error),
+    delete: fn(String) -> Result(Nil, error),
+    scan: fn(String) -> Result(List(String), error),
+  )
+}
+```
+
+Values are opaque JSON `String`s — you bring your own encode/decode for sessions; flow instances are serialized automatically.
+
+### ETS (built in)
+
+```gleam
+import telega/storage
+import telega/storage/ets
+
+let assert Ok(kv) = ets.new("my_bot_storage")
+
+// Sessions: provide JSON encode/decode for your session type.
+let session_settings =
+  storage.session_settings_from_storage(
+    storage: kv,
+    encode: encode_my_session,           // fn(MySession) -> json.Json
+    decode: my_session_decoder(),         // decode.Decoder(MySession)
+    default: fn() { MySession(count: 0) },
+  )
+
+// Flows: no per-type wiring needed — the full instance is serialized for you.
+let flow_storage = storage.flow_storage_from_storage(kv)
+```
+
+`ets.new` keeps data in memory for the lifetime of the VM (lost on restart) and emulates `set_with_ttl` with lazy expiration on access. For persistence across restarts, back `KeyValueStorage` with a database (see below) and pass it to the same two bridges.
+
+### Custom backend
+
+Implement `KeyValueStorage` once and both sessions and flows work. The contract is small: `get`/`set`/`set_with_ttl`/`delete`/`scan(prefix)`. Keys are namespaced for you (`session:…`, `flow:…`), so a single store can hold both. `scan(prefix)` must return live keys beginning with the prefix; it backs `FlowStorage.list_by_user` and TTL cleanup.
+
+```gleam
+fn my_kv(conn) -> storage.KeyValueStorage(MyError) {
+  storage.KeyValueStorage(
+    get: fn(key) { /* SELECT value WHERE key = $1 */ },
+    set: fn(key, value) { /* UPSERT */ },
+    set_with_ttl: fn(key, value, ttl_ms) { /* UPSERT with expires_at */ },
+    delete: fn(key) { /* DELETE */ },
+    scan: fn(prefix) { /* SELECT key WHERE key LIKE $1 || '%' AND not expired */ },
+  )
+}
+```
+
+The manual `SessionSettings` recipes below remain valid if you prefer to wire sessions directly without the `KeyValueStorage` bridge.
+
 ## Storage Backends
 
 ### In-Memory (Actor)

@@ -640,7 +640,10 @@ fn declared_constructors(text: String) -> List(#(String, Bool)) {
           True -> #(False, acc)
           False ->
             case leading_constructor(trimmed) {
-              Some(name) -> #(True, [#(name, string.contains(trimmed, "(")), ..acc])
+              Some(name) -> #(True, [
+                #(name, string.contains(trimmed, "(")),
+                ..acc
+              ])
               None -> #(True, acc)
             }
         }
@@ -662,10 +665,7 @@ fn leading_constructor(trimmed: String) -> Option(String) {
   }
 }
 
-fn module_import(
-  type_names: List(String),
-  ctor_names: List(String),
-) -> String {
+fn module_import(type_names: List(String), ctor_names: List(String)) -> String {
   let entries =
     list.append(list.map(type_names, fn(n) { "type " <> n }), ctor_names)
   case entries {
@@ -689,7 +689,9 @@ fn types_import_for(
   let apps = applied_ctor_set(body)
   let noarg_uses = noarg_use_set(body)
   let used_types =
-    set.intersection(words, all_types) |> set.to_list |> list.sort(string.compare)
+    set.intersection(words, all_types)
+    |> set.to_list
+    |> list.sort(string.compare)
   let used_ctors =
     set.union(
       set.intersection(apps, arg_ctors),
@@ -852,8 +854,7 @@ fn run() -> Result(String, String) {
     [types_suffix, decoder_suffix, encoder_suffix]
     |> string.join("\n")
     |> declared_constructors
-  let #(suffix_arg, suffix_noarg) =
-    list.partition(suffix_ctors, fn(c) { c.1 })
+  let #(suffix_arg, suffix_noarg) = list.partition(suffix_ctors, fn(c) { c.1 })
   let arg_ctors =
     union_variant_ctors
     |> list.append(list.map(field_model_names, fn(m) { m.name }))

@@ -1,18 +1,14 @@
 import envoy
-import gleam/dict
-import gleam/dynamic/decode
 import gleam/int
-import gleam/json
-import gleam/list
-import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
 import logging
-import pog
-import restaurant_booking/sql
-import telega/flow/instance
+import sqlight
+
 import telega/flow/types
 import telega/keyboard
+import telega/storage
+import telega_storage_sqlite as sqlite
 
 /// Log an info message
 pub fn log(message: String) -> Nil {
@@ -34,133 +30,33 @@ pub fn log_warning(message: String) -> Nil {
   logging.log(logging.Warning, message)
 }
 
-/// Parse JSON data back to dict using gleam/json
-fn parse_json_to_dict(json_str: String) -> dict.Dict(String, String) {
-  case string.trim(json_str) {
-    "{}" -> dict.new()
-    "" -> dict.new()
-    _ -> {
-      case json.parse(json_str, decode.dict(decode.string, decode.string)) {
-        Ok(parsed_dict) -> parsed_dict
-        Error(_) -> dict.new()
-      }
-    }
-  }
+/// Build flow storage from the SQLite key-value adapter.
+///
+/// No hand-written storage code: `telega_storage_sqlite` implements the
+/// `KeyValueStorage` contract, and `storage.flow_storage_from_storage` derives
+/// the `FlowStorage` from it. We only adapt the error type to `String` to match
+/// the example's flow error type.
+pub fn create_database_storage(
+  db: sqlight.Connection,
+) -> types.FlowStorage(String) {
+  sqlite.new(db)
+  |> with_string_errors
+  |> storage.flow_storage_from_storage
 }
 
-fn db_row_to_flow_instance(row: sql.LoadFlowInstanceRow) -> types.FlowInstance {
-  let data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
-  let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
-
-  instance.instance_from_row(types.FlowInstanceRow(
-    id: row.id,
-    flow_name: row.flow_name,
-    user_id: row.user_id,
-    chat_id: row.chat_id,
-    current_step: row.current_step,
-    data:,
-    step_data:,
-    wait_token: row.wait_token,
-    wait_timeout_at: None,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  ))
-}
-
-/// Convert list database rows to FlowInstance list
-fn db_rows_to_flow_instances(
-  rows: List(sql.ListUserInstancesRow),
-) -> List(types.FlowInstance) {
-  rows
-  |> list.map(fn(row) {
-    let data = parse_json_to_dict(option.unwrap(row.state_data, "{}"))
-    let step_data = parse_json_to_dict(option.unwrap(row.scene_data, "{}"))
-
-    instance.instance_from_row(types.FlowInstanceRow(
-      id: row.id,
-      flow_name: row.flow_name,
-      user_id: row.user_id,
-      chat_id: row.chat_id,
-      current_step: row.current_step,
-      data:,
-      step_data:,
-      wait_token: row.wait_token,
-      wait_timeout_at: None,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    ))
-  })
-}
-
-/// Create real database storage for flow persistence
-pub fn create_database_storage(db: pog.Connection) -> types.FlowStorage(String) {
-  types.FlowStorage(
-    save: fn(inst) {
-      let row = instance.instance_to_row(inst)
-
-      // Convert flow state data to JSON
-      let state_data_json =
-        json.object(
-          row.data
-          |> dict.to_list
-          |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
-        )
-
-      // Convert step data to JSON (if exists)
-      let step_data_json = case dict.size(row.step_data) {
-        0 -> json.null()
-        _ ->
-          json.object(
-            row.step_data
-            |> dict.to_list
-            |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
-          )
-      }
-
-      case
-        sql.save_flow_instance(
-          db,
-          row.id,
-          row.flow_name,
-          row.user_id,
-          row.chat_id,
-          row.current_step,
-          state_data_json,
-          step_data_json,
-          option.unwrap(row.wait_token, ""),
-        )
-      {
-        Ok(_) -> Ok(Nil)
-        Error(err) ->
-          Error("Failed to save flow instance: " <> string.inspect(err))
-      }
+fn with_string_errors(
+  kv: storage.KeyValueStorage(e),
+) -> storage.KeyValueStorage(String) {
+  storage.KeyValueStorage(
+    get: fn(key) { kv.get(key) |> result.map_error(string.inspect) },
+    set: fn(key, value) {
+      kv.set(key, value) |> result.map_error(string.inspect)
     },
-    load: fn(id) {
-      case sql.load_flow_instance(db, id) {
-        Ok(pog.Returned(count: _, rows: [row])) ->
-          Ok(Some(db_row_to_flow_instance(row)))
-        Ok(pog.Returned(count: _, rows: [])) -> Ok(None)
-        Ok(pog.Returned(count: _, rows: [first_row, ..])) ->
-          Ok(Some(db_row_to_flow_instance(first_row)))
-        Error(err) ->
-          Error("Failed to load flow instance: " <> string.inspect(err))
-      }
+    set_with_ttl: fn(key, value, ttl) {
+      kv.set_with_ttl(key, value, ttl) |> result.map_error(string.inspect)
     },
-    delete: fn(id) {
-      case sql.delete_flow_instance(db, id) {
-        Ok(_) -> Ok(Nil)
-        Error(err) ->
-          Error("Failed to delete flow instance: " <> string.inspect(err))
-      }
-    },
-    list_by_user: fn(user_id, chat_id) {
-      case sql.list_user_instances(db, user_id, chat_id) {
-        Ok(pog.Returned(count: _, rows: rows)) ->
-          Ok(db_rows_to_flow_instances(rows))
-        Error(err) ->
-          Error("Failed to list user flow instances: " <> string.inspect(err))
-      }
-    },
+    delete: fn(key) { kv.delete(key) |> result.map_error(string.inspect) },
+    scan: fn(prefix) { kv.scan(prefix) |> result.map_error(string.inspect) },
   )
 }
 

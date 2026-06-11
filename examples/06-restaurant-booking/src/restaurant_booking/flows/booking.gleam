@@ -2,8 +2,7 @@ import gleam/int
 import gleam/option
 import gleam/result
 import gleam/string
-import gleam/time/calendar
-import pog
+import sqlight
 
 import telega/bot.{type Context}
 import telega/flow/action
@@ -50,7 +49,7 @@ fn string_to_step(name: String) -> Result(BookingStep, Nil) {
 
 /// Create simplified booking flow using built-in helpers
 pub fn create_booking_flow(
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> types.Flow(BookingStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
@@ -112,7 +111,7 @@ pub fn create_booking_flow(
 
 /// Check if user is registered before allowing booking
 fn check_user_registration(
-  db: pog.Connection,
+  db: sqlight.Connection,
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(BookingStep, Nil, String) {
@@ -123,10 +122,9 @@ fn check_user_registration(
       instance.instance_chat_id(instance),
     )
   {
-    Ok(pog.Returned(count: _, rows: [_user])) ->
-      action.next(ctx, instance, Welcome)
+    Ok([_user, ..]) -> action.next(ctx, instance, Welcome)
 
-    Ok(pog.Returned(count: _, rows: [])) -> {
+    Ok([]) -> {
       let _ =
         reply.with_text(
           ctx,
@@ -136,9 +134,6 @@ fn check_user_registration(
       action.cancel(ctx, instance)
     }
 
-    Ok(pog.Returned(count: _, rows: _)) ->
-      Error("Multiple users found for same telegram_id")
-
     Error(err) ->
       Error("Failed to check user registration: " <> string.inspect(err))
   }
@@ -146,7 +141,7 @@ fn check_user_registration(
 
 /// Simplified step: Confirm and create booking
 fn confirm_and_book_step(
-  db: pog.Connection,
+  db: sqlight.Connection,
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(BookingStep, Nil, String) {
@@ -248,62 +243,16 @@ fn extract_booking_data(
   ))
 }
 
-/// Parse and validate date string (YYYY-MM-DD)
-fn parse_date(date_str: String) -> Result(calendar.Date, String) {
-  case string.split(date_str, "-") {
-    [year_str, month_str, day_str] -> {
-      use year <- result.try(
-        int.parse(year_str)
-        |> result.map_error(fn(_) { "Invalid year: " <> year_str }),
-      )
-      use month_int <- result.try(
-        int.parse(month_str)
-        |> result.map_error(fn(_) { "Invalid month: " <> month_str }),
-      )
-      use day <- result.try(
-        int.parse(day_str)
-        |> result.map_error(fn(_) { "Invalid day: " <> day_str }),
-      )
-      use month <- result.try(
-        calendar.month_from_int(month_int)
-        |> result.map_error(fn(_) { "Invalid month value: " <> month_str }),
-      )
-
-      Ok(calendar.Date(year, month, day))
-    }
-    _ -> Error("Date format must be YYYY-MM-DD")
-  }
-}
-
-/// Parse and validate time string (HH:MM)
-fn parse_time(time_str: String) -> Result(calendar.TimeOfDay, String) {
-  case string.split(time_str, ":") {
-    [hour_str, minute_str] -> {
-      use hour <- result.try(
-        int.parse(hour_str)
-        |> result.map_error(fn(_) { "Invalid hour: " <> hour_str }),
-      )
-      use minute <- result.try(
-        int.parse(minute_str)
-        |> result.map_error(fn(_) { "Invalid minute: " <> minute_str }),
-      )
-
-      Ok(calendar.TimeOfDay(hour, minute, 0, 0))
-    }
-    _ -> Error("Time format must be HH:MM")
-  }
-}
-
 /// Create real booking in database
 fn create_booking(
-  db: pog.Connection,
+  db: sqlight.Connection,
   ctx: Context(Nil, String),
   date: String,
   time: String,
   guests: Int,
 ) -> Result(Booking, String) {
-  use date_val <- result.try(parse_date(date))
-  use time_val <- result.try(parse_time(time))
+  use _ <- result.try(validate_date(date))
+  use _ <- result.try(validate_time(time))
 
   // Get the user's internal database ID
   let telegram_id = ctx.update.from_id
@@ -317,26 +266,24 @@ fn create_booking(
   )
 
   let user_id = case user_result {
-    pog.Returned(count: _, rows: [user]) -> Ok(user.id)
-    pog.Returned(count: _, rows: []) -> Error("User not found in database")
-    _ -> Error("Multiple users found for same telegram_id")
+    [user, ..] -> Ok(user.id)
+    [] -> Error("User not found in database")
   }
 
   use user_id <- result.try(user_id)
   let confirmation_code = util.generate_confirmation_code()
 
   use available_tables <- result.try(
-    sql.get_available_tables(db, guests, date_val, time_val)
+    sql.get_available_tables(db, guests, date, time)
     |> result.map_error(fn(err) {
       "Failed to check availability: " <> string.inspect(err)
     }),
   )
 
   case available_tables {
-    pog.Returned(count: _, rows: []) ->
-      Error("No tables available for that date and time")
+    [] -> Error("No tables available for that date and time")
 
-    pog.Returned(count: _, rows: [first_table, ..]) -> {
+    [first_table, ..] -> {
       let table_id = first_table.id
 
       use booking_result <- result.try(
@@ -344,8 +291,8 @@ fn create_booking(
           db,
           user_id,
           table_id,
-          date_val,
-          time_val,
+          date,
+          time,
           guests,
           "",
           confirmation_code,
@@ -356,7 +303,7 @@ fn create_booking(
       )
 
       case booking_result {
-        pog.Returned(count: _, rows: [row]) ->
+        [row, ..] ->
           Ok(Booking(
             id: row.id,
             user_id: row.user_id,
@@ -368,8 +315,32 @@ fn create_booking(
             status: row.status,
             confirmation_code: row.confirmation_code,
           ))
-        _ -> Error("Failed to create booking")
+        [] -> Error("Failed to create booking")
       }
     }
+  }
+}
+
+/// Validate a date string is `YYYY-MM-DD` (stored as text in SQLite).
+fn validate_date(date_str: String) -> Result(Nil, String) {
+  case string.split(date_str, "-") {
+    [year, month, day] ->
+      case int.parse(year), int.parse(month), int.parse(day) {
+        Ok(_), Ok(_), Ok(_) -> Ok(Nil)
+        _, _, _ -> Error("Date format must be YYYY-MM-DD")
+      }
+    _ -> Error("Date format must be YYYY-MM-DD")
+  }
+}
+
+/// Validate a time string is `HH:MM` (stored as text in SQLite).
+fn validate_time(time_str: String) -> Result(Nil, String) {
+  case string.split(time_str, ":") {
+    [hour, minute] ->
+      case int.parse(hour), int.parse(minute) {
+        Ok(_), Ok(_) -> Ok(Nil)
+        _, _ -> Error("Time format must be HH:MM")
+      }
+    _ -> Error("Time format must be HH:MM")
   }
 }

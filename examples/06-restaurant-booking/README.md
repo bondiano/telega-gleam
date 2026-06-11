@@ -1,12 +1,12 @@
 # Restaurant Booking Bot - Persistent Flow Example
 
-A complete restaurant table booking system demonstrating Telega's persistent flow capabilities with database integration.
+A complete restaurant table booking system demonstrating Telega's persistent flow capabilities, backed by **SQLite** — single-file persistence with no external services.
 
 ## Features Demonstrated
 
 - 🍽️ **Multi-step conversational flows** - User registration and table booking with persistence
-- 📊 **Database persistence** - PostgreSQL integration with flow state storage
-- 🔄 **Flow resumption** - Continue conversations after interruptions
+- 📊 **Unified storage** - Sessions *and* flows persisted via `telega_storage_sqlite`, with no hand-written storage code
+- 🔄 **Flow resumption** - Continue conversations after interruptions and across restarts
 - ✅ **Input validation** - Robust error handling and user feedback
 - 🗄️ **Real-time data** - Live table availability checking
 - 🏗️ **Interactive Menus** - Advanced menu system using menu_builder with categories and pagination
@@ -14,24 +14,50 @@ A complete restaurant table booking system demonstrating Telega's persistent flo
 ## Setup
 
 ### Prerequisites
-- Docker and Docker Compose
 - Gleam
 - Telegram Bot Token from @BotFather
 
+No database server is required — the bot creates and seeds a local SQLite file on first run.
+
 ### Quick Start
 
-1. Configure environment in `.env` file
+1. Set environment variables (the bot reads them from the process environment):
 
-2. Start database:
 ```bash
-docker-compose up -d
+export BOT_TOKEN="<your bot token>"
+export RESTAURANT_NAME="Bella Vista"      # optional
+export DATABASE_PATH="restaurant_booking.db"  # optional, this is the default
 ```
 
-3. Run bot:
+2. Run the bot:
+
 ```bash
-gleam deps download
 gleam run
 ```
+
+The SQLite schema (users, tables, bookings) and the `telega_storage` table for flow
+persistence are created automatically, and sample tables are seeded on startup.
+
+### Flow persistence
+
+Flow state is stored through the unified `KeyValueStorage` contract:
+
+```gleam
+// util.gleam — no bespoke SQL, just the adapter + the core bridge
+pub fn create_database_storage(db: sqlight.Connection) -> types.FlowStorage(String) {
+  sqlite.new(db)
+  |> with_string_errors
+  |> storage.flow_storage_from_storage
+}
+```
+
+## Testing
+
+```bash
+gleam test
+```
+
+Integration tests run against an in-memory SQLite database, so they need no setup.
 
 ## Usage
 

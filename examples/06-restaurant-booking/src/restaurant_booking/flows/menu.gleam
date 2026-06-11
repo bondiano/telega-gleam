@@ -1,7 +1,7 @@
 import gleam/int
 import gleam/option.{None, Some}
 import gleam/string
-import pog
+import sqlight
 
 import telega/bot.{type Context}
 import telega/flow/action
@@ -48,7 +48,9 @@ fn string_to_step(name: String) -> Result(MenuStep, Nil) {
   }
 }
 
-pub fn create_menu_flow(db: pog.Connection) -> types.Flow(MenuStep, Nil, String) {
+pub fn create_menu_flow(
+  db: sqlight.Connection,
+) -> types.Flow(MenuStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
   builder.new("menu", storage, step_to_string, string_to_step)
@@ -68,7 +70,7 @@ pub fn create_menu_flow(db: pog.Connection) -> types.Flow(MenuStep, Nil, String)
 }
 
 fn show_categories_step(
-  _db: pog.Connection,
+  _db: sqlight.Connection,
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(MenuStep, Nil, String) {
@@ -109,7 +111,7 @@ fn show_categories_step(
 
 /// Show items in selected category
 fn show_items_step(
-  _db: pog.Connection,
+  _db: sqlight.Connection,
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(MenuStep, Nil, String) {

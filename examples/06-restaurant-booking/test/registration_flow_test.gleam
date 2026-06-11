@@ -1,12 +1,11 @@
 //// Integration tests for the restaurant registration flow.
-//// Requires a running PostgreSQL instance with the test database.
-//// Tests are skipped gracefully when the database is unavailable.
+//// Backed by an in-memory SQLite database, so they run without any service.
 ////
 //// Demonstrates: conversation DSL, expect_keyboard, expect_reply_with_keyboard,
 //// expect_api_call, with_test_bot, and routed_client.
 
 import gleam/option.{None, Some}
-import pog
+import sqlight
 
 import test_db
 
@@ -21,7 +20,7 @@ import restaurant_booking/config
 import restaurant_booking/constants
 import restaurant_booking/database
 
-fn with_db(test_fn: fn(pog.Connection) -> Nil) -> Nil {
+fn with_db(test_fn: fn(sqlight.Connection) -> Nil) -> Nil {
   case test_db.try_connect_and_setup() {
     None -> Nil
     Some(db) -> {
@@ -34,7 +33,7 @@ fn with_db(test_fn: fn(pog.Connection) -> Nil) -> Nil {
 fn test_config() -> config.Config {
   config.Config(
     bot_token: "test_token",
-    database: database.default_config(),
+    database: database.ConnectionConfig(path: ":memory:"),
     restaurant_name: constants.default_restaurant_name,
   )
 }

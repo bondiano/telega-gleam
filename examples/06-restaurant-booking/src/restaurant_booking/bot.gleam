@@ -1,7 +1,7 @@
 import gleam/erlang/process
 import gleam/result
 import gleam/string
-import pog
+import sqlight
 
 import telega
 import telega/flow/registry
@@ -42,7 +42,7 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
 
 pub fn build_router(
   cfg: config.Config,
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> Router(Nil, String) {
   let registration_flow = registration.create_registration_flow(db)
   let booking_flow = booking.create_booking_flow(db)

@@ -1,16 +1,20 @@
 //// Instance CRUD, accessors, factories, WaitResult, and serialization.
 
 import gleam/dict
+import gleam/dynamic/decode.{type Decoder}
 import gleam/float
+import gleam/json.{type Json}
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import telega/bot.{type Context}
 import telega/flow/types.{
-  type Flow, type FlowInstance, type FlowInstanceRow, type StepResult,
-  type WaitResult, AudioInput, BoolCallback, CommandInput, DataCallback,
-  FlowInstance, FlowInstanceRow, FlowState, LocationInput, Next, Pending,
-  PhotoInput, TextInput, VideoInput, VoiceInput,
+  type Flow, type FlowInstance, type FlowInstanceRow, type FlowStackFrame,
+  type FlowState, type ParallelState, type StepResult, type WaitResult,
+  AudioInput, BoolCallback, CommandInput, DataCallback, FlowInstance,
+  FlowInstanceRow, FlowStackFrame, FlowState, LocationInput, Next, ParallelState,
+  Pending, PhotoInput, TextInput, VideoInput, VoiceInput,
 }
 import telega/internal/utils
 
@@ -212,6 +216,161 @@ pub fn instance_from_row(row: FlowInstanceRow) -> FlowInstance {
     created_at: row.created_at,
     updated_at: row.updated_at,
   )
+}
+
+// JSON serialization ---------------------------------------------------------
+//
+// Unlike `instance_to_row`, these encode the *complete* instance — including
+// `history`, `flow_stack`, and `parallel_state` — so any key-value backend can
+// persist and restore subflows and parallel execution across restarts.
+
+fn encode_string_dict(d: dict.Dict(String, String)) -> Json {
+  json.object(list.map(dict.to_list(d), fn(kv) { #(kv.0, json.string(kv.1)) }))
+}
+
+fn string_dict_decoder() -> Decoder(dict.Dict(String, String)) {
+  decode.dict(decode.string, decode.string)
+}
+
+fn encode_nested_dict(d: dict.Dict(String, dict.Dict(String, String))) -> Json {
+  json.object(
+    list.map(dict.to_list(d), fn(kv) { #(kv.0, encode_string_dict(kv.1)) }),
+  )
+}
+
+fn nested_dict_decoder() -> Decoder(
+  dict.Dict(String, dict.Dict(String, String)),
+) {
+  decode.dict(decode.string, string_dict_decoder())
+}
+
+fn encode_parallel_state(ps: ParallelState) -> Json {
+  json.object([
+    #("pending_steps", json.array(ps.pending_steps, json.string)),
+    #("completed_steps", json.array(ps.completed_steps, json.string)),
+    #("results", encode_nested_dict(ps.results)),
+    #("join_step", json.string(ps.join_step)),
+  ])
+}
+
+fn parallel_state_decoder() -> Decoder(ParallelState) {
+  use pending_steps <- decode.field("pending_steps", decode.list(decode.string))
+  use completed_steps <- decode.field(
+    "completed_steps",
+    decode.list(decode.string),
+  )
+  use results <- decode.field("results", nested_dict_decoder())
+  use join_step <- decode.field("join_step", decode.string)
+  decode.success(ParallelState(
+    pending_steps:,
+    completed_steps:,
+    results:,
+    join_step:,
+  ))
+}
+
+fn encode_stack_frame(frame: FlowStackFrame) -> Json {
+  json.object([
+    #("flow_name", json.string(frame.flow_name)),
+    #("return_step", json.string(frame.return_step)),
+    #("saved_data", encode_string_dict(frame.saved_data)),
+  ])
+}
+
+fn stack_frame_decoder() -> Decoder(FlowStackFrame) {
+  use flow_name <- decode.field("flow_name", decode.string)
+  use return_step <- decode.field("return_step", decode.string)
+  use saved_data <- decode.field("saved_data", string_dict_decoder())
+  decode.success(FlowStackFrame(flow_name:, return_step:, saved_data:))
+}
+
+fn encode_state(state: FlowState) -> Json {
+  json.object([
+    #("current_step", json.string(state.current_step)),
+    #("data", encode_string_dict(state.data)),
+    #("history", json.array(state.history, json.string)),
+    #("flow_stack", json.array(state.flow_stack, encode_stack_frame)),
+    #(
+      "parallel_state",
+      json.nullable(state.parallel_state, encode_parallel_state),
+    ),
+  ])
+}
+
+fn state_decoder() -> Decoder(FlowState) {
+  use current_step <- decode.field("current_step", decode.string)
+  use data <- decode.field("data", string_dict_decoder())
+  use history <- decode.field("history", decode.list(decode.string))
+  use flow_stack <- decode.field(
+    "flow_stack",
+    decode.list(stack_frame_decoder()),
+  )
+  use parallel_state <- decode.field(
+    "parallel_state",
+    decode.optional(parallel_state_decoder()),
+  )
+  decode.success(FlowState(
+    current_step:,
+    data:,
+    history:,
+    flow_stack:,
+    parallel_state:,
+  ))
+}
+
+/// Encode a complete `FlowInstance` to JSON.
+pub fn to_json(instance: FlowInstance) -> Json {
+  json.object([
+    #("id", json.string(instance.id)),
+    #("flow_name", json.string(instance.flow_name)),
+    #("user_id", json.int(instance.user_id)),
+    #("chat_id", json.int(instance.chat_id)),
+    #("state", encode_state(instance.state)),
+    #("step_data", encode_string_dict(instance.step_data)),
+    #("wait_token", json.nullable(instance.wait_token, json.string)),
+    #("wait_timeout_at", json.nullable(instance.wait_timeout_at, json.int)),
+    #("created_at", json.int(instance.created_at)),
+    #("updated_at", json.int(instance.updated_at)),
+  ])
+}
+
+/// Decoder for a complete `FlowInstance`.
+pub fn instance_decoder() -> Decoder(FlowInstance) {
+  use id <- decode.field("id", decode.string)
+  use flow_name <- decode.field("flow_name", decode.string)
+  use user_id <- decode.field("user_id", decode.int)
+  use chat_id <- decode.field("chat_id", decode.int)
+  use state <- decode.field("state", state_decoder())
+  use step_data <- decode.field("step_data", string_dict_decoder())
+  use wait_token <- decode.field("wait_token", decode.optional(decode.string))
+  use wait_timeout_at <- decode.field(
+    "wait_timeout_at",
+    decode.optional(decode.int),
+  )
+  use created_at <- decode.field("created_at", decode.int)
+  use updated_at <- decode.field("updated_at", decode.int)
+  decode.success(FlowInstance(
+    id:,
+    flow_name:,
+    user_id:,
+    chat_id:,
+    state:,
+    step_data:,
+    wait_token:,
+    wait_timeout_at:,
+    created_at:,
+    updated_at:,
+  ))
+}
+
+/// Serialize a `FlowInstance` to a JSON string (for string-based storage).
+pub fn to_json_string(instance: FlowInstance) -> String {
+  instance |> to_json |> json.to_string
+}
+
+/// Deserialize a `FlowInstance` from a JSON string.
+pub fn from_json_string(raw: String) -> Result(FlowInstance, json.DecodeError) {
+  json.parse(raw, instance_decoder())
 }
 
 /// Check if an instance is expired based on TTL or wait timeout

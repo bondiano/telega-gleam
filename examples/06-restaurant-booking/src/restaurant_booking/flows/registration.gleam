@@ -3,9 +3,9 @@ import gleam/int
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
-import pog
 import restaurant_booking/sql
 import restaurant_booking/util
+import sqlight
 import telega/bot.{type Context}
 import telega/flow/action
 import telega/flow/builder
@@ -45,7 +45,7 @@ fn string_to_step(name: String) -> Result(RegistrationStep, Nil) {
 }
 
 pub fn create_registration_flow(
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> types.Flow(RegistrationStep, Nil, String) {
   let storage = util.create_database_storage(db)
 
@@ -65,7 +65,7 @@ pub fn create_registration_flow(
 pub fn welcome_step(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
   use user_in_db <- result.try(
     sql.get_user(
@@ -78,7 +78,7 @@ pub fn welcome_step(
     }),
   )
 
-  use <- bool.guard(user_in_db.count > 0, action.cancel(ctx, instance))
+  use <- bool.guard(user_in_db != [], action.cancel(ctx, instance))
 
   let message = "🍽️ Welcome to " <> util.get_restaurant_name() <> "!
 
@@ -228,7 +228,7 @@ You can skip this step by typing 'skip'.
 fn confirm_registration_step(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
   case instance.get_wait_result(instance) {
     types.BoolCallback(value: True) ->
@@ -250,7 +250,7 @@ fn confirm_registration_step(
 fn save_and_complete(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
-  db: pog.Connection,
+  db: sqlight.Connection,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Error(e) -> {

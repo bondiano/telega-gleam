@@ -84,7 +84,12 @@ fn build_bot() {
       None,
     )
 
-  telega.new(api_client: client, url:, webhook_path:, secret_token: Some(secret_token))
+  telega.new(
+    api_client: client,
+    url:,
+    webhook_path:,
+    secret_token: Some(secret_token),
+  )
   |> telega.with_router(build_router())
   |> session.attach
   |> telega.init()

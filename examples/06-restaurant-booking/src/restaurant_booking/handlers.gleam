@@ -2,8 +2,8 @@ import gleam/int
 import gleam/list
 import gleam/option.{Some}
 import gleam/string
-import pog
 import restaurant_booking/sql
+import sqlight
 import telega/bot.{type Context}
 import telega/format as fmt
 import telega/reply
@@ -31,7 +31,7 @@ pub fn help(
 }
 
 pub fn my_bookings(
-  db: pog.Connection,
+  db: sqlight.Connection,
   ctx: Context(Nil, String),
   _cmd: update.Command,
 ) -> Result(Context(Nil, String), String) {
@@ -39,26 +39,21 @@ pub fn my_bookings(
   let telegram_id = ctx.update.from_id
 
   case sql.get_user(db, telegram_id, chat_id) {
-    Ok(pog.Returned(count: _, rows: [user])) ->
-      show_user_bookings(db, ctx, user.id)
+    Ok([user, ..]) -> show_user_bookings(db, ctx, user.id)
 
-    Ok(pog.Returned(count: _, rows: [])) ->
-      send_registration_required_message(ctx)
-
-    Ok(pog.Returned(count: _, rows: _)) ->
-      Error("Multiple users found for same telegram_id")
+    Ok([]) -> send_registration_required_message(ctx)
 
     Error(_) -> Error("Failed to fetch user from database")
   }
 }
 
 fn show_user_bookings(
-  db: pog.Connection,
+  db: sqlight.Connection,
   ctx: Context(Nil, String),
   user_id: Int,
 ) -> Result(Context(Nil, String), String) {
   case sql.get_user_bookings(db, user_id) {
-    Ok(pog.Returned(count: _, rows: [])) -> {
+    Ok([]) -> {
       case
         reply.with_text(
           ctx,
@@ -72,7 +67,7 @@ fn show_user_bookings(
           Error("Failed to send bookings message: " <> string.inspect(error))
       }
     }
-    Ok(pog.Returned(count: _, rows: bookings)) -> {
+    Ok(bookings) -> {
       let bookings_text = format_bookings_list(bookings)
       case reply.with_formatted(ctx, bookings_text) {
         Ok(_) -> Ok(ctx)
@@ -100,7 +95,7 @@ fn send_registration_required_message(
 }
 
 fn format_bookings_list(
-  bookings: List(sql.GetUserBookingsRow),
+  bookings: List(sql.UserBookingRow),
 ) -> fmt.FormattedText {
   let builder =
     fmt.build()
@@ -121,7 +116,7 @@ fn format_bookings_list(
 
 fn format_single_booking(
   builder: fmt.FormatBuilder,
-  booking: sql.GetUserBookingsRow,
+  booking: sql.UserBookingRow,
 ) -> fmt.FormatBuilder {
   let status_emoji = get_status_emoji(booking.status)
   let status_text = format_status(booking.status)
