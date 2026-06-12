@@ -16,9 +16,13 @@ import restaurant_booking/flows/booking
 import restaurant_booking/flows/menu
 import restaurant_booking/flows/registration
 import restaurant_booking/handlers
+import restaurant_booking/observability
 import restaurant_booking/util
 
 pub fn start(cfg: config.Config) -> Result(Nil, String) {
+  // Subscribe to telemetry events before the bot starts handling updates.
+  observability.attach()
+
   use db <- result.try(database.connect(cfg.database))
 
   util.log("Connected to database")

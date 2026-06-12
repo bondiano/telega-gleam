@@ -18,6 +18,10 @@ A [Gleam](https://gleam.run/) library for the Telegram Bot API on BEAM.
 - long polling with automatic retry and exponential backoff
 - session bot implementation
 - conversation implementation (multi-message flows)
+- per-user flood control middleware (`router.with_rate_limit`)
+- inline mode result builders with pagination (`telega/inline_mode`)
+- payments helpers — Telegram Stars first-class (`telega/payments`)
+- production observability via [telemetry](https://hexdocs.pm/telemetry/) events (`telega/telemetry`)
 - graceful shutdown via `telega.shutdown()`
 
 ## Quick start

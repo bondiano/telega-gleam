@@ -1,6 +1,9 @@
 import envoy
 import gleam/erlang/process
+import gleam/int
+import gleam/list
 import gleam/option.{None, Some}
+import gleam/string
 import mist
 import taskle
 import wisp
@@ -11,9 +14,13 @@ import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/error as telega_error
 import telega/format as fmt
+import telega/inline_mode
 import telega/keyboard as telega_keyboard
 import telega/model/encoder as telega_model_encoder
-import telega/model/types.{AnswerCallbackQueryParameters}
+import telega/model/types.{
+  type InlineQuery, type PreCheckoutQuery, AnswerCallbackQueryParameters,
+}
+import telega/payments
 import telega/reply
 import telega/router
 import telega_httpc
@@ -171,6 +178,125 @@ fn handle_inline_change_language(ctx: BotContext, _command) {
   bot.next_session(ctx, LanguageBotSession(language))
 }
 
+fn t_donate_title(language) {
+  case language {
+    English -> "Support the bot"
+    Russian -> "Поддержать бота"
+  }
+}
+
+fn t_donate_description(language) {
+  case language {
+    English -> "A small donation to keep the bot running"
+    Russian -> "Небольшое пожертвование на работу бота"
+  }
+}
+
+fn t_donate_thanks(language, amount) {
+  case language {
+    English -> "🎉 Thank you for " <> int.to_string(amount) <> " ⭐!"
+    Russian -> "🎉 Спасибо за " <> int.to_string(amount) <> " ⭐!"
+  }
+}
+
+const donate_amounts = [1, 25, 50]
+
+/// Sells a "donation" for Telegram Stars: the user picks an amount,
+/// gets an invoice, the pre-checkout query is confirmed by
+/// `handle_pre_checkout_query`, and the handler resumes once the
+/// successful payment service message arrives.
+fn donate_command_handler(ctx: BotContext, _command) {
+  use ctx <- telega.log_context(ctx, "donate")
+
+  let language = ctx.session.language
+
+  use ctx, amount <- telega.wait_choice(
+    ctx:,
+    options: list.map(donate_amounts, fn(amount) {
+      #("⭐ " <> int.to_string(amount), amount)
+    }),
+    or: None,
+    timeout: None,
+  )
+
+  use _ <- try(
+    payments.stars_invoice(
+      title: t_donate_title(language),
+      description: t_donate_description(language),
+      payload: "donate:" <> int.to_string(amount),
+      amount:,
+    )
+    |> payments.send(ctx),
+  )
+
+  use ctx, payment <- payments.wait_successful_payment(
+    ctx,
+    or: None,
+    timeout: Some(600_000),
+  )
+
+  use _ <- try(reply.with_text(
+    ctx,
+    t_donate_thanks(language, payment.total_amount),
+  ))
+
+  Ok(ctx)
+}
+
+/// Telegram requires an answer within 10 seconds, otherwise the payment
+/// fails — donations need no validation, so always confirm.
+fn handle_pre_checkout_query(ctx: BotContext, query: PreCheckoutQuery) {
+  use ctx <- telega.log_context(ctx, "pre_checkout")
+
+  use _ <- try(payments.answer_pre_checkout_ok(ctx, query))
+
+  Ok(ctx)
+}
+
+/// Phrasebook shared via inline mode: type `@bot <query>` in any chat.
+const phrasebook = [
+  #("Hello", "Привет"),
+  #("Good morning", "Доброе утро"),
+  #("Good evening", "Добрый вечер"),
+  #("Thank you", "Спасибо"),
+  #("You're welcome", "Пожалуйста"),
+  #("How are you?", "Как дела?"),
+  #("Nice to meet you", "Приятно познакомиться"),
+  #("Goodbye", "До свидания"),
+]
+
+fn handle_inline_query(ctx: BotContext, query: InlineQuery) {
+  use ctx <- telega.log_context(ctx, "inline query")
+
+  let search = string.lowercase(query.query)
+  let matches =
+    list.filter(phrasebook, fn(phrase) {
+      string.contains(string.lowercase(phrase.0), search)
+      || string.contains(string.lowercase(phrase.1), search)
+    })
+
+  let #(page, next_offset) =
+    inline_mode.paginate(items: matches, offset: query.offset, page_size: 5)
+
+  use _ <- try(
+    list.index_fold(page, inline_mode.new(), fn(builder, phrase, index) {
+      let #(english, russian) = phrase
+      inline_mode.article_described(
+        builder,
+        id: query.offset <> ":" <> int.to_string(index),
+        title: english,
+        text: english <> " — " <> russian,
+        description: Some(russian),
+      )
+    })
+    |> inline_mode.with_cache_time(60)
+    |> inline_mode.maybe_next_offset(next_offset)
+    |> inline_mode.answer(ctx, query.id),
+  )
+
+  Ok(ctx)
+}
+
 fn start_command_handler(ctx: BotContext, _command) {
   use ctx <- telega.log_context(ctx, "start")
   use _ <- try(reply.with_formatted(
@@ -184,6 +310,7 @@ fn start_command_handler(ctx: BotContext, _command) {
 const commands = [
   #("/lang", "Shows custom keyboard with languages"),
   #("/lang_inline", "Change language inline"),
+  #("/donate", "Support the bot with Telegram Stars"),
 ]
 
 pub type BotContext =
@@ -196,9 +323,19 @@ pub type BotError {
 
 pub fn build_router() -> router.Router(LanguageBotSession, BotError) {
   router.new("keyboard_bot")
+  // Per-user flood control: at most 5 updates in 3 seconds,
+  // excess updates are dropped silently.
+  |> router.use_middleware(
+    router.with_rate_limit(limit: 5, window_ms: 3000, on_limit: fn(ctx) {
+      Ok(ctx)
+    }),
+  )
   |> router.on_command("start", start_command_handler)
   |> router.on_command("lang", change_languages_keyboard)
   |> router.on_command("lang_inline", handle_inline_change_language)
+  |> router.on_command("donate", donate_command_handler)
+  |> router.on_inline_query(handle_inline_query)
+  |> router.on_pre_checkout_query(handle_pre_checkout_query)
 }
 
 fn build_bot() {

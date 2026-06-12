@@ -273,7 +273,9 @@
 //// - `Handler` - Generic handler for any update type
 ////
 
+import gleam/bool
 import gleam/dict.{type Dict}
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -281,6 +283,7 @@ import gleam/string
 import telega/bot.{type Context}
 
 import telega/internal/log
+import telega/internal/rate_limiter
 import telega/model/types.{
   type Audio, type ChatJoinRequest, type ChatMemberUpdated,
   type ChosenInlineResult, type InlineQuery, type Message,
@@ -289,6 +292,7 @@ import telega/model/types.{
   type ShippingQuery, type Video, type Voice, ReactionTypeEmojiReactionType,
   ReactionTypePaidReactionType,
 }
+import telega/telemetry
 import telega/update.{type Command, type Update}
 
 /// Router with unified routes and middleware support
@@ -2071,6 +2075,65 @@ pub fn with_recovery(
     case handler(ctx, update) {
       Ok(result) -> Ok(result)
       Error(err) -> recover(err)
+    }
+  }
+}
+
+/// Per-user flood control middleware: allows at most `limit` updates per
+/// `window_ms` window for each `{chat_id}:{from_id}` pair. Counters live in
+/// ETS, so the limit is shared across all routes of the bot.
+///
+/// `on_limit` is called instead of the handler when the limit is exceeded —
+/// pass `fn(ctx) { Ok(ctx) }` to drop the update silently, or reply from it
+/// to inform the user. Every rejected update emits a
+/// `telega.rate_limit.hit` telemetry event.
+///
+/// Updates without user context (e.g. poll updates, `from_id` is `-1`) are
+/// not limited.
+///
+/// ```gleam
+/// router.new("bot")
+/// |> router.use_middleware(router.with_rate_limit(
+///   limit: 5,
+///   window_ms: 3000,
+///   on_limit: fn(ctx) { Ok(ctx) },
+/// ))
+/// ```
+///
+/// Call `with_rate_limit` once at bot setup: the limiter's ETS table is owned
+/// by the calling process and is deleted when that process exits.
+pub fn with_rate_limit(
+  limit limit: Int,
+  window_ms window_ms: Int,
+  on_limit on_limit: fn(Context(session, error)) ->
+    Result(Context(session, error), error),
+) -> Middleware(session, error) {
+  let limiter = rate_limiter.new(limit:, window_ms:)
+
+  fn(handler) {
+    fn(ctx: Context(session, error), update_param: Update) {
+      use <- bool.lazy_guard(when: update_param.from_id < 0, return: fn() {
+        handler(ctx, update_param)
+      })
+
+      let key =
+        int.to_string(update_param.chat_id)
+        <> ":"
+        <> int.to_string(update_param.from_id)
+      case rate_limiter.hit(limiter, key) {
+        True -> handler(ctx, update_param)
+        False -> {
+          telemetry.execute(["telega", "rate_limit", "hit"], [#("count", 1)], [
+            #("chat_id", telemetry.IntValue(update_param.chat_id)),
+            #("from_id", telemetry.IntValue(update_param.from_id)),
+            #(
+              "update_type",
+              telemetry.StringValue(update.to_string(update_param)),
+            ),
+          ])
+          on_limit(ctx)
+        }
+      }
     }
   }
 }

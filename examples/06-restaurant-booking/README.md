@@ -10,6 +10,7 @@ A complete restaurant table booking system demonstrating Telega's persistent flo
 - ✅ **Input validation** - Robust error handling and user feedback
 - 🗄️ **Real-time data** - Live table availability checking
 - 🏗️ **Interactive Menus** - Advanced menu system using menu_builder with categories and pagination
+- 🔭 **Observability** - `telega/telemetry` events turned into logs, plus custom spans around database queries
 
 ## Setup
 
@@ -50,6 +51,34 @@ pub fn create_database_storage(db: sqlight.Connection) -> types.FlowStorage(Stri
   |> storage.flow_storage_from_storage
 }
 ```
+
+### Observability
+
+Telega emits [`telemetry`](https://hexdocs.pm/telemetry/) events at every key
+point of the update lifecycle (see the `telega/telemetry` module docs for the
+full event reference). The `observability` module attaches one handler at
+startup that turns the most useful events into log lines:
+
+- slow updates (handler took longer than 1 second)
+- handler errors (`telega.update.exception`)
+- Telegram API rate-limit retries (`telega.api_call.retry`)
+- flow steps, timeouts and cancellations
+- the example's own database spans
+
+Custom spans use the same `start`/`stop`/`exception` convention as the
+built-in events:
+
+```gleam
+// handlers.gleam — emits restaurant_booking.db.start / .stop / .exception
+telemetry.span(
+  event: ["restaurant_booking", "db"],
+  metadata: [#("query", telemetry.StringValue("get_user_bookings"))],
+  run: fn() { sql.get_user_bookings(db, user_id) },
+)
+```
+
+The same events can feed Prometheus or OpenTelemetry exporters instead of
+logs — the attached handler is the only thing to swap.
 
 ## Testing
 

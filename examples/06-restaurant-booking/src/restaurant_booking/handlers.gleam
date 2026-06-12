@@ -7,6 +7,7 @@ import sqlight
 import telega/bot.{type Context}
 import telega/format as fmt
 import telega/reply
+import telega/telemetry
 import telega/update
 
 pub fn help(
@@ -38,7 +39,7 @@ pub fn my_bookings(
   let chat_id = ctx.update.chat_id
   let telegram_id = ctx.update.from_id
 
-  case sql.get_user(db, telegram_id, chat_id) {
+  case db_span("get_user", fn() { sql.get_user(db, telegram_id, chat_id) }) {
     Ok([user, ..]) -> show_user_bookings(db, ctx, user.id)
 
     Ok([]) -> send_registration_required_message(ctx)
@@ -47,12 +48,25 @@ pub fn my_bookings(
   }
 }
 
+/// Wrap a database query in a custom telemetry span: emits
+/// `restaurant_booking.db.start` / `.stop` / `.exception` with the query name
+/// and a monotonic `duration`. The observability module logs these events.
+fn db_span(query: String, run: fn() -> Result(a, e)) -> Result(a, e) {
+  telemetry.span(
+    event: ["restaurant_booking", "db"],
+    metadata: [#("query", telemetry.StringValue(query))],
+    run:,
+  )
+}
+
 fn show_user_bookings(
   db: sqlight.Connection,
   ctx: Context(Nil, String),
   user_id: Int,
 ) -> Result(Context(Nil, String), String) {
-  case sql.get_user_bookings(db, user_id) {
+  case
+    db_span("get_user_bookings", fn() { sql.get_user_bookings(db, user_id) })
+  {
     Ok([]) -> {
       case
         reply.with_text(
