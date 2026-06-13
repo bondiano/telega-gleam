@@ -1,0 +1,19 @@
+name = "telega_webapp"
+version = "1.0.0"
+description = "Telegram Mini Apps (Web App) initData validation and helpers for the Telega Telegram Bot Library"
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
+
+gleam = ">= 1.12.0"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
+gleam_json = ">= 3.0.2 and < 4.0.0"
+gleam_crypto = ">= 1.0.0 and < 2.0.0"
+gleam_erlang = ">= 1.2.0 and < 2.0.0"
+gleam_http = ">= 4.0.0 and < 5.0.0"
+telega = { path = ".." }
+
+[dev-dependencies]
+gleeunit = ">= 1.2.0 and < 2.0.0"

@@ -9,7 +9,7 @@ tasks:
     desc: Format root project, adapters, and all examples
     cmds:
       - gleam format
-      - for: ["telega_wisp", "telega_httpc", "telega_hackney"]
+      - for: ["telega_wisp", "telega_httpc", "telega_hackney", "telega_webapp"]
         cmd: cd {{.ITEM}} && gleam format
       - for: [
           "00-echo-bot",
@@ -45,7 +45,7 @@ tasks:
     desc: Run tests in root project, adapters, and check all examples compile
     cmds:
       - gleam test
-      - for: ["telega_wisp", "telega_httpc", "telega_hackney"]
+      - for: ["telega_wisp", "telega_httpc", "telega_hackney", "telega_webapp"]
         cmd: cd {{.ITEM}} && gleam test
       - for: [
           "00-echo-bot",
