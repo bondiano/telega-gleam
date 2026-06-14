@@ -1,0 +1,54 @@
+name: check-telega-storage-postgres
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "telega_storage_postgres/**"
+  pull_request:
+    paths:
+      - "telega_storage_postgres/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telega_storage_postgres
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: telega_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: 28.0.1
+          gleam-version: 1.16.0
+          rebar3-version: 3.25.1
+
+      - name: Install Dependencies
+        run: gleam deps download
+
+      - name: Check Format
+        run: gleam format --check src test
+
+      - name: Check
+        run: gleam check
+
+      - name: Test
+        run: GLEAM_LOG=trace gleam test

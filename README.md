@@ -139,6 +139,7 @@ Telega is a monorepo. The core `telega` package is HTTP-client- and storage-agno
 | Package | Purpose |
 | --- | --- |
 | [`telega_wisp`](https://github.com/bondiano/telega-gleam/tree/master/telega_wisp) | Wisp webhook adapter (endpoint handling, secret-token validation) |
+| [`telega_mist`](https://github.com/bondiano/telega-gleam/tree/master/telega_mist) | Minimal webhook adapter directly over `mist`, without wisp |
 | [`telega_httpc`](https://github.com/bondiano/telega-gleam/tree/master/telega_httpc) | HTTP client adapter over Erlang `httpc` |
 | [`telega_hackney`](https://github.com/bondiano/telega-gleam/tree/master/telega_hackney) | HTTP client adapter over `hackney` |
 | [`telega_storage_postgres`](https://github.com/bondiano/telega-gleam/tree/master/telega_storage_postgres) | PostgreSQL session/flow storage adapter |
