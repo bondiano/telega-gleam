@@ -12,6 +12,7 @@ import telega/keyboard
 import telega/menu_builder
 import telega/reply
 
+import restaurant_booking/i18n
 import restaurant_booking/util
 
 pub type MenuStep {
@@ -63,7 +64,11 @@ pub fn create_menu_flow(
   |> builder.on_error(fn(ctx, _, error) {
     let error_msg = option.unwrap(error, "Unknown error")
     util.log_error("Menu flow error: " <> error_msg)
-    let _ = reply.with_text(ctx, "❌ Menu error: " <> error_msg)
+    let _ =
+      reply.with_text(
+        ctx,
+        i18n.t(ctx, "menu.error", [#("error", i18n.t(ctx, error_msg, []))]),
+      )
     Ok(ctx)
   })
   |> builder.build(initial: ShowCategories)
@@ -78,22 +83,27 @@ fn show_categories_step(
 
   let menu =
     menu_builder.new("categories")
-    |> menu_builder.title("🍽️ " <> util.get_restaurant_name() <> " Menu")
-    |> menu_builder.section(Some("🍽️ Food Categories"))
+    |> menu_builder.title(
+      i18n.t(ctx, "menu.title", [#("restaurant", util.get_restaurant_name())]),
+    )
+    |> menu_builder.section(Some(i18n.t(ctx, "menu.food_categories", [])))
     |> menu_builder.add_items_from_list(categories, fn(category, _index) {
       #(
         category.emoji
           <> " "
           <> category.name
           <> " ("
-          <> int.to_string(category.item_count)
-          <> " items)",
+          <> i18n.tn(ctx, "menu.items", category.item_count, [])
+          <> ")",
         "category:" <> category.name,
       )
     })
-    |> menu_builder.section(Some("📋 Reservations"))
-    |> menu_builder.add_item("🍽️ Make Reservation", "book_table")
-    |> menu_builder.add_item("📋 My Bookings", "my_bookings")
+    |> menu_builder.section(Some(i18n.t(ctx, "menu.reservations", [])))
+    |> menu_builder.add_item(
+      i18n.t(ctx, "menu.make_reservation", []),
+      "book_table",
+    )
+    |> menu_builder.add_item(i18n.t(ctx, "menu.my_bookings", []), "my_bookings")
     |> menu_builder.layout(2, None, True)
     |> menu_builder.build()
 
@@ -122,20 +132,23 @@ fn show_items_step(
 
       let menu =
         menu_builder.new("items")
-        |> menu_builder.title("🍽️ " <> category <> " Menu")
+        |> menu_builder.title(
+          i18n.t(ctx, "menu.category_menu", [#("category", category)]),
+        )
         |> menu_builder.add_items_from_list(items, fn(item, _index) {
           #(item.name <> " - " <> item.price, "item:" <> int.to_string(item.id))
         })
         |> menu_builder.paginate_with_text(
           6,
           True,
-          "◀️ Previous",
-          "Next ▶️",
-          "Page {current} of {total}",
+          i18n.t(ctx, "menu.prev", []),
+          i18n.t(ctx, "menu.next", []),
+          // {current}/{total} are filled by menu_builder, not i18n.
+          i18n.t(ctx, "menu.page", []),
         )
         |> menu_builder.with_back_button_text(
           "back_to_categories",
-          "← Back to Categories",
+          i18n.t(ctx, "menu.back", []),
         )
         |> menu_builder.layout(1, None, False)
         |> menu_builder.build()
@@ -321,9 +334,9 @@ pub fn handle_menu_callback(
           case int.parse(item_id_str) {
             Ok(item_id) -> {
               let item_info =
-                "📋 Item ID: "
-                <> int.to_string(item_id)
-                <> "\n\n🍽️ Use /book to reserve a table and enjoy our food!"
+                i18n.t(ctx, "menu.item_info", [
+                  #("id", int.to_string(item_id)),
+                ])
               let _ = reply.with_text(ctx, item_info)
               action.complete(ctx, instance)
             }
@@ -334,16 +347,12 @@ pub fn handle_menu_callback(
           case callback_data {
             "back_to_categories" -> action.next(ctx, instance, ShowCategories)
             "book_table" -> {
-              let _ =
-                reply.with_text(ctx, "📋 Use /book to make a table reservation!")
+              let _ = reply.with_text(ctx, i18n.t(ctx, "menu.use_book", []))
               action.complete(ctx, instance)
             }
             "my_bookings" -> {
               let _ =
-                reply.with_text(
-                  ctx,
-                  "📋 Use /my_bookings to view your reservations!",
-                )
+                reply.with_text(ctx, i18n.t(ctx, "menu.use_my_bookings", []))
               action.complete(ctx, instance)
             }
             _ -> Error("Unknown menu action: " <> callback_data)

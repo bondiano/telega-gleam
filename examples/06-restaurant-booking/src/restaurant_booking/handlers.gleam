@@ -2,6 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{Some}
 import gleam/string
+import restaurant_booking/i18n
 import restaurant_booking/sql
 import sqlight
 import telega/bot.{type Context}
@@ -14,18 +15,7 @@ pub fn help(
   ctx: Context(Nil, String),
   _cmd: update.Command,
 ) -> Result(Context(Nil, String), String) {
-  case
-    reply.with_text(
-      ctx,
-      "🍽️ Restaurant Booking Bot\n\n"
-        <> "Available commands:\n"
-        <> "/start - Register or update your profile\n"
-        <> "/menu - Browse our menu and order food\n"
-        <> "/book - Make a new table reservation\n"
-        <> "/my_bookings - View your reservations\n"
-        <> "/help - Show this message",
-    )
-  {
+  case reply.with_text(ctx, i18n.t(ctx, "help.text", [])) {
     Ok(_) -> Ok(ctx)
     Error(_) -> Error("Failed to send help message")
   }
@@ -68,14 +58,7 @@ fn show_user_bookings(
     db_span("get_user_bookings", fn() { sql.get_user_bookings(db, user_id) })
   {
     Ok([]) -> {
-      case
-        reply.with_text(
-          ctx,
-          "📋 Your Bookings\n\n"
-            <> "You don't have any bookings yet.\n"
-            <> "Use /book to make a reservation!",
-        )
-      {
+      case reply.with_text(ctx, i18n.t(ctx, "bookings.none", [])) {
         Ok(_) -> Ok(ctx)
         Error(error) ->
           Error("Failed to send bookings message: " <> string.inspect(error))
@@ -96,12 +79,7 @@ fn show_user_bookings(
 fn send_registration_required_message(
   ctx: Context(Nil, String),
 ) -> Result(Context(Nil, String), String) {
-  case
-    reply.with_text(
-      ctx,
-      "❌ You need to register first!\n\nUse /start to create your profile.",
-    )
-  {
+  case reply.with_text(ctx, i18n.t(ctx, "common.registration_required", [])) {
     Ok(_) -> Ok(ctx)
     Error(error) ->
       Error("Failed to send registration message: " <> string.inspect(error))
@@ -115,7 +93,7 @@ fn format_bookings_list(
     fmt.build()
     |> fmt.with_mode(fmt.HTML)
     |> fmt.text("📋 ")
-    |> fmt.bold_text("Your Bookings")
+    |> fmt.bold_text(i18n.tr("bookings.header", []))
     |> fmt.line_break()
     |> fmt.line_break()
 
@@ -138,16 +116,32 @@ fn format_single_booking(
   let single_booking_builder =
     builder
     |> fmt.text(status_emoji <> " ")
-    |> fmt.bold_text("Reservation" <> status_text)
-    |> fmt.line_break()
-    |> fmt.text("📅 " <> booking.booking_date <> " at " <> booking.booking_time)
-    |> fmt.line_break()
-    |> fmt.text("👥 " <> int.to_string(booking.guests) <> " guests")
+    |> fmt.bold_text(i18n.tr("bookings.reservation", []) <> status_text)
     |> fmt.line_break()
     |> fmt.text(
-      "🪑 Table "
+      "📅 "
+      <> booking.booking_date
+      <> " "
+      <> i18n.tr("bookings.at", [])
+      <> " "
+      <> booking.booking_time,
+    )
+    |> fmt.line_break()
+    |> fmt.text(
+      "👥 "
+      <> int.to_string(booking.guests)
+      <> " "
+      <> i18n.tr("bookings.guests", []),
+    )
+    |> fmt.line_break()
+    |> fmt.text(
+      "🪑 "
+      <> i18n.tr("bookings.table", [])
+      <> " "
       <> int.to_string(booking.table_number)
-      <> " (capacity: "
+      <> " ("
+      <> i18n.tr("bookings.capacity", [])
+      <> ": "
       <> int.to_string(booking.capacity)
       <> ")",
     )
@@ -161,7 +155,9 @@ fn format_single_booking(
     Some(req) if req != "" ->
       single_booking_builder
       |> fmt.line_break()
-      |> fmt.text("💬 Special requests: " <> req)
+      |> fmt.text(
+        "💬 " <> i18n.tr("bookings.special_requests", []) <> ": " <> req,
+      )
     _ -> single_booking_builder
   }
 
@@ -169,7 +165,7 @@ fn format_single_booking(
     Some(code) ->
       single_booking_builder
       |> fmt.line_break()
-      |> fmt.text("🎫 Confirmation: " <> code)
+      |> fmt.text("🎫 " <> i18n.tr("bookings.confirmation", []) <> ": " <> code)
     _ -> single_booking_builder
   }
 }
@@ -185,9 +181,9 @@ fn get_status_emoji(status: option.Option(String)) -> String {
 
 fn format_status(status: option.Option(String)) -> String {
   case status {
-    Some("confirmed") -> " (Confirmed)"
-    Some("pending") -> " (Pending)"
-    Some("cancelled") -> " (Cancelled)"
+    Some("confirmed") -> i18n.tr("bookings.confirmed", [])
+    Some("pending") -> i18n.tr("bookings.pending", [])
+    Some("cancelled") -> i18n.tr("bookings.cancelled", [])
     _ -> ""
   }
 }

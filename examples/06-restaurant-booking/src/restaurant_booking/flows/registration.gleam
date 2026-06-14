@@ -1,8 +1,8 @@
 import gleam/bool
-import gleam/int
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
+import restaurant_booking/i18n
 import restaurant_booking/sql
 import restaurant_booking/util
 import sqlight
@@ -80,12 +80,8 @@ pub fn welcome_step(
 
   use <- bool.guard(user_in_db != [], action.cancel(ctx, instance))
 
-  let message = "🍽️ Welcome to " <> util.get_restaurant_name() <> "!
-
-To make a reservation, I need to collect some information about you.
-This will only take a few minutes.
-
-Let's start! 👋"
+  let message =
+    i18n.t(ctx, "reg.welcome", [#("restaurant", util.get_restaurant_name())])
 
   case reply.with_text(ctx, message) {
     Ok(_) -> action.next(ctx, instance, CollectName)
@@ -108,7 +104,13 @@ fn collect_name_step(
         }
         Error(error_msg) -> {
           let _ =
-            reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
+            reply.with_text(
+              ctx,
+              "❌ "
+                <> i18n.t(ctx, error_msg, [])
+                <> "\n"
+                <> i18n.t(ctx, "common.try_again", []),
+            )
           action.wait(ctx, instance)
         }
       }
@@ -121,7 +123,7 @@ fn ask_for_name(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
-  case reply.with_text(ctx, "Please enter your full name:") {
+  case reply.with_text(ctx, i18n.t(ctx, "reg.ask_name", [])) {
     Ok(_) -> action.wait(ctx, instance)
     Error(_) -> action.cancel(ctx, instance)
   }
@@ -142,7 +144,13 @@ fn collect_phone_step(
         }
         Error(error_msg) -> {
           let _ =
-            reply.with_text(ctx, "❌ " <> error_msg <> "\nPlease try again.")
+            reply.with_text(
+              ctx,
+              "❌ "
+                <> i18n.t(ctx, error_msg, [])
+                <> "\n"
+                <> i18n.t(ctx, "common.try_again", []),
+            )
           action.wait(ctx, instance)
         }
       }
@@ -155,15 +163,7 @@ fn ask_for_phone(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
-  let message =
-    "
-📱 Please provide your phone number:
-
-This is required for booking confirmations and important updates.
-Format: +1-555-123-4567 or (555) 123-4567
-  "
-
-  case reply.with_text(ctx, message) {
+  case reply.with_text(ctx, i18n.t(ctx, "reg.ask_phone", [])) {
     Ok(_) -> action.wait(ctx, instance)
     Error(_) -> action.cancel(ctx, instance)
   }
@@ -197,11 +197,7 @@ fn collect_email_step(
               action.next(ctx, instance, ConfirmRegistration)
             }
             Error(_) -> {
-              let _ =
-                reply.with_text(
-                  ctx,
-                  "❌ Invalid email format. Please try again or type 'skip'.",
-                )
+              let _ = reply.with_text(ctx, i18n.t(ctx, "reg.invalid_email", []))
               action.wait(ctx, instance)
             }
           }
@@ -209,15 +205,7 @@ fn collect_email_step(
       }
     }
     None -> {
-      let message =
-        "
-📧 Email address (optional):
-
-We'll send you booking confirmations and special offers.
-You can skip this step by typing 'skip'.
-      "
-
-      case reply.with_text(ctx, message) {
+      case reply.with_text(ctx, i18n.t(ctx, "reg.ask_email", [])) {
         Ok(_) -> action.wait(ctx, instance)
         Error(_) -> action.cancel(ctx, instance)
       }
@@ -254,7 +242,7 @@ fn save_and_complete(
 ) -> types.StepResult(RegistrationStep, Nil, String) {
   case extract_registration_data(instance) {
     Error(e) -> {
-      let _ = reply.with_text(ctx, "❌ " <> e)
+      let _ = reply.with_text(ctx, "❌ " <> i18n.t(ctx, e, []))
       action.cancel(ctx, instance)
     }
     Ok(reg_data) -> {
@@ -271,7 +259,12 @@ fn save_and_complete(
         Ok(_) -> action.complete(ctx, instance)
         Error(err) -> {
           let _ =
-            reply.with_text(ctx, "❌ Failed to save: " <> string.inspect(err))
+            reply.with_text(
+              ctx,
+              i18n.t(ctx, "reg.save_failed", [
+                #("error", string.inspect(err)),
+              ]),
+            )
           action.cancel(ctx, instance)
         }
       }
@@ -283,7 +276,7 @@ fn restart_registration(
   ctx: Context(Nil, String),
   instance: types.FlowInstance,
 ) -> types.StepResult(RegistrationStep, Nil, String) {
-  let _ = reply.with_text(ctx, "Starting over. Please enter your full name:")
+  let _ = reply.with_text(ctx, i18n.t(ctx, "reg.restart", []))
   action.goto(ctx, instance.clear_step_data(instance), CollectName)
 }
 
@@ -296,8 +289,8 @@ fn handle_text_response(
     Some(text) -> {
       let instance = instance.clear_step_data_key(instance, "user_input")
       case parse_edit_command(text) {
-        Some(#(step, prompt)) -> {
-          let _ = reply.with_text(ctx, prompt)
+        Some(#(step, prompt_key)) -> {
+          let _ = reply.with_text(ctx, i18n.t(ctx, prompt_key, []))
           action.goto(ctx, instance, step)
         }
         None -> ask_for_confirmation(ctx, instance)
@@ -313,13 +306,9 @@ fn parse_edit_command(
     False -> None
     True -> {
       case string.drop_start(text, 5) |> string.trim |> string.lowercase {
-        "name" -> Some(#(CollectName, "Please enter your new name:"))
-        "phone" -> Some(#(CollectPhone, "Please enter your new phone number:"))
-        "email" ->
-          Some(#(
-            CollectEmail,
-            "Please enter your new email (or type 'skip' to leave it empty):",
-          ))
+        "name" -> Some(#(CollectName, "reg.edit_name"))
+        "phone" -> Some(#(CollectPhone, "reg.edit_phone"))
+        "email" -> Some(#(CollectEmail, "reg.edit_email"))
         _ -> None
       }
     }
@@ -333,19 +322,16 @@ fn ask_for_confirmation(
   case extract_registration_data(instance) {
     Ok(reg_data) -> {
       let email_display = case reg_data.email {
-        Some(e) -> "📧 " <> e
-        None -> "📧 Not provided"
+        Some(e) -> i18n.t(ctx, "reg.email_provided", [#("email", e)])
+        None -> i18n.t(ctx, "reg.email_not_provided", [])
       }
 
-      let message = "
-✨ Please confirm your registration:
-
-👤 Name: " <> reg_data.name <> "
-📱 Phone: " <> reg_data.phone <> "
-" <> email_display <> "
-
-To edit any field, type 'edit name', 'edit phone', or 'edit email'
-  "
+      let message =
+        i18n.t(ctx, "reg.confirm", [
+          #("name", reg_data.name),
+          #("phone", reg_data.phone),
+          #("email", email_display),
+        ])
 
       let keyboard = util.yes_no_keyboard("reg_confirm")
 
@@ -357,7 +343,13 @@ To edit any field, type 'edit name', 'edit phone', or 'edit email'
       }
     }
     Error(error_msg) -> {
-      let _ = reply.with_text(ctx, "❌ Registration error: " <> error_msg)
+      let _ =
+        reply.with_text(
+          ctx,
+          i18n.t(ctx, "reg.error_prefix", [
+            #("error", i18n.t(ctx, error_msg, [])),
+          ]),
+        )
       action.cancel(ctx, instance)
     }
   }
@@ -367,15 +359,8 @@ fn registration_complete(
   ctx: Context(Nil, String),
   _instance: types.FlowInstance,
 ) -> Result(Context(Nil, String), String) {
-  let message = "
-🎉 Registration successful!
-
-Welcome to " <> util.get_restaurant_name() <> "! You can now make reservations.
-
-Use /book to make a new reservation
-Use /my_bookings to see your current reservations
-Use /help for more options
-  "
+  let message =
+    i18n.t(ctx, "reg.success", [#("restaurant", util.get_restaurant_name())])
 
   case reply.with_text(ctx, message) {
     Ok(_) -> Ok(ctx)
@@ -388,12 +373,7 @@ fn registration_error(
   _instance: types.FlowInstance,
   _error: option.Option(String),
 ) -> Result(Context(Nil, String), String) {
-  let message =
-    "❌ Sorry, there was an error with your registration.
-
-Please try again with /register or contact support if the problem persists."
-
-  case reply.with_text(ctx, message) {
+  case reply.with_text(ctx, i18n.t(ctx, "reg.error", [])) {
     Ok(_) -> Ok(ctx)
     Error(_) -> Ok(ctx)
   }
@@ -446,12 +426,14 @@ fn extract_registration_data(
   ))
 }
 
+/// Validators return i18n keys (e.g. `"error.invalid_phone"`) instead of raw
+/// English; call sites translate them with `i18n.t`.
 pub fn validate_name(name: String) -> Result(String, String) {
   let trimmed = string.trim(name)
   case string.length(trimmed) {
     n if n >= 2 && n <= 100 -> Ok(trimmed)
-    n if n < 2 -> Error("Name must be at least 2 characters")
-    _ -> Error("Name is too long")
+    n if n < 2 -> Error("error.name_too_short")
+    _ -> Error("error.name_too_long")
   }
 }
 
@@ -465,12 +447,7 @@ pub fn validate_phone(phone: String) -> Result(String, String) {
   let length = string.length(cleaned)
   case length >= 10 && length <= 15 {
     True -> Ok(cleaned)
-    False ->
-      Error(
-        "Phone number must be between 10 and 15 digits (got "
-        <> int.to_string(length)
-        <> " digits)",
-      )
+    False -> Error("error.invalid_phone")
   }
 }
 
@@ -478,6 +455,6 @@ pub fn validate_email(email: String) -> Result(String, String) {
   let trimmed = string.trim(email)
   case string.contains(trimmed, "@") && string.contains(trimmed, ".") {
     True -> Ok(trimmed)
-    False -> Error("Invalid email format")
+    False -> Error("error.invalid_email")
   }
 }

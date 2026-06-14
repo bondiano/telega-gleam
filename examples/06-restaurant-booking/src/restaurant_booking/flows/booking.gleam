@@ -12,6 +12,7 @@ import telega/flow/instance
 import telega/flow/types
 import telega/reply
 
+import restaurant_booking/i18n
 import restaurant_booking/sql
 import restaurant_booking/util
 
@@ -59,34 +60,40 @@ pub fn create_booking_flow(
   })
   |> builder.add_step(
     Welcome,
-    handler.message_step(
-      fn(_) {
-        "🍽️ Let's make your reservation at "
-        <> util.get_restaurant_name()
-        <> "!\n\nI'll help you book the perfect table."
+    // `_with` variants resolve the text per update, so the middleware's locale
+    // is already in effect — no need for a custom step wrapper.
+    handler.message_step_with(
+      fn(ctx, _inst) {
+        i18n.t(ctx, "book.welcome", [
+          #("restaurant", util.get_restaurant_name()),
+        ])
       },
       option.Some(Date),
     ),
   )
   |> builder.add_step(
     Date,
-    handler.text_step(
-      "📅 Enter date (YYYY-MM-DD):\nExample: 2024-12-25",
+    handler.text_step_with(
+      fn(ctx, _inst) { i18n.t(ctx, "book.ask_date", []) },
       "booking_date",
       Time,
     ),
   )
   |> builder.add_step(
     Time,
-    handler.text_step(
-      "🕐 Enter time (HH:MM):\nExample: 19:30\n\nHours: Mon-Thu 17:00-23:00, Fri-Sat 17:00-24:00, Sun 17:00-22:00",
+    handler.text_step_with(
+      fn(ctx, _inst) { i18n.t(ctx, "book.ask_time", []) },
       "booking_time",
       Guests,
     ),
   )
   |> builder.add_step(
     Guests,
-    handler.text_step("👥 How many guests? (1-12)", "guest_count", Confirm),
+    handler.text_step_with(
+      fn(ctx, _inst) { i18n.t(ctx, "book.ask_guests", []) },
+      "guest_count",
+      Confirm,
+    ),
   )
   |> builder.add_step(Confirm, fn(ctx, inst) {
     confirm_and_book_step(db, ctx, inst)
@@ -97,7 +104,7 @@ pub fn create_booking_flow(
     use _ <- result.try(
       reply.with_text(
         ctx,
-        "❌ Booking error: " <> error_msg <> "\nUse /book to try again.",
+        i18n.t(ctx, "book.error", [#("error", i18n.t(ctx, error_msg, []))]),
       )
       |> result.map_error(fn(err) {
         "Error message failed: " <> string.inspect(err)
@@ -126,10 +133,7 @@ fn check_user_registration(
 
     Ok([]) -> {
       let _ =
-        reply.with_text(
-          ctx,
-          "❌ You need to register first!\n\nUse /start to create your profile.",
-        )
+        reply.with_text(ctx, i18n.t(ctx, "common.registration_required", []))
 
       action.cancel(ctx, instance)
     }
@@ -149,19 +153,16 @@ fn confirm_and_book_step(
     ctx,
     instance,
     extract_booking_data(instance),
-    fn(err) { "❌ Error: " <> err },
+    fn(err) { "❌ " <> i18n.t(ctx, err, []) },
   )
 
-  let confirmation = "
-🎉 Confirm your reservation:
-
-📅 Date: " <> booking_data.booking_date <> "
-🕐 Time: " <> booking_data.booking_time <> "
-👥 Guests: " <> int.to_string(booking_data.guest_count) <> "
-🍽️ Restaurant: " <> util.get_restaurant_name() <> "
-
-We'll book an available table for you!
-  "
+  let confirmation =
+    i18n.t(ctx, "book.confirm", [
+      #("date", booking_data.booking_date),
+      #("time", booking_data.booking_time),
+      #("guests", int.to_string(booking_data.guest_count)),
+      #("restaurant", util.get_restaurant_name()),
+    ])
 
   use _ <- action.try(ctx, instance, reply.with_text(ctx, confirmation))
 
@@ -175,18 +176,17 @@ We'll book an available table for you!
       booking_data.booking_time,
       booking_data.guest_count,
     ),
-    fn(err) { "❌ Booking failed: " <> err },
+    fn(err) { "❌ " <> i18n.t(ctx, err, []) },
   )
 
-  let success_message = "
-✅ Booking confirmed!
-
-Confirmation: " <> option.unwrap(booking.confirmation_code, "PENDING") <> "
-📅 " <> booking.booking_date <> " at " <> booking.booking_time <> "
-👥 " <> int.to_string(booking.guests) <> " guests
-
-Thank you for choosing " <> util.get_restaurant_name() <> "!
-  "
+  let success_message =
+    i18n.t(ctx, "book.success", [
+      #("code", option.unwrap(booking.confirmation_code, "PENDING")),
+      #("date", booking.booking_date),
+      #("time", booking.booking_time),
+      #("guests", int.to_string(booking.guests)),
+      #("restaurant", util.get_restaurant_name()),
+    ])
 
   use _ <- action.try(ctx, instance, reply.with_text(ctx, success_message))
   action.complete(ctx, instance)
@@ -281,7 +281,7 @@ fn create_booking(
   )
 
   case available_tables {
-    [] -> Error("No tables available for that date and time")
+    [] -> Error("book.no_tables")
 
     [first_table, ..] -> {
       let table_id = first_table.id
@@ -327,9 +327,9 @@ fn validate_date(date_str: String) -> Result(Nil, String) {
     [year, month, day] ->
       case int.parse(year), int.parse(month), int.parse(day) {
         Ok(_), Ok(_), Ok(_) -> Ok(Nil)
-        _, _, _ -> Error("Date format must be YYYY-MM-DD")
+        _, _, _ -> Error("error.invalid_date")
       }
-    _ -> Error("Date format must be YYYY-MM-DD")
+    _ -> Error("error.invalid_date")
   }
 }
 
@@ -339,8 +339,8 @@ fn validate_time(time_str: String) -> Result(Nil, String) {
     [hour, minute] ->
       case int.parse(hour), int.parse(minute) {
         Ok(_), Ok(_) -> Ok(Nil)
-        _, _ -> Error("Time format must be HH:MM")
+        _, _ -> Error("error.invalid_time")
       }
-    _ -> Error("Time format must be HH:MM")
+    _ -> Error("error.invalid_time")
   }
 }

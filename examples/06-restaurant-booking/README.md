@@ -11,6 +11,7 @@ A complete restaurant table booking system demonstrating Telega's persistent flo
 - 🗄️ **Real-time data** - Live table availability checking
 - 🏗️ **Interactive Menus** - Advanced menu system using menu_builder with categories and pagination
 - 🔭 **Observability** - `telega/telemetry` events turned into logs, plus custom spans around database queries
+- 🌍 **Internationalization** - English/Russian via `telega_i18n`; locale auto-selected from the user's Telegram language and switchable with `/language`
 
 ## Setup
 
@@ -80,6 +81,77 @@ telemetry.span(
 The same events can feed Prometheus or OpenTelemetry exporters instead of
 logs — the attached handler is the only thing to swap.
 
+### Internationalization
+
+All user-facing copy lives in TOML catalogs under `locales/` (`en.toml` is the
+default, `ru.toml` the translation). They are loaded once at startup and the
+`telega_i18n` middleware resolves the active locale per update:
+
+1. the user's stored override (set via `/language`), else
+2. the user's Telegram `language_code`, else
+3. the default locale (`en`).
+
+```gleam
+// bot.gleam
+router.new(...)
+|> router.use_middleware(i18n.middleware(catalog, db))
+```
+
+```gleam
+// i18n.gleam — catalog loaded from the TOML files
+pub fn catalog() -> Catalog {
+  let assert Ok(catalog) =
+    telega_i18n.new(default_locale: "en")
+    |> telega_i18n.load_toml_dir("locales")
+  catalog
+}
+```
+
+Handlers and flow steps then translate by key — the middleware already stashed
+the locale for the current update:
+
+```gleam
+i18n.t(ctx, "reg.welcome", [#("restaurant", util.get_restaurant_name())])
+i18n.tn(ctx, "menu.items", count, [])   // CLDR pluralization (one/few/many)
+```
+
+Helpers without a `Context` (e.g. the bookings list formatter) use `i18n.tr`,
+which reads the same per-process locale. Missing keys fall back through the
+locale chain to the default, then to the key itself — so a typo degrades
+gracefully instead of crashing.
+
+**Switching language.** `/language` shows an inline keyboard (each language in
+its own name). The chosen locale is persisted per user in the same SQLite
+key-value store the flows use (key `lang:{chat}:{from}`), so it survives
+restarts and is independent of registration. The selection callbacks are
+registered as exact matches (`lang:en`, `lang:ru`) so they take priority over
+the flows' catch-all callback handler:
+
+```gleam
+// settings.gleam — persist, acknowledge, then confirm in the new language
+use _ <- result.try(i18n.set_user_language(db, chat_id, from_id, locale))
+let _ = reply.answer_callback_query(ctx, types.new_answer_callback_query_parameters(query_id))
+telega_i18n.enter(catalog:, locale:)
+reply.with_text(ctx, i18n.t(ctx, "settings.language_set", []))
+```
+
+The plain `handler.text_step` / `message_step` bake their text in at startup,
+before any locale is known. The booking flow instead uses the context-aware
+`handler.text_step_with` / `handler.message_step_with`, which resolve the text
+per update (when the middleware's locale is already in effect):
+
+```gleam
+// flows/booking.gleam
+builder.add_step(
+  Date,
+  handler.text_step_with(
+    fn(ctx, _inst) { i18n.t(ctx, "book.ask_date", []) },
+    "booking_date",
+    Time,
+  ),
+)
+```
+
 ## Testing
 
 ```bash
@@ -94,6 +166,7 @@ Integration tests run against an in-memory SQLite database, so they need no setu
 - `/menu` - Browse restaurant menu with interactive categories
 - `/book` - Make a table reservation
 - `/my_bookings` - View your reservations
+- `/language` - Switch language (English / Русский)
 - `/help` - Show available commands
 
 The bot guides users through multi-step flows that persist across bot restarts and handle interruptions gracefully.

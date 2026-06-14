@@ -132,6 +132,21 @@ pub fn greeting_flow_test() {
 
 See the full [Testing guide](https://hexdocs.pm/telega/docs/testing.html) for handler isolation, mock clients, media assertions, and more.
 
+## Ecosystem
+
+Telega is a monorepo. The core `telega` package is HTTP-client- and storage-agnostic; pick the adapters you need:
+
+| Package | Purpose |
+| --- | --- |
+| [`telega_wisp`](https://github.com/bondiano/telega-gleam/tree/master/telega_wisp) | Wisp webhook adapter (endpoint handling, secret-token validation) |
+| [`telega_httpc`](https://github.com/bondiano/telega-gleam/tree/master/telega_httpc) | HTTP client adapter over Erlang `httpc` |
+| [`telega_hackney`](https://github.com/bondiano/telega-gleam/tree/master/telega_hackney) | HTTP client adapter over `hackney` |
+| [`telega_storage_postgres`](https://github.com/bondiano/telega-gleam/tree/master/telega_storage_postgres) | PostgreSQL session/flow storage adapter |
+| [`telega_storage_sqlite`](https://github.com/bondiano/telega-gleam/tree/master/telega_storage_sqlite) | SQLite session/flow storage adapter |
+| [`telega_storage_redis`](https://github.com/bondiano/telega-gleam/tree/master/telega_storage_redis) | Redis/Valkey session/flow storage adapter |
+| [`telega_webapp`](https://github.com/bondiano/telega-gleam/tree/master/telega_webapp) | Telegram Mini Apps (Web App) `initData` validation and helpers |
+| [`telega_i18n`](https://github.com/bondiano/telega-gleam/tree/master/telega_i18n) | Internationalization: TOML/JSON catalogs, locale middleware, interpolation, CLDR pluralization |
+
 ## Examples
 
 Progressive examples in the [examples](./examples) directory:

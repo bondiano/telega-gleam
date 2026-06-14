@@ -370,6 +370,46 @@ fn decode_text_message(
   }
 }
 
+/// Get the original raw `ModelUpdate` behind any typed update. Useful when you
+/// need a field that the typed variant does not surface (e.g. the sender's
+/// `language_code`).
+pub fn raw(update: Update) -> ModelUpdate {
+  case update {
+    TextUpdate(raw:, ..) -> raw
+    CommandUpdate(raw:, ..) -> raw
+    MessageUpdate(raw:, ..) -> raw
+    PhotoUpdate(raw:, ..) -> raw
+    VideoUpdate(raw:, ..) -> raw
+    AudioUpdate(raw:, ..) -> raw
+    VoiceUpdate(raw:, ..) -> raw
+    MediaGroupUpdate(raw:, ..) -> raw
+    WebAppUpdate(raw:, ..) -> raw
+    CallbackQueryUpdate(raw:, ..) -> raw
+    ChannelPostUpdate(raw:, ..) -> raw
+    EditedMessageUpdate(raw:, ..) -> raw
+    EditedChannelPostUpdate(raw:, ..) -> raw
+    BusinessConnectionUpdate(raw:, ..) -> raw
+    BusinessMessageUpdate(raw:, ..) -> raw
+    ChatJoinRequestUpdate(raw:, ..) -> raw
+    ChatMemberUpdate(raw:, ..) -> raw
+    ChosenInlineResultUpdate(raw:, ..) -> raw
+    DeletedBusinessMessageUpdate(raw:, ..) -> raw
+    EditedBusinessMessageUpdate(raw:, ..) -> raw
+    InlineQueryUpdate(raw:, ..) -> raw
+    MessageReactionCountUpdate(raw:, ..) -> raw
+    MessageReactionUpdate(raw:, ..) -> raw
+    MyChatMemberUpdate(raw:, ..) -> raw
+    PaidMediaPurchaseUpdate(raw:, ..) -> raw
+    PollAnswerUpdate(raw:, ..) -> raw
+    PollUpdate(raw:, ..) -> raw
+    PreCheckoutQueryUpdate(raw:, ..) -> raw
+    RemovedChatBoost(raw:, ..) -> raw
+    ShippingQueryUpdate(raw:, ..) -> raw
+    ManagedBotUpdate(raw:, ..) -> raw
+    GuestMessageUpdate(raw:, ..) -> raw
+  }
+}
+
 pub fn to_string(update: Update) -> String {
   case update {
     CommandUpdate(command:, from_id:, ..) ->

@@ -1,0 +1,85 @@
+# English translations for the restaurant booking bot.
+# This is the default locale (see `restaurant_booking/i18n`).
+
+[help]
+text = "🍽️ Restaurant Booking Bot\n\nAvailable commands:\n/start - Register or update your profile\n/menu - Browse our menu and order food\n/book - Make a new table reservation\n/my_bookings - View your reservations\n/language - Change language\n/help - Show this message"
+
+[settings]
+choose_language = "🌍 Choose your language:"
+language_set = "✅ Language set to English"
+
+[common]
+yes = "✅ Yes"
+no = "❌ No"
+try_again = "Please try again."
+registration_required = "❌ You need to register first!\n\nUse /start to create your profile."
+
+[error]
+name_too_short = "Name must be at least 2 characters"
+name_too_long = "Name is too long"
+invalid_phone = "Phone number must be between 10 and 15 digits"
+invalid_email = "Invalid email format"
+invalid_date = "Date format must be YYYY-MM-DD"
+invalid_time = "Time format must be HH:MM"
+
+[bookings]
+none = "📋 Your Bookings\n\nYou don't have any bookings yet.\nUse /book to make a reservation!"
+header = "Your Bookings"
+reservation = "Reservation"
+confirmed = " (Confirmed)"
+pending = " (Pending)"
+cancelled = " (Cancelled)"
+at = "at"
+guests = "guests"
+table = "Table"
+capacity = "capacity"
+special_requests = "Special requests"
+confirmation = "Confirmation"
+
+[reg]
+welcome = "🍽️ Welcome to {restaurant}!\n\nTo make a reservation, I need to collect some information about you.\nThis will only take a few minutes.\n\nLet's start! 👋"
+ask_name = "Please enter your full name:"
+ask_phone = "📱 Please provide your phone number:\n\nThis is required for booking confirmations and important updates.\nFormat: +1-555-123-4567 or (555) 123-4567"
+ask_email = "📧 Email address (optional):\n\nWe'll send you booking confirmations and special offers.\nYou can skip this step by typing 'skip'."
+invalid_email = "❌ Invalid email format. Please try again or type 'skip'."
+confirm = "✨ Please confirm your registration:\n\n👤 Name: {name}\n📱 Phone: {phone}\n{email}\n\nTo edit any field, type 'edit name', 'edit phone', or 'edit email'"
+email_provided = "📧 {email}"
+email_not_provided = "📧 Not provided"
+success = "🎉 Registration successful!\n\nWelcome to {restaurant}! You can now make reservations.\n\nUse /book to make a new reservation\nUse /my_bookings to see your current reservations\nUse /help for more options"
+error = "❌ Sorry, there was an error with your registration.\n\nPlease try again with /register or contact support if the problem persists."
+restart = "Starting over. Please enter your full name:"
+edit_name = "Please enter your new name:"
+edit_phone = "Please enter your new phone number:"
+edit_email = "Please enter your new email (or type 'skip' to leave it empty):"
+error_prefix = "❌ Registration error: {error}"
+save_failed = "❌ Failed to save: {error}"
+
+[book]
+welcome = "🍽️ Let's make your reservation at {restaurant}!\n\nI'll help you book the perfect table."
+ask_date = "📅 Enter date (YYYY-MM-DD):\nExample: 2024-12-25"
+ask_time = "🕐 Enter time (HH:MM):\nExample: 19:30\n\nHours: Mon-Thu 17:00-23:00, Fri-Sat 17:00-24:00, Sun 17:00-22:00"
+ask_guests = "👥 How many guests? (1-12)"
+confirm = "🎉 Confirm your reservation:\n\n📅 Date: {date}\n🕐 Time: {time}\n👥 Guests: {guests}\n🍽️ Restaurant: {restaurant}\n\nWe'll book an available table for you!"
+success = "✅ Booking confirmed!\n\nConfirmation: {code}\n📅 {date} at {time}\n👥 {guests} guests\n\nThank you for choosing {restaurant}!"
+error = "❌ Booking error: {error}\nUse /book to try again."
+no_tables = "No tables available for that date and time"
+
+[menu]
+title = "🍽️ {restaurant} Menu"
+food_categories = "🍽️ Food Categories"
+reservations = "📋 Reservations"
+make_reservation = "🍽️ Make Reservation"
+my_bookings = "📋 My Bookings"
+category_menu = "🍽️ {category} Menu"
+prev = "◀️ Previous"
+next = "Next ▶️"
+page = "Page {current} of {total}"
+back = "← Back to Categories"
+item_info = "📋 Item ID: {id}\n\n🍽️ Use /book to reserve a table and enjoy our food!"
+use_book = "📋 Use /book to make a table reservation!"
+use_my_bookings = "📋 Use /my_bookings to view your reservations!"
+error = "❌ Menu error: {error}"
+
+[menu.items]
+one = "{count} item"
+other = "{count} items"

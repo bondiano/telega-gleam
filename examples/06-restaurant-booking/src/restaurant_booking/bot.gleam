@@ -1,4 +1,5 @@
 import gleam/erlang/process
+import gleam/list
 import gleam/result
 import gleam/string
 import sqlight
@@ -16,7 +17,9 @@ import restaurant_booking/flows/booking
 import restaurant_booking/flows/menu
 import restaurant_booking/flows/registration
 import restaurant_booking/handlers
+import restaurant_booking/i18n
 import restaurant_booking/observability
+import restaurant_booking/settings
 import restaurant_booking/util
 
 pub fn start(cfg: config.Config) -> Result(Nil, String) {
@@ -58,10 +61,30 @@ pub fn build_router(
     |> registry.register(types.OnCommand("/book"), booking_flow)
     |> registry.register(types.OnCommand("/menu"), menu_flow)
 
-  router.new(cfg.restaurant_name <> constants.bot_name_suffix)
-  |> router.on_command("/help", handlers.help)
-  |> router.on_command("/my_bookings", fn(ctx, cmd) {
-    handlers.my_bookings(db, ctx, cmd)
-  })
+  let catalog = i18n.catalog()
+
+  let base =
+    router.new(cfg.restaurant_name <> constants.bot_name_suffix)
+    |> router.use_middleware(i18n.middleware(catalog, db))
+    |> router.on_command("/help", handlers.help)
+    |> router.on_command("/language", settings.language)
+    |> router.on_command("/my_bookings", fn(ctx, cmd) {
+      handlers.my_bookings(db, ctx, cmd)
+    })
+
+  // Register one exact callback per locale (`lang:en`, `lang:ru`). Exact matches
+  // take priority over the flows' catch-all callback handler, which is a prefix.
+  let with_language =
+    list.fold(i18n.supported_locales, base, fn(r, locale) {
+      router.on_callback(
+        r,
+        router.Exact("lang:" <> locale),
+        fn(ctx, query_id, data) {
+          settings.set_language(catalog, db, ctx, query_id, data)
+        },
+      )
+    })
+
+  with_language
   |> registry.apply_to_router(flow_registry)
 }

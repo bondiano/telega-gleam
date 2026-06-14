@@ -10,6 +10,8 @@ import telega/keyboard
 import telega/storage
 import telega_storage_sqlite as sqlite
 
+import restaurant_booking/i18n
+
 /// Log an info message
 pub fn log(message: String) -> Nil {
   logging.log(logging.Info, message)
@@ -71,10 +73,16 @@ pub fn yes_no_keyboard(id: String) -> keyboard.InlineKeyboard {
   let callback_data = keyboard.bool_callback_data(id)
 
   let assert Ok(yes_button) =
-    keyboard.inline_button("✅ Yes", keyboard.pack_callback(callback_data, True))
+    keyboard.inline_button(
+      i18n.tr("common.yes", []),
+      keyboard.pack_callback(callback_data, True),
+    )
 
   let assert Ok(no_button) =
-    keyboard.inline_button("❌ No", keyboard.pack_callback(callback_data, False))
+    keyboard.inline_button(
+      i18n.tr("common.no", []),
+      keyboard.pack_callback(callback_data, False),
+    )
 
   keyboard.new_inline([[yes_button, no_button]])
 }

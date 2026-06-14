@@ -42,6 +42,45 @@ pub fn text_step(
   }
 }
 
+/// Like `text_step`, but the prompt is computed per update from the `Context`
+/// and the flow instance instead of being fixed when the flow is built.
+///
+/// Use this when the prompt depends on something only known at update time —
+/// most commonly the active locale for internationalization. `text_step` bakes
+/// its prompt in at flow-construction time (startup), which is too early to know
+/// the user's language; `text_step_with` resolves it on every prompt instead.
+///
+/// ```gleam
+/// builder.add_step(
+///   Date,
+///   handler.text_step_with(
+///     fn(ctx, _instance) { i18n.t(ctx, "book.ask_date", []) },
+///     "booking_date",
+///     Time,
+///   ),
+/// )
+/// ```
+pub fn text_step_with(
+  prompt prompt: fn(Context(session, error), FlowInstance) -> String,
+  data_key data_key: String,
+  next_step next_step: step_type,
+) -> StepHandler(step_type, session, error) {
+  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+    case instance.get_wait_result(instance_val) {
+      TextInput(value:) -> {
+        let instance_val = instance.store_data(instance_val, data_key, value)
+        Ok(#(ctx, Next(next_step), instance_val))
+      }
+      _ -> {
+        case reply.with_text(ctx, prompt(ctx, instance_val)) {
+          Ok(_) -> Ok(#(ctx, Wait, instance_val))
+          Error(_) -> Ok(#(ctx, Cancel, instance_val))
+        }
+      }
+    }
+  }
+}
+
 /// Create a message display step
 pub fn message_step(
   message_fn: fn(FlowInstance) -> String,
@@ -49,6 +88,36 @@ pub fn message_step(
 ) -> StepHandler(step_type, session, error) {
   fn(ctx: Context(session, error), instance_val: FlowInstance) {
     let message = message_fn(instance_val)
+    case reply.with_text(ctx, message) {
+      Ok(_) -> {
+        case next_step {
+          Some(step) -> Ok(#(ctx, Next(step), instance_val))
+          None -> Ok(#(ctx, Complete(instance_val.state.data), instance_val))
+        }
+      }
+      Error(_) -> Ok(#(ctx, Cancel, instance_val))
+    }
+  }
+}
+
+/// Like `message_step`, but the message is computed from the `Context` (in
+/// addition to the flow instance), enabling localization.
+///
+/// ```gleam
+/// builder.add_step(
+///   Welcome,
+///   handler.message_step_with(
+///     fn(ctx, _instance) { i18n.t(ctx, "book.welcome", []) },
+///     option.Some(Date),
+///   ),
+/// )
+/// ```
+pub fn message_step_with(
+  message_fn message_fn: fn(Context(session, error), FlowInstance) -> String,
+  next_step next_step: Option(step_type),
+) -> StepHandler(step_type, session, error) {
+  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+    let message = message_fn(ctx, instance_val)
     case reply.with_text(ctx, message) {
       Ok(_) -> {
         case next_step {

@@ -10,6 +10,7 @@ import telega/bot
 import telega/flow/action
 import telega/flow/builder
 import telega/flow/engine
+import telega/flow/handler
 import telega/flow/instance
 import telega/flow/registry
 import telega/flow/storage
@@ -644,6 +645,113 @@ pub fn engine_wait_and_resume_with_text_test() {
 
   // Instance should be cleaned up
   let assert Ok(None) = ets.load(flow_id)
+}
+
+/// `text_step_with` computes its prompt from the `Context` on every prompt,
+/// so the message reflects per-update data (here the sender id) instead of a
+/// value fixed when the flow was built.
+pub fn text_step_with_resolves_prompt_per_update_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("text_with_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(
+      Start,
+      handler.text_step_with(
+        fn(ctx, _inst) { "ask-" <> int.to_string(ctx.update.from_id) },
+        "answer",
+        End,
+      ),
+    )
+    |> builder.add_step(End, fn(ctx, inst) {
+      let answer = instance.get_data(inst, "answer")
+      process.send(events, "end:" <> option.unwrap(answer, "none"))
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, calls) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 50, chat_id: 60),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // First call: prompt is built from the context, then the step waits.
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 50,
+      chat_id: 60,
+      initial_data: dict.new(),
+    )
+  let _ =
+    mock.assert_called_with_body(
+      from: calls,
+      path_contains: "sendMessage",
+      body_contains: "ask-50",
+    )
+
+  // Resume with text: stored under `data_key`, then advances to End.
+  let flow_id = storage.generate_id(50, 60, "text_with_test")
+  let assert Ok(Some(saved_instance)) = ets.load(flow_id)
+  let resume_data =
+    dict.from_list([
+      #("user_input", "Bob"),
+      #("__wait_result", "text:Bob"),
+    ])
+  let assert Ok(_) =
+    engine.resume_with_instance(flow, ctx, saved_instance, Some(resume_data))
+  let assert Ok("end:Bob") = process.receive(events, 100)
+}
+
+/// `message_step_with` computes its message from the `Context`, then advances.
+pub fn message_step_with_uses_context_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("msg_with_test", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(
+      Start,
+      handler.message_step_with(
+        fn(ctx, _inst) { "hi-" <> int.to_string(ctx.update.from_id) },
+        Some(End),
+      ),
+    )
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "end")
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, calls) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 7, chat_id: 8),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 7,
+      chat_id: 8,
+      initial_data: dict.new(),
+    )
+
+  let _ =
+    mock.assert_called_with_body(
+      from: calls,
+      path_contains: "sendMessage",
+      body_contains: "hi-7",
+    )
+  let assert Ok("end") = process.receive(events, 100)
 }
 
 pub fn engine_wait_callback_and_resume_test() {

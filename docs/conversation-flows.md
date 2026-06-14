@@ -432,6 +432,34 @@ builder.add_step(
 )
 ```
 
+### `text_step_with` / `message_step_with` — Context-Aware Text
+
+`text_step` and `message_step` capture their text when the flow is *built*
+(at startup). When the text must be computed per update — most commonly for
+internationalization, where the locale is only known once a request arrives —
+use the `_with` variants. Their text function receives the `Context` (and the
+flow instance):
+
+```gleam
+builder.add_step(
+  Date,
+  handler.text_step_with(
+    fn(ctx, _inst) { i18n.t(ctx, "booking.ask_date", []) },
+    "booking_date",
+    Time,
+  ),
+)
+|> builder.add_step(
+  Welcome,
+  handler.message_step_with(
+    fn(ctx, _inst) { i18n.t(ctx, "booking.welcome", []) },
+    Some(Date),
+  ),
+)
+```
+
+See `examples/06-restaurant-booking` for a full bilingual flow built on these.
+
 ## Error Handling
 
 ### Flow-Level Error Handler
@@ -1192,6 +1220,6 @@ fn string_to_step(s) {
 | `telega/flow/storage` | Storage utilities (ETS, noop, `generate_id`) |
 | `telega/flow/builder` | Flow construction (`new`, `add_step`, `build`, hooks, middleware, conditionals) |
 | `telega/flow/engine` | Core execution engine (internal) |
-| `telega/flow/handler` | Built-in step handlers (`text_step`, `message_step`, resume handlers) |
+| `telega/flow/handler` | Built-in step handlers (`text_step`, `message_step`, context-aware `text_step_with` / `message_step_with`, resume handlers) |
 | `telega/flow/registry` | Flow registry and router integration (`new_registry`, `register`, `apply_to_router`) |
 | `telega/flow/compose` | Flow composition (`compose_sequential`, `compose_conditional`, `compose_parallel`, `validation_middleware`) |

@@ -1,0 +1,19 @@
+name = "telega_i18n"
+version = "1.0.0"
+description = "Internationalization (i18n) for the Telega Telegram Bot Library: TOML/JSON catalogs, locale middleware, interpolation and CLDR pluralization"
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
+
+gleam = ">= 1.12.0"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
+gleam_json = ">= 3.0.2 and < 4.0.0"
+gleam_erlang = ">= 1.2.0 and < 2.0.0"
+tom = ">= 1.0.0 and < 2.0.0"
+simplifile = ">= 2.3.0 and < 3.0.0"
+telega = { path = ".." }
+
+[dev-dependencies]
+gleeunit = ">= 1.2.0 and < 2.0.0"
