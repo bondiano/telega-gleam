@@ -35,7 +35,7 @@ Initiate a gleam project and add `telega` as a dependency:
 ```sh
 $ gleam new first_tg_bot
 $ cd first_tg_bot
-$ gleam add telega gleam_erlang
+$ gleam add telega gleam_erlang telega_httpc
 ```
 
 Replace the `first_tg_bot.gleam` file content with the following code:
@@ -46,6 +46,7 @@ import telega
 import telega/reply
 import telega/router
 import telega/update
+import telega_httpc
 
 fn handle_text(ctx, text) {
   use ctx <- telega.log_context(ctx, "echo_text")
@@ -60,17 +61,18 @@ fn handle_command(ctx, command: update.Command) {
 }
 
 pub fn main() {
-  let router =
-    router.new("echo_bot")
-    |> router.on_any_text(handle_text)
-    |> router.on_commands(["start", "help"], handle_command)
+  let router = router.new("echo_bot")
+  |> router.on_any_text(handle_text)
+  |> router.on_commands(["start", "help"], handle_command)
+
+  let client =
+    telega_httpc.new("BOT_TOKEN")
 
   let assert Ok(_bot) =
-    telega.new_for_polling(token: "BOT_TOKEN")
+    telega.new_for_polling(api_client: client)
     |> telega.with_router(router)
     |> telega.init_for_polling_nil_session()
 
-  // The bot is running with a supervision tree (including polling).
   process.sleep_forever()
 }
 ```
