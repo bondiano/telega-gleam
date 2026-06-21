@@ -6,9 +6,7 @@ import wisp
 import wisp/wisp_mist
 
 import telega
-import telega/api as telega_api
 import telega/error as telega_error
-import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
 import telega_hackney
@@ -49,16 +47,22 @@ fn start_command_handler(ctx, _command) {
   Ok(ctx)
 }
 
-const commands = [#("/dice", "Roll a dice")]
-
 pub type BotError {
   TelegaBotError(telega_error.TelegaError)
 }
 
 pub fn build_router() -> router.Router(Nil, BotError) {
   router.new("commands_bot")
-  |> router.on_command("start", start_command_handler)
-  |> router.on_command("dice", dice_command_handler)
+  |> router.on_command_with_description(
+    "start",
+    "Show the welcome message",
+    start_command_handler,
+  )
+  |> router.on_command_with_description(
+    "dice",
+    "Roll a dice",
+    dice_command_handler,
+  )
 }
 
 fn build_bot() {
@@ -68,13 +72,6 @@ fn build_bot() {
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
   let client = telega_hackney.new(token)
-  let assert Ok(_) =
-    telega_api.set_my_commands(
-      client,
-      telega_encoder.bot_commands_from(commands),
-      None,
-    )
-
   let router = build_router()
 
   telega.new(
@@ -85,6 +82,10 @@ fn build_bot() {
   )
   |> telega.with_router(router)
   |> telega.with_nil_session()
+  // Publish the router's commands to the Telegram menu on start, and request
+  // only the update types the router actually handles.
+  |> telega.with_auto_commands()
+  |> telega.with_auto_allowed_updates()
   |> telega.init()
 }
 

@@ -11,6 +11,7 @@ links = [
 [documentation]
 pages = [
     { title = " ", path = "#", source = "" },
+    { title = "Router", path="docs/router.html", source="docs/router.md" },
     { title = "Conversation", path="docs/conversation.html", source="docs/conversation.md" },
     { title = "Conversation Flows", path="docs/conversation-flows.html", source="docs/conversation-flows.md" },
     { title = "Session Serialization", path="docs/session-serialization.html", source="docs/session-serialization.md" },

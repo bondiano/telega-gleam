@@ -99,6 +99,7 @@ import gleam/string
 import simplifile
 import tom
 
+import telega
 import telega/bot.{type Context}
 import telega/model/types.{type Update as ModelUpdate, type User}
 import telega/router.{type Middleware}
@@ -165,6 +166,46 @@ pub fn default_locale(catalog: Catalog) -> String {
 /// The list of locales the catalog knows about.
 pub fn locales(catalog: Catalog) -> List(String) {
   dict.keys(catalog.locales)
+}
+
+// Command synchronization ----------------------------------------------------
+
+/// Wire localized command descriptions from this catalog into a `telega`
+/// builder. Implies `telega.with_auto_commands`: the bot publishes its commands
+/// on start (default language first, then one `setMyCommands(language_code:)`
+/// per catalog locale).
+///
+/// Each command's description is looked up at `prefix <> command` — command
+/// `"start"` with `prefix: "commands."` reads catalog key `"commands.start"`,
+/// honoring the catalog's fallback chains. A missing key keeps the description
+/// the command was registered with in the router.
+///
+/// ```gleam
+/// let catalog =
+///   i18n.new("en")
+///   |> i18n.add_toml("en", en_toml)
+///   |> i18n.add_toml("ru", ru_toml)
+///
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// |> i18n.with_command_translations(catalog, prefix: "commands.")
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_command_translations(
+  builder: telega.TelegaBuilder(session, error),
+  catalog catalog: Catalog,
+  prefix prefix: String,
+) -> telega.TelegaBuilder(session, error) {
+  telega.with_command_translations(
+    builder,
+    locales: locales(catalog),
+    translate: fn(command, locale) {
+      case lookup(catalog, locale, prefix <> command) {
+        Ok(template) -> Some(interpolate(template, []))
+        Error(_) -> None
+      }
+    },
+  )
 }
 
 // Loaders --------------------------------------------------------------------

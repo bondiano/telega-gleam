@@ -74,9 +74,13 @@
 //// router
 //// |> router.with_catch_handler(fn(error) {
 ////   log.error("Route error: " <> string.inspect(error))
-////   reply.with_text(ctx, "Sorry, an error occurred")
+////   Error(error)
 //// })
 //// ```
+////
+//// The catch handler receives only the `error` (no context) and must return
+//// `Result(Context, error)` — log and re-raise with `Error(error)`, or recover
+//// with a context already in scope.
 ////
 //// Note: The router's catch handler only handles errors from route handlers.
 //// System-level errors (like session persistence failures) are handled by
@@ -299,6 +303,11 @@ import telega/update.{type Command, type Update}
 pub opaque type Router(session, error) {
   Router(
     commands: Dict(String, Handler(session, error)),
+    /// Optional human-readable descriptions for registered commands, keyed by
+    /// the same normalized command name as `commands`. Populated by
+    /// `on_command_with_description` and consumed by the auto `setMyCommands`
+    /// machinery in `telega`.
+    command_descriptions: Dict(String, String),
     callbacks: Dict(String, Handler(session, error)),
     routes: List(Route(session, error)),
     fallback: Option(Handler(session, error)),
@@ -437,6 +446,7 @@ pub type Route(session, error) {
 pub fn new(name: String) -> Router(session, error) {
   Router(
     commands: dict.new(),
+    command_descriptions: dict.new(),
     callbacks: dict.new(),
     routes: [],
     fallback: None,
@@ -455,10 +465,7 @@ pub fn on_command(
   case router {
     Router(commands:, ..) -> {
       // Remove leading slash if present for consistency
-      let command_key = case string.starts_with(command, "/") {
-        True -> string.drop_start(command, 1)
-        False -> command
-      }
+      let command_key = normalize_command(command)
       let wrapped_handler = fn(ctx, upd) {
         case upd {
           update.CommandUpdate(command: cmd, ..) -> handler(ctx, cmd)
@@ -481,6 +488,48 @@ pub fn on_commands(
   handler: CommandHandler(session, error),
 ) -> Router(session, error) {
   list.fold(commands, router, fn(r, cmd) { on_command(r, cmd, handler) })
+}
+
+/// Add a command handler together with a human-readable description.
+///
+/// The description is what shows up in the Telegram command menu. When the bot
+/// is started with `telega.with_auto_commands`, all commands registered this way
+/// are published via `setMyCommands` automatically, and `telega_i18n` can supply
+/// per-language variants. The description is ignored for routing — it only feeds
+/// command auto-synchronization.
+///
+/// ```gleam
+/// router
+/// |> router.on_command_with_description("start", "Start the bot", handle_start)
+/// |> router.on_command_with_description("help", "Show help", handle_help)
+/// ```
+pub fn on_command_with_description(
+  router: Router(session, error),
+  command: String,
+  description: String,
+  handler: CommandHandler(session, error),
+) -> Router(session, error) {
+  let command_key = normalize_command(command)
+  case on_command(router, command, handler) {
+    Router(command_descriptions:, ..) as router ->
+      Router(
+        ..router,
+        command_descriptions: dict.insert(
+          command_descriptions,
+          command_key,
+          description,
+        ),
+      )
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Strip a single leading slash so command keys are stored consistently.
+fn normalize_command(command: String) -> String {
+  case string.starts_with(command, "/") {
+    True -> string.drop_start(command, 1)
+    False -> command
+  }
 }
 
 /// Add a text handler with pattern
@@ -1172,6 +1221,7 @@ pub fn merge(
 
   let assert Router(
     commands: first_commands,
+    command_descriptions: first_descriptions,
     callbacks: first_callbacks,
     routes: first_routes,
     fallback: first_fallback,
@@ -1182,6 +1232,7 @@ pub fn merge(
 
   let assert Router(
     commands: second_commands,
+    command_descriptions: second_descriptions,
     callbacks: second_callbacks,
     routes: second_routes,
     fallback: second_fallback,
@@ -1190,24 +1241,14 @@ pub fn merge(
     name: second_name,
   ) = second_flat
 
-  let merged_commands =
-    dict.fold(second_commands, first_commands, fn(acc, key, value) {
-      case dict.has_key(acc, key) {
-        True -> acc
-        False -> dict.insert(acc, key, value)
-      }
-    })
-
-  let merged_callbacks =
-    dict.fold(second_callbacks, first_callbacks, fn(acc, key, value) {
-      case dict.has_key(acc, key) {
-        True -> acc
-        False -> dict.insert(acc, key, value)
-      }
-    })
+  let merged_commands = merge_keeping_first(second_commands, first_commands)
+  let merged_descriptions =
+    merge_keeping_first(second_descriptions, first_descriptions)
+  let merged_callbacks = merge_keeping_first(second_callbacks, first_callbacks)
 
   Router(
     commands: merged_commands,
+    command_descriptions: merged_descriptions,
     callbacks: merged_callbacks,
     routes: list.append(first_routes, second_routes),
     fallback: option.or(first_fallback, second_fallback),
@@ -1215,6 +1256,16 @@ pub fn merge(
     catch_handler: option.or(first_catch_handler, second_catch_handler),
     name: first_name <> "+" <> second_name,
   )
+}
+
+/// Merge `incoming` into `base`, keeping `base`'s value on key conflicts.
+fn merge_keeping_first(incoming: Dict(k, v), base: Dict(k, v)) -> Dict(k, v) {
+  dict.fold(incoming, base, fn(acc, key, value) {
+    case dict.has_key(acc, key) {
+      True -> acc
+      False -> dict.insert(acc, key, value)
+    }
+  })
 }
 
 /// Compose two routers, where each router maintains its own middleware and catch handlers.
@@ -1294,6 +1345,7 @@ fn merge_routers(
     [] ->
       Router(
         commands: dict.new(),
+        command_descriptions: dict.new(),
         callbacks: dict.new(),
         routes: [],
         fallback: None,
@@ -1303,24 +1355,7 @@ fn merge_routers(
       )
     [router] -> {
       case router {
-        Router(
-          commands:,
-          callbacks:,
-          routes:,
-          fallback:,
-          middleware:,
-          catch_handler:,
-          ..,
-        ) ->
-          Router(
-            commands: commands,
-            callbacks: callbacks,
-            routes: routes,
-            fallback: fallback,
-            middleware: middleware,
-            catch_handler: catch_handler,
-            name: name,
-          )
+        Router(..) as router -> Router(..router, name: name)
         ComposedRouter(..) -> router
         // Should not happen after flattening
       }
@@ -1330,6 +1365,7 @@ fn merge_routers(
 
       let assert Router(
         commands: first_commands,
+        command_descriptions: first_descriptions,
         callbacks: first_callbacks,
         routes: first_routes,
         fallback: first_fallback,
@@ -1340,6 +1376,7 @@ fn merge_routers(
 
       let assert Router(
         commands: rest_commands,
+        command_descriptions: rest_descriptions,
         callbacks: rest_callbacks,
         routes: rest_routes,
         fallback: rest_fallback,
@@ -1348,24 +1385,15 @@ fn merge_routers(
         ..,
       ) = merged_rest
 
-      let merged_commands =
-        dict.fold(rest_commands, first_commands, fn(acc, key, value) {
-          case dict.has_key(acc, key) {
-            True -> acc
-            False -> dict.insert(acc, key, value)
-          }
-        })
-
+      let merged_commands = merge_keeping_first(rest_commands, first_commands)
+      let merged_descriptions =
+        merge_keeping_first(rest_descriptions, first_descriptions)
       let merged_callbacks =
-        dict.fold(rest_callbacks, first_callbacks, fn(acc, key, value) {
-          case dict.has_key(acc, key) {
-            True -> acc
-            False -> dict.insert(acc, key, value)
-          }
-        })
+        merge_keeping_first(rest_callbacks, first_callbacks)
 
       Router(
         commands: merged_commands,
+        command_descriptions: merged_descriptions,
         callbacks: merged_callbacks,
         routes: list.append(first_routes, rest_routes),
         fallback: option.or(first_fallback, rest_fallback),
@@ -1374,6 +1402,93 @@ fn merge_routers(
         name: name,
       )
     }
+  }
+}
+
+/// List every command registered with a description, as `#(command, description)`
+/// pairs sorted by command name. Commands added with `on_command` (no
+/// description) are omitted. Flattens composed routers, so a fully composed
+/// router reports the union of its sub-routers' described commands.
+///
+/// This is what `telega.with_auto_commands` feeds into `setMyCommands`.
+pub fn registered_commands(
+  router: Router(session, error),
+) -> List(#(String, String)) {
+  let assert Router(command_descriptions:, ..) = to_flat_router(router)
+
+  command_descriptions
+  |> dict.to_list
+  |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
+}
+
+/// Derive the set of Telegram update types this router actually handles, as the
+/// strings expected by `allowed_updates` (e.g. `"message"`, `"callback_query"`).
+/// The result is deduplicated and sorted for stable output.
+///
+/// If the router has a fallback, custom, or filtered route, the handled set
+/// cannot be determined statically (those routes can match anything), so an
+/// empty list is returned to signal "do not restrict" — Telegram then sends its
+/// default update set. Use a manual override when you need narrowing alongside
+/// catch-all routes.
+pub fn allowed_updates(router: Router(session, error)) -> List(String) {
+  let assert Router(commands:, callbacks:, routes:, fallback:, ..) =
+    to_flat_router(router)
+
+  let has_wildcard =
+    option.is_some(fallback)
+    || list.any(routes, fn(route) {
+      case route {
+        CustomRoute(..) | FilteredRoute(..) -> True
+        _ -> False
+      }
+    })
+
+  case has_wildcard {
+    True -> []
+    False -> {
+      let from_commands = case dict.is_empty(commands) {
+        True -> []
+        False -> ["message"]
+      }
+      let from_callbacks = case dict.is_empty(callbacks) {
+        True -> []
+        False -> ["callback_query"]
+      }
+      let from_routes = list.map(routes, route_update_type)
+
+      [from_commands, from_callbacks, from_routes]
+      |> list.flatten
+      |> list.unique
+      |> list.sort(string.compare)
+    }
+  }
+}
+
+/// Map a concrete route to the Telegram `allowed_updates` string it consumes.
+fn route_update_type(route: Route(session, error)) -> String {
+  case route {
+    TextPatternRoute(..)
+    | PhotoRoute(..)
+    | VideoRoute(..)
+    | VoiceRoute(..)
+    | AudioRoute(..)
+    | MediaGroupRoute(..) -> "message"
+    InlineQueryRoute(..) -> "inline_query"
+    ChosenInlineResultRoute(..) -> "chosen_inline_result"
+    ShippingQueryRoute(..) -> "shipping_query"
+    PreCheckoutQueryRoute(..) -> "pre_checkout_query"
+    PollRoute(..) -> "poll"
+    PollAnswerRoute(..) -> "poll_answer"
+    MessageReactionRoute(..)
+    | MessageReactionEmojiRoute(..)
+    | MessageReactionPaidRoute(..)
+    | MessageReactionAddedRoute(..)
+    | MessageReactionRemovedRoute(..) -> "message_reaction"
+    MessageReactionCountRoute(..) -> "message_reaction_count"
+    ChatMemberUpdatedRoute(..) -> "chat_member"
+    ChatJoinRequestRoute(..) -> "chat_join_request"
+    // Wildcards are handled before this function is reached.
+    CustomRoute(..) | FilteredRoute(..) -> "message"
   }
 }
 
@@ -1478,6 +1593,7 @@ pub fn scope(
   case router {
     Router(
       commands:,
+      command_descriptions:,
       callbacks:,
       routes:,
       fallback:,
@@ -1654,6 +1770,7 @@ pub fn scope(
 
       Router(
         commands: dict.map_values(commands, fn(_, h) { scoped_handler(h) }),
+        command_descriptions: command_descriptions,
         callbacks: dict.map_values(callbacks, fn(_, h) { scoped_handler(h) }),
         routes: list.map(routes, scope_route),
         fallback: option.map(fallback, scoped_handler),

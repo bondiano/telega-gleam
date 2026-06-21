@@ -1833,3 +1833,120 @@ pub fn user_id_and_chat_id_parsing_test() {
   should.equal(upd_from_chat.from_id, -69_420)
   should.equal(upd_from_user.chat_id, 123_456_789)
 }
+
+// --- Auto-sync: command descriptions & allowed_updates ---
+
+fn ok_1(
+  ctx: Context(String, TelegaError),
+  _x: a,
+) -> Result(Context(String, TelegaError), TelegaError) {
+  Ok(ctx)
+}
+
+fn ok_2(
+  ctx: Context(String, TelegaError),
+  _x: a,
+  _y: b,
+) -> Result(Context(String, TelegaError), TelegaError) {
+  Ok(ctx)
+}
+
+pub fn registered_commands_lists_described_only_test() {
+  let r =
+    router.new("test")
+    |> router.on_command("start", ok_1)
+    |> router.on_command_with_description("help", "Show help", ok_1)
+    |> router.on_command_with_description("about", "About the bot", ok_1)
+
+  // Sorted by command, and plain on_command("start") is excluded.
+  router.registered_commands(r)
+  |> should.equal([#("about", "About the bot"), #("help", "Show help")])
+}
+
+pub fn registered_commands_strips_leading_slash_test() {
+  let r =
+    router.new("test")
+    |> router.on_command_with_description("/start", "Start", ok_1)
+
+  router.registered_commands(r)
+  |> should.equal([#("start", "Start")])
+}
+
+pub fn registered_commands_empty_without_descriptions_test() {
+  let r =
+    router.new("test")
+    |> router.on_command("start", ok_1)
+
+  router.registered_commands(r)
+  |> should.equal([])
+}
+
+pub fn allowed_updates_from_concrete_routes_test() {
+  let r =
+    router.new("test")
+    |> router.on_command_with_description("start", "Start", ok_1)
+    |> router.on_callback(router.Exact("ok"), ok_2)
+    |> router.on_photo(ok_1)
+    |> router.on_inline_query(ok_1)
+
+  router.allowed_updates(r)
+  |> should.equal(["callback_query", "inline_query", "message"])
+}
+
+pub fn allowed_updates_specialized_routes_test() {
+  let r =
+    router.new("test")
+    |> router.on_reaction(ok_1)
+    |> router.on_chat_member_updated(ok_1)
+    |> router.on_poll(ok_1)
+
+  router.allowed_updates(r)
+  |> should.equal(["chat_member", "message_reaction", "poll"])
+}
+
+pub fn allowed_updates_empty_with_fallback_test() {
+  let r =
+    router.new("test")
+    |> router.on_command_with_description("start", "Start", ok_1)
+    |> router.fallback(ok_1)
+
+  // A fallback can match anything, so the set cannot be narrowed.
+  router.allowed_updates(r)
+  |> should.equal([])
+}
+
+pub fn allowed_updates_empty_with_custom_route_test() {
+  let r =
+    router.new("test")
+    |> router.on_command_with_description("start", "Start", ok_1)
+    |> router.on_custom(fn(_) { True }, ok_1)
+
+  router.allowed_updates(r)
+  |> should.equal([])
+}
+
+pub fn registered_commands_merges_composed_routers_test() {
+  let admin =
+    router.new("admin")
+    |> router.on_command_with_description("ban", "Ban a user", ok_1)
+  let user =
+    router.new("user")
+    |> router.on_command_with_description("start", "Start", ok_1)
+
+  router.merge(admin, user)
+  |> router.registered_commands
+  |> should.equal([#("ban", "Ban a user"), #("start", "Start")])
+}
+
+pub fn allowed_updates_across_compose_test() {
+  let a =
+    router.new("a")
+    |> router.on_command_with_description("start", "Start", ok_1)
+  let b =
+    router.new("b")
+    |> router.on_inline_query(ok_1)
+
+  router.compose(a, b)
+  |> router.allowed_updates
+  |> should.equal(["inline_query", "message"])
+}

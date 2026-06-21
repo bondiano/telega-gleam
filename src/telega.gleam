@@ -73,6 +73,18 @@ pub opaque type TelegaBuilder(session, error) {
     on_shutdown: Option(fn() -> Nil),
     drain_timeout: Option(Int),
     handle_signals: Bool,
+    // --- Command/route auto-synchronization ---
+    /// When `True`, publish the router's described commands via `setMyCommands`
+    /// on start. Enabled by `with_auto_commands`/`with_command_translations`.
+    auto_commands: Bool,
+    /// Language codes to publish localized command descriptions for.
+    command_locales: List(String),
+    /// Localizer: `(command, language_code) -> Option(description)`. `None`
+    /// for a given pair falls back to the router's default description.
+    command_translate: Option(fn(String, String) -> Option(String)),
+    /// When `True` and `allowed_updates` was not set manually, derive the
+    /// requested update types from the router's registered routes.
+    auto_allowed_updates: Bool,
   )
 }
 
@@ -144,6 +156,10 @@ pub fn new(
     on_shutdown: None,
     drain_timeout: None,
     handle_signals: False,
+    auto_commands: False,
+    command_locales: [],
+    command_translate: None,
+    auto_allowed_updates: False,
   )
 }
 
@@ -180,6 +196,10 @@ pub fn new_for_polling(api_client api_client: client.TelegramClient) {
     on_shutdown: None,
     drain_timeout: None,
     handle_signals: False,
+    auto_commands: False,
+    command_locales: [],
+    command_translate: None,
+    auto_allowed_updates: False,
   )
 }
 
@@ -360,6 +380,73 @@ pub fn with_signal_handlers(
   TelegaBuilder(..builder, handle_signals: True)
 }
 
+/// Publish the router's commands to Telegram on start.
+///
+/// Every command registered with `router.on_command_with_description` is sent
+/// via `setMyCommands` once the bot is up, so the Telegram client shows them in
+/// the command menu without a manual call. Commands added with plain
+/// `router.on_command` (no description) are not published.
+///
+/// For localized descriptions use `with_command_translations` instead — it
+/// turns this on as well.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// |> telega.with_auto_commands()
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_auto_commands(
+  builder: TelegaBuilder(session, error),
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, auto_commands: True)
+}
+
+/// Publish localized command descriptions on start.
+///
+/// Implies `with_auto_commands`: the default-language commands are published
+/// first, then for every locale in `locales` a `setMyCommands(language_code:)`
+/// call is made. `translate(command, locale)` supplies the per-language text;
+/// returning `None` keeps the router's default description for that command.
+///
+/// `telega_i18n` provides a convenience wrapper that builds `translate` from a
+/// translation catalog, so you usually call this through it.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// |> telega.with_command_translations(
+///   locales: ["en", "ru"],
+///   translate: fn(command, locale) { lookup_description(command, locale) },
+/// )
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_command_translations(
+  builder: TelegaBuilder(session, error),
+  locales locales: List(String),
+  translate translate: fn(String, String) -> Option(String),
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(
+    ..builder,
+    auto_commands: True,
+    command_locales: locales,
+    command_translate: Some(translate),
+  )
+}
+
+/// Derive `allowed_updates` from the router's registered routes.
+///
+/// Telegram then sends only the update types the bot actually handles, cutting
+/// out traffic for routes you never registered. A manual `set_allowed_updates`
+/// always wins (the escape hatch). If the router has a fallback, custom, or
+/// filtered route — which can match anything — derivation can't narrow safely
+/// and falls back to Telegram's default update set.
+pub fn with_auto_allowed_updates(
+  builder: TelegaBuilder(session, error),
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, auto_allowed_updates: True)
+}
+
 /// Set nil session for the bot.
 pub fn with_nil_session(
   builder: TelegaBuilder(Nil, error),
@@ -403,7 +490,7 @@ pub fn init(
       drop_pending_updates: builder.drop_pending_updates,
       max_connections: builder.max_connections,
       ip_address: builder.ip_address,
-      allowed_updates: builder.allowed_updates,
+      allowed_updates: resolve_allowed_updates(builder),
       certificate: builder.certificate,
     ),
   ))
@@ -545,7 +632,7 @@ pub fn init_for_polling(
   let polling_timeout = option.unwrap(builder.polling_timeout, 30)
   let polling_limit = option.unwrap(builder.polling_limit, 100)
   let polling_interval = option.unwrap(builder.polling_interval, 1000)
-  let allowed_updates = option.unwrap(builder.allowed_updates, [])
+  let allowed_updates = option.unwrap(resolve_allowed_updates(builder), [])
 
   let poller_name = process.new_name("telega_poller")
   let poller = process.named_subject(poller_name)
@@ -1177,17 +1264,22 @@ fn finalize(
       on_shutdown: builder.on_shutdown,
     )
 
-  use _ <- result.try(case builder.on_start {
-    Some(on_start) ->
-      case on_start(telega) {
-        Ok(_) -> Ok(Nil)
-        Error(e) -> {
-          // Tear down the just-started tree before surfacing the failure.
-          process.send_abnormal_exit(supervisor_pid, atom.create("shutdown"))
-          Error(e)
-        }
-      }
-    None -> Ok(Nil)
+  // Auto-publish commands first, then run the user hook. Either failing tears
+  // the just-started tree back down before surfacing the error.
+  let run_startup = fn() {
+    use _ <- result.try(maybe_sync_commands(builder, config))
+    case builder.on_start {
+      Some(on_start) -> on_start(telega)
+      None -> Ok(Nil)
+    }
+  }
+
+  use _ <- result.try(case run_startup() {
+    Ok(_) -> Ok(Nil)
+    Error(e) -> {
+      process.send_abnormal_exit(supervisor_pid, atom.create("shutdown"))
+      Error(e)
+    }
   })
 
   case builder.handle_signals {
@@ -1196,6 +1288,79 @@ fn finalize(
   }
 
   Ok(telega)
+}
+
+/// Resolve the effective `allowed_updates`. A manual value (via
+/// `set_allowed_updates`) always wins; otherwise, when `with_auto_allowed_updates`
+/// is enabled, derive the set from the router. `None` means "do not restrict".
+fn resolve_allowed_updates(
+  builder: TelegaBuilder(session, error),
+) -> Option(List(String)) {
+  case builder.allowed_updates {
+    Some(_) as manual -> manual
+    None ->
+      case builder.auto_allowed_updates, builder.router {
+        True, Some(router) ->
+          case router.allowed_updates(router) {
+            [] -> None
+            updates -> Some(updates)
+          }
+        _, _ -> None
+      }
+  }
+}
+
+/// Publish the router's described commands via `setMyCommands` when
+/// `auto_commands` is enabled: a default-language call first, then one
+/// `setMyCommands(language_code:)` per configured locale.
+fn maybe_sync_commands(
+  builder: TelegaBuilder(session, error),
+  config: Config,
+) -> Result(Nil, error.TelegaError) {
+  use <- bool.guard(!builder.auto_commands, Ok(Nil))
+
+  case builder.router {
+    None -> Ok(Nil)
+    Some(router) -> {
+      let described = router.registered_commands(router)
+      use <- bool.guard(described == [], Ok(Nil))
+
+      let client = config.api_client
+      let base_commands =
+        list.map(described, fn(pair) {
+          types.BotCommand(command: pair.0, description: pair.1)
+        })
+
+      use _ <- result.try(api.set_my_commands(
+        client:,
+        commands: base_commands,
+        parameters: None,
+      ))
+
+      case builder.command_translate {
+        None -> Ok(Nil)
+        Some(translate) ->
+          list.try_each(builder.command_locales, fn(locale) {
+            let localized =
+              list.map(described, fn(pair) {
+                let description =
+                  translate(pair.0, locale) |> option.unwrap(pair.1)
+                types.BotCommand(command: pair.0, description:)
+              })
+
+            api.set_my_commands(
+              client:,
+              commands: localized,
+              parameters: Some(types.BotCommandParameters(
+                scope: None,
+                language_code: Some(locale),
+              )),
+            )
+            |> result.map(fn(_) { Nil })
+          })
+      }
+    }
+  }
 }
 
 fn install_signal_handlers(telega: Telega(session, error)) -> Nil {

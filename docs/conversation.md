@@ -25,7 +25,7 @@ With conversations, you can create handlers that span multiple messages:
 ```gleam
 handle_command("name", fn(ctx, _) {
   // First message
-  use ctx <- reply.with_text(ctx, "What's your name?")
+  use _ <- try(reply.with_text(ctx, "What's your name?"))
 
   // Wait for user's text response
   use ctx, name <- wait_text(ctx, or: None, timeout: None)
@@ -34,6 +34,9 @@ handle_command("name", fn(ctx, _) {
   reply.with_text(ctx, "Hello, " <> name <> "!")
 })
 ```
+
+> `reply.with_text` returns `Result(Message, _)`, so chain it with `use _ <- try(...)`
+> (from `gleam/result`). Only the `wait_*` functions hand you back an updated `ctx`.
 
 Under the hood, Telega uses the BEAM actor model to pause the execution of your handler at each `wait_*` call, resuming it when the expected message type arrives.
 
@@ -155,7 +158,7 @@ Each wait function accepts these common parameters:
 ```gleam
 fn set_name_command_handler(ctx, _) {
   // Ask for a name
-  use ctx <- reply.with_text(ctx, "What's your name?")
+  use _ <- try(reply.with_text(ctx, "What's your name?"))
 
   // Wait for text response
   use ctx, name <- wait_text(ctx, or: None, timeout: None)
@@ -171,7 +174,7 @@ fn set_name_command_handler(ctx, _) {
 ```gleam
 fn registration_handler(ctx, _cmd) {
   // Collect age with validation
-  use ctx <- reply.with_text(ctx, "Let's register! What's your age?")
+  use _ <- try(reply.with_text(ctx, "Let's register! What's your age?"))
 
   use ctx, age <- wait_number(
     ctx,
@@ -184,7 +187,7 @@ fn registration_handler(ctx, _cmd) {
   )
 
   // Collect email with validation
-  use ctx <- reply.with_text(ctx, "What's your email?")
+  use _ <- try(reply.with_text(ctx, "What's your email?"))
 
   use ctx, email <- wait_email(
     ctx,
@@ -195,7 +198,7 @@ fn registration_handler(ctx, _cmd) {
   )
 
   // Select plan
-  use ctx <- reply.with_text(ctx, "Choose your plan:")
+  use _ <- try(reply.with_text(ctx, "Choose your plan:"))
 
   use ctx, plan <- wait_choice(
     ctx,
@@ -231,13 +234,18 @@ use ctx, text <- wait_hears(
 ### With Timeout
 
 ```gleam
+let assert Ok(filter) = telega_keyboard.filter_inline_keyboard_query(keyboard)
+
 use ctx, payload, callback_query_id <- wait_callback_query(
   ctx,
-  filter: telega_keyboard.filter_inline_keyboard_query(keyboard),
+  filter: Some(filter),
   or: None,
   timeout: Some(30_000),  // 30 seconds
 )
 ```
+
+`filter_inline_keyboard_query` returns `Result(CallbackQueryFilter, String)`, so
+unwrap it first and pass `Some(filter)` — the `filter:` parameter is an `Option`.
 
 Conversation will be stopped after 30 seconds of waiting for a callback query, and normal handler execution will continue.
 
