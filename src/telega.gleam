@@ -14,6 +14,7 @@ import gleam/string
 import telega/internal/config.{type Config}
 import telega/internal/log
 import telega/internal/registry
+import telega/internal/signal
 import telega/internal/utils
 
 import telega/api
@@ -23,6 +24,7 @@ import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
 import telega/router.{type Router}
+import telega/telemetry
 import telega/update
 
 pub opaque type Telega(session, error) {
@@ -31,6 +33,13 @@ pub opaque type Telega(session, error) {
     bot_info: User,
     bot_subject: BotSubject,
     supervisor_pid: process.Pid,
+    /// Polling worker subject, present only in polling mode. Used by graceful
+    /// shutdown to stop fetching updates before draining.
+    poller: Option(process.Subject(polling.PollingMessage)),
+    /// Max time (ms) `shutdown` waits for in-flight updates to drain.
+    drain_timeout: Int,
+    /// Hook run during `shutdown`, after draining and before stopping children.
+    on_shutdown: Option(fn() -> Nil),
   )
 }
 
@@ -57,6 +66,13 @@ pub opaque type TelegaBuilder(session, error) {
     chat_restart_tolerance_intensity: Option(Int),
     chat_restart_tolerance_period: Option(Int),
     chat_init_timeout: Option(Int),
+    // --- Lifecycle parameters ---
+    on_start: Option(
+      fn(Telega(session, error)) -> Result(Nil, error.TelegaError),
+    ),
+    on_shutdown: Option(fn() -> Nil),
+    drain_timeout: Option(Int),
+    handle_signals: Bool,
   )
 }
 
@@ -124,6 +140,10 @@ pub fn new(
     chat_restart_tolerance_intensity: None,
     chat_restart_tolerance_period: None,
     chat_init_timeout: None,
+    on_start: None,
+    on_shutdown: None,
+    drain_timeout: None,
+    handle_signals: False,
   )
 }
 
@@ -156,6 +176,10 @@ pub fn new_for_polling(api_client api_client: client.TelegramClient) {
     chat_restart_tolerance_intensity: None,
     chat_restart_tolerance_period: None,
     chat_init_timeout: None,
+    on_start: None,
+    on_shutdown: None,
+    drain_timeout: None,
+    handle_signals: False,
   )
 }
 
@@ -276,6 +300,66 @@ pub fn with_chat_config(
   )
 }
 
+/// Set a hook to run once the bot has fully started.
+///
+/// Runs after the supervision tree is up and the `Telega` instance is built, so
+/// you can use it for warming caches, registering commands via the API, etc.
+/// Returning `Error` aborts startup and tears the supervision tree back down.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// |> telega.with_on_start(fn(bot) {
+///   // register commands, warm caches...
+///   Ok(Nil)
+/// })
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_on_start(
+  builder: TelegaBuilder(session, error),
+  on_start on_start: fn(Telega(session, error)) ->
+    Result(Nil, error.TelegaError),
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, on_start: Some(on_start))
+}
+
+/// Set a hook to run during `shutdown`, after in-flight updates have drained
+/// and before the supervision tree is stopped. Use it to release resources
+/// (close pools, flush buffers, deregister from a service discovery, …).
+pub fn with_on_shutdown(
+  builder: TelegaBuilder(session, error),
+  on_shutdown on_shutdown: fn() -> Nil,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, on_shutdown: Some(on_shutdown))
+}
+
+/// Set the maximum time (in milliseconds) `shutdown` waits for in-flight
+/// updates to finish before forcibly stopping the supervision tree.
+///
+/// Defaults to 5000ms.
+pub fn with_drain_timeout(
+  builder: TelegaBuilder(session, error),
+  timeout timeout: Int,
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, drain_timeout: Some(timeout))
+}
+
+/// Install an OS signal handler (SIGTERM) that runs a graceful `shutdown` and
+/// then halts the VM.
+///
+/// This makes the bot survive rolling deploys on platforms like fly.io or
+/// Kubernetes: on SIGTERM the bot stops accepting new updates, drains in-flight
+/// work (bounded by `with_drain_timeout`), runs the `on_shutdown` hook, and
+/// stops cleanly. The handler replaces the runtime's default signal behavior.
+///
+/// Only SIGTERM is handled — BEAM reserves SIGINT for its interactive break
+/// handler, so it cannot be intercepted this way.
+pub fn with_signal_handlers(
+  builder: TelegaBuilder(session, error),
+) -> TelegaBuilder(session, error) {
+  TelegaBuilder(..builder, handle_signals: True)
+}
+
 /// Set nil session for the bot.
 pub fn with_nil_session(
   builder: TelegaBuilder(Nil, error),
@@ -379,7 +463,14 @@ pub fn init(
     |> result.map_error(error.SupervisorStartError),
   )
 
-  Ok(Telega(config:, bot_info:, bot_subject:, supervisor_pid: sup_started.pid))
+  finalize(
+    builder:,
+    config:,
+    bot_info:,
+    bot_subject:,
+    supervisor_pid: sup_started.pid,
+    poller: None,
+  )
 }
 
 /// Initialize the bot for long polling with a supervision tree.
@@ -456,6 +547,9 @@ pub fn init_for_polling(
   let polling_interval = option.unwrap(builder.polling_interval, 1000)
   let allowed_updates = option.unwrap(builder.allowed_updates, [])
 
+  let poller_name = process.new_name("telega_poller")
+  let poller = process.named_subject(poller_name)
+
   let polling_spec =
     polling.supervised(
       client: api_client,
@@ -465,6 +559,7 @@ pub fn init_for_polling(
       allowed_updates:,
       poll_interval: polling_interval,
       on_stop: builder.polling_on_stop,
+      name: poller_name,
     )
 
   use sup_started <- result.try(
@@ -476,7 +571,14 @@ pub fn init_for_polling(
     |> result.map_error(error.SupervisorStartError),
   )
 
-  Ok(Telega(config:, bot_info:, bot_subject:, supervisor_pid: sup_started.pid))
+  finalize(
+    builder:,
+    config:,
+    bot_info:,
+    bot_subject:,
+    supervisor_pid: sup_started.pid,
+    poller: Some(poller),
+  )
 }
 
 /// Handle an update.
@@ -996,16 +1098,115 @@ pub fn start_polling_default(
   )
 }
 
-/// Graceful shutdown — stops supervisor, cascading to all children.
-/// Children are stopped in reverse start order: polling → bot → chat_factory.
+/// Graceful shutdown with in-flight draining.
+///
+/// 1. Emits `[telega, shutdown, start]`.
+/// 2. Stops intake — for polling, tells the worker to stop fetching updates
+///    (Telegram re-delivers unconfirmed updates on the next start); for webhook,
+///    the bot starts rejecting updates and `is_draining` reports `True` so
+///    adapters can answer `503`.
+/// 3. Waits up to `drain_timeout` for in-flight updates to finish.
+/// 4. Runs the `on_shutdown` hook.
+/// 5. Emits `[telega, shutdown, stop]` with the number of drained updates.
+/// 6. Stops the supervisor, cascading to all children (polling → bot →
+///    chat_factory).
 pub fn shutdown(telega: Telega(session, error)) -> Nil {
+  let started_at = telemetry.monotonic_time()
+  telemetry.execute(
+    ["telega", "shutdown", "start"],
+    [#("system_time", telemetry.system_time())],
+    [],
+  )
+
+  // Stop intake before draining so no new updates are accepted mid-drain.
+  case telega.poller {
+    Some(poller) -> polling.stop_worker(poller)
+    None -> Nil
+  }
+
+  let drained = bot.drain(telega.bot_subject, telega.drain_timeout)
+
+  case telega.on_shutdown {
+    Some(on_shutdown) -> on_shutdown()
+    None -> Nil
+  }
+
+  let duration = telemetry.monotonic_time() - started_at
+  telemetry.execute(
+    ["telega", "shutdown", "stop"],
+    [#("duration", duration), #("drained", int.max(0, drained))],
+    [#("timed_out", telemetry.BoolValue(drained < 0))],
+  )
+
   process.send_abnormal_exit(telega.supervisor_pid, atom.create("shutdown"))
+}
+
+/// Whether the bot is currently draining and no longer accepting updates.
+///
+/// Webhook adapters should answer `503` when this is `True` so Telegram retries
+/// the update after the deploy instead of it being dropped.
+pub fn is_draining(telega: Telega(session, error)) -> Bool {
+  bot.is_draining(telega.bot_subject)
 }
 
 /// Get the supervisor PID for the running bot instance.
 pub fn get_supervisor_pid(telega: Telega(session, error)) -> process.Pid {
   telega.supervisor_pid
 }
+
+const default_drain_timeout = 5000
+
+/// Build the `Telega` value, run the `on_start` hook, and install signal
+/// handlers if requested. Shared by `init` and `init_for_polling`.
+fn finalize(
+  builder builder: TelegaBuilder(session, error),
+  config config: Config,
+  bot_info bot_info: User,
+  bot_subject bot_subject: BotSubject,
+  supervisor_pid supervisor_pid: process.Pid,
+  poller poller: Option(process.Subject(polling.PollingMessage)),
+) -> Result(Telega(session, error), error.TelegaError) {
+  let telega =
+    Telega(
+      config:,
+      bot_info:,
+      bot_subject:,
+      supervisor_pid:,
+      poller:,
+      drain_timeout: option.unwrap(builder.drain_timeout, default_drain_timeout),
+      on_shutdown: builder.on_shutdown,
+    )
+
+  use _ <- result.try(case builder.on_start {
+    Some(on_start) ->
+      case on_start(telega) {
+        Ok(_) -> Ok(Nil)
+        Error(e) -> {
+          // Tear down the just-started tree before surfacing the failure.
+          process.send_abnormal_exit(supervisor_pid, atom.create("shutdown"))
+          Error(e)
+        }
+      }
+    None -> Ok(Nil)
+  })
+
+  case builder.handle_signals {
+    True -> install_signal_handlers(telega)
+    False -> Nil
+  }
+
+  Ok(telega)
+}
+
+fn install_signal_handlers(telega: Telega(session, error)) -> Nil {
+  signal.install(fn(_signal) {
+    shutdown(telega)
+    halt(0)
+  })
+}
+
+@external(erlang, "erlang", "halt")
+fn halt(code: Int) -> Nil
 
 // Default chat instance factory settings
 const default_chat_restart_intensity = 5

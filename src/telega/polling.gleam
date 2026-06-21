@@ -165,6 +165,7 @@ pub fn supervised(
   allowed_updates allowed_updates: List(String),
   poll_interval poll_interval: Int,
   on_stop on_stop: Option(fn(TelegaError) -> Nil),
+  name name: process.Name(PollingMessage),
 ) -> supervision.ChildSpecification(Subject(PollingMessage)) {
   supervision.worker(fn() {
     let config =
@@ -194,6 +195,7 @@ pub fn supervised(
     use started <- result.try(
       actor.new(initial_state)
       |> actor.on_message(handle_polling_message)
+      |> actor.named(name)
       |> actor.start(),
     )
 
@@ -202,6 +204,14 @@ pub fn supervised(
     Ok(started)
   })
   |> supervision.restart(supervision.Permanent)
+}
+
+/// Stop a supervised polling worker by its subject.
+///
+/// Sends `StopPolling`, which makes the worker stop fetching new updates after
+/// its current batch. Used by graceful shutdown to halt intake before draining.
+pub fn stop_worker(worker worker: Subject(PollingMessage)) -> Nil {
+  process.send(worker, StopPolling)
 }
 
 /// Handle messages in the polling worker

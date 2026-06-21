@@ -72,6 +72,11 @@ pub fn handle_bot_with_limit(
   use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
     empty_response(401)
   })
+  // While the bot is draining (graceful shutdown) reject updates with 503 so
+  // Telegram retries them after the deploy instead of losing them.
+  use <- bool.lazy_guard(telega.is_draining(telega), fn() {
+    empty_response(503)
+  })
 
   case mist.read_body(req, max_body_limit) {
     Ok(req) ->

@@ -24,6 +24,8 @@
 //// | `telega.flow.step` | `duration` | `flow_name`, `step` |
 //// | `telega.flow.timeout` | `count` | `flow_name`, `step` |
 //// | `telega.flow.cancel` | `count` | `flow_name`, `step` |
+//// | `telega.shutdown.start` | `system_time` | — |
+//// | `telega.shutdown.stop` | `duration`, `drained` | `timed_out` |
 ////
 //// - Update and API call events follow the **span convention**
 ////   (`start`/`stop`/`exception` with a monotonic `duration`), the same
@@ -36,6 +38,9 @@
 ////   `reason` tells you which.
 //// - `telega.rate_limit.hit` fires for every update rejected by
 ////   `router.with_rate_limit`.
+//// - `telega.shutdown.start`/`stop` wrap `telega.shutdown`'s graceful drain;
+////   `drained` is the number of in-flight updates waited for and `timed_out`
+////   is `True` if the drain timeout elapsed first.
 ////
 //// ## Attaching a handler
 ////

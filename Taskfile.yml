@@ -1,25 +1,28 @@
 version: "3"
 
+vars:
+  # Every ecosystem package in the monorepo (single source of truth).
+  PACKAGES: >-
+    telega_wisp telega_mist telega_httpc telega_hackney
+    telega_webapp telega_i18n
+    telega_storage_postgres telega_storage_sqlite telega_storage_redis
+  # Standalone example projects under examples/.
+  EXAMPLES: >-
+    00-echo-bot 01-commands-bot 02-session-bot 03-conversation-bot
+    04-keyboard-bot 05-media-group-bot 06-restaurant-booking
+
 tasks:
   format:
     desc: Format root project
     cmd: gleam format
 
   format:all:
-    desc: Format root project, adapters, and all examples
+    desc: Format root project, all ecosystem packages, and all examples
     cmds:
       - gleam format
-      - for: ["telega_wisp", "telega_httpc", "telega_hackney", "telega_webapp", "telega_i18n"]
+      - for: { var: PACKAGES }
         cmd: cd {{.ITEM}} && gleam format
-      - for: [
-          "00-echo-bot",
-          "01-commands-bot",
-          "02-session-bot",
-          "03-conversation-bot",
-          "04-keyboard-bot",
-          "05-media-group-bot",
-          "06-restaurant-booking",
-        ]
+      - for: { var: EXAMPLES }
         cmd: cd examples/{{.ITEM}} && gleam format
 
   codegen:fetch:
@@ -42,18 +45,60 @@ tasks:
     cmd: gleam test
 
   test:all:
-    desc: Run tests in root project, adapters, and check all examples compile
+    desc: Run tests in root project, all ecosystem packages, and all examples
     cmds:
       - gleam test
-      - for: ["telega_wisp", "telega_httpc", "telega_hackney", "telega_webapp", "telega_i18n"]
+      - for: { var: PACKAGES }
         cmd: cd {{.ITEM}} && gleam test
-      - for: [
-          "00-echo-bot",
-          "01-commands-bot",
-          "02-session-bot",
-          "03-conversation-bot",
-          "04-keyboard-bot",
-          "05-media-group-bot",
-          "06-restaurant-booking",
-        ]
+      - for: { var: EXAMPLES }
         cmd: cd examples/{{.ITEM}} && gleam test
+
+  publish:
+    desc: >
+      Publish the core telega package, then every ecosystem package, to Hex.
+      Bump the `version` of each package you changed first — Hex rejects
+      republishing an existing version, so unchanged packages are simply
+      reported as skipped at the end.
+    cmds:
+      - task: publish:core
+      - task: publish:packages
+
+  publish:core:
+    desc: Publish the core telega package to Hex
+    cmd: gleam publish
+
+  publish:packages:
+    desc: >
+      Publish every ecosystem package to Hex. Packages that use a local path
+      dependency on telega (`telega = { path = ".." }`) have it temporarily
+      rewritten to a version requirement (derived from the core version) for the
+      publish, then restored from git so local dev/CI keep using the path dep.
+      Requires the core to already be published on Hex.
+    cmd: |
+      set -u
+      CORE=$(sed -nE 's/^version = "([^"]+)"/\1/p' gleam.toml)
+      MAJOR=${CORE%%.*}
+      REQ=">= ${CORE} and < $((MAJOR + 1)).0.0"
+      echo "telega requirement for path-dependent packages: ${REQ}"
+      failed=""
+      for pkg in {{.PACKAGES}}; do
+        echo ""
+        echo "==> Publishing ${pkg}"
+        swapped=0
+        if grep -q '^telega = { path = "\.\." }' "${pkg}/gleam.toml"; then
+          sed -i.bak "s#^telega = { path = \"\.\.\" }#telega = \"${REQ}\"#" "${pkg}/gleam.toml"
+          rm -f "${pkg}/gleam.toml.bak"
+          swapped=1
+        fi
+        ( cd "${pkg}" && gleam publish ) || failed="${failed} ${pkg}"
+        if [ "${swapped}" -eq 1 ]; then
+          git -C "${pkg}" checkout -- gleam.toml manifest.toml
+        fi
+      done
+      if [ -n "${failed}" ]; then
+        echo ""
+        echo "Not published (already on Hex or errored):${failed}"
+        exit 1
+      fi
+      echo ""
+      echo "All packages published."

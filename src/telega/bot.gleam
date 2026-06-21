@@ -85,6 +85,19 @@ pub opaque type Bot(session, error) {
       ChatInstanceArgs(session, error),
       ChatInstanceSubject(session, error),
     ),
+    // --- Graceful lifecycle / drain ---
+    // When `False`, new updates are rejected (replied with `False`) instead of
+    // being dispatched — used during graceful drain.
+    accepting: Bool,
+    // Number of updates currently being handled by chat instances.
+    in_flight: Int,
+    // `True` once a drain has been requested.
+    draining: Bool,
+    // Number of in-flight updates captured when the drain started — reported
+    // back to the drain caller as the "drained" count.
+    drain_count: Int,
+    // Subject to notify once the drain completes (in_flight reaches zero).
+    drain_waiter: Option(Subject(Int)),
   )
 }
 
@@ -98,6 +111,9 @@ pub type ChatInstanceArgs(session, error) {
     router_handler: RouterHandler(session, error),
     bot_info: User,
     registry: Registry(ChatInstanceMessage(session, error)),
+    // Subject of the owning `Bot` actor, used to report update completion so
+    // the bot can track in-flight work for graceful draining.
+    bot_subject: BotSubject,
   )
 }
 
@@ -112,6 +128,16 @@ pub opaque type BotMessage {
   // `reply_with` is a subject with `is_ok` field
   // It is used to notify the adapter that the update was handled successfully or not
   HandleUpdateBotMessage(update: Update, reply_with: Subject(Bool))
+  // Sent by a chat instance once it finishes handling one update (success or
+  // handled error). Used to keep the in-flight counter accurate for draining.
+  UpdateHandledBotMessage
+  // Begin a graceful drain: stop accepting new updates and reply on
+  // `reply_with` with the number of drained updates once all in-flight work
+  // completes.
+  StartDrainBotMessage(reply_with: Subject(Int))
+  // Query whether the bot is currently draining (used by webhook adapters to
+  // return 503 and let Telegram retry).
+  IsDrainingBotMessage(reply_with: Subject(Bool))
 }
 
 /// Handler called when an error occurs in handler
@@ -133,21 +159,27 @@ pub fn start(
   ),
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
-  let self = process.new_subject()
-  let bot =
-    Bot(
-      self:,
-      config:,
-      bot_info:,
-      catch_handler:,
-      session_settings:,
-      router_handler:,
-      registry:,
-      chat_factory:,
-    )
-
   let builder =
-    actor.new(bot)
+    actor.new_with_initialiser(bot_init_timeout, fn(self) {
+      Bot(
+        self:,
+        config:,
+        bot_info:,
+        catch_handler:,
+        session_settings:,
+        router_handler:,
+        registry:,
+        chat_factory:,
+        accepting: True,
+        in_flight: 0,
+        draining: False,
+        drain_count: 0,
+        drain_waiter: None,
+      )
+      |> actor.initialised
+      |> actor.returning(self)
+      |> Ok
+    })
     |> actor.on_message(bot_loop)
 
   let builder = case name {
@@ -158,6 +190,8 @@ pub fn start(
   actor.start(builder)
 }
 
+const bot_init_timeout = 1000
+
 /// Stops waiting for any handler for specific key (chat_id)
 pub fn cancel_conversation(
   bot bot: Bot(session, error),
@@ -166,21 +200,88 @@ pub fn cancel_conversation(
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
-fn bot_loop(bot, message) {
+fn bot_loop(
+  bot: Bot(session, error),
+  message: BotMessage,
+) -> actor.Next(Bot(session, error), BotMessage) {
   case message {
-    HandleUpdateBotMessage(update:, reply_with:) -> {
-      case handle_update_bot_message(bot:, update:, reply_with:) {
-        Ok(_) -> actor.continue(bot)
-        Error(error) -> {
-          log.error_d("Error in handler: ", error)
-          actor.stop()
+    HandleUpdateBotMessage(update:, reply_with:) ->
+      case bot.accepting {
+        // Draining — reject new updates so the caller (polling worker or
+        // webhook dispatch) knows the update was not handled.
+        False -> {
+          process.send(reply_with, False)
+          actor.continue(bot)
         }
+        True ->
+          case handle_update_bot_message(bot:, update:, reply_with:) {
+            Ok(_) -> actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
+            Error(error) -> {
+              log.error_d("Error in handler: ", error)
+              actor.stop()
+            }
+          }
       }
+    UpdateHandledBotMessage -> {
+      let in_flight = int.max(0, bot.in_flight - 1)
+      case bot.draining && in_flight == 0 {
+        True -> {
+          case bot.drain_waiter {
+            Some(waiter) -> process.send(waiter, bot.drain_count)
+            None -> Nil
+          }
+          actor.continue(Bot(..bot, in_flight: 0, drain_waiter: None))
+        }
+        False -> actor.continue(Bot(..bot, in_flight:))
+      }
+    }
+    StartDrainBotMessage(reply_with:) -> {
+      let bot =
+        Bot(..bot, accepting: False, draining: True, drain_count: bot.in_flight)
+      case bot.in_flight {
+        0 -> {
+          process.send(reply_with, 0)
+          actor.continue(bot)
+        }
+        _ -> actor.continue(Bot(..bot, drain_waiter: Some(reply_with)))
+      }
+    }
+    IsDrainingBotMessage(reply_with:) -> {
+      process.send(reply_with, bot.draining)
+      actor.continue(bot)
     }
     CancelConversationBotMessage(key:) -> {
       registry.unregister(bot.registry, key)
       actor.continue(bot)
     }
+  }
+}
+
+/// Begin a graceful drain of the bot.
+///
+/// Stops accepting new updates and blocks until all in-flight updates finish or
+/// `timeout` milliseconds elapse. Returns the number of updates that were
+/// in-flight when the drain started, or `-1` if the timeout was reached before
+/// draining completed.
+pub fn drain(bot_subject bot_subject: BotSubject, timeout timeout: Int) -> Int {
+  let reply = process.new_subject()
+  process.send(bot_subject, StartDrainBotMessage(reply))
+  case process.receive(reply, timeout) {
+    Ok(count) -> count
+    Error(_) -> -1
+  }
+}
+
+/// Whether the bot is currently draining (no longer accepting new updates).
+///
+/// Webhook adapters use this to answer `503` so Telegram retries the update
+/// after the deploy instead of dropping it.
+pub fn is_draining(bot_subject bot_subject: BotSubject) -> Bool {
+  let reply = process.new_subject()
+  process.send(bot_subject, IsDrainingBotMessage(reply))
+  case process.receive(reply, 1000) {
+    Ok(draining) -> draining
+    Error(_) -> False
   }
 }
 
@@ -213,6 +314,7 @@ fn handle_update_bot_message(
           router_handler: bot.router_handler,
           bot_info: bot.bot_info,
           registry: bot.registry,
+          bot_subject: bot.self,
         )
       use started <- result.try(
         fsup.start_child(bot.chat_factory, args)
@@ -261,6 +363,8 @@ type ChatInstance(session, error) {
     router_handler: RouterHandler(session, error),
     catch_handler: CatchHandler(session, error),
     bot_info: User,
+    // Subject of the owning `Bot` actor, notified when an update completes.
+    bot_subject: BotSubject,
   )
 }
 
@@ -297,6 +401,7 @@ pub fn start_chat_instance(
         continuation: None,
         router_handler: args.router_handler,
         bot_info: args.bot_info,
+        bot_subject: args.bot_subject,
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
@@ -381,13 +486,13 @@ fn do_handle_new_chat_instance_message(
         Ok(Context(session: new_session, ..)) -> {
           case chat.session_settings.persist_session(chat.key, new_session) {
             Ok(persisted_session) -> {
-              actor.send(reply_with, True)
+              ack(chat, reply_with, True)
               actor.continue(ChatInstance(..chat, session: persisted_session))
             }
             Error(e) -> {
               case chat.catch_handler(context, e) {
                 Ok(_) -> {
-                  actor.send(reply_with, False)
+                  ack(chat, reply_with, False)
                   actor.continue(chat)
                 }
                 Error(e) -> {
@@ -401,7 +506,7 @@ fn do_handle_new_chat_instance_message(
         Error(e) -> {
           case chat.catch_handler(context, e) {
             Ok(_) -> {
-              actor.send(reply_with, False)
+              ack(chat, reply_with, False)
               actor.continue(chat)
             }
             Error(e) -> {
@@ -423,11 +528,25 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
 }
 
 fn stop_chat_instance(chat: ChatInstance(session, error), reason: String) {
+  // The update that was being handled is finished (the instance is going away),
+  // so release its slot in the bot's in-flight counter before stopping.
+  process.send(chat.bot_subject, UpdateHandledBotMessage)
   telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
     #("reason", telemetry.StringValue(reason)),
   ])
   actor.stop()
+}
+
+/// Reply to the update's caller and notify the owning bot that one in-flight
+/// update has finished, so the in-flight counter stays accurate for draining.
+fn ack(
+  chat: ChatInstance(session, error),
+  reply_with: Subject(Bool),
+  value: Bool,
+) -> Nil {
+  process.send(reply_with, value)
+  process.send(chat.bot_subject, UpdateHandledBotMessage)
 }
 
 fn do_handle_continuation(
@@ -444,7 +563,7 @@ fn do_handle_continuation(
       // Persist the new session after continuation completes
       case chat.session_settings.persist_session(chat.key, new_session) {
         Ok(persisted_session) -> {
-          actor.send(reply_with, True)
+          ack(chat, reply_with, True)
           actor.continue(
             ChatInstance(..chat, session: persisted_session, continuation: None),
           )
@@ -452,7 +571,7 @@ fn do_handle_continuation(
         Error(e) -> {
           case chat.catch_handler(context, e) {
             Ok(_) -> {
-              actor.send(reply_with, False)
+              ack(chat, reply_with, False)
               actor.continue(chat)
             }
             Error(e) -> {
@@ -469,7 +588,7 @@ fn do_handle_continuation(
     Some(Error(e)) -> {
       case chat.catch_handler(context, e) {
         Ok(_) -> {
-          actor.send(reply_with, False)
+          ack(chat, reply_with, False)
           actor.continue(chat)
         }
         Error(e) -> {
@@ -487,7 +606,7 @@ fn do_handle_continuation(
                 chat.session_settings.persist_session(chat.key, new_session)
               {
                 Ok(persisted_session) -> {
-                  actor.send(reply_with, True)
+                  ack(chat, reply_with, True)
                   actor.continue(
                     ChatInstance(..chat, session: persisted_session),
                   )
@@ -495,7 +614,7 @@ fn do_handle_continuation(
                 Error(e) -> {
                   case chat.catch_handler(context, e) {
                     Ok(_) -> {
-                      actor.send(reply_with, False)
+                      ack(chat, reply_with, False)
                       actor.continue(chat)
                     }
                     Error(e) -> {
@@ -512,7 +631,7 @@ fn do_handle_continuation(
             Some(Error(e)) -> {
               case chat.catch_handler(context, e) {
                 Ok(_) -> {
-                  actor.send(reply_with, False)
+                  ack(chat, reply_with, False)
                   actor.continue(chat)
                 }
                 Error(e) -> {
@@ -522,12 +641,12 @@ fn do_handle_continuation(
               }
             }
             None -> {
-              actor.send(reply_with, False)
+              ack(chat, reply_with, False)
               actor.continue(chat)
             }
           }
         None -> {
-          actor.send(reply_with, False)
+          ack(chat, reply_with, False)
           actor.continue(chat)
         }
       }

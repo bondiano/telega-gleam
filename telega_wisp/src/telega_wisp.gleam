@@ -36,6 +36,9 @@ pub fn handle_bot(
   use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
     wisp.response(401)
   })
+  // While the bot is draining (graceful shutdown) reject updates with 503 so
+  // Telegram retries them after the deploy instead of losing them.
+  use <- bool.lazy_guard(telega.is_draining(telega), fn() { wisp.response(503) })
 
   // Telegram will wait response from the server, before sending the next update
   // So we need to handle it in a separate process and return response immediately.
