@@ -20,43 +20,47 @@ import telega/router
 import telega/update
 
 /// Flow registry for centralized flow management
-pub opaque type FlowRegistry(session, error) {
+pub opaque type FlowRegistry(session, error, dependencies) {
   FlowRegistry(
     flows: List(
-      #(FlowTrigger, Flow(Dynamic, session, error), Dict(String, String)),
+      #(
+        FlowTrigger,
+        Flow(Dynamic, session, error, dependencies),
+        Dict(String, String),
+      ),
     ),
-    flow_map: Dict(String, Flow(Dynamic, session, error)),
+    flow_map: Dict(String, Flow(Dynamic, session, error, dependencies)),
     cancel_commands: List(
       #(
         String,
-        fn(Context(session, error), List(String)) ->
-          Result(Context(session, error), error),
+        fn(Context(session, error, dependencies), List(String)) ->
+          Result(Context(session, error, dependencies), error),
       ),
     ),
   )
 }
 
 /// Create a new empty flow registry
-pub fn new_registry() -> FlowRegistry(session, error) {
+pub fn new_registry() -> FlowRegistry(session, error, dependencies) {
   FlowRegistry(flows: [], flow_map: dict.new(), cancel_commands: [])
 }
 
 /// Add a flow to the registry with a trigger
 pub fn register(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   trigger: FlowTrigger,
-  flow: Flow(step_type, session, error),
-) -> FlowRegistry(session, error) {
+  flow: Flow(step_type, session, error, dependencies),
+) -> FlowRegistry(session, error, dependencies) {
   register_with_data(registry, trigger, flow, dict.new())
 }
 
 /// Add a flow to the registry with a trigger and initial data
 pub fn register_with_data(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   trigger: FlowTrigger,
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   initial_data: Dict(String, String),
-) -> FlowRegistry(session, error) {
+) -> FlowRegistry(session, error, dependencies) {
   let coerced_flow = unsafe_coerce(flow)
   FlowRegistry(
     ..registry,
@@ -67,9 +71,9 @@ pub fn register_with_data(
 
 /// Register a flow without a trigger (for calling from handlers)
 pub fn register_callable(
-  registry: FlowRegistry(session, error),
-  flow: Flow(step_type, session, error),
-) -> FlowRegistry(session, error) {
+  registry: FlowRegistry(session, error, dependencies),
+  flow: Flow(step_type, session, error, dependencies),
+) -> FlowRegistry(session, error, dependencies) {
   let coerced_flow = unsafe_coerce(flow)
   FlowRegistry(
     ..registry,
@@ -80,9 +84,9 @@ pub fn register_callable(
 
 /// Register a cancel command that cancels all active flows for the user
 pub fn register_cancel_command(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   command: String,
-) -> FlowRegistry(session, error) {
+) -> FlowRegistry(session, error, dependencies) {
   register_cancel_command_with(registry, command, fn(ctx, _cancelled) {
     Ok(ctx)
   })
@@ -90,11 +94,11 @@ pub fn register_cancel_command(
 
 /// Register a cancel command with a custom callback
 pub fn register_cancel_command_with(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   command: String,
-  on_cancel: fn(Context(session, error), List(String)) ->
-    Result(Context(session, error), error),
-) -> FlowRegistry(session, error) {
+  on_cancel: fn(Context(session, error, dependencies), List(String)) ->
+    Result(Context(session, error, dependencies), error),
+) -> FlowRegistry(session, error, dependencies) {
   FlowRegistry(
     ..registry,
     cancel_commands: list.append(registry.cancel_commands, [
@@ -105,7 +109,7 @@ pub fn register_cancel_command_with(
 
 /// Cancel all flows for a user in a chat
 pub fn cancel_user_flows(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   user_id user_id: Int,
   chat_id chat_id: Int,
 ) -> Result(List(String), error) {
@@ -127,7 +131,7 @@ pub fn cancel_user_flows(
 
 /// Cancel a specific flow instance by ID
 pub fn cancel_flow_instance(
-  registry: FlowRegistry(session, error),
+  registry: FlowRegistry(session, error, dependencies),
   flow_id flow_id: String,
 ) -> Result(Bool, error) {
   let flows = dict.values(registry.flow_map)
@@ -150,11 +154,11 @@ pub fn cancel_flow_instance(
 
 /// Call a registered flow from any handler
 pub fn call_flow(
-  ctx ctx: Context(session, error),
-  registry registry: FlowRegistry(session, error),
+  ctx ctx: Context(session, error, dependencies),
+  registry registry: FlowRegistry(session, error, dependencies),
   name flow_name: String,
   initial initial_data: Dict(String, String),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case dict.get(registry.flow_map, flow_name) {
     Ok(found_flow) -> start(found_flow, initial_data, ctx)
     Error(_) -> Ok(ctx)
@@ -163,9 +167,9 @@ pub fn call_flow(
 
 /// Apply all registered flows to a router
 pub fn apply_to_router(
-  router: router.Router(session, error),
-  registry: FlowRegistry(session, error),
-) -> router.Router(session, error) {
+  router: router.Router(session, error, dependencies),
+  registry: FlowRegistry(session, error, dependencies),
+) -> router.Router(session, error, dependencies) {
   let router_with_flows =
     list.fold(registry.flows, router, fn(router, flow_entry) {
       let #(trigger, flow, initial_data) = flow_entry
@@ -226,35 +230,35 @@ pub fn apply_to_router(
 
 /// Create a router handler that starts a flow
 pub fn to_handler(
-  flow flow: Flow(step_type, session, error),
-) -> fn(Context(session, error), update.Command) ->
-  Result(Context(session, error), error) {
+  flow flow: Flow(step_type, session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Command) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, _command) { start(flow, dict.new(), ctx) }
 }
 
 fn start(
-  flow flow: Flow(step_type, session, error),
+  flow flow: Flow(step_type, session, error, dependencies),
   initial initial_data: Dict(String, String),
-  ctx ctx: Context(session, error),
-) -> Result(Context(session, error), error) {
+  ctx ctx: Context(session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   let #(from_id, chat_id) = engine.extract_ids_from_context(ctx)
   engine.start_or_resume(flow, ctx, from_id, chat_id, initial_data)
 }
 
 fn to_handler_with_data(
-  flow flow: Flow(step_type, session, error),
+  flow flow: Flow(step_type, session, error, dependencies),
   initial initial_data: Dict(String, String),
-) -> fn(Context(session, error), update.Command) ->
-  Result(Context(session, error), error) {
+) -> fn(Context(session, error, dependencies), update.Command) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, _update) { start(flow, initial_data, ctx) }
 }
 
 fn add_flow_route(
-  router: router.Router(session, error),
+  router: router.Router(session, error, dependencies),
   trigger: FlowTrigger,
-  flow: Flow(Dynamic, session, error),
+  flow: Flow(Dynamic, session, error, dependencies),
   initial_data initial_data: Dict(String, String),
-) -> router.Router(session, error) {
+) -> router.Router(session, error, dependencies) {
   case trigger {
     OnCommand(command) ->
       router.on_command(
@@ -294,10 +298,10 @@ fn add_flow_route(
 /// Check if instance is expired, run timeout/exit hooks if so, delete and return True.
 /// Returns False if not expired.
 fn run_timeout_and_cleanup(
-  flow: Flow(Dynamic, session, error),
-  ctx: Context(session, error),
+  flow: Flow(Dynamic, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   inst: FlowInstance,
-) -> #(Bool, Result(Context(session, error), error)) {
+) -> #(Bool, Result(Context(session, error, dependencies), error)) {
   case instance.is_expired(inst, flow.ttl_ms) {
     True -> {
       engine.emit_flow_event("timeout", inst, [#("count", 1)])
@@ -325,10 +329,10 @@ fn run_timeout_and_cleanup(
 }
 
 fn auto_resume_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), String) ->
-  Result(Context(session, error), error) {
-  fn(ctx: Context(session, error), text: String) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), String) ->
+  Result(Context(session, error, dependencies), error) {
+  fn(ctx: Context(session, error, dependencies), text: String) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
 
@@ -368,10 +372,14 @@ fn auto_resume_handler(
 }
 
 fn auto_resume_callback_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), String, String) ->
-  Result(Context(session, error), error) {
-  fn(ctx: Context(session, error), _callback_id: String, data: String) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), String, String) ->
+  Result(Context(session, error, dependencies), error) {
+  fn(
+    ctx: Context(session, error, dependencies),
+    _callback_id: String,
+    data: String,
+  ) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
 
@@ -417,9 +425,9 @@ fn auto_resume_callback_handler(
 }
 
 fn auto_resume_photo_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), List(model_types.PhotoSize)) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), List(model_types.PhotoSize)) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, photos: List(model_types.PhotoSize)) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
@@ -461,9 +469,9 @@ fn auto_resume_photo_handler(
 }
 
 fn auto_resume_video_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), model_types.Video) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), model_types.Video) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, video: model_types.Video) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
@@ -503,9 +511,9 @@ fn auto_resume_video_handler(
 }
 
 fn auto_resume_voice_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), model_types.Voice) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), model_types.Voice) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, voice: model_types.Voice) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
@@ -545,9 +553,9 @@ fn auto_resume_voice_handler(
 }
 
 fn auto_resume_audio_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), model_types.Audio) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), model_types.Audio) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, audio: model_types.Audio) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     let flows = dict.values(registry.flow_map)
@@ -587,9 +595,9 @@ fn auto_resume_audio_handler(
 }
 
 fn auto_resume_location_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, upd) {
     case upd {
       update.MessageUpdate(message:, ..) ->
@@ -650,9 +658,9 @@ fn auto_resume_location_handler(
 }
 
 fn auto_resume_command_handler(
-  registry: FlowRegistry(session, error),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+  registry: FlowRegistry(session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, upd) {
     case upd {
       update.CommandUpdate(command:, ..) -> {

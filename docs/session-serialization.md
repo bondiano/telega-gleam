@@ -2,6 +2,11 @@
 
 How to persist session state in Telega bots.
 
+> Sessions are for **user state**. Shared services (a db pool, http client, i18n
+> catalog) belong in the non-persisted `dependencies` slot instead — see the
+> [Dependency Injection guide](https://hexdocs.pm/telega/docs/dependency-injection.html).
+> Don't put services in `session`: they would be serialized to your storage backend.
+
 ## Overview
 
 Telega sessions are keyed by `"{chat_id}:{from_id}"` and configured via `SessionSettings`:

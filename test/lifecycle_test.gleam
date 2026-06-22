@@ -27,8 +27,8 @@ fn start_test_factory() {
 
 fn start_named_bot(
   registry_name: String,
-  router_handler: fn(bot.Context(TestSession, TestError), _) ->
-    Result(bot.Context(TestSession, TestError), TestError),
+  router_handler: fn(bot.Context(TestSession, TestError, Nil), _) ->
+    Result(bot.Context(TestSession, TestError, Nil), TestError),
 ) -> bot.BotSubject {
   let assert Ok(registry) = registry.start(registry_name)
   let config = context.config()
@@ -50,6 +50,7 @@ fn start_named_bot(
       router_handler:,
       session_settings:,
       catch_handler:,
+      dependencies: Nil,
       chat_factory:,
       name: Some(name),
     )

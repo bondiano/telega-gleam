@@ -184,6 +184,55 @@ pub fn full_bot_test() {
 }
 ```
 
+## Testing with Dependencies
+
+If your bot injects services through the `dependencies` slot (see the
+[Dependency Injection guide](https://hexdocs.pm/telega/docs/dependency-injection.html)),
+substitute mocks in tests.
+
+For isolated handler tests, build the context with `context_with_dependencies`:
+
+```gleam
+import telega/testing/context
+
+pub fn my_bookings_test() {
+  let ctx =
+    context.context_with_dependencies(
+      session: Nil,
+      dependencies: Deps(db: mock_db(), catalog: test_catalog()),
+    )
+
+  let assert Ok(_) = my_bookings(ctx, command)
+}
+```
+
+For full actor-level tests, the runners take a `dependencies` value:
+
+```gleam
+// conversation DSL
+conversation.conversation_test()
+|> conversation.send("/my_bookings")
+|> conversation.expect_reply_containing("No bookings")
+|> conversation.run_with_dependencies(build_router(), fn() { Nil }, Deps(db:, catalog:))
+
+// or the bot subject directly
+handler.with_test_bot_with_dependencies(
+  router: build_router(),
+  session: fn() { Nil },
+  dependencies: Deps(db:, catalog:),
+  handler: fn(bot_subject, calls) { /* ... */ },
+)
+
+// custom mock client + dependencies, or full control over every input:
+conversation.run_with_mock_with_dependencies(build_router(), fn() { Nil }, client, calls, Deps(db:, catalog:))
+handler.with_test_bot_advanced_with_dependencies(
+  router_handler:,
+  session_settings:,
+  dependencies: Deps(db:, catalog:),
+  handler:,
+)
+```
+
 ## Mock Client Assertions
 
 The `mock` module provides API call recording and assertions:
@@ -358,3 +407,4 @@ pub fn my_db_test() {
 | Call-order-dependent responses | `mock.stateful_client(handler: fn(req, n) { ... })` |
 | Custom client in conversation DSL | `conversation.run_with_mock(...)` or `conversation.run_with_client(...)` |
 | Session state | Check `ctx.session` from `handler.test_handler()` result |
+| Injected services (`dependencies`) | `context.context_with_dependencies()`, `conversation.run_with_dependencies()`, `handler.with_test_bot_with_dependencies()` |

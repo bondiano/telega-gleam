@@ -300,100 +300,114 @@ import telega/telemetry
 import telega/update.{type Command, type Update}
 
 /// Router with unified routes and middleware support
-pub opaque type Router(session, error) {
+pub opaque type Router(session, error, dependencies) {
   Router(
-    commands: Dict(String, Handler(session, error)),
+    commands: Dict(String, Handler(session, error, dependencies)),
     /// Optional human-readable descriptions for registered commands, keyed by
     /// the same normalized command name as `commands`. Populated by
     /// `on_command_with_description` and consumed by the auto `setMyCommands`
     /// machinery in `telega`.
     command_descriptions: Dict(String, String),
-    callbacks: Dict(String, Handler(session, error)),
-    routes: List(Route(session, error)),
-    fallback: Option(Handler(session, error)),
-    middleware: List(Middleware(session, error)),
-    catch_handler: Option(fn(error) -> Result(Context(session, error), error)),
+    callbacks: Dict(String, Handler(session, error, dependencies)),
+    routes: List(Route(session, error, dependencies)),
+    fallback: Option(Handler(session, error, dependencies)),
+    middleware: List(Middleware(session, error, dependencies)),
+    catch_handler: Option(
+      fn(error) -> Result(Context(session, error, dependencies), error),
+    ),
     name: String,
   )
-  ComposedRouter(composes: List(Router(session, error)), name: String)
+  ComposedRouter(
+    composes: List(Router(session, error, dependencies)),
+    name: String,
+  )
 }
 
 /// Generic handler type for all updates
-pub type Handler(session, error) =
-  fn(Context(session, error), Update) -> Result(Context(session, error), error)
+pub type Handler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Update) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type CommandHandler(session, error) =
-  fn(Context(session, error), Command) -> Result(Context(session, error), error)
+pub type CommandHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Command) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type TextHandler(session, error) =
-  fn(Context(session, error), String) -> Result(Context(session, error), error)
+pub type TextHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), String) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type CallbackHandler(session, error) =
-  fn(Context(session, error), String, String) ->
-    Result(Context(session, error), error)
+pub type CallbackHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), String, String) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type PhotoHandler(session, error) =
-  fn(Context(session, error), List(PhotoSize)) ->
-    Result(Context(session, error), error)
+pub type PhotoHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), List(PhotoSize)) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type VideoHandler(session, error) =
-  fn(Context(session, error), Video) -> Result(Context(session, error), error)
+pub type VideoHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Video) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type VoiceHandler(session, error) =
-  fn(Context(session, error), Voice) -> Result(Context(session, error), error)
+pub type VoiceHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Voice) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type AudioHandler(session, error) =
-  fn(Context(session, error), Audio) -> Result(Context(session, error), error)
+pub type AudioHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Audio) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type MediaGroupHandler(session, error) =
-  fn(Context(session, error), String, List(Message)) ->
-    Result(Context(session, error), error)
+pub type MediaGroupHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), String, List(Message)) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type MessageHandler(session, error) =
-  fn(Context(session, error), Message) -> Result(Context(session, error), error)
+pub type MessageHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Message) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type InlineQueryHandler(session, error) =
-  fn(Context(session, error), InlineQuery) ->
-    Result(Context(session, error), error)
+pub type InlineQueryHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), InlineQuery) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type ChosenInlineResultHandler(session, error) =
-  fn(Context(session, error), ChosenInlineResult) ->
-    Result(Context(session, error), error)
+pub type ChosenInlineResultHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), ChosenInlineResult) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type ShippingQueryHandler(session, error) =
-  fn(Context(session, error), ShippingQuery) ->
-    Result(Context(session, error), error)
+pub type ShippingQueryHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), ShippingQuery) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type PreCheckoutQueryHandler(session, error) =
-  fn(Context(session, error), PreCheckoutQuery) ->
-    Result(Context(session, error), error)
+pub type PreCheckoutQueryHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), PreCheckoutQuery) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type PollHandler(session, error) =
-  fn(Context(session, error), Poll) -> Result(Context(session, error), error)
+pub type PollHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Poll) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type PollAnswerHandler(session, error) =
-  fn(Context(session, error), PollAnswer) ->
-    Result(Context(session, error), error)
+pub type PollAnswerHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), PollAnswer) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type MessageReactionHandler(session, error) =
-  fn(Context(session, error), MessageReactionUpdated) ->
-    Result(Context(session, error), error)
+pub type MessageReactionHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), MessageReactionUpdated) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type MessageReactionCountHandler(session, error) =
-  fn(Context(session, error), MessageReactionCountUpdated) ->
-    Result(Context(session, error), error)
+pub type MessageReactionCountHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), MessageReactionCountUpdated) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type ChatMemberUpdatedHandler(session, error) =
-  fn(Context(session, error), ChatMemberUpdated) ->
-    Result(Context(session, error), error)
+pub type ChatMemberUpdatedHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), ChatMemberUpdated) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type ChatJoinRequestHandler(session, error) =
-  fn(Context(session, error), ChatJoinRequest) ->
-    Result(Context(session, error), error)
+pub type ChatJoinRequestHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), ChatJoinRequest) ->
+    Result(Context(session, error, dependencies), error)
 
 /// Middleware wraps a handler with additional functionality
-pub type Middleware(session, error) =
-  fn(Handler(session, error)) -> Handler(session, error)
+pub type Middleware(session, error, dependencies) =
+  fn(Handler(session, error, dependencies)) ->
+    Handler(session, error, dependencies)
 
 /// Pattern matching for text and callbacks
 pub type Pattern {
@@ -412,38 +426,62 @@ pub opaque type Filter {
 }
 
 /// Unified route type that encompasses all route types
-pub type Route(session, error) {
-  TextPatternRoute(pattern: Pattern, handler: TextHandler(session, error))
-  PhotoRoute(handler: PhotoHandler(session, error))
-  VideoRoute(handler: VideoHandler(session, error))
-  VoiceRoute(handler: VoiceHandler(session, error))
-  AudioRoute(handler: AudioHandler(session, error))
-  MediaGroupRoute(handler: MediaGroupHandler(session, error))
-  InlineQueryRoute(handler: InlineQueryHandler(session, error))
-  ChosenInlineResultRoute(handler: ChosenInlineResultHandler(session, error))
-  ShippingQueryRoute(handler: ShippingQueryHandler(session, error))
-  PreCheckoutQueryRoute(handler: PreCheckoutQueryHandler(session, error))
-  PollRoute(handler: PollHandler(session, error))
-  PollAnswerRoute(handler: PollAnswerHandler(session, error))
-  MessageReactionRoute(handler: MessageReactionHandler(session, error))
+pub type Route(session, error, dependencies) {
+  TextPatternRoute(
+    pattern: Pattern,
+    handler: TextHandler(session, error, dependencies),
+  )
+  PhotoRoute(handler: PhotoHandler(session, error, dependencies))
+  VideoRoute(handler: VideoHandler(session, error, dependencies))
+  VoiceRoute(handler: VoiceHandler(session, error, dependencies))
+  AudioRoute(handler: AudioHandler(session, error, dependencies))
+  MediaGroupRoute(handler: MediaGroupHandler(session, error, dependencies))
+  InlineQueryRoute(handler: InlineQueryHandler(session, error, dependencies))
+  ChosenInlineResultRoute(
+    handler: ChosenInlineResultHandler(session, error, dependencies),
+  )
+  ShippingQueryRoute(
+    handler: ShippingQueryHandler(session, error, dependencies),
+  )
+  PreCheckoutQueryRoute(
+    handler: PreCheckoutQueryHandler(session, error, dependencies),
+  )
+  PollRoute(handler: PollHandler(session, error, dependencies))
+  PollAnswerRoute(handler: PollAnswerHandler(session, error, dependencies))
+  MessageReactionRoute(
+    handler: MessageReactionHandler(session, error, dependencies),
+  )
   MessageReactionEmojiRoute(
     emojis: List(String),
-    handler: MessageReactionHandler(session, error),
+    handler: MessageReactionHandler(session, error, dependencies),
   )
-  MessageReactionPaidRoute(handler: MessageReactionHandler(session, error))
-  MessageReactionAddedRoute(handler: MessageReactionHandler(session, error))
-  MessageReactionRemovedRoute(handler: MessageReactionHandler(session, error))
+  MessageReactionPaidRoute(
+    handler: MessageReactionHandler(session, error, dependencies),
+  )
+  MessageReactionAddedRoute(
+    handler: MessageReactionHandler(session, error, dependencies),
+  )
+  MessageReactionRemovedRoute(
+    handler: MessageReactionHandler(session, error, dependencies),
+  )
   MessageReactionCountRoute(
-    handler: MessageReactionCountHandler(session, error),
+    handler: MessageReactionCountHandler(session, error, dependencies),
   )
-  ChatMemberUpdatedRoute(handler: ChatMemberUpdatedHandler(session, error))
-  ChatJoinRequestRoute(handler: ChatJoinRequestHandler(session, error))
-  CustomRoute(matcher: fn(Update) -> Bool, handler: Handler(session, error))
-  FilteredRoute(filter: Filter, handler: Handler(session, error))
+  ChatMemberUpdatedRoute(
+    handler: ChatMemberUpdatedHandler(session, error, dependencies),
+  )
+  ChatJoinRequestRoute(
+    handler: ChatJoinRequestHandler(session, error, dependencies),
+  )
+  CustomRoute(
+    matcher: fn(Update) -> Bool,
+    handler: Handler(session, error, dependencies),
+  )
+  FilteredRoute(filter: Filter, handler: Handler(session, error, dependencies))
 }
 
 /// Create a new router
-pub fn new(name: String) -> Router(session, error) {
+pub fn new(name: String) -> Router(session, error, dependencies) {
   Router(
     commands: dict.new(),
     command_descriptions: dict.new(),
@@ -458,10 +496,10 @@ pub fn new(name: String) -> Router(session, error) {
 
 /// Add a command handler
 pub fn on_command(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   command: String,
-  handler: CommandHandler(session, error),
-) -> Router(session, error) {
+  handler: CommandHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(commands:, ..) -> {
       // Remove leading slash if present for consistency
@@ -483,10 +521,10 @@ pub fn on_command(
 
 /// Add multiple commands with same handler
 pub fn on_commands(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   commands: List(String),
-  handler: CommandHandler(session, error),
-) -> Router(session, error) {
+  handler: CommandHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   list.fold(commands, router, fn(r, cmd) { on_command(r, cmd, handler) })
 }
 
@@ -504,11 +542,11 @@ pub fn on_commands(
 /// |> router.on_command_with_description("help", "Show help", handle_help)
 /// ```
 pub fn on_command_with_description(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   command: String,
   description: String,
-  handler: CommandHandler(session, error),
-) -> Router(session, error) {
+  handler: CommandHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   let command_key = normalize_command(command)
   case on_command(router, command, handler) {
     Router(command_descriptions:, ..) as router ->
@@ -534,10 +572,10 @@ fn normalize_command(command: String) -> String {
 
 /// Add a text handler with pattern
 pub fn on_text(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   pattern: Pattern,
-  handler: TextHandler(session, error),
-) -> Router(session, error) {
+  handler: TextHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [TextPatternRoute(pattern:, handler:), ..routes])
@@ -547,18 +585,18 @@ pub fn on_text(
 
 /// Add a handler for any text
 pub fn on_any_text(
-  router: Router(session, error),
-  handler: TextHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: TextHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   on_text(router, Prefix(""), handler)
 }
 
 /// Add a callback query handler with pattern
 pub fn on_callback(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   pattern: Pattern,
-  handler: CallbackHandler(session, error),
-) -> Router(session, error) {
+  handler: CallbackHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(callbacks:, ..) -> {
       let key = case pattern {
@@ -586,9 +624,9 @@ pub fn on_callback(
 
 /// Add handlers for media types
 pub fn on_photo(
-  router: Router(session, error),
-  handler: PhotoHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: PhotoHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PhotoRoute(handler:), ..routes])
@@ -597,9 +635,9 @@ pub fn on_photo(
 }
 
 pub fn on_video(
-  router: Router(session, error),
-  handler: VideoHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: VideoHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [VideoRoute(handler:), ..routes])
@@ -608,9 +646,9 @@ pub fn on_video(
 }
 
 pub fn on_voice(
-  router: Router(session, error),
-  handler: VoiceHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: VoiceHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [VoiceRoute(handler:), ..routes])
@@ -619,9 +657,9 @@ pub fn on_voice(
 }
 
 pub fn on_audio(
-  router: Router(session, error),
-  handler: AudioHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: AudioHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [AudioRoute(handler:), ..routes])
@@ -631,9 +669,9 @@ pub fn on_audio(
 
 /// Add handler for media groups (albums of photos/videos)
 pub fn on_media_group(
-  router: Router(session, error),
-  handler: MediaGroupHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MediaGroupHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MediaGroupRoute(handler:), ..routes])
@@ -643,9 +681,9 @@ pub fn on_media_group(
 
 /// Add handler for inline queries
 pub fn on_inline_query(
-  router: Router(session, error),
-  handler: InlineQueryHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: InlineQueryHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [InlineQueryRoute(handler:), ..routes])
@@ -655,9 +693,9 @@ pub fn on_inline_query(
 
 /// Add handler for chosen inline results
 pub fn on_chosen_inline_result(
-  router: Router(session, error),
-  handler: ChosenInlineResultHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: ChosenInlineResultHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChosenInlineResultRoute(handler:), ..routes])
@@ -667,9 +705,9 @@ pub fn on_chosen_inline_result(
 
 /// Add handler for shipping queries (payments)
 pub fn on_shipping_query(
-  router: Router(session, error),
-  handler: ShippingQueryHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: ShippingQueryHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ShippingQueryRoute(handler:), ..routes])
@@ -679,9 +717,9 @@ pub fn on_shipping_query(
 
 /// Add handler for pre-checkout queries (payments)
 pub fn on_pre_checkout_query(
-  router: Router(session, error),
-  handler: PreCheckoutQueryHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: PreCheckoutQueryHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PreCheckoutQueryRoute(handler:), ..routes])
@@ -691,9 +729,9 @@ pub fn on_pre_checkout_query(
 
 /// Add handler for poll updates
 pub fn on_poll(
-  router: Router(session, error),
-  handler: PollHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: PollHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PollRoute(handler:), ..routes])
@@ -703,9 +741,9 @@ pub fn on_poll(
 
 /// Add handler for poll answer updates
 pub fn on_poll_answer(
-  router: Router(session, error),
-  handler: PollAnswerHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: PollAnswerHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PollAnswerRoute(handler:), ..routes])
@@ -715,9 +753,9 @@ pub fn on_poll_answer(
 
 /// Add handler for message reactions
 pub fn on_reaction(
-  router: Router(session, error),
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionRoute(handler:), ..routes])
@@ -733,10 +771,10 @@ pub fn on_reaction(
 /// |> router.on_reaction_emoji("👍", handle_like)
 /// ```
 pub fn on_reaction_emoji(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   emoji: String,
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [
@@ -755,10 +793,10 @@ pub fn on_reaction_emoji(
 /// |> router.on_reaction_emojis(["👍", "❤", "🔥"], handle_positive_reactions)
 /// ```
 pub fn on_reaction_emojis(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   emojis: List(String),
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [
@@ -777,9 +815,9 @@ pub fn on_reaction_emojis(
 /// |> router.on_paid_reaction(handle_star_reaction)
 /// ```
 pub fn on_paid_reaction(
-  router: Router(session, error),
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionPaidRoute(handler:), ..routes])
@@ -795,9 +833,9 @@ pub fn on_paid_reaction(
 /// |> router.on_reaction_added(handle_new_reaction)
 /// ```
 pub fn on_reaction_added(
-  router: Router(session, error),
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionAddedRoute(handler:), ..routes])
@@ -813,9 +851,9 @@ pub fn on_reaction_added(
 /// |> router.on_reaction_removed(handle_removed_reaction)
 /// ```
 pub fn on_reaction_removed(
-  router: Router(session, error),
-  handler: MessageReactionHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MessageReactionHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionRemovedRoute(handler:), ..routes])
@@ -831,9 +869,9 @@ pub fn on_reaction_removed(
 /// |> router.on_reaction_count(handle_reaction_counts)
 /// ```
 pub fn on_reaction_count(
-  router: Router(session, error),
-  handler: MessageReactionCountHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: MessageReactionCountHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionCountRoute(handler:), ..routes])
@@ -843,9 +881,9 @@ pub fn on_reaction_count(
 
 /// Add handler for chat member updates
 pub fn on_chat_member_updated(
-  router: Router(session, error),
-  handler: ChatMemberUpdatedHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: ChatMemberUpdatedHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChatMemberUpdatedRoute(handler:), ..routes])
@@ -855,9 +893,9 @@ pub fn on_chat_member_updated(
 
 /// Add handler for chat join requests
 pub fn on_chat_join_request(
-  router: Router(session, error),
-  handler: ChatJoinRequestHandler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: ChatJoinRequestHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChatJoinRequestRoute(handler:), ..routes])
@@ -867,10 +905,10 @@ pub fn on_chat_join_request(
 
 /// Add a custom route with matcher function
 pub fn on_custom(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   matcher: fn(Update) -> Bool,
-  handler: Handler(session, error),
-) -> Router(session, error) {
+  handler: Handler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [CustomRoute(matcher:, handler:), ..routes])
@@ -880,10 +918,10 @@ pub fn on_custom(
 
 /// Add a filtered route
 pub fn on_filtered(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   filter: Filter,
-  handler: Handler(session, error),
-) -> Router(session, error) {
+  handler: Handler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [FilteredRoute(filter:, handler:), ..routes])
@@ -1133,9 +1171,9 @@ fn evaluate_filter(f: Filter, update: Update) -> Bool {
 
 /// Set fallback handler for unmatched updates
 pub fn fallback(
-  router: Router(session, error),
-  handler: Handler(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  handler: Handler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(..) -> Router(..router, fallback: Some(handler))
     ComposedRouter(..) as composed -> composed
@@ -1144,9 +1182,9 @@ pub fn fallback(
 
 /// Add middleware to the router
 pub fn use_middleware(
-  router: Router(session, error),
-  middleware: Middleware(session, error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  middleware: Middleware(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(middleware: existing_middleware, ..) ->
       Router(..router, middleware: [middleware, ..existing_middleware])
@@ -1156,9 +1194,10 @@ pub fn use_middleware(
 
 /// Add a catch handler to the router that handles errors from all routes
 pub fn with_catch_handler(
-  router: Router(session, error),
-  catch_handler: fn(error) -> Result(Context(session, error), error),
-) -> Router(session, error) {
+  router: Router(session, error, dependencies),
+  catch_handler: fn(error) ->
+    Result(Context(session, error, dependencies), error),
+) -> Router(session, error, dependencies) {
   case router {
     Router(..) -> Router(..router, catch_handler: Some(catch_handler))
     ComposedRouter(..) as composed -> composed
@@ -1167,10 +1206,10 @@ pub fn with_catch_handler(
 
 /// Process an update through the router
 pub fn handle(
-  router: Router(session, error),
-  ctx: Context(session, error),
+  router: Router(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   update: Update,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case router {
     Router(middleware:, catch_handler:, ..) -> {
       let handler = find_handler(router, update, ctx)
@@ -1193,10 +1232,10 @@ pub fn handle(
 
 /// Handle update through a list of composed routers
 fn handle_composed(
-  routers: List(Router(session, error)),
-  ctx: Context(session, error),
+  routers: List(Router(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   update: Update,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case routers {
     [] -> Ok(ctx)
     // No router handled it
@@ -1212,9 +1251,9 @@ fn handle_composed(
 /// Merge two routers into one. All routes are combined, with first router's routes
 /// taking priority in case of conflicts. Middleware and catch handlers are shared.
 pub fn merge(
-  first: Router(session, error),
-  second: Router(session, error),
-) -> Router(session, error) {
+  first: Router(session, error, dependencies),
+  second: Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   // Convert both routers to flat representation for merging
   let first_flat = to_flat_router(first)
   let second_flat = to_flat_router(second)
@@ -1271,9 +1310,9 @@ fn merge_keeping_first(incoming: Dict(k, v), base: Dict(k, v)) -> Dict(k, v) {
 /// Compose two routers, where each router maintains its own middleware and catch handlers.
 /// First router is tried first, if it doesn't handle the update, second router is tried.
 pub fn compose(
-  first: Router(session, error),
-  second: Router(session, error),
-) -> Router(session, error) {
+  first: Router(session, error, dependencies),
+  second: Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case first, second {
     ComposedRouter(composes: first_list, ..),
       ComposedRouter(composes: second_list, ..)
@@ -1303,8 +1342,8 @@ pub fn compose(
 /// Compose multiple routers into one. Routers are tried in order.
 /// Each router maintains its own middleware and catch handlers.
 pub fn compose_many(
-  routers: List(Router(session, error)),
-) -> Router(session, error) {
+  routers: List(Router(session, error, dependencies)),
+) -> Router(session, error, dependencies) {
   case routers {
     [] -> new("empty")
     [router] -> router
@@ -1317,7 +1356,7 @@ pub fn compose_many(
 }
 
 /// Get the name of a router
-fn get_router_name(router: Router(session, error)) -> String {
+fn get_router_name(router: Router(session, error, dependencies)) -> String {
   case router {
     Router(name:, ..) -> name
     ComposedRouter(name:, ..) -> name
@@ -1325,7 +1364,9 @@ fn get_router_name(router: Router(session, error)) -> String {
 }
 
 /// Convert any router (including ComposedRouter) to a flat Router with all routes merged
-fn to_flat_router(router: Router(session, error)) -> Router(session, error) {
+fn to_flat_router(
+  router: Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
   case router {
     Router(..) -> router
     ComposedRouter(composes:, name:) -> {
@@ -1338,9 +1379,9 @@ fn to_flat_router(router: Router(session, error)) -> Router(session, error) {
 
 /// Merge a list of routers into a single flat router
 fn merge_routers(
-  routers: List(Router(session, error)),
+  routers: List(Router(session, error, dependencies)),
   name: String,
-) -> Router(session, error) {
+) -> Router(session, error, dependencies) {
   case routers {
     [] ->
       Router(
@@ -1412,7 +1453,7 @@ fn merge_routers(
 ///
 /// This is what `telega.with_auto_commands` feeds into `setMyCommands`.
 pub fn registered_commands(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
 ) -> List(#(String, String)) {
   let assert Router(command_descriptions:, ..) = to_flat_router(router)
 
@@ -1430,7 +1471,9 @@ pub fn registered_commands(
 /// empty list is returned to signal "do not restrict" — Telegram then sends its
 /// default update set. Use a manual override when you need narrowing alongside
 /// catch-all routes.
-pub fn allowed_updates(router: Router(session, error)) -> List(String) {
+pub fn allowed_updates(
+  router: Router(session, error, dependencies),
+) -> List(String) {
   let assert Router(commands:, callbacks:, routes:, fallback:, ..) =
     to_flat_router(router)
 
@@ -1465,7 +1508,7 @@ pub fn allowed_updates(router: Router(session, error)) -> List(String) {
 }
 
 /// Map a concrete route to the Telegram `allowed_updates` string it consumes.
-fn route_update_type(route: Route(session, error)) -> String {
+fn route_update_type(route: Route(session, error, dependencies)) -> String {
   case route {
     TextPatternRoute(..)
     | PhotoRoute(..)
@@ -1493,7 +1536,10 @@ fn route_update_type(route: Route(session, error)) -> String {
 }
 
 /// Check if a router can handle a given update (has specific routes or fallback)
-fn can_handle_update(router: Router(session, error), update: Update) -> Bool {
+fn can_handle_update(
+  router: Router(session, error, dependencies),
+  update: Update,
+) -> Bool {
   case router {
     Router(commands:, callbacks:, routes:, fallback:, ..) -> {
       let has_specific_route = case update {
@@ -1587,9 +1633,9 @@ fn can_handle_update(router: Router(session, error), update: Update) -> Bool {
 
 /// Create a sub-router that processes updates within its own scope
 pub fn scope(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   predicate: fn(Update) -> Bool,
-) -> Router(session, error) {
+) -> Router(session, error, dependencies) {
   case router {
     Router(
       commands:,
@@ -1785,10 +1831,10 @@ pub fn scope(
 
 /// Find the appropriate handler for an update
 fn find_handler(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   update: Update,
-  context: Context(session, error),
-) -> Handler(session, error) {
+  context: Context(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   case router {
     Router(..) -> find_handler_in_router(router, update, context)
     ComposedRouter(composes:, ..) ->
@@ -1798,10 +1844,10 @@ fn find_handler(
 
 /// Find handler in composed routers
 fn find_handler_in_composed(
-  routers: List(Router(session, error)),
+  routers: List(Router(session, error, dependencies)),
   update: Update,
-  context: Context(session, error),
-) -> Handler(session, error) {
+  context: Context(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   case routers {
     [] -> fn(ctx, _) { Ok(ctx) }
     // No handler found
@@ -1816,10 +1862,10 @@ fn find_handler_in_composed(
 
 /// Find handler in a regular router (not composed)
 fn find_handler_in_router(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   update: Update,
-  context: Context(session, error),
-) -> Handler(session, error) {
+  context: Context(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   case update {
     update.CommandUpdate(..) ->
       find_command_handler(router, update, context)
@@ -1835,10 +1881,10 @@ fn find_handler_in_router(
 
 /// Find a command handler
 fn find_command_handler(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   update: Update,
-  context: Context(session, error),
-) -> Option(Handler(session, error)) {
+  context: Context(session, error, dependencies),
+) -> Option(Handler(session, error, dependencies)) {
   case router, update {
     Router(commands:, ..), update.CommandUpdate(command:, ..) -> {
       //if command /help@yourbot has @ in the text,
@@ -1860,9 +1906,9 @@ fn find_command_handler(
 
 /// Find a callback handler
 fn find_callback_handler(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   update: Update,
-) -> Option(Handler(session, error)) {
+) -> Option(Handler(session, error, dependencies)) {
   case router, update {
     Router(callbacks:, ..), update.CallbackQueryUpdate(query:, ..) ->
       case query.data {
@@ -1875,9 +1921,9 @@ fn find_callback_handler(
 
 /// Find callback handler by data string
 fn find_callback_by_data(
-  callbacks: Dict(String, Handler(session, error)),
+  callbacks: Dict(String, Handler(session, error, dependencies)),
   data: String,
-) -> Option(Handler(session, error)) {
+) -> Option(Handler(session, error, dependencies)) {
   // Try exact match first
   case dict.get(callbacks, data) {
     Ok(handler) -> Some(handler)
@@ -1887,9 +1933,9 @@ fn find_callback_by_data(
 
 /// Find callback handler by pattern matching
 fn find_callback_by_pattern(
-  callbacks: Dict(String, Handler(session, error)),
+  callbacks: Dict(String, Handler(session, error, dependencies)),
   data: String,
-) -> Option(Handler(session, error)) {
+) -> Option(Handler(session, error, dependencies)) {
   dict.to_list(callbacks)
   |> list.find(fn(entry) {
     let #(key, _) = entry
@@ -1914,9 +1960,9 @@ fn matches_callback_pattern(key: String, data: String) -> Bool {
 
 /// Try routes, then fallback
 fn find_route_or_fallback(
-  router: Router(session, error),
+  router: Router(session, error, dependencies),
   update: Update,
-) -> Handler(session, error) {
+) -> Handler(session, error, dependencies) {
   case router {
     Router(routes:, fallback:, ..) -> {
       case find_matching_route(routes, update) {
@@ -1935,9 +1981,9 @@ fn find_route_or_fallback(
 
 /// Find route or fallback in composed routers
 fn find_route_or_fallback_in_composed(
-  routers: List(Router(session, error)),
+  routers: List(Router(session, error, dependencies)),
   update: Update,
-) -> Handler(session, error) {
+) -> Handler(session, error, dependencies) {
   case routers {
     [] -> fn(ctx, _) { Ok(ctx) }
     [router, ..rest] -> {
@@ -1951,9 +1997,9 @@ fn find_route_or_fallback_in_composed(
 
 /// Find matching route for an update
 fn find_matching_route(
-  routes: List(Route(session, error)),
+  routes: List(Route(session, error, dependencies)),
   update: Update,
-) -> Option(Handler(session, error)) {
+) -> Option(Handler(session, error, dependencies)) {
   case routes {
     [] -> None
     [route, ..rest] ->
@@ -2037,7 +2083,10 @@ fn find_matching_route(
 }
 
 /// Check if a route matches an update
-fn route_matches(route: Route(session, error), update: Update) -> Bool {
+fn route_matches(
+  route: Route(session, error, dependencies),
+  update: Update,
+) -> Bool {
   case route, update {
     TextPatternRoute(pattern:, ..), update.TextUpdate(text:, ..) ->
       matches_pattern(pattern, text)
@@ -2141,16 +2190,16 @@ fn reaction_type_equals(a: ReactionType, b: ReactionType) -> Bool {
 
 /// Apply middleware to a handler
 fn apply_middleware(
-  handler: Handler(session, error),
-  middleware: List(Middleware(session, error)),
-) -> Handler(session, error) {
+  handler: Handler(session, error, dependencies),
+  middleware: List(Middleware(session, error, dependencies)),
+) -> Handler(session, error, dependencies) {
   list.fold(middleware, handler, fn(h, mw) { mw(h) })
 }
 
 /// Logging middleware - logs update processing
 pub fn with_logging(
-  handler: Handler(session, error),
-) -> Handler(session, error) {
+  handler: Handler(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   fn(ctx, update_param) {
     let update_type = update.to_string(update_param)
     log.info("Processing " <> update_type)
@@ -2173,8 +2222,8 @@ pub fn with_logging(
 /// Filter middleware - only process updates that match predicate
 pub fn with_filter(
   predicate: fn(Update) -> Bool,
-  handler: Handler(session, error),
-) -> Handler(session, error) {
+  handler: Handler(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   fn(ctx, update) {
     case predicate(update) {
       True -> handler(ctx, update)
@@ -2185,9 +2234,9 @@ pub fn with_filter(
 
 /// Error recovery middleware
 pub fn with_recovery(
-  recover: fn(error) -> Result(Context(session, error), error),
-  handler: Handler(session, error),
-) -> Handler(session, error) {
+  recover: fn(error) -> Result(Context(session, error, dependencies), error),
+  handler: Handler(session, error, dependencies),
+) -> Handler(session, error, dependencies) {
   fn(ctx, update) {
     case handler(ctx, update) {
       Ok(result) -> Ok(result)
@@ -2222,13 +2271,13 @@ pub fn with_recovery(
 pub fn with_rate_limit(
   limit limit: Int,
   window_ms window_ms: Int,
-  on_limit on_limit: fn(Context(session, error)) ->
-    Result(Context(session, error), error),
-) -> Middleware(session, error) {
+  on_limit on_limit: fn(Context(session, error, dependencies)) ->
+    Result(Context(session, error, dependencies), error),
+) -> Middleware(session, error, dependencies) {
   let limiter = rate_limiter.new(limit:, window_ms:)
 
   fn(handler) {
-    fn(ctx: Context(session, error), update_param: Update) {
+    fn(ctx: Context(session, error, dependencies), update_param: Update) {
       use <- bool.lazy_guard(when: update_param.from_id < 0, return: fn() {
         handler(ctx, update_param)
       })

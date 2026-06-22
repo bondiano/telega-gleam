@@ -15,19 +15,25 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn make_ctx(session: String) -> Context(String, TelegaError) {
+fn make_ctx(session: String) -> Context(String, TelegaError, Nil) {
   test_context.context(session:)
 }
 
 pub fn command_routing_integration_test() {
-  let start_handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+  let start_handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    cmd: update.Command,
+  ) {
     case cmd.command {
       "start" -> Ok(Context(..ctx, session: "start_called"))
       _ -> Ok(ctx)
     }
   }
 
-  let help_handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+  let help_handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    cmd: update.Command,
+  ) {
     case cmd.command {
       "help" -> Ok(Context(..ctx, session: "help_called"))
       _ -> Ok(ctx)
@@ -128,7 +134,7 @@ pub fn decode_command_with_args_test() {
 }
 
 pub fn router_command_with_args_test() {
-  let handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), cmd: update.Command) {
     Ok(Context(..ctx, session: option.unwrap(cmd.payload, "no_payload")))
   }
 
@@ -177,7 +183,7 @@ pub fn router_command_with_non_matching_suffix_test() {
 }
 
 fn router_command_with_suffix_test(text: String, session_val: String) {
-  let handler = fn(ctx: Context(String, TelegaError), cmd: update.Command) {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), cmd: update.Command) {
     Ok(Context(..ctx, session: cmd.command))
   }
 
@@ -215,11 +221,11 @@ fn router_command_with_suffix_test(text: String, session_val: String) {
 }
 
 pub fn text_pattern_matching_integration_test() {
-  let exact_handler = fn(ctx: Context(String, TelegaError), _text: String) {
+  let exact_handler = fn(ctx: Context(String, TelegaError, Nil), _text: String) {
     Ok(Context(..ctx, session: "exact_matched"))
   }
 
-  let prefix_handler = fn(ctx: Context(String, TelegaError), _text: String) {
+  let prefix_handler = fn(ctx: Context(String, TelegaError, Nil), _text: String) {
     Ok(Context(..ctx, session: "prefix_matched"))
   }
 
@@ -262,12 +268,12 @@ pub fn text_pattern_matching_integration_test() {
 }
 
 pub fn middleware_integration_test() {
-  let handler = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
     Ok(Context(..ctx, session: ctx.session <> "_handler"))
   }
 
   let counting_middleware = fn(handler) {
-    fn(ctx: Context(String, TelegaError), update: Update) {
+    fn(ctx: Context(String, TelegaError, Nil), update: Update) {
       let modified_ctx = Context(..ctx, session: ctx.session <> "_pre")
       case handler(modified_ctx, update) {
         Ok(result_ctx) ->
@@ -300,13 +306,16 @@ pub fn middleware_integration_test() {
 
 pub fn fallback_integration_test() {
   let command_handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     _cmd: update.Command,
   ) {
     Ok(Context(..ctx, session: "command_handled"))
   }
 
-  let fallback_handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+  let fallback_handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _update: Update,
+  ) {
     Ok(Context(..ctx, session: "fallback_handled"))
   }
 
@@ -347,7 +356,7 @@ pub fn fallback_integration_test() {
 }
 
 pub fn filter_middleware_integration_test() {
-  let handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), _update: Update) {
     Ok(Context(..ctx, session: "handler_called"))
   }
 
@@ -403,7 +412,10 @@ pub fn filter_middleware_integration_test() {
 }
 
 pub fn custom_matcher_integration_test() {
-  let custom_handler = fn(ctx: Context(String, TelegaError), _update: Update) {
+  let custom_handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _update: Update,
+  ) {
     Ok(Context(..ctx, session: "custom_matched"))
   }
 
@@ -465,11 +477,17 @@ pub fn custom_matcher_integration_test() {
 }
 
 pub fn router_composition_integration_test() {
-  let handler1 = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+  let handler1 = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _cmd: update.Command,
+  ) {
     Ok(Context(..ctx, session: "router1"))
   }
 
-  let handler2 = fn(ctx: Context(String, TelegaError), _cmd: update.Command) {
+  let handler2 = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _cmd: update.Command,
+  ) {
     Ok(Context(..ctx, session: "router2"))
   }
 
@@ -518,13 +536,16 @@ pub fn router_composition_integration_test() {
 
 pub fn media_handlers_integration_test() {
   let photo_handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     _photos: List(types.PhotoSize),
   ) {
     Ok(Context(..ctx, session: "photo"))
   }
 
-  let video_handler = fn(ctx: Context(String, TelegaError), _video: types.Video) {
+  let video_handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _video: types.Video,
+  ) {
     Ok(Context(..ctx, session: "video"))
   }
 
@@ -579,7 +600,7 @@ pub fn media_handlers_integration_test() {
 
 pub fn recovery_middleware_integration_test() {
   let failing_handler = fn(
-    _ctx: Context(String, TelegaError),
+    _ctx: Context(String, TelegaError, Nil),
     _cmd: update.Command,
   ) {
     Error(error.ActorError("expected error"))
@@ -830,7 +851,7 @@ pub fn deeply_nested_compose_test() {
   let router1 =
     router.new("router1")
     |> router.use_middleware(fn(handler) {
-      fn(c: bot.Context(String, error.TelegaError), update) {
+      fn(c: bot.Context(String, error.TelegaError, Nil), update) {
         handler(make_ctx(c.session <> "_mw1"), update)
       }
     })
@@ -839,7 +860,7 @@ pub fn deeply_nested_compose_test() {
   let router2 =
     router.new("router2")
     |> router.use_middleware(fn(handler) {
-      fn(c: bot.Context(String, error.TelegaError), update) {
+      fn(c: bot.Context(String, error.TelegaError, Nil), update) {
         handler(make_ctx(c.session <> "_mw2"), update)
       }
     })
@@ -848,7 +869,7 @@ pub fn deeply_nested_compose_test() {
   let router3 =
     router.new("router3")
     |> router.use_middleware(fn(handler) {
-      fn(c: bot.Context(String, error.TelegaError), update) {
+      fn(c: bot.Context(String, error.TelegaError, Nil), update) {
         handler(make_ctx(c.session <> "_mw3"), update)
       }
     })
@@ -857,7 +878,7 @@ pub fn deeply_nested_compose_test() {
   let router4 =
     router.new("router4")
     |> router.use_middleware(fn(handler) {
-      fn(c: bot.Context(String, error.TelegaError), update) {
+      fn(c: bot.Context(String, error.TelegaError, Nil), update) {
         handler(make_ctx(c.session <> "_mw4"), update)
       }
     })
@@ -1440,7 +1461,10 @@ pub fn complex_filter_composition_test() {
 }
 
 pub fn inline_query_handler_test() {
-  let handler = fn(ctx: Context(String, TelegaError), query: types.InlineQuery) {
+  let handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    query: types.InlineQuery,
+  ) {
     Ok(Context(..ctx, session: "inline_query:" <> query.query))
   }
 
@@ -1472,7 +1496,7 @@ pub fn inline_query_handler_test() {
 
 pub fn chosen_inline_result_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     result: types.ChosenInlineResult,
   ) {
     Ok(Context(..ctx, session: "chosen:" <> result.result_id))
@@ -1504,7 +1528,7 @@ pub fn chosen_inline_result_handler_test() {
 }
 
 pub fn poll_handler_test() {
-  let handler = fn(ctx: Context(String, TelegaError), poll: types.Poll) {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), poll: types.Poll) {
     Ok(Context(..ctx, session: "poll:" <> poll.question))
   }
 
@@ -1571,7 +1595,10 @@ pub fn poll_handler_test() {
 }
 
 pub fn poll_answer_handler_test() {
-  let handler = fn(ctx: Context(String, TelegaError), answer: types.PollAnswer) {
+  let handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    answer: types.PollAnswer,
+  ) {
     Ok(Context(..ctx, session: "poll_answer:" <> answer.poll_id))
   }
 
@@ -1602,7 +1629,7 @@ pub fn poll_answer_handler_test() {
 
 pub fn shipping_query_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     query: types.ShippingQuery,
   ) {
     Ok(Context(..ctx, session: "shipping:" <> query.id))
@@ -1641,7 +1668,7 @@ pub fn shipping_query_handler_test() {
 
 pub fn pre_checkout_query_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     query: types.PreCheckoutQuery,
   ) {
     Ok(Context(..ctx, session: "checkout:" <> query.id))
@@ -1676,7 +1703,7 @@ pub fn pre_checkout_query_handler_test() {
 
 pub fn message_reaction_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     reaction: types.MessageReactionUpdated,
   ) {
     Ok(Context(..ctx, session: "reaction:" <> string.inspect(reaction.chat.id)))
@@ -1711,7 +1738,7 @@ pub fn message_reaction_handler_test() {
 
 pub fn chat_member_updated_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     member: types.ChatMemberUpdated,
   ) {
     Ok(
@@ -1768,7 +1795,7 @@ pub fn chat_member_updated_handler_test() {
 
 pub fn chat_join_request_handler_test() {
   let handler = fn(
-    ctx: Context(String, TelegaError),
+    ctx: Context(String, TelegaError, Nil),
     request: types.ChatJoinRequest,
   ) {
     Ok(Context(..ctx, session: "join_request:" <> request.from.first_name))
@@ -1837,17 +1864,17 @@ pub fn user_id_and_chat_id_parsing_test() {
 // --- Auto-sync: command descriptions & allowed_updates ---
 
 fn ok_1(
-  ctx: Context(String, TelegaError),
+  ctx: Context(String, TelegaError, Nil),
   _x: a,
-) -> Result(Context(String, TelegaError), TelegaError) {
+) -> Result(Context(String, TelegaError, Nil), TelegaError) {
   Ok(ctx)
 }
 
 fn ok_2(
-  ctx: Context(String, TelegaError),
+  ctx: Context(String, TelegaError, Nil),
   _x: a,
   _y: b,
-) -> Result(Context(String, TelegaError), TelegaError) {
+) -> Result(Context(String, TelegaError, Nil), TelegaError) {
   Ok(ctx)
 }
 

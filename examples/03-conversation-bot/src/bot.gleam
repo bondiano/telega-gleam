@@ -7,10 +7,8 @@ import wisp
 import wisp/wisp_mist
 
 import telega
-import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/error as telega_error
-import telega/model/encoder as telega_encoder
 import telega/reply
 import telega/router
 import telega_httpc
@@ -61,13 +59,23 @@ pub fn start_command_handler(ctx, _command) {
   Ok(ctx)
 }
 
-const commands = [#("/set_name", "Set name"), #("/get_name", "Get name")]
-
-pub fn build_router() -> router.Router(NameBotSession, BotError) {
+pub fn build_router() -> router.Router(NameBotSession, BotError, Nil) {
   router.new("conversation_bot")
-  |> router.on_command("start", start_command_handler)
-  |> router.on_command("set_name", set_name_command_handler)
-  |> router.on_command("get_name", get_name_command_handler)
+  |> router.on_command_with_description(
+    "start",
+    "Show the welcome message",
+    start_command_handler,
+  )
+  |> router.on_command_with_description(
+    "set_name",
+    "Set name",
+    set_name_command_handler,
+  )
+  |> router.on_command_with_description(
+    "get_name",
+    "Get name",
+    get_name_command_handler,
+  )
 }
 
 fn build_bot() {
@@ -77,12 +85,6 @@ fn build_bot() {
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
   let client = telega_httpc.new(token)
-  let assert Ok(_) =
-    telega_api.set_my_commands(
-      client,
-      telega_encoder.bot_commands_from(commands),
-      None,
-    )
 
   telega.new(
     api_client: client,
@@ -92,6 +94,10 @@ fn build_bot() {
   )
   |> telega.with_router(build_router())
   |> session.attach
+  // Publish the router's commands to the Telegram menu on start, and request
+  // only the update types the router actually handles.
+  |> telega.with_auto_commands()
+  |> telega.with_auto_allowed_updates()
   |> telega.init()
 }
 
@@ -111,7 +117,7 @@ pub fn main() {
 }
 
 pub type BotContext =
-  Context(NameBotSession, BotError)
+  Context(NameBotSession, BotError, Nil)
 
 pub type BotError {
   TelegaBotError(telega_error.TelegaError)

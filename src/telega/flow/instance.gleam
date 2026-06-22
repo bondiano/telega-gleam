@@ -389,19 +389,19 @@ pub fn is_expired(instance: FlowInstance, ttl_ms: option.Option(Int)) -> Bool {
 
 /// Update instance data and continue to next step
 pub fn next_with_data(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   step step: step_type,
   key key: String,
   value value: String,
-) -> StepResult(step_type, session, error) {
+) -> StepResult(step_type, session, error, dependencies) {
   let updated_instance = store_data(instance, key, value)
   Ok(#(ctx, Next(step), updated_instance))
 }
 
 /// Get current step as typed value
 pub fn get_current_step(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   instance: FlowInstance,
 ) -> Result(step_type, Nil) {
   flow.string_to_step(instance.state.current_step)

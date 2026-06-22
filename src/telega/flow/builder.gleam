@@ -15,30 +15,35 @@ import telega/flow/types.{
   SubflowConfig,
 }
 
-pub opaque type FlowBuilder(step_type, session, error) {
+pub opaque type FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(
     flow_name: String,
-    steps: Dict(String, StepConfig(step_type, session, error)),
+    steps: Dict(String, StepConfig(step_type, session, error, dependencies)),
     step_to_string: fn(step_type) -> String,
     string_to_step: fn(String) -> Result(step_type, Nil),
     storage: FlowStorage(error),
     on_complete: Option(
-      fn(Context(session, error), types.FlowInstance) ->
-        Result(Context(session, error), error),
+      fn(Context(session, error, dependencies), types.FlowInstance) ->
+        Result(Context(session, error, dependencies), error),
     ),
     on_error: Option(
-      fn(Context(session, error), types.FlowInstance, Option(error)) ->
-        Result(Context(session, error), error),
+      fn(
+        Context(session, error, dependencies),
+        types.FlowInstance,
+        Option(error),
+      ) -> Result(Context(session, error, dependencies), error),
     ),
-    global_middlewares: List(StepMiddleware(step_type, session, error)),
+    global_middlewares: List(
+      StepMiddleware(step_type, session, error, dependencies),
+    ),
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
-    subflows: List(SubflowConfig(step_type, session, error)),
-    on_flow_enter: Option(FlowEnterHook(session, error)),
-    on_flow_leave: Option(FlowLeaveHook(session, error)),
-    on_flow_exit: Option(FlowExitHook(session, error)),
+    subflows: List(SubflowConfig(step_type, session, error, dependencies)),
+    on_flow_enter: Option(FlowEnterHook(session, error, dependencies)),
+    on_flow_leave: Option(FlowLeaveHook(session, error, dependencies)),
+    on_flow_exit: Option(FlowExitHook(session, error, dependencies)),
     ttl_ms: Option(Int),
-    on_timeout: Option(types.FlowExitHook(session, error)),
+    on_timeout: Option(types.FlowExitHook(session, error, dependencies)),
   )
 }
 
@@ -48,7 +53,7 @@ pub fn new(
   storage: FlowStorage(error),
   step_to_string: fn(step_type) -> String,
   string_to_step: fn(String) -> Result(step_type, Nil),
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(
     flow_name:,
     steps: dict.new(),
@@ -74,7 +79,7 @@ pub fn new_with_default_converters(
   flow_name: String,
   storage: FlowStorage(error),
   steps: List(#(String, step_type)),
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(
     flow_name:,
     storage:,
@@ -97,10 +102,10 @@ pub fn new_with_default_converters(
 
 /// Add a step to the flow
 pub fn add_step(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   step: step_type,
-  handler: StepHandler(step_type, session, error),
-) -> FlowBuilder(step_type, session, error) {
+  handler: StepHandler(step_type, session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let step_name = builder.step_to_string(step)
   let config =
     StepConfig(handler:, middlewares: [], on_enter: None, on_leave: None)
@@ -109,11 +114,11 @@ pub fn add_step(
 
 /// Add a step with middleware
 pub fn add_step_with_middleware(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   step: step_type,
-  middlewares: List(StepMiddleware(step_type, session, error)),
-  handler: StepHandler(step_type, session, error),
-) -> FlowBuilder(step_type, session, error) {
+  middlewares: List(StepMiddleware(step_type, session, error, dependencies)),
+  handler: StepHandler(step_type, session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let step_name = builder.step_to_string(step)
   let config =
     StepConfig(handler:, middlewares:, on_enter: None, on_leave: None)
@@ -122,12 +127,12 @@ pub fn add_step_with_middleware(
 
 /// Add a step with lifecycle hooks
 pub fn add_step_with_hooks(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   step: step_type,
-  handler handler: StepHandler(step_type, session, error),
-  on_enter on_enter: Option(StepEnterHook(session, error)),
-  on_leave on_leave: Option(StepLeaveHook(session, error)),
-) -> FlowBuilder(step_type, session, error) {
+  handler handler: StepHandler(step_type, session, error, dependencies),
+  on_enter on_enter: Option(StepEnterHook(session, error, dependencies)),
+  on_leave on_leave: Option(StepLeaveHook(session, error, dependencies)),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let step_name = builder.step_to_string(step)
   let config = StepConfig(handler:, middlewares: [], on_enter:, on_leave:)
   FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
@@ -135,13 +140,15 @@ pub fn add_step_with_hooks(
 
 /// Add a step with hooks and middleware
 pub fn add_step_with_hooks_and_middleware(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   step: step_type,
-  handler handler: StepHandler(step_type, session, error),
-  middlewares middlewares: List(StepMiddleware(step_type, session, error)),
-  on_enter on_enter: Option(StepEnterHook(session, error)),
-  on_leave on_leave: Option(StepLeaveHook(session, error)),
-) -> FlowBuilder(step_type, session, error) {
+  handler handler: StepHandler(step_type, session, error, dependencies),
+  middlewares middlewares: List(
+    StepMiddleware(step_type, session, error, dependencies),
+  ),
+  on_enter on_enter: Option(StepEnterHook(session, error, dependencies)),
+  on_leave on_leave: Option(StepLeaveHook(session, error, dependencies)),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let step_name = builder.step_to_string(step)
   let config = StepConfig(handler:, middlewares:, on_enter:, on_leave:)
   FlowBuilder(..builder, steps: dict.insert(builder.steps, step_name, config))
@@ -149,9 +156,9 @@ pub fn add_step_with_hooks_and_middleware(
 
 /// Add global middleware that applies to all steps
 pub fn add_global_middleware(
-  builder: FlowBuilder(step_type, session, error),
-  middleware: StepMiddleware(step_type, session, error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  middleware: StepMiddleware(step_type, session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(
     ..builder,
     global_middlewares: list.append(builder.global_middlewares, [middleware]),
@@ -160,12 +167,12 @@ pub fn add_global_middleware(
 
 /// Add conditional transition
 pub fn add_conditional(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   from: step_type,
   condition: fn(types.FlowInstance) -> Bool,
   true on_true: step_type,
   false on_false: step_type,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let from_str = builder.step_to_string(from)
   let conditional =
     ConditionalTransition(
@@ -181,11 +188,11 @@ pub fn add_conditional(
 
 /// Add multi-way conditional
 pub fn add_multi_conditional(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   from: step_type,
   conditions: List(#(fn(types.FlowInstance) -> Bool, step_type)),
   default: step_type,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let from_str = builder.step_to_string(from)
   let conditional = ConditionalTransition(from: from_str, conditions:, default:)
   FlowBuilder(
@@ -196,11 +203,11 @@ pub fn add_multi_conditional(
 
 /// Add parallel step execution (simplified API).
 pub fn parallel(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   from from: step_type,
   steps steps: List(step_type),
   join join: step_type,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   add_parallel_steps(builder, from, steps, join)
 }
 
@@ -208,11 +215,11 @@ pub fn parallel(
 ///
 /// @deprecated Use `parallel()` instead for cleaner API.
 pub fn add_parallel_steps(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   trigger_step: step_type,
   parallel_steps: List(step_type),
   join_at: step_type,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let trigger_str = builder.step_to_string(trigger_step)
   let config =
     ParallelConfig(
@@ -228,14 +235,14 @@ pub fn add_parallel_steps(
 
 /// Add sub-flow
 pub fn add_subflow(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   trigger_step: step_type,
-  subflow subflow: Flow(Dynamic, session, error),
+  subflow subflow: Flow(Dynamic, session, error, dependencies),
   return_to return_to: step_type,
   map_args map_args: fn(types.FlowInstance) -> Dict(String, String),
   map_result map_result: fn(Dict(String, String), types.FlowInstance) ->
     types.FlowInstance,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let trigger_str = builder.step_to_string(trigger_step)
   let config =
     SubflowConfig(
@@ -250,7 +257,7 @@ pub fn add_subflow(
 
 /// Add an inline subflow defined within the parent flow
 pub fn with_inline_subflow(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   name name: String,
   trigger trigger: step_type,
   return_to return_to: step_type,
@@ -258,11 +265,11 @@ pub fn with_inline_subflow(
   steps steps: List(
     #(
       String,
-      fn(Context(session, error), types.FlowInstance) ->
-        StepResult(InlineStep, session, error),
+      fn(Context(session, error, dependencies), types.FlowInstance) ->
+        StepResult(InlineStep, session, error, dependencies),
     ),
   ),
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let inline_flow_name = builder.flow_name <> "::" <> name
   let inline_storage = builder.storage
 
@@ -281,7 +288,8 @@ pub fn with_inline_subflow(
     })
 
   let inline_flow = build(inline_builder, initial: InlineStep(initial))
-  let coerced_flow: Flow(Dynamic, session, error) = unsafe_coerce(inline_flow)
+  let coerced_flow: Flow(Dynamic, session, error, dependencies) =
+    unsafe_coerce(inline_flow)
 
   add_subflow(
     builder,
@@ -303,7 +311,7 @@ pub fn with_inline_subflow(
 
 /// Add an inline subflow with custom argument and result mapping
 pub fn with_inline_subflow_mapped(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   name name: String,
   trigger trigger: step_type,
   return_to return_to: step_type,
@@ -311,14 +319,14 @@ pub fn with_inline_subflow_mapped(
   steps steps: List(
     #(
       String,
-      fn(Context(session, error), types.FlowInstance) ->
-        StepResult(InlineStep, session, error),
+      fn(Context(session, error, dependencies), types.FlowInstance) ->
+        StepResult(InlineStep, session, error, dependencies),
     ),
   ),
   map_args map_args: fn(types.FlowInstance) -> Dict(String, String),
   map_result map_result: fn(Dict(String, String), types.FlowInstance) ->
     types.FlowInstance,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   let inline_flow_name = builder.flow_name <> "::" <> name
   let inline_storage = builder.storage
 
@@ -337,83 +345,87 @@ pub fn with_inline_subflow_mapped(
     })
 
   let inline_flow = build(inline_builder, initial: InlineStep(initial))
-  let coerced_flow: Flow(Dynamic, session, error) = unsafe_coerce(inline_flow)
+  let coerced_flow: Flow(Dynamic, session, error, dependencies) =
+    unsafe_coerce(inline_flow)
 
   add_subflow(builder, trigger, coerced_flow, return_to, map_args, map_result)
 }
 
 /// Navigate to next inline step by name
 pub fn inline_next(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   instance: types.FlowInstance,
   step_name step_name: String,
-) -> StepResult(InlineStep, session, error) {
+) -> StepResult(InlineStep, session, error, dependencies) {
   Ok(#(ctx, types.Next(InlineStep(step_name)), instance))
 }
 
 /// Set completion handler
 pub fn on_complete(
-  builder: FlowBuilder(step_type, session, error),
-  handler: fn(Context(session, error), types.FlowInstance) ->
-    Result(Context(session, error), error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  handler: fn(Context(session, error, dependencies), types.FlowInstance) ->
+    Result(Context(session, error, dependencies), error),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_complete: Some(handler))
 }
 
 /// Set error handler
 pub fn on_error(
-  builder: FlowBuilder(step_type, session, error),
-  handler: fn(Context(session, error), types.FlowInstance, Option(error)) ->
-    Result(Context(session, error), error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  handler: fn(
+    Context(session, error, dependencies),
+    types.FlowInstance,
+    Option(error),
+  ) -> Result(Context(session, error, dependencies), error),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_error: Some(handler))
 }
 
 /// Set flow enter hook
 pub fn set_on_flow_enter(
-  builder: FlowBuilder(step_type, session, error),
-  hook: FlowEnterHook(session, error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  hook: FlowEnterHook(session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_flow_enter: Some(hook))
 }
 
 /// Set flow leave hook
 pub fn set_on_flow_leave(
-  builder: FlowBuilder(step_type, session, error),
-  hook: FlowLeaveHook(session, error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  hook: FlowLeaveHook(session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_flow_leave: Some(hook))
 }
 
 /// Set flow-level TTL (maximum lifetime in milliseconds)
 pub fn with_ttl(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   ms ms: Int,
-) -> FlowBuilder(step_type, session, error) {
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, ttl_ms: Some(ms))
 }
 
 /// Set timeout hook (called when flow or wait expires via lazy check)
 pub fn on_timeout(
-  builder: FlowBuilder(step_type, session, error),
-  handler: types.FlowExitHook(session, error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  handler: types.FlowExitHook(session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_timeout: Some(handler))
 }
 
 /// Set flow exit hook
 pub fn set_on_flow_exit(
-  builder: FlowBuilder(step_type, session, error),
-  hook: FlowExitHook(session, error),
-) -> FlowBuilder(step_type, session, error) {
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  hook: FlowExitHook(session, error, dependencies),
+) -> FlowBuilder(step_type, session, error, dependencies) {
   FlowBuilder(..builder, on_flow_exit: Some(hook))
 }
 
 /// Build the flow
 pub fn build(
-  builder: FlowBuilder(step_type, session, error),
+  builder: FlowBuilder(step_type, session, error, dependencies),
   initial initial_step: step_type,
-) -> Flow(step_type, session, error) {
+) -> Flow(step_type, session, error, dependencies) {
   Flow(
     initial_step:,
     name: builder.flow_name,

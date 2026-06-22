@@ -50,9 +50,9 @@ import telega/update
 pub fn test_handler(
   session session: session,
   update update: update.Update,
-  handler handler: fn(bot.Context(session, error), update.Update) ->
-    Result(bot.Context(session, error), error),
-) -> #(Result(bot.Context(session, error), error), Subject(mock.ApiCall)) {
+  handler handler: fn(bot.Context(session, error, Nil), update.Update) ->
+    Result(bot.Context(session, error, Nil), error),
+) -> #(Result(bot.Context(session, error, Nil), error), Subject(mock.ApiCall)) {
   let #(client, calls) = mock.message_client()
   let config = test_context.config_with_client(client)
   let ctx =
@@ -61,6 +61,7 @@ pub fn test_handler(
       update:,
       config:,
       session:,
+      dependencies: Nil,
       chat_subject: process.new_subject(),
       start_time: None,
       log_prefix: None,
@@ -75,7 +76,7 @@ pub fn test_handler(
 ///
 /// Use this to test end-to-end update handling with minimal boilerplate.
 pub fn with_test_bot(
-  router router: router.Router(session, error),
+  router router: router.Router(session, error, Nil),
   session default_session: fn() -> session,
   handler handler: fn(bot.BotSubject, Subject(mock.ApiCall)) -> Nil,
 ) -> Nil {
@@ -86,11 +87,50 @@ pub fn with_test_bot(
   )
 }
 
+/// Like `with_test_bot`, but for a router whose handlers need injected
+/// dependencies (`dependencies`). Starts the bot with the given `dependencies` so handlers can
+/// read services from `ctx.dependencies`.
+pub fn with_test_bot_with_dependencies(
+  router router: router.Router(session, error, dependencies),
+  session default_session: fn() -> session,
+  dependencies dependencies: dependencies,
+  handler handler: fn(bot.BotSubject, Subject(mock.ApiCall)) -> Nil,
+) -> Nil {
+  with_test_bot_advanced_with_dependencies(
+    router_handler: fn(ctx, update) { router.handle(router, ctx, update) },
+    session_settings: test_context.session_settings(default: default_session),
+    dependencies:,
+    handler:,
+  )
+}
+
 /// Lower-level variant with custom router handler and session settings.
 pub fn with_test_bot_advanced(
-  router_handler router_handler: fn(bot.Context(session, error), update.Update) ->
-    Result(bot.Context(session, error), error),
+  router_handler router_handler: fn(
+    bot.Context(session, error, Nil),
+    update.Update,
+  ) -> Result(bot.Context(session, error, Nil), error),
   session_settings session_settings: bot.SessionSettings(session, error),
+  handler handler: fn(bot.BotSubject, Subject(mock.ApiCall)) -> Nil,
+) -> Nil {
+  with_test_bot_advanced_with_dependencies(
+    router_handler:,
+    session_settings:,
+    dependencies: Nil,
+    handler:,
+  )
+}
+
+/// Lowest-level dependencies-aware bot harness: custom router handler, session settings,
+/// and injected `dependencies`. `with_test_bot` / `with_test_bot_with_dependencies` /
+/// `with_test_bot_advanced` all funnel through here.
+pub fn with_test_bot_advanced_with_dependencies(
+  router_handler router_handler: fn(
+    bot.Context(session, error, dependencies),
+    update.Update,
+  ) -> Result(bot.Context(session, error, dependencies), error),
+  session_settings session_settings: bot.SessionSettings(session, error),
+  dependencies dependencies: dependencies,
   handler handler: fn(bot.BotSubject, Subject(mock.ApiCall)) -> Nil,
 ) -> Nil {
   let #(client, calls) = mock.message_client()
@@ -110,6 +150,7 @@ pub fn with_test_bot_advanced(
       router_handler:,
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
+      dependencies:,
       chat_factory: chat_factory_started.data,
       name: None,
     )

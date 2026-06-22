@@ -10,13 +10,11 @@ import wisp
 import wisp/wisp_mist
 
 import telega
-import telega/api as telega_api
 import telega/bot.{type Context}
 import telega/error as telega_error
 import telega/format as fmt
 import telega/inline_mode
 import telega/keyboard as telega_keyboard
-import telega/model/encoder as telega_model_encoder
 import telega/model/types.{
   type InlineQuery, type PreCheckoutQuery, AnswerCallbackQueryParameters,
 }
@@ -307,21 +305,15 @@ fn start_command_handler(ctx: BotContext, _command) {
   Ok(ctx)
 }
 
-const commands = [
-  #("/lang", "Shows custom keyboard with languages"),
-  #("/lang_inline", "Change language inline"),
-  #("/donate", "Support the bot with Telegram Stars"),
-]
-
 pub type BotContext =
-  Context(LanguageBotSession, BotError)
+  Context(LanguageBotSession, BotError, Nil)
 
 pub type BotError {
   TelegaBotError(telega_error.TelegaError)
   TaskleError(taskle.Error)
 }
 
-pub fn build_router() -> router.Router(LanguageBotSession, BotError) {
+pub fn build_router() -> router.Router(LanguageBotSession, BotError, Nil) {
   router.new("keyboard_bot")
   // Per-user flood control: at most 5 updates in 3 seconds,
   // excess updates are dropped silently.
@@ -331,9 +323,21 @@ pub fn build_router() -> router.Router(LanguageBotSession, BotError) {
     }),
   )
   |> router.on_command("start", start_command_handler)
-  |> router.on_command("lang", change_languages_keyboard)
-  |> router.on_command("lang_inline", handle_inline_change_language)
-  |> router.on_command("donate", donate_command_handler)
+  |> router.on_command_with_description(
+    "lang",
+    "Shows custom keyboard with languages",
+    change_languages_keyboard,
+  )
+  |> router.on_command_with_description(
+    "lang_inline",
+    "Change language inline",
+    handle_inline_change_language,
+  )
+  |> router.on_command_with_description(
+    "donate",
+    "Support the bot with Telegram Stars",
+    donate_command_handler,
+  )
   |> router.on_inline_query(handle_inline_query)
   |> router.on_pre_checkout_query(handle_pre_checkout_query)
 }
@@ -345,13 +349,6 @@ fn build_bot() {
   let assert Ok(secret_token) = envoy.get("BOT_SECRET_TOKEN")
 
   let assert Ok(client) = telega_httpc.new_with_queue(token)
-  let assert Ok(_) =
-    telega_api.set_my_commands(
-      client,
-      telega_model_encoder.bot_commands_from(commands),
-      None,
-    )
-
   let router = build_router()
 
   telega.new(
@@ -363,6 +360,10 @@ fn build_bot() {
   |> telega.with_router(router)
   |> telega.set_drop_pending_updates(True)
   |> session.attach()
+  // Publish the router's commands to the Telegram menu on start, and request
+  // only the update types the router actually handles.
+  |> telega.with_auto_commands()
+  |> telega.with_auto_allowed_updates()
   |> telega.init()
 }
 

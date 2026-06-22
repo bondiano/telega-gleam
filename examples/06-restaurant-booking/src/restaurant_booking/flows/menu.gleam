@@ -12,6 +12,7 @@ import telega/keyboard
 import telega/menu_builder
 import telega/reply
 
+import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 import restaurant_booking/util
 
@@ -51,16 +52,14 @@ fn string_to_step(name: String) -> Result(MenuStep, Nil) {
 
 pub fn create_menu_flow(
   db: sqlight.Connection,
-) -> types.Flow(MenuStep, Nil, String) {
+) -> types.Flow(MenuStep, Nil, String, Dependencies) {
+  // `db` builds the flow's persistence backend at init. The menu steps use mock
+  // data and don't query the db, so they take no db at all.
   let storage = util.create_database_storage(db)
 
   builder.new("menu", storage, step_to_string, string_to_step)
-  |> builder.add_step(ShowCategories, fn(ctx, inst) {
-    show_categories_step(db, ctx, inst)
-  })
-  |> builder.add_step(ShowItems, fn(ctx, inst) {
-    show_items_step(db, ctx, inst)
-  })
+  |> builder.add_step(ShowCategories, show_categories_step)
+  |> builder.add_step(ShowItems, show_items_step)
   |> builder.on_error(fn(ctx, _, error) {
     let error_msg = option.unwrap(error, "Unknown error")
     util.log_error("Menu flow error: " <> error_msg)
@@ -75,10 +74,9 @@ pub fn create_menu_flow(
 }
 
 fn show_categories_step(
-  _db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(MenuStep, Nil, String) {
+) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
   let categories = get_menu_categories()
 
   let menu =
@@ -121,10 +119,9 @@ fn show_categories_step(
 
 /// Show items in selected category
 fn show_items_step(
-  _db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(MenuStep, Nil, String) {
+) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
   // Get category from flow data
   case instance.get_data(instance, "selected_category") {
     Some(category) -> {
@@ -315,10 +312,10 @@ fn get_menu_items(category: String) -> List(MenuItem) {
 
 /// Handle menu navigation callbacks
 pub fn handle_menu_callback(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
   callback_data: String,
-) -> types.StepResult(MenuStep, Nil, String) {
+) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
   case string.starts_with(callback_data, "category:") {
     True -> {
       let category = string.drop_start(callback_data, 9)

@@ -47,6 +47,7 @@ pub fn bot_start_test() {
       router_handler:,
       session_settings:,
       catch_handler:,
+      dependencies: Nil,
       chat_factory:,
       name: None,
     )
@@ -76,6 +77,7 @@ pub fn bot_handle_update_test() {
       router_handler:,
       session_settings:,
       catch_handler:,
+      dependencies: Nil,
       chat_factory:,
       name: None,
     )
@@ -114,7 +116,7 @@ pub fn session_settings_test() {
 pub fn context_next_session_test() {
   let assert Ok(_registry) = registry.start("ctx_next_session_test")
 
-  let ctx: bot.Context(TestSession, TestError) =
+  let ctx: bot.Context(TestSession, TestError, Nil) =
     context.context_with(
       session: TestSession(counter: 5),
       update: factory.text_update(text: "Hello"),
@@ -143,7 +145,7 @@ pub fn get_session_test() {
 }
 
 pub fn handler_types_test() {
-  let _test_ctx: bot.Context(TestSession, TestError) =
+  let _test_ctx: bot.Context(TestSession, TestError, Nil) =
     context.context(session: TestSession(counter: 0))
 
   let handle_all = bot.HandleAll(fn(ctx, _update) { Ok(ctx) })
@@ -180,6 +182,7 @@ pub fn get_session_error_fallback_test() {
       router_handler:,
       session_settings:,
       catch_handler:,
+      dependencies: Nil,
       chat_factory:,
       name: None,
     )
@@ -188,7 +191,7 @@ pub fn get_session_error_fallback_test() {
 }
 
 pub fn wait_handler_test() {
-  let ctx: bot.Context(TestSession, TestError) =
+  let ctx: bot.Context(TestSession, TestError, Nil) =
     context.context(session: TestSession(counter: 0))
 
   let handler = bot.HandleText(fn(ctx, _text) { Ok(ctx) })

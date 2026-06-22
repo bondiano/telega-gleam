@@ -115,47 +115,47 @@ pub type FlowStorage(error) {
 }
 
 /// Hook called when entering a flow (from trigger or from parent flow)
-pub type FlowEnterHook(session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    Result(#(Context(session, error), FlowInstance), error)
+pub type FlowEnterHook(session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    Result(#(Context(session, error, dependencies), FlowInstance), error)
 
 /// Hook called when leaving a flow to enter a subflow
-pub type FlowLeaveHook(session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    Result(#(Context(session, error), FlowInstance), error)
+pub type FlowLeaveHook(session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    Result(#(Context(session, error, dependencies), FlowInstance), error)
 
 /// Hook called when completely exiting the flow (cancel or complete)
-pub type FlowExitHook(session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    Result(Context(session, error), error)
+pub type FlowExitHook(session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    Result(Context(session, error, dependencies), error)
 
-pub type StepHandler(step_type, session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    StepResult(step_type, session, error)
+pub type StepHandler(step_type, session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    StepResult(step_type, session, error, dependencies)
 
-pub type StepMiddleware(step_type, session, error) =
+pub type StepMiddleware(step_type, session, error, dependencies) =
   fn(
-    Context(session, error),
+    Context(session, error, dependencies),
     FlowInstance,
-    fn() -> StepResult(step_type, session, error),
-  ) -> StepResult(step_type, session, error)
+    fn() -> StepResult(step_type, session, error, dependencies),
+  ) -> StepResult(step_type, session, error, dependencies)
 
 /// Hook called when entering a step (before the handler)
-pub type StepEnterHook(session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    Result(#(Context(session, error), FlowInstance), error)
+pub type StepEnterHook(session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    Result(#(Context(session, error, dependencies), FlowInstance), error)
 
 /// Hook called when leaving a step (after the handler, before transition)
-pub type StepLeaveHook(session, error) =
-  fn(Context(session, error), FlowInstance) ->
-    Result(#(Context(session, error), FlowInstance), error)
+pub type StepLeaveHook(session, error, dependencies) =
+  fn(Context(session, error, dependencies), FlowInstance) ->
+    Result(#(Context(session, error, dependencies), FlowInstance), error)
 
-pub type StepConfig(step_type, session, error) {
+pub type StepConfig(step_type, session, error, dependencies) {
   StepConfig(
-    handler: StepHandler(step_type, session, error),
-    middlewares: List(StepMiddleware(step_type, session, error)),
-    on_enter: Option(StepEnterHook(session, error)),
-    on_leave: Option(StepLeaveHook(session, error)),
+    handler: StepHandler(step_type, session, error, dependencies),
+    middlewares: List(StepMiddleware(step_type, session, error, dependencies)),
+    on_enter: Option(StepEnterHook(session, error, dependencies)),
+    on_leave: Option(StepLeaveHook(session, error, dependencies)),
   )
 }
 
@@ -176,10 +176,10 @@ pub type ParallelConfig(step_type) {
 }
 
 /// Sub-flow configuration
-pub type SubflowConfig(step_type, session, error) {
+pub type SubflowConfig(step_type, session, error, dependencies) {
   SubflowConfig(
     trigger_step: String,
-    flow: Flow(Dynamic, session, error),
+    flow: Flow(Dynamic, session, error, dependencies),
     return_step: step_type,
     map_args: fn(FlowInstance) -> Dict(String, String),
     map_result: fn(Dict(String, String), FlowInstance) -> FlowInstance,
@@ -187,8 +187,15 @@ pub type SubflowConfig(step_type, session, error) {
 }
 
 /// Result type for flow steps
-pub type StepResult(step_type, session, error) =
-  Result(#(Context(session, error), FlowAction(step_type), FlowInstance), error)
+pub type StepResult(step_type, session, error, dependencies) =
+  Result(
+    #(
+      Context(session, error, dependencies),
+      FlowAction(step_type),
+      FlowInstance,
+    ),
+    error,
+  )
 
 pub type FlowAction(step_type) {
   /// Move to the next step
@@ -224,33 +231,35 @@ pub type FlowAction(step_type) {
 }
 
 /// Built flow ready for execution
-pub type Flow(step_type, session, error) {
+pub type Flow(step_type, session, error, dependencies) {
   Flow(
     name: String,
-    steps: Dict(String, StepConfig(step_type, session, error)),
+    steps: Dict(String, StepConfig(step_type, session, error, dependencies)),
     initial_step: step_type,
     step_to_string: fn(step_type) -> String,
     string_to_step: fn(String) -> Result(step_type, Nil),
     storage: FlowStorage(error),
     on_complete: Option(
-      fn(Context(session, error), FlowInstance) ->
-        Result(Context(session, error), error),
+      fn(Context(session, error, dependencies), FlowInstance) ->
+        Result(Context(session, error, dependencies), error),
     ),
     on_error: Option(
-      fn(Context(session, error), FlowInstance, Option(error)) ->
-        Result(Context(session, error), error),
+      fn(Context(session, error, dependencies), FlowInstance, Option(error)) ->
+        Result(Context(session, error, dependencies), error),
     ),
-    global_middlewares: List(StepMiddleware(step_type, session, error)),
+    global_middlewares: List(
+      StepMiddleware(step_type, session, error, dependencies),
+    ),
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
-    subflows: List(SubflowConfig(step_type, session, error)),
+    subflows: List(SubflowConfig(step_type, session, error, dependencies)),
     // Flow lifecycle hooks
-    on_flow_enter: Option(FlowEnterHook(session, error)),
-    on_flow_leave: Option(FlowLeaveHook(session, error)),
-    on_flow_exit: Option(FlowExitHook(session, error)),
+    on_flow_enter: Option(FlowEnterHook(session, error, dependencies)),
+    on_flow_leave: Option(FlowLeaveHook(session, error, dependencies)),
+    on_flow_exit: Option(FlowExitHook(session, error, dependencies)),
     // Timeout configuration
     ttl_ms: Option(Int),
-    on_timeout: Option(FlowExitHook(session, error)),
+    on_timeout: Option(FlowExitHook(session, error, dependencies)),
   )
 }
 

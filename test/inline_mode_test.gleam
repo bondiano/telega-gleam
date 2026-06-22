@@ -87,7 +87,7 @@ pub fn answer_sends_results_and_options_test() {
       ),
     ])
 
-  let base: Context(String, TelegaError) =
+  let base: Context(String, TelegaError, Nil) =
     test_context.context_with(
       session: "initial",
       update: factory.text_update(text: "hi"),

@@ -2,6 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{Some}
 import gleam/string
+import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 import restaurant_booking/sql
 import sqlight
@@ -12,9 +13,9 @@ import telega/telemetry
 import telega/update
 
 pub fn help(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   _cmd: update.Command,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
   case reply.with_text(ctx, i18n.t(ctx, "help.text", [])) {
     Ok(_) -> Ok(ctx)
     Error(_) -> Error("Failed to send help message")
@@ -22,10 +23,10 @@ pub fn help(
 }
 
 pub fn my_bookings(
-  db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   _cmd: update.Command,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
+  let db = ctx.dependencies.db
   let chat_id = ctx.update.chat_id
   let telegram_id = ctx.update.from_id
 
@@ -51,9 +52,9 @@ fn db_span(query: String, run: fn() -> Result(a, e)) -> Result(a, e) {
 
 fn show_user_bookings(
   db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   user_id: Int,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
   case
     db_span("get_user_bookings", fn() { sql.get_user_bookings(db, user_id) })
   {
@@ -77,8 +78,8 @@ fn show_user_bookings(
 }
 
 fn send_registration_required_message(
-  ctx: Context(Nil, String),
-) -> Result(Context(Nil, String), String) {
+  ctx: Context(Nil, String, Dependencies),
+) -> Result(Context(Nil, String, Dependencies), String) {
   case reply.with_text(ctx, i18n.t(ctx, "common.registration_required", [])) {
     Ok(_) -> Ok(ctx)
     Error(error) ->

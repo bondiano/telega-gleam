@@ -51,7 +51,7 @@ pub type BotError {
   TelegaBotError(telega_error.TelegaError)
 }
 
-pub fn build_router() -> router.Router(Nil, BotError) {
+pub fn build_router() -> router.Router(Nil, BotError, Nil) {
   router.new("commands_bot")
   |> router.on_command_with_description(
     "start",

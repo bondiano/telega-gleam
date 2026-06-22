@@ -22,9 +22,9 @@ import telega/reply
 /// Compose flows sequentially
 pub fn compose_sequential(
   name: String,
-  flows: List(Flow(Dynamic, session, error)),
+  flows: List(Flow(Dynamic, session, error, dependencies)),
   storage: FlowStorage(error),
-) -> Flow(ComposedStep, session, error) {
+) -> Flow(ComposedStep, session, error, dependencies) {
   let flow_builder =
     builder.new(name, storage, composed_step_to_string, string_to_composed_step)
 
@@ -41,9 +41,9 @@ pub fn compose_sequential(
 pub fn compose_conditional(
   name: String,
   condition: fn(FlowInstance) -> String,
-  flows: Dict(String, Flow(Dynamic, session, error)),
+  flows: Dict(String, Flow(Dynamic, session, error, dependencies)),
   storage: FlowStorage(error),
-) -> Flow(ComposedStep, session, error) {
+) -> Flow(ComposedStep, session, error, dependencies) {
   let flow_builder =
     builder.new(name, storage, composed_step_to_string, string_to_composed_step)
 
@@ -74,10 +74,10 @@ pub fn compose_conditional(
 /// Compose flows for parallel execution
 pub fn compose_parallel(
   name: String,
-  flows: List(Flow(Dynamic, session, error)),
+  flows: List(Flow(Dynamic, session, error, dependencies)),
   merge_results: fn(List(Dict(String, String))) -> Dict(String, String),
   storage: FlowStorage(error),
-) -> Flow(ComposedStep, session, error) {
+) -> Flow(ComposedStep, session, error, dependencies) {
   let flow_builder =
     builder.new(name, storage, composed_step_to_string, string_to_composed_step)
 
@@ -132,7 +132,7 @@ pub fn compose_parallel(
 /// Validation middleware
 pub fn validation_middleware(
   validator: fn(FlowInstance) -> Result(Nil, String),
-) -> StepMiddleware(step_type, session, error) {
+) -> StepMiddleware(step_type, session, error, dependencies) {
   fn(ctx, instance, next) {
     case validator(instance) {
       Ok(_) -> next()
@@ -186,11 +186,11 @@ fn string_to_composed_step(s: String) -> Result(ComposedStep, Nil) {
 }
 
 fn create_composed_handler(
-  flow: Flow(Dynamic, session, error),
-  all_flows: List(Flow(Dynamic, session, error)),
+  flow: Flow(Dynamic, session, error, dependencies),
+  all_flows: List(Flow(Dynamic, session, error, dependencies)),
   index: Int,
-) -> StepHandler(ComposedStep, session, error) {
-  fn(ctx: Context(session, error), instance: FlowInstance) {
+) -> StepHandler(ComposedStep, session, error, dependencies) {
+  fn(ctx: Context(session, error, dependencies), instance: FlowInstance) {
     let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
     engine.start_or_resume(flow, ctx, user_id, chat_id, instance.state.data)
     |> result.map(fn(new_ctx) {

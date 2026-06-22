@@ -19,9 +19,9 @@ import telega/testing/factory
 import telega/testing/mock.{type ApiCall, ApiCall}
 
 fn ok_1(
-  ctx: Context(Nil, TelegaError),
+  ctx: Context(Nil, TelegaError, Nil),
   _x: a,
-) -> Result(Context(Nil, TelegaError), TelegaError) {
+) -> Result(Context(Nil, TelegaError, Nil), TelegaError) {
   Ok(ctx)
 }
 
@@ -69,7 +69,7 @@ fn drain(calls: Subject(ApiCall)) -> List(ApiCall) {
 /// `telega.shutdown` sends an abnormal exit to the root supervisor, which is
 /// linked to this test process. Unlink first so tearing the tree down does not
 /// take the test with it.
-fn stop(bot: telega.Telega(Nil, TelegaError)) -> Nil {
+fn stop(bot: telega.Telega(Nil, TelegaError, Nil)) -> Nil {
   process.unlink(telega.get_supervisor_pid(bot))
   telega.shutdown(bot)
 }

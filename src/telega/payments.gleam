@@ -321,7 +321,7 @@ pub fn require_email(invoice invoice: Invoice) -> Invoice {
 /// Send the invoice to the current chat.
 pub fn send(
   invoice invoice: Invoice,
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
 ) -> Result(Message, error.TelegaError) {
   api.send_invoice(
     ctx.config.api_client,
@@ -362,7 +362,7 @@ pub fn send(
 /// Create a shareable payment link for the invoice.
 pub fn create_link(
   invoice invoice: Invoice,
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
 ) -> Result(String, error.TelegaError) {
   api.create_invoice_link(
     ctx.config.api_client,
@@ -396,7 +396,7 @@ pub fn create_link(
 /// Confirm a pre-checkout query: the order can proceed.
 /// Must be sent within 10 seconds after the query arrives.
 pub fn answer_pre_checkout_ok(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   query query: PreCheckoutQuery,
 ) -> Result(Bool, error.TelegaError) {
   api.answer_pre_checkout_query(
@@ -411,7 +411,7 @@ pub fn answer_pre_checkout_ok(
 
 /// Reject a pre-checkout query with a human-readable reason shown to the user.
 pub fn answer_pre_checkout_error(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   query query: PreCheckoutQuery,
   message message: String,
 ) -> Result(Bool, error.TelegaError) {
@@ -436,7 +436,7 @@ pub fn shipping_option(
 
 /// Confirm delivery to the queried address with the available options.
 pub fn answer_shipping_ok(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   query query: ShippingQuery,
   options options: List(ShippingOption),
 ) -> Result(Bool, error.TelegaError) {
@@ -453,7 +453,7 @@ pub fn answer_shipping_ok(
 
 /// Reject a shipping query with a human-readable reason shown to the user.
 pub fn answer_shipping_error(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   query query: ShippingQuery,
   message message: String,
 ) -> Result(Bool, error.TelegaError) {
@@ -480,12 +480,14 @@ pub fn answer_shipping_error(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_successful_payment(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), SuccessfulPayment) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(
+    Context(session, error, dependencies),
+    SuccessfulPayment,
+  ) -> Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let payment_handler =
     bot.HandleMessage(fn(ctx, message) {
       case message.successful_payment {

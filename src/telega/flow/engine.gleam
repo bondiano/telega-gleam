@@ -37,12 +37,12 @@ pub fn emit_flow_event(
 /// Start or resume a flow for a given user/chat
 @internal
 pub fn start_or_resume(
-  flow flow: Flow(step_type, session, error),
-  ctx ctx: Context(session, error),
+  flow flow: Flow(step_type, session, error, dependencies),
+  ctx ctx: Context(session, error, dependencies),
   user_id user_id: Int,
   chat_id chat_id: Int,
   initial_data initial_data: dict.Dict(String, String),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   let flow_id =
     flow.name <> "_" <> int.to_string(chat_id) <> "_" <> int.to_string(user_id)
 
@@ -114,11 +114,11 @@ pub fn start_or_resume(
 /// Resume a flow with a wait token
 @internal
 pub fn resume_with_token(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   token token: String,
   data data: Option(dict.Dict(String, String)),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case find_instance_by_token(flow.storage, token) {
     Ok(Some(instance)) -> resume_with_instance(flow, ctx, instance, data)
     _ -> Ok(ctx)
@@ -128,11 +128,11 @@ pub fn resume_with_token(
 /// Resume a flow with an existing instance
 @internal
 pub fn resume_with_instance(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   data data: Option(dict.Dict(String, String)),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   let updated_instance = case data {
     Some(d) ->
       FlowInstance(
@@ -149,10 +149,10 @@ pub fn resume_with_instance(
 /// Execute the current step of a flow
 @internal
 pub fn execute_step(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   // Check for conditional transitions first
   case check_conditionals(flow, instance) {
     Some(next_step) -> {
@@ -231,11 +231,11 @@ pub fn execute_step(
 /// Handle an error in a flow
 @internal
 pub fn handle_error(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   error: Option(error),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case flow.on_error {
     Some(handler) -> {
       case handler(ctx, instance, error) {
@@ -249,18 +249,20 @@ pub fn handle_error(
 
 /// Extract user and chat IDs from context
 @internal
-pub fn extract_ids_from_context(ctx: Context(session, error)) -> #(Int, Int) {
+pub fn extract_ids_from_context(
+  ctx: Context(session, error, dependencies),
+) -> #(Int, Int) {
   #(ctx.update.from_id, ctx.update.chat_id)
 }
 
 /// Apply middleware chain to handler
 @internal
 pub fn apply_middlewares(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-  handler: fn() -> StepResult(step_type, session, error),
-  middlewares: List(StepMiddleware(step_type, session, error)),
-) -> StepResult(step_type, session, error) {
+  handler: fn() -> StepResult(step_type, session, error, dependencies),
+  middlewares: List(StepMiddleware(step_type, session, error, dependencies)),
+) -> StepResult(step_type, session, error, dependencies) {
   case middlewares {
     [] -> handler()
     [middleware, ..rest] -> {
@@ -279,12 +281,12 @@ pub fn generate_wait_token(instance: FlowInstance) -> String {
 
 /// Process action with leave hook support
 fn process_action_with_leave_hook(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   action: FlowAction(step_type),
   instance: FlowInstance,
-  leave_hook: Option(StepLeaveHook(session, error)),
-) -> Result(Context(session, error), error) {
+  leave_hook: Option(StepLeaveHook(session, error, dependencies)),
+) -> Result(Context(session, error, dependencies), error) {
   case action {
     Wait | WaitCallback | WaitWithTimeout(_) | WaitCallbackWithTimeout(_) ->
       process_action(flow, ctx, action, instance)
@@ -299,11 +301,11 @@ fn process_action_with_leave_hook(
 }
 
 fn process_action(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   action: FlowAction(step_type),
   instance: FlowInstance,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case action {
     Next(step) -> {
       let step_name = flow.step_to_string(step)
@@ -644,10 +646,10 @@ fn process_action(
 }
 
 fn run_enter_hook(
-  hook: Option(StepEnterHook(session, error)),
-  ctx: Context(session, error),
+  hook: Option(StepEnterHook(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(#(Context(session, error), FlowInstance), error) {
+) -> Result(#(Context(session, error, dependencies), FlowInstance), error) {
   case hook {
     Some(enter_fn) -> enter_fn(ctx, instance)
     None -> Ok(#(ctx, instance))
@@ -655,10 +657,10 @@ fn run_enter_hook(
 }
 
 fn run_leave_hook(
-  hook: Option(StepLeaveHook(session, error)),
-  ctx: Context(session, error),
+  hook: Option(StepLeaveHook(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(#(Context(session, error), FlowInstance), error) {
+) -> Result(#(Context(session, error, dependencies), FlowInstance), error) {
   case hook {
     Some(leave_fn) -> leave_fn(ctx, instance)
     None -> Ok(#(ctx, instance))
@@ -666,10 +668,10 @@ fn run_leave_hook(
 }
 
 fn run_flow_enter_hook(
-  hook: Option(FlowEnterHook(session, error)),
-  ctx: Context(session, error),
+  hook: Option(FlowEnterHook(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(#(Context(session, error), FlowInstance), error) {
+) -> Result(#(Context(session, error, dependencies), FlowInstance), error) {
   case hook {
     Some(enter_fn) -> enter_fn(ctx, instance)
     None -> Ok(#(ctx, instance))
@@ -677,10 +679,10 @@ fn run_flow_enter_hook(
 }
 
 fn run_flow_leave_hook(
-  hook: Option(FlowLeaveHook(session, error)),
-  ctx: Context(session, error),
+  hook: Option(FlowLeaveHook(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(#(Context(session, error), FlowInstance), error) {
+) -> Result(#(Context(session, error, dependencies), FlowInstance), error) {
   case hook {
     Some(leave_fn) -> leave_fn(ctx, instance)
     None -> Ok(#(ctx, instance))
@@ -688,10 +690,10 @@ fn run_flow_leave_hook(
 }
 
 fn run_flow_exit_hook(
-  hook: Option(FlowExitHook(session, error)),
-  ctx: Context(session, error),
+  hook: Option(FlowExitHook(session, error, dependencies)),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   case hook {
     Some(exit_fn) -> exit_fn(ctx, instance)
     None -> Ok(ctx)
@@ -699,7 +701,7 @@ fn run_flow_exit_hook(
 }
 
 fn check_conditionals(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   instance: FlowInstance,
 ) -> Option(String) {
   list.fold(flow.conditionals, None, fn(acc, conditional) {
@@ -730,7 +732,7 @@ fn check_conditionals(
 }
 
 fn check_parallel_trigger(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   instance: FlowInstance,
 ) -> Option(ParallelConfig(step_type)) {
   list.find(flow.parallel_configs, fn(config) {
@@ -740,9 +742,9 @@ fn check_parallel_trigger(
 }
 
 fn check_subflow_trigger(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   instance: FlowInstance,
-) -> Option(SubflowConfig(step_type, session, error)) {
+) -> Option(SubflowConfig(step_type, session, error, dependencies)) {
   list.find(flow.subflows, fn(config) {
     config.trigger_step == instance.state.current_step
   })
@@ -750,11 +752,11 @@ fn check_subflow_trigger(
 }
 
 fn start_subflow_execution(
-  parent_flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  parent_flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-  config: SubflowConfig(step_type, session, error),
-) -> Result(Context(session, error), error) {
+  config: SubflowConfig(step_type, session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   case run_flow_leave_hook(parent_flow.on_flow_leave, ctx, instance) {
     Ok(#(ctx_after_leave, instance_after_leave)) -> {
       let return_step = parent_flow.step_to_string(config.return_step)
@@ -801,11 +803,11 @@ fn start_subflow_execution(
 }
 
 fn start_parallel_execution(
-  flow: Flow(step_type, session, error),
-  ctx: Context(session, error),
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   config config: ParallelConfig(step_type),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   let pending_steps = list.map(config.parallel_steps, flow.step_to_string)
   let join_step = flow.step_to_string(config.join_step)
   let parallel_state =
@@ -867,11 +869,11 @@ fn find_instance_by_token(
 /// Execute a step within a subflow context
 @internal
 pub fn execute_subflow_step(
-  flow: Flow(dynamic.Dynamic, session, error),
-  ctx: Context(session, error),
+  flow: Flow(dynamic.Dynamic, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
-  config: SubflowConfig(step_type, session, error),
-) -> Result(Context(session, error), error) {
+  config: SubflowConfig(step_type, session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   case dict.get(flow.steps, instance.state.current_step) {
     Ok(step_config) -> {
       let handler_fn = fn() { step_config.handler(ctx, instance) }
@@ -898,12 +900,12 @@ pub fn execute_subflow_step(
 }
 
 fn process_subflow_action(
-  flow: Flow(dynamic.Dynamic, session, error),
-  ctx: Context(session, error),
+  flow: Flow(dynamic.Dynamic, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   action: FlowAction(dynamic.Dynamic),
   instance: FlowInstance,
-  config: SubflowConfig(step_type, session, error),
-) -> Result(Context(session, error), error) {
+  config: SubflowConfig(step_type, session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   case action {
     Complete(data) | Exit(Some(data)) -> {
       return_to_parent_flow(ctx, instance, data, config)
@@ -1046,11 +1048,11 @@ fn process_subflow_action(
 }
 
 fn return_to_parent_flow(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   result: dict.Dict(String, String),
-  config: SubflowConfig(step_type, session, error),
-) -> Result(Context(session, error), error) {
+  config: SubflowConfig(step_type, session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   case instance.state.flow_stack {
     [frame, ..rest_stack] -> {
       let temp_instance =
@@ -1084,12 +1086,12 @@ fn return_to_parent_flow(
 }
 
 fn handle_subflow_error(
-  flow: Flow(dynamic.Dynamic, session, error),
-  ctx: Context(session, error),
+  flow: Flow(dynamic.Dynamic, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   error: Option(error),
-  _config: SubflowConfig(step_type, session, error),
-) -> Result(Context(session, error), error) {
+  _config: SubflowConfig(step_type, session, error, dependencies),
+) -> Result(Context(session, error, dependencies), error) {
   case flow.on_error {
     Some(handler) -> {
       case handler(ctx, instance, error) {

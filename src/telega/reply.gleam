@@ -23,7 +23,7 @@ import telega/model/types.{
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_text(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   text text: String,
 ) -> Result(Message, error.TelegaError) {
   api.send_message(
@@ -50,7 +50,7 @@ pub fn with_text(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_markup(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   text text: String,
   markup reply_markup: SendMessageReplyMarkupParameters,
 ) -> Result(Message, error.TelegaError) {
@@ -86,7 +86,7 @@ pub fn with_markup(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_formatted(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   formatted formatted: FormattedText,
 ) -> Result(Message, error.TelegaError) {
   let #(text, parse_mode) = format.render(formatted)
@@ -121,7 +121,7 @@ pub fn with_formatted(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_html(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   html html: String,
 ) -> Result(Message, error.TelegaError) {
   api.send_message(
@@ -153,7 +153,7 @@ pub fn with_html(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_markdown(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   markdown markdown: String,
 ) -> Result(Message, error.TelegaError) {
   api.send_message(
@@ -185,7 +185,7 @@ pub fn with_markdown(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_markdown_v2(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   markdown markdown: String,
 ) -> Result(Message, error.TelegaError) {
   api.send_message(
@@ -212,7 +212,7 @@ pub fn with_markdown_v2(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_formatted_markup(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   formatted formatted: FormattedText,
   markup reply_markup: SendMessageReplyMarkupParameters,
 ) -> Result(Message, error.TelegaError) {
@@ -242,7 +242,7 @@ pub fn with_formatted_markup(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#senddice
 pub fn with_dice(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   parameters parameters: Option(SendDiceParameters),
 ) -> Result(Message, error.TelegaError) {
   let parameters =
@@ -266,7 +266,7 @@ pub fn with_dice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   parameters parameters: EditMessageTextParameters,
 ) -> Result(Message, error.TelegaError) {
   api.edit_message_text(ctx.config.api_client, parameters)
@@ -276,7 +276,7 @@ pub fn edit_text(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text_formatted(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   message_id message_id: Int,
   formatted formatted: FormattedText,
 ) -> Result(Message, error.TelegaError) {
@@ -302,7 +302,7 @@ pub fn edit_text_formatted(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#forwardmessage
 pub fn forward(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   parameters parameters: ForwardMessageParameters,
 ) -> Result(Message, error.TelegaError) {
   api.forward_message(ctx.config.api_client, parameters)
@@ -314,7 +314,7 @@ pub fn forward(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#answercallbackquery
 pub fn answer_callback_query(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   parameters parameters: AnswerCallbackQueryParameters,
 ) -> Result(Bool, error.TelegaError) {
   api.answer_callback_query(ctx.config.api_client, parameters)
@@ -322,7 +322,7 @@ pub fn answer_callback_query(
 
 /// Get download link for the file.
 pub fn with_file_link(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   file_id file_id: String,
 ) -> Result(String, error.TelegaError) {
   use file <- result.try(api.get_file(ctx.config.api_client, file_id))
@@ -344,7 +344,7 @@ pub fn with_file_link(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendpoll
 pub fn with_poll(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   question question: String,
   options options: List(String),
 ) -> Result(Message, error.TelegaError) {
@@ -393,7 +393,7 @@ pub fn with_poll(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendinvoice
 pub fn with_invoice(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   title title: String,
   description description: String,
   payload payload: String,
@@ -443,7 +443,7 @@ pub fn with_invoice(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendsticker
 pub fn with_sticker(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   sticker sticker: FileOrString,
 ) -> Result(Message, error.TelegaError) {
   api.send_sticker(
@@ -486,7 +486,7 @@ pub fn with_sticker(
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
 pub fn with_media_group(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   media media: List(InputMedia),
 ) -> Result(List(Message), error.TelegaError) {
   api.send_media_group(

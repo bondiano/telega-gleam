@@ -285,7 +285,7 @@ pub fn results(builder builder: InlineQueryAnswer) -> List(InlineQueryResult) {
 /// No more than 50 results per query are allowed.
 pub fn answer(
   builder builder: InlineQueryAnswer,
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   query_id query_id: String,
 ) -> Result(Bool, error.TelegaError) {
   api.answer_inline_query(

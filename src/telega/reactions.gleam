@@ -144,7 +144,7 @@ pub const ok: ReactionType = ReactionTypeEmojiReactionType(
 /// reactions.react(ctx, reactions.thumbs_up)
 /// ```
 pub fn react(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   reaction reaction: ReactionType,
 ) -> Result(Bool, error.TelegaError) {
   case get_message_id(ctx.update) {
@@ -162,7 +162,7 @@ pub fn react(
 /// reactions.react_emoji(ctx, "👍")
 /// ```
 pub fn react_emoji(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   emoji_str emoji_str: String,
 ) -> Result(Bool, error.TelegaError) {
   react(ctx, emoji(emoji_str))
@@ -175,7 +175,7 @@ pub fn react_emoji(
 /// reactions.react_many(ctx, [reactions.thumbs_up, reactions.heart])
 /// ```
 pub fn react_many(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   reactions reactions: List(ReactionType),
 ) -> Result(Bool, error.TelegaError) {
   case get_message_id(ctx.update) {
@@ -193,7 +193,7 @@ pub fn react_many(
 /// reactions.react_big(ctx, reactions.party)
 /// ```
 pub fn react_big(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   reaction reaction: ReactionType,
 ) -> Result(Bool, error.TelegaError) {
   case get_message_id(ctx.update) {
@@ -217,7 +217,7 @@ pub fn react_big(
 /// reactions.clear_reaction(ctx)
 /// ```
 pub fn clear_reaction(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
 ) -> Result(Bool, error.TelegaError) {
   case get_message_id(ctx.update) {
     Some(message_id) ->
@@ -234,7 +234,7 @@ pub fn clear_reaction(
 /// reactions.react_to_message(ctx, message_id: 123, reaction: reactions.heart)
 /// ```
 pub fn react_to_message(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   message_id message_id: Int,
   reaction reaction: ReactionType,
 ) -> Result(Bool, error.TelegaError) {
@@ -248,7 +248,7 @@ pub fn react_to_message(
 /// reactions.react_to_chat_message(ctx, chat_id: -100123, message_id: 456, reaction: reactions.fire)
 /// ```
 pub fn react_to_chat_message(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   chat_id chat_id: Int,
   message_id message_id: Int,
   reaction reaction: ReactionType,
@@ -478,7 +478,7 @@ pub fn matches_emoji(reaction: ReactionType, emoji_str: String) -> Bool {
 // ============================================
 
 fn set_reaction(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   chat_id: Int,
   message_id: Int,
   reaction: Option(List(ReactionType)),

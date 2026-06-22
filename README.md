@@ -115,6 +115,28 @@ telega.shutdown(bot)
 
 Sends an OTP `shutdown` signal to the root supervisor, which stops children in reverse start order (polling → bot → chat factory).
 
+## Dependency injection
+
+Handlers reach shared services — a database pool, an HTTP client, an i18n catalog — through the typed, non-persisted `dependencies` slot on `Context`. It is set once at init and is never serialized, unlike `session` (which holds per-user state):
+
+```gleam
+pub type Dependencies {
+  Dependencies(db: Connection, catalog: Catalog)
+}
+
+telega.new_for_polling_with_dependencies(api_client: client, dependencies: Dependencies(db:, catalog:))
+|> telega.with_router(router)
+|> telega.init_for_polling()
+
+// in any handler / flow step / middleware:
+fn my_bookings(ctx: Context(Nil, String, Dependencies), _cmd) {
+  let bookings = db.list_bookings(ctx.dependencies.db, ctx.update.from_id)
+  reply.with_text(ctx, format_bookings(bookings))
+}
+```
+
+Bots that need no services pay nothing: `dependencies` defaults to `Nil`. See the [Dependency injection guide](https://hexdocs.pm/telega/docs/dependency-injection.html).
+
 ## Testing
 
 Telega ships with a testing toolkit under `telega/testing/` — mock clients, data factories, and a declarative conversation DSL. No real Telegram API calls needed.

@@ -18,12 +18,12 @@ fn make_router(limit limit: Int, window_ms window_ms: Int) {
     router.with_rate_limit(
       limit:,
       window_ms:,
-      on_limit: fn(ctx: Context(String, TelegaError)) {
+      on_limit: fn(ctx: Context(String, TelegaError, Nil)) {
         Ok(Context(..ctx, session: "limited"))
       },
     ),
   )
-  |> router.on_any_text(fn(ctx: Context(String, TelegaError), _text) {
+  |> router.on_any_text(fn(ctx: Context(String, TelegaError, Nil), _text) {
     Ok(Context(..ctx, session: "handled"))
   })
 }
@@ -36,7 +36,7 @@ fn handle_text_from(r, from_id from_id: Int, chat_id chat_id: Int) -> String {
     upd,
   )
   |> should.be_ok()
-  |> fn(ctx: Context(String, TelegaError)) { ctx.session }
+  |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
 }
 
 pub fn rate_limit_blocks_after_limit_test() {
@@ -89,17 +89,17 @@ pub fn rate_limit_invokes_handler_exactly_once_test() {
       router.with_rate_limit(
         limit: 10,
         window_ms: 60_000,
-        on_limit: fn(ctx: Context(String, TelegaError)) { Ok(ctx) },
+        on_limit: fn(ctx: Context(String, TelegaError, Nil)) { Ok(ctx) },
       ),
     )
-    |> router.on_any_text(fn(ctx: Context(String, TelegaError), _text) {
+    |> router.on_any_text(fn(ctx: Context(String, TelegaError, Nil), _text) {
       Ok(Context(..ctx, session: ctx.session <> "+"))
     })
 
   let upd = factory.text_update_with(text: "hi", from_id: 7, chat_id: 7)
   router.handle(r, test_context.context_with(session: "", update: upd), upd)
   |> should.be_ok()
-  |> fn(ctx: Context(String, TelegaError)) { ctx.session }
+  |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
   |> should.equal("+")
 }
 

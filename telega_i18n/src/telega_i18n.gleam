@@ -192,10 +192,10 @@ pub fn locales(catalog: Catalog) -> List(String) {
 /// |> telega.init_for_polling()
 /// ```
 pub fn with_command_translations(
-  builder: telega.TelegaBuilder(session, error),
+  builder: telega.TelegaBuilder(session, error, dependencies),
   catalog catalog: Catalog,
   prefix prefix: String,
-) -> telega.TelegaBuilder(session, error) {
+) -> telega.TelegaBuilder(session, error, dependencies) {
   telega.with_command_translations(
     builder,
     locales: locales(catalog),
@@ -491,7 +491,7 @@ fn state_key() -> Atom {
 /// `{placeholder}` values from `args`. Requires the [`middleware`](#middleware)
 /// (or a manual [`enter`](#enter)); otherwise returns the key unchanged.
 pub fn t(
-  ctx _ctx: Context(session, error),
+  ctx _ctx: Context(session, error, dependencies),
   key key: String,
   args args: List(#(String, String)),
 ) -> String {
@@ -500,7 +500,7 @@ pub fn t(
 
 /// Pluralizing variant of [`t`](#t). See [`translate_count`](#translate_count).
 pub fn tn(
-  ctx _ctx: Context(session, error),
+  ctx _ctx: Context(session, error, dependencies),
   key key: String,
   count count: Int,
   args args: List(#(String, String)),
@@ -535,9 +535,9 @@ pub fn translate_current(
 pub fn middleware(
   catalog catalog: Catalog,
   from from: fn(session) -> Option(String),
-) -> Middleware(session, error) {
+) -> Middleware(session, error, dependencies) {
   fn(handler) {
-    fn(ctx: Context(session, error), update: Update) {
+    fn(ctx: Context(session, error, dependencies), update: Update) {
       let session_locale = from(ctx.session)
       let update_locale = user_language_code(update.raw(ctx.update))
       let locale = resolve_locale(catalog, session_locale, update_locale)

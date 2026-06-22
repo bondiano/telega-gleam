@@ -40,7 +40,7 @@ pub const default_max_body_limit = 4_000_000
 ///
 /// fn handle_request(
 ///   req: Request(Connection),
-///   bot: Telega(session, error),
+///   bot: Telega(session, error, dependencies),
 /// ) -> Response(ResponseData) {
 ///   use <- telega_mist.handle_bot(telega: bot, req:)
 ///
@@ -49,7 +49,7 @@ pub const default_max_body_limit = 4_000_000
 /// }
 /// ```
 pub fn handle_bot(
-  telega telega: Telega(session, error),
+  telega telega: Telega(session, error, dependencies),
   req req: Request(Connection),
   next handler: fn() -> Response(ResponseData),
 ) -> Response(ResponseData) {
@@ -63,7 +63,7 @@ pub fn handle_bot(
 
 /// Same as `handle_bot`, but lets you set the maximum request body size in bytes.
 pub fn handle_bot_with_limit(
-  telega telega: Telega(session, error),
+  telega telega: Telega(session, error, dependencies),
   req req: Request(Connection),
   max_body_limit max_body_limit: Int,
   next handler: fn() -> Response(ResponseData),
@@ -107,7 +107,10 @@ fn empty_response(status: Int) -> Response(ResponseData) {
   |> response.set_body(mist.Bytes(bytes_tree.new()))
 }
 
-fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
+fn is_secret_token_valid(
+  telega: Telega(session, error, dependencies),
+  req,
+) -> Bool {
   let secret_header_value =
     request.get_header(req, secret_header)
     |> result.unwrap("")
@@ -116,7 +119,7 @@ fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
 }
 
 fn is_bot_request(
-  telega: Telega(session, error),
+  telega: Telega(session, error, dependencies),
   req: Request(Connection),
 ) -> Bool {
   let path = request.path_segments(req) |> string.join("/")

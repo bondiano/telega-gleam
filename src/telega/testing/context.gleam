@@ -48,36 +48,59 @@ pub fn config_with_client(client: client.TelegramClient) -> config.Config {
 }
 
 /// Creates a `Context` with the given session and default update/config.
-pub fn context(session session: session) -> bot.Context(session, error) {
+///
+/// `dependencies` defaults to `Nil`. To inject mock services, use `context_with_dependencies`
+/// (or `context_with_all`).
+pub fn context(session session: session) -> bot.Context(session, error, Nil) {
   context_with(session:, update: factory.text_update(text: "Hello"))
 }
 
-/// Creates a `Context` with the given session and update.
+/// Creates a `Context` with the given session and update. `dependencies` defaults to `Nil`.
 pub fn context_with(
   session session: session,
   update update: update.Update,
-) -> bot.Context(session, error) {
+) -> bot.Context(session, error, Nil) {
   context_with_all(
     session:,
     update:,
     key: "test_chat:123",
     bot_info: factory.bot_user(),
+    dependencies: Nil,
   )
 }
 
-/// Creates a `Context` with full customization.
+/// Creates a `Context` with the given session and mock dependencies (services).
+///
+/// Use this to substitute mocked services in handler tests:
+/// `context.context_with_dependencies(session: MySession(..), dependencies: MockDependencies(db:, http:))`.
+pub fn context_with_dependencies(
+  session session: session,
+  dependencies dependencies: dependencies,
+) -> bot.Context(session, error, dependencies) {
+  context_with_all(
+    session:,
+    update: factory.text_update(text: "Hello"),
+    key: "test_chat:123",
+    bot_info: factory.bot_user(),
+    dependencies:,
+  )
+}
+
+/// Creates a `Context` with full customization, including injected `dependencies`.
 pub fn context_with_all(
   session session: session,
   update update: update.Update,
   key key: String,
   bot_info bot_info: types.User,
-) -> bot.Context(session, error) {
+  dependencies dependencies: dependencies,
+) -> bot.Context(session, error, dependencies) {
   let chat_subject = process.new_subject()
   bot.Context(
     key:,
     update:,
     config: config(),
     session:,
+    dependencies:,
     chat_subject:,
     start_time: None,
     log_prefix: None,
@@ -109,6 +132,6 @@ pub fn session_settings_with(
 }
 
 /// Creates a no-op catch handler.
-pub fn catch_handler() -> bot.CatchHandler(session, error) {
+pub fn catch_handler() -> bot.CatchHandler(session, error, dependencies) {
   fn(_ctx, _error) { Ok(Nil) }
 }

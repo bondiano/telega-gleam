@@ -27,7 +27,7 @@ import telega/router.{type Router}
 import telega/telemetry
 import telega/update
 
-pub opaque type Telega(session, error) {
+pub opaque type Telega(session, error, dependencies) {
   Telega(
     config: Config,
     bot_info: User,
@@ -43,12 +43,15 @@ pub opaque type Telega(session, error) {
   )
 }
 
-pub opaque type TelegaBuilder(session, error) {
+pub opaque type TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(
     config: Config,
-    router: Option(Router(session, error)),
+    router: Option(Router(session, error, dependencies)),
     session_settings: Option(SessionSettings(session, error)),
-    catch_handler: Option(bot.CatchHandler(session, error)),
+    catch_handler: Option(bot.CatchHandler(session, error, dependencies)),
+    // Non-persisted services/dependencies injected into every `Context`.
+    // Defaults to `Nil`; set via `with_dependencies`.
+    dependencies: dependencies,
     bot_subject: Option(BotSubject),
     api_client: Option(client.TelegramClient),
     // --- SetWebhook parameters ---
@@ -68,7 +71,7 @@ pub opaque type TelegaBuilder(session, error) {
     chat_init_timeout: Option(Int),
     // --- Lifecycle parameters ---
     on_start: Option(
-      fn(Telega(session, error)) -> Result(Nil, error.TelegaError),
+      fn(Telega(session, error, dependencies)) -> Result(Nil, error.TelegaError),
     ),
     on_shutdown: Option(fn() -> Nil),
     drain_timeout: Option(Int),
@@ -90,14 +93,16 @@ pub opaque type TelegaBuilder(session, error) {
 
 /// Internal function to get bot subject for polling
 @internal
-pub fn get_bot_subject_internal(telega: Telega(session, error)) -> BotSubject {
+pub fn get_bot_subject_internal(
+  telega: Telega(session, error, dependencies),
+) -> BotSubject {
   telega.bot_subject
 }
 
 /// Internal function to get client for polling
 @internal
 pub fn get_client_internal(
-  telega: Telega(session, error),
+  telega: Telega(session, error, dependencies),
 ) -> client.TelegramClient {
   telega.config.api_client
 }
@@ -105,186 +110,309 @@ pub fn get_client_internal(
 /// Check if a path is the webhook path for the bot.
 ///
 /// Useful if you plan to implement own adapter.
-pub fn is_webhook_path(telega: Telega(session, error), path: String) {
+pub fn is_webhook_path(
+  telega: Telega(session, error, dependencies),
+  path: String,
+) {
   telega.config.webhook_path == path
 }
 
 /// Check if a secret token is valid.
 ///
 /// Useful if you plan to implement own adapter.
-pub fn is_secret_token_valid(telega: Telega(session, error), token: String) {
+pub fn is_secret_token_valid(
+  telega: Telega(session, error, dependencies),
+  token: String,
+) {
   telega.config.secret_token == token
 }
 
 /// Helper to get the config for API requests.
-pub fn get_api_config(telega: Telega(session, error)) {
+pub fn get_api_config(telega: Telega(session, error, dependencies)) {
   telega.config.api_client
 }
 
-/// Create a new Telega instance.
+/// Build a builder with every field at its default, given a config and the
+/// injected `dependencies`. Shared by all four constructors so the long default list
+/// lives in exactly one place.
+fn default_builder(
+  config config: Config,
+  dependencies dependencies: dependencies,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(
+    config:,
+    dependencies:,
+    router: None,
+    session_settings: None,
+    catch_handler: None,
+    bot_subject: None,
+    api_client: None,
+    drop_pending_updates: None,
+    max_connections: None,
+    ip_address: None,
+    allowed_updates: None,
+    certificate: None,
+    polling_timeout: None,
+    polling_limit: None,
+    polling_interval: None,
+    polling_on_stop: None,
+    chat_restart_tolerance_intensity: None,
+    chat_restart_tolerance_period: None,
+    chat_init_timeout: None,
+    on_start: None,
+    on_shutdown: None,
+    drain_timeout: None,
+    handle_signals: False,
+    auto_commands: False,
+    command_locales: [],
+    command_translate: None,
+    auto_allowed_updates: False,
+  )
+}
+
+fn webhook_config(
+  api_client: client.TelegramClient,
+  server_url: String,
+  webhook_path: String,
+  secret_token: Option(String),
+) -> Config {
+  config.new(
+    api_client:,
+    url: utils.normalize_url(server_url),
+    webhook_path: utils.normalize_webhook_path(webhook_path),
+    secret_token:,
+  )
+}
+
+fn polling_config(api_client: client.TelegramClient) -> Config {
+  config.new(
+    api_client:,
+    webhook_path: "/webhook",
+    secret_token: None,
+    url: "https://api.telegram.org",
+  )
+}
+
+/// Create a new Telega instance with no injected dependencies (`dependencies` is `Nil`).
 ///
 /// Requires an `api_client` created by an adapter package like `telega_httpc` or `telega_hackney`.
+/// To inject services, prefer `new_with_dependencies` — it fixes the `dependencies` type up front
+/// and avoids the field-reset footgun of `with_dependencies` (see `with_dependencies`).
 pub fn new(
   api_client api_client: client.TelegramClient,
   url server_url: String,
   webhook_path webhook_path: String,
   secret_token secret_token: Option(String),
-) {
-  let url = utils.normalize_url(server_url)
-  let webhook_path = utils.normalize_webhook_path(webhook_path)
-
-  TelegaBuilder(
-    router: None,
-    config: config.new(api_client:, webhook_path:, secret_token:, url:),
-    session_settings: None,
-    catch_handler: None,
-    bot_subject: None,
-    api_client: None,
-    drop_pending_updates: None,
-    max_connections: None,
-    ip_address: None,
-    allowed_updates: None,
-    certificate: None,
-    polling_timeout: None,
-    polling_limit: None,
-    polling_interval: None,
-    polling_on_stop: None,
-    chat_restart_tolerance_intensity: None,
-    chat_restart_tolerance_period: None,
-    chat_init_timeout: None,
-    on_start: None,
-    on_shutdown: None,
-    drain_timeout: None,
-    handle_signals: False,
-    auto_commands: False,
-    command_locales: [],
-    command_translate: None,
-    auto_allowed_updates: False,
+) -> TelegaBuilder(session, error, Nil) {
+  default_builder(
+    config: webhook_config(api_client, server_url, webhook_path, secret_token),
+    dependencies: Nil,
   )
 }
 
-/// Create a new Telega instance optimized for long polling.
+/// Like `new`, but injects `dependencies` (services) at construction.
+///
+/// This is the safest way to use dependency injection: the builder's `dependencies`
+/// type is fixed from the start, so `with_router`/`with_catch_handler`/`on_start`
+/// can be called in any order without being reset. See `with_dependencies` for the
+/// `session` vs `dependencies` distinction.
+///
+/// ```gleam
+/// telega.new_with_dependencies(api_client:, url:, webhook_path:, secret_token:, dependencies: Dependencies(db:, catalog:))
+/// |> telega.with_router(router)
+/// |> telega.init()
+/// ```
+pub fn new_with_dependencies(
+  api_client api_client: client.TelegramClient,
+  url server_url: String,
+  webhook_path webhook_path: String,
+  secret_token secret_token: Option(String),
+  dependencies dependencies: dependencies,
+) -> TelegaBuilder(session, error, dependencies) {
+  default_builder(
+    config: webhook_config(api_client, server_url, webhook_path, secret_token),
+    dependencies:,
+  )
+}
+
+/// Create a new Telega instance optimized for long polling, with no injected
+/// dependencies (`dependencies` is `Nil`).
 ///
 /// Requires an `api_client` created by an adapter package like `telega_httpc` or `telega_hackney`.
 /// This is a convenience function for polling bots that don't need webhook configuration.
-pub fn new_for_polling(api_client api_client: client.TelegramClient) {
-  TelegaBuilder(
-    router: None,
-    config: config.new(
-      api_client:,
-      webhook_path: "/webhook",
-      secret_token: None,
-      url: "https://api.telegram.org",
-    ),
-    session_settings: None,
-    catch_handler: None,
-    bot_subject: None,
-    api_client: None,
-    drop_pending_updates: None,
-    max_connections: None,
-    ip_address: None,
-    allowed_updates: None,
-    certificate: None,
-    polling_timeout: None,
-    polling_limit: None,
-    polling_interval: None,
-    polling_on_stop: None,
-    chat_restart_tolerance_intensity: None,
-    chat_restart_tolerance_period: None,
-    chat_init_timeout: None,
-    on_start: None,
-    on_shutdown: None,
-    drain_timeout: None,
-    handle_signals: False,
-    auto_commands: False,
-    command_locales: [],
-    command_translate: None,
-    auto_allowed_updates: False,
-  )
+/// To inject services, prefer `new_for_polling_with_dependencies`.
+pub fn new_for_polling(
+  api_client api_client: client.TelegramClient,
+) -> TelegaBuilder(session, error, Nil) {
+  default_builder(config: polling_config(api_client), dependencies: Nil)
+}
+
+/// Like `new_for_polling`, but injects `dependencies` (services) at construction.
+///
+/// Preferred over `new_for_polling` + `with_dependencies`: the `dependencies` type is fixed up
+/// front, so the builder steps that follow are never reset (see `with_dependencies`).
+///
+/// ```gleam
+/// telega.new_for_polling_with_dependencies(api_client:, dependencies: Dependencies(db:, catalog:))
+/// |> telega.with_router(router)
+/// |> telega.init_for_polling()
+/// ```
+pub fn new_for_polling_with_dependencies(
+  api_client api_client: client.TelegramClient,
+  dependencies dependencies: dependencies,
+) -> TelegaBuilder(session, error, dependencies) {
+  default_builder(config: polling_config(api_client), dependencies:)
 }
 
 /// Set the router for handling updates.
 /// This is the primary way to handle updates - use router.new() to create a router
 /// and configure it with command handlers, text handlers, middleware, etc.
 pub fn with_router(
-  builder: TelegaBuilder(session, error),
-  router: Router(session, error),
-) -> TelegaBuilder(session, error) {
+  builder: TelegaBuilder(session, error, dependencies),
+  router: Router(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, router: Some(router))
 }
 
 /// Set session settings for the bot.
 pub fn with_session_settings(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   session_settings: SessionSettings(session, error),
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, session_settings: Some(session_settings))
+}
+
+/// Inject typed, non-persisted dependencies (services) available in every
+/// handler via `ctx.dependencies` (or `get_dependencies`).
+///
+/// Use this for things that are not user state and must not be persisted —
+/// a database pool, an http client, an i18n catalog, configuration, etc. The
+/// rule of thumb: `session` is the user's state (persisted), `dependencies` is the
+/// bot's services (set once at init, never persisted).
+///
+/// > ⚠️ **Footgun — silently resets fields.** `with_dependencies` changes the builder's
+/// > `dependencies` type, so it cannot keep the previously-set `router`, `catch_handler`,
+/// > or `on_start` (they are typed against the old `dependencies`). It **resets them to
+/// > their defaults**. If you call it *after* `with_router`, your router is
+/// > silently dropped and the bot runs with no routes — and there is no compile
+/// > error, only a dead bot at runtime. Either call `with_dependencies` *first*, or —
+/// > better — skip it entirely and inject at construction with
+/// > `new_for_polling_with_dependencies` / `new_with_dependencies`, which fix the `dependencies` type up
+/// > front and have no reset behaviour.
+///
+/// ```gleam
+/// // Preferred — no reset, any order:
+/// telega.new_for_polling_with_dependencies(api_client:, dependencies: Dependencies(db:, catalog:))
+/// |> telega.with_router(router)
+/// |> telega.init_for_polling()
+///
+/// // With `with_dependencies` — MUST come before with_router/with_catch_handler/on_start:
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_dependencies(Dependencies(db:, catalog:))
+/// |> telega.with_router(router)
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_dependencies(
+  builder builder: TelegaBuilder(session, error, old_dependencies),
+  dependencies dependencies: dependencies,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(
+    config: builder.config,
+    // `dependencies`-typed fields cannot survive the `dependencies` type change, so they are
+    // reset. Call `with_dependencies` before these, or use `new_*_with_dependencies`.
+    router: None,
+    catch_handler: None,
+    on_start: None,
+    dependencies:,
+    session_settings: builder.session_settings,
+    bot_subject: builder.bot_subject,
+    api_client: builder.api_client,
+    drop_pending_updates: builder.drop_pending_updates,
+    max_connections: builder.max_connections,
+    ip_address: builder.ip_address,
+    allowed_updates: builder.allowed_updates,
+    certificate: builder.certificate,
+    polling_timeout: builder.polling_timeout,
+    polling_limit: builder.polling_limit,
+    polling_interval: builder.polling_interval,
+    polling_on_stop: builder.polling_on_stop,
+    chat_restart_tolerance_intensity: builder.chat_restart_tolerance_intensity,
+    chat_restart_tolerance_period: builder.chat_restart_tolerance_period,
+    chat_init_timeout: builder.chat_init_timeout,
+    on_shutdown: builder.on_shutdown,
+    drain_timeout: builder.drain_timeout,
+    handle_signals: builder.handle_signals,
+    auto_commands: builder.auto_commands,
+    command_locales: builder.command_locales,
+    command_translate: builder.command_translate,
+    auto_allowed_updates: builder.auto_allowed_updates,
+  )
 }
 
 /// Set catch handler for system errors (like session persistence failures) and [conversation](/docs/conversation) errors.
 /// This is different from router's catch handler which handles route errors.
 pub fn with_catch_handler(
-  builder: TelegaBuilder(session, error),
-  catch_handler: bot.CatchHandler(session, error),
-) -> TelegaBuilder(session, error) {
+  builder: TelegaBuilder(session, error, dependencies),
+  catch_handler: bot.CatchHandler(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, catch_handler: Some(catch_handler))
 }
 
 /// Set whether to drop pending updates.
 pub fn set_drop_pending_updates(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   drop: Bool,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, drop_pending_updates: Some(drop))
 }
 
 /// Set max connections for webhook.
 pub fn set_max_connections(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   max: Int,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, max_connections: Some(max))
 }
 
 /// Set IP address for webhook.
 pub fn set_ip_address(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   ip: String,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, ip_address: Some(ip))
 }
 
 /// Set allowed updates for webhook.
 pub fn set_allowed_updates(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   updates: List(String),
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, allowed_updates: Some(updates))
 }
 
 /// Set certificate for webhook.
 pub fn set_certificate(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   cert: File,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, certificate: Some(cert))
 }
 
 /// Set a custom API client.
 pub fn set_api_client(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   client: client.TelegramClient,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, api_client: Some(client))
 }
 
 /// Set polling configuration for the supervised polling worker.
 pub fn with_polling_config(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   timeout timeout: Int,
   limit limit: Int,
   poll_interval poll_interval: Int,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(
     ..builder,
     polling_timeout: Some(timeout),
@@ -295,9 +423,9 @@ pub fn with_polling_config(
 
 /// Set a callback for when polling stops due to errors.
 pub fn with_polling_on_stop(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   on_stop on_stop: fn(error.TelegaError) -> Nil,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, polling_on_stop: Some(on_stop))
 }
 
@@ -307,11 +435,11 @@ pub fn with_polling_on_stop(
 /// - `restart_tolerance_period` — period in seconds (default: 10)
 /// - `init_timeout` — chat instance init timeout in ms (default: 10 000)
 pub fn with_chat_config(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   restart_tolerance_intensity intensity: Int,
   restart_tolerance_period period: Int,
   init_timeout timeout: Int,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(
     ..builder,
     chat_restart_tolerance_intensity: Some(intensity),
@@ -336,10 +464,10 @@ pub fn with_chat_config(
 /// |> telega.init_for_polling()
 /// ```
 pub fn with_on_start(
-  builder: TelegaBuilder(session, error),
-  on_start on_start: fn(Telega(session, error)) ->
+  builder: TelegaBuilder(session, error, dependencies),
+  on_start on_start: fn(Telega(session, error, dependencies)) ->
     Result(Nil, error.TelegaError),
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, on_start: Some(on_start))
 }
 
@@ -347,9 +475,9 @@ pub fn with_on_start(
 /// and before the supervision tree is stopped. Use it to release resources
 /// (close pools, flush buffers, deregister from a service discovery, …).
 pub fn with_on_shutdown(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   on_shutdown on_shutdown: fn() -> Nil,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, on_shutdown: Some(on_shutdown))
 }
 
@@ -358,9 +486,9 @@ pub fn with_on_shutdown(
 ///
 /// Defaults to 5000ms.
 pub fn with_drain_timeout(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   timeout timeout: Int,
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, drain_timeout: Some(timeout))
 }
 
@@ -375,8 +503,8 @@ pub fn with_drain_timeout(
 /// Only SIGTERM is handled — BEAM reserves SIGINT for its interactive break
 /// handler, so it cannot be intercepted this way.
 pub fn with_signal_handlers(
-  builder: TelegaBuilder(session, error),
-) -> TelegaBuilder(session, error) {
+  builder: TelegaBuilder(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, handle_signals: True)
 }
 
@@ -397,8 +525,8 @@ pub fn with_signal_handlers(
 /// |> telega.init_for_polling()
 /// ```
 pub fn with_auto_commands(
-  builder: TelegaBuilder(session, error),
-) -> TelegaBuilder(session, error) {
+  builder: TelegaBuilder(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, auto_commands: True)
 }
 
@@ -422,10 +550,10 @@ pub fn with_auto_commands(
 /// |> telega.init_for_polling()
 /// ```
 pub fn with_command_translations(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   locales locales: List(String),
   translate translate: fn(String, String) -> Option(String),
-) -> TelegaBuilder(session, error) {
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(
     ..builder,
     auto_commands: True,
@@ -442,15 +570,15 @@ pub fn with_command_translations(
 /// filtered route — which can match anything — derivation can't narrow safely
 /// and falls back to Telegram's default update set.
 pub fn with_auto_allowed_updates(
-  builder: TelegaBuilder(session, error),
-) -> TelegaBuilder(session, error) {
+  builder: TelegaBuilder(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, auto_allowed_updates: True)
 }
 
 /// Set nil session for the bot.
 pub fn with_nil_session(
-  builder: TelegaBuilder(Nil, error),
-) -> TelegaBuilder(Nil, error) {
+  builder: TelegaBuilder(Nil, error, dependencies),
+) -> TelegaBuilder(Nil, error, dependencies) {
   builder
   |> with_session_settings(
     bot.SessionSettings(
@@ -463,8 +591,8 @@ pub fn with_nil_session(
 
 /// Initialize the bot for long polling with nil session.
 pub fn init_for_polling_nil_session(
-  builder: TelegaBuilder(Nil, error),
-) -> Result(Telega(Nil, error), error.TelegaError) {
+  builder: TelegaBuilder(Nil, error, dependencies),
+) -> Result(Telega(Nil, error, dependencies), error.TelegaError) {
   builder
   |> with_session_settings(
     bot.SessionSettings(
@@ -478,8 +606,8 @@ pub fn init_for_polling_nil_session(
 
 /// Initialize the bot for webhook mode with a supervision tree.
 pub fn init(
-  builder: TelegaBuilder(session, error),
-) -> Result(Telega(session, error), error.TelegaError) {
+  builder: TelegaBuilder(session, error, dependencies),
+) -> Result(Telega(session, error, dependencies), error.TelegaError) {
   let api_client = option.unwrap(builder.api_client, builder.config.api_client)
 
   use is_ok <- result.try(api.set_webhook(
@@ -536,6 +664,7 @@ pub fn init(
         router_handler:,
         session_settings:,
         catch_handler:,
+        dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
         name: Some(bot_name),
       )
@@ -563,8 +692,8 @@ pub fn init(
 /// Initialize the bot for long polling with a supervision tree.
 /// Includes a supervised polling worker that auto-starts.
 pub fn init_for_polling(
-  builder: TelegaBuilder(session, error),
-) -> Result(Telega(session, error), error.TelegaError) {
+  builder: TelegaBuilder(session, error, dependencies),
+) -> Result(Telega(session, error, dependencies), error.TelegaError) {
   let api_client = option.unwrap(builder.api_client, builder.config.api_client)
 
   use bot_info <- result.try(
@@ -623,6 +752,7 @@ pub fn init_for_polling(
         router_handler:,
         session_settings:,
         catch_handler:,
+        dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
         name: Some(bot_name),
       )
@@ -672,7 +802,7 @@ pub fn init_for_polling(
 ///
 /// This function is useful when you want to handle updates in your own way.
 pub fn handle_update(
-  telega: Telega(session, error),
+  telega: Telega(session, error, dependencies),
   raw_update: Update,
 ) -> Bool {
   let update = update.raw_to_update(raw_update)
@@ -680,34 +810,45 @@ pub fn handle_update(
 }
 
 /// Get the bot's information.
-pub fn get_me(telega: Telega(session, error)) -> User {
+pub fn get_me(telega: Telega(session, error, dependencies)) -> User {
   telega.bot_info
 }
 
 /// Get session for the current context.
-pub fn get_session(ctx: Context(session, error)) -> session {
+pub fn get_session(ctx: Context(session, error, dependencies)) -> session {
   ctx.session
+}
+
+/// Get the injected dependencies (services) for the current context.
+///
+/// `dependencies` is set once at bot init via `with_dependencies` and is never persisted.
+/// See the `session` vs `dependencies` distinction in `with_dependencies`.
+pub fn get_dependencies(
+  ctx: Context(session, error, dependencies),
+) -> dependencies {
+  ctx.dependencies
 }
 
 /// Add logging context to the current context.
 pub fn log_context(
-  ctx: Context(session, error),
+  ctx: Context(session, error, dependencies),
   prefix: String,
-  fun: fn(Context(session, error)) -> Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  fun: fn(Context(session, error, dependencies)) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let ctx_with_log = bot.Context(..ctx, log_prefix: Some(prefix))
   fun(ctx_with_log)
 }
 
 /// Context helpers for logging
-pub fn log_info(ctx: Context(session, error), message: String) {
+pub fn log_info(ctx: Context(session, error, dependencies), message: String) {
   case ctx.log_prefix {
     Some(prefix) -> log.info_d(prefix, message)
     None -> log.info(message)
   }
 }
 
-pub fn log_error(ctx: Context(session, error), message: String) {
+pub fn log_error(ctx: Context(session, error, dependencies), message: String) {
   case ctx.log_prefix {
     Some(prefix) -> log.error_d(prefix, message)
     None -> log.error(message)
@@ -719,12 +860,12 @@ pub fn log_error(ctx: Context(session, error), message: String) {
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_any(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue handler: fn(Context(session, error), update.Update) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue handler: fn(Context(session, error, dependencies), update.Update) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     handler: bot.HandleAll(handler:),
@@ -738,13 +879,13 @@ pub fn wait_any(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_command(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   command command: String,
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), update.Command) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), update.Command) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -758,13 +899,13 @@ pub fn wait_command(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_commands(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   commands commands: List(String),
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), update.Command) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), update.Command) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -778,12 +919,12 @@ pub fn wait_commands(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_text(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), String) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), String) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     handler: bot.HandleText(continue),
@@ -797,13 +938,13 @@ pub fn wait_text(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_hears(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   hears hears: bot.Hears,
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), String) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), String) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -817,12 +958,12 @@ pub fn wait_hears(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_message(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), types.Message) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), types.Message) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -836,13 +977,13 @@ pub fn wait_message(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_callback_query(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   filter filter: Option(bot.CallbackQueryFilter),
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), String, String) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), String, String) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let assert Ok(default_re) = regexp.from_string(".*")
   let filter_value =
     option.unwrap(filter, bot.CallbackQueryFilter(re: default_re))
@@ -859,12 +1000,12 @@ pub fn wait_callback_query(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_audio(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), types.Audio) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), types.Audio) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -878,12 +1019,12 @@ pub fn wait_audio(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_video(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), types.Video) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), types.Video) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -897,12 +1038,12 @@ pub fn wait_video(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_voice(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), types.Voice) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), types.Voice) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -916,12 +1057,14 @@ pub fn wait_voice(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_photos(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), List(types.PhotoSize)) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(
+    Context(session, error, dependencies),
+    List(types.PhotoSize),
+  ) -> Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   bot.wait_handler(
     ctx:,
     timeout:,
@@ -954,14 +1097,14 @@ pub fn wait_photos(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_number(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   min min: Option(Int),
   max max: Option(Int),
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), Int) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), Int) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let validation_handler =
     bot.HandleText(fn(ctx, text) {
       case int.parse(text) {
@@ -1013,12 +1156,12 @@ pub fn wait_number(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_email(
-  ctx ctx: Context(session, error),
-  or handle_else: Option(bot.Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), String) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), String) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let email_pattern = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
 
   let validation_handler =
@@ -1058,13 +1201,13 @@ pub fn wait_email(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_choice(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   options options: List(#(String, a)),
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), a) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), a) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   // Create inline keyboard buttons from options
   let buttons =
     options
@@ -1156,13 +1299,13 @@ pub fn wait_choice(
 ///
 /// See [conversation](/docs/conversation)
 pub fn wait_for(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   filter filter: fn(update.Update) -> Bool,
-  or handle_else: Option(bot.Handler(session, error)),
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-  continue continue: fn(Context(session, error), update.Update) ->
-    Result(Context(session, error), error),
-) -> Result(Context(session, error), error) {
+  continue continue: fn(Context(session, error, dependencies), update.Update) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
   let filter_handler =
     bot.HandleAll(fn(ctx, upd) {
       case filter(upd) {
@@ -1177,7 +1320,7 @@ pub fn wait_for(
 /// Start polling with default configuration for a Telega instance.
 /// This is useful when you want to manually start polling outside the supervision tree.
 pub fn start_polling_default(
-  telega: Telega(session, error),
+  telega: Telega(session, error, dependencies),
 ) -> Result(polling.Poller, error.TelegaError) {
   polling.start_polling_default(
     client: telega.config.api_client,
@@ -1197,7 +1340,7 @@ pub fn start_polling_default(
 /// 5. Emits `[telega, shutdown, stop]` with the number of drained updates.
 /// 6. Stops the supervisor, cascading to all children (polling → bot →
 ///    chat_factory).
-pub fn shutdown(telega: Telega(session, error)) -> Nil {
+pub fn shutdown(telega: Telega(session, error, dependencies)) -> Nil {
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
     ["telega", "shutdown", "start"],
@@ -1232,12 +1375,14 @@ pub fn shutdown(telega: Telega(session, error)) -> Nil {
 ///
 /// Webhook adapters should answer `503` when this is `True` so Telegram retries
 /// the update after the deploy instead of it being dropped.
-pub fn is_draining(telega: Telega(session, error)) -> Bool {
+pub fn is_draining(telega: Telega(session, error, dependencies)) -> Bool {
   bot.is_draining(telega.bot_subject)
 }
 
 /// Get the supervisor PID for the running bot instance.
-pub fn get_supervisor_pid(telega: Telega(session, error)) -> process.Pid {
+pub fn get_supervisor_pid(
+  telega: Telega(session, error, dependencies),
+) -> process.Pid {
   telega.supervisor_pid
 }
 
@@ -1246,13 +1391,13 @@ const default_drain_timeout = 5000
 /// Build the `Telega` value, run the `on_start` hook, and install signal
 /// handlers if requested. Shared by `init` and `init_for_polling`.
 fn finalize(
-  builder builder: TelegaBuilder(session, error),
+  builder builder: TelegaBuilder(session, error, dependencies),
   config config: Config,
   bot_info bot_info: User,
   bot_subject bot_subject: BotSubject,
   supervisor_pid supervisor_pid: process.Pid,
   poller poller: Option(process.Subject(polling.PollingMessage)),
-) -> Result(Telega(session, error), error.TelegaError) {
+) -> Result(Telega(session, error, dependencies), error.TelegaError) {
   let telega =
     Telega(
       config:,
@@ -1294,7 +1439,7 @@ fn finalize(
 /// `set_allowed_updates`) always wins; otherwise, when `with_auto_allowed_updates`
 /// is enabled, derive the set from the router. `None` means "do not restrict".
 fn resolve_allowed_updates(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
 ) -> Option(List(String)) {
   case builder.allowed_updates {
     Some(_) as manual -> manual
@@ -1314,7 +1459,7 @@ fn resolve_allowed_updates(
 /// `auto_commands` is enabled: a default-language call first, then one
 /// `setMyCommands(language_code:)` per configured locale.
 fn maybe_sync_commands(
-  builder: TelegaBuilder(session, error),
+  builder: TelegaBuilder(session, error, dependencies),
   config: Config,
 ) -> Result(Nil, error.TelegaError) {
   use <- bool.guard(!builder.auto_commands, Ok(Nil))
@@ -1363,7 +1508,9 @@ fn maybe_sync_commands(
   }
 }
 
-fn install_signal_handlers(telega: Telega(session, error)) -> Nil {
+fn install_signal_handlers(
+  telega: Telega(session, error, dependencies),
+) -> Nil {
   signal.install(fn(_signal) {
     shutdown(telega)
     halt(0)
@@ -1381,7 +1528,9 @@ const default_chat_restart_period = 10
 const default_chat_init_timeout = 10_000
 
 // Build the chat factory child spec from builder settings
-fn build_chat_factory_spec(builder: TelegaBuilder(session, error)) {
+fn build_chat_factory_spec(
+  builder: TelegaBuilder(session, error, dependencies),
+) {
   let intensity =
     option.unwrap(
       builder.chat_restart_tolerance_intensity,

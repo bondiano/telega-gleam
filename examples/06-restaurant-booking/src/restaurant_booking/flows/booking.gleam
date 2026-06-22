@@ -12,6 +12,7 @@ import telega/flow/instance
 import telega/flow/types
 import telega/reply
 
+import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 import restaurant_booking/sql
 import restaurant_booking/util
@@ -51,13 +52,13 @@ fn string_to_step(name: String) -> Result(BookingStep, Nil) {
 /// Create simplified booking flow using built-in helpers
 pub fn create_booking_flow(
   db: sqlight.Connection,
-) -> types.Flow(BookingStep, Nil, String) {
+) -> types.Flow(BookingStep, Nil, String, Dependencies) {
+  // `db` builds the flow's persistence backend at init (resolved before any
+  // update). Step handlers read their query db from `ctx.dependencies.db`.
   let storage = util.create_database_storage(db)
 
   builder.new("booking", storage, step_to_string, string_to_step)
-  |> builder.add_step(CheckUser, fn(ctx, inst) {
-    check_user_registration(db, ctx, inst)
-  })
+  |> builder.add_step(CheckUser, check_user_registration)
   |> builder.add_step(
     Welcome,
     // `_with` variants resolve the text per update, so the middleware's locale
@@ -95,9 +96,7 @@ pub fn create_booking_flow(
       Confirm,
     ),
   )
-  |> builder.add_step(Confirm, fn(ctx, inst) {
-    confirm_and_book_step(db, ctx, inst)
-  })
+  |> builder.add_step(Confirm, confirm_and_book_step)
   |> builder.on_error(fn(ctx, _, error) {
     let error_msg = option.unwrap(error, "Unknown error")
     util.log_error("Booking flow error: " <> error_msg)
@@ -118,13 +117,12 @@ pub fn create_booking_flow(
 
 /// Check if user is registered before allowing booking
 fn check_user_registration(
-  db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(BookingStep, Nil, String) {
+) -> types.StepResult(BookingStep, Nil, String, Dependencies) {
   case
     sql.get_user(
-      db,
+      ctx.dependencies.db,
       instance.instance_user_id(instance),
       instance.instance_chat_id(instance),
     )
@@ -145,10 +143,9 @@ fn check_user_registration(
 
 /// Simplified step: Confirm and create booking
 fn confirm_and_book_step(
-  db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(BookingStep, Nil, String) {
+) -> types.StepResult(BookingStep, Nil, String, Dependencies) {
   use booking_data <- action.try_with_message(
     ctx,
     instance,
@@ -170,7 +167,6 @@ fn confirm_and_book_step(
     ctx,
     instance,
     create_booking(
-      db,
       ctx,
       booking_data.booking_date,
       booking_data.booking_time,
@@ -245,14 +241,15 @@ fn extract_booking_data(
 
 /// Create real booking in database
 fn create_booking(
-  db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   date: String,
   time: String,
   guests: Int,
 ) -> Result(Booking, String) {
   use _ <- result.try(validate_date(date))
   use _ <- result.try(validate_time(time))
+
+  let db = ctx.dependencies.db
 
   // Get the user's internal database ID
   let telegram_id = ctx.update.from_id

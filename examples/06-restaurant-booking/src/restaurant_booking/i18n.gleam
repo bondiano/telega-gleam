@@ -34,6 +34,8 @@ import telega/update
 import telega_i18n.{type Catalog}
 import telega_storage_sqlite as sqlite
 
+import restaurant_booking/dependencies.{type Dependencies, Dependencies}
+
 /// Locales the bot ships translations for. Drives the `/language` picker.
 pub const supported_locales = ["en", "ru"]
 
@@ -49,12 +51,10 @@ pub fn catalog() -> Catalog {
 /// Locale-resolving middleware: stored per-user override → Telegram
 /// `language_code` → default. The resolved locale is stored for the handler,
 /// so `t`/`tr`/`tn` only need a key.
-pub fn middleware(
-  catalog: Catalog,
-  db: sqlight.Connection,
-) -> Middleware(Nil, String) {
+pub fn middleware() -> Middleware(Nil, String, Dependencies) {
   fn(handler) {
-    fn(ctx: Context(Nil, String), upd: update.Update) {
+    fn(ctx: Context(Nil, String, Dependencies), upd: update.Update) {
+      let Dependencies(db:, catalog:) = ctx.dependencies
       let stored = get_user_language(db, ctx.update.chat_id, ctx.update.from_id)
       let from_telegram = telega_i18n.user_language_code(update.raw(ctx.update))
       let locale = telega_i18n.resolve_locale(catalog, stored, from_telegram)
@@ -95,7 +95,7 @@ fn language_key(chat_id: Int, from_id: Int) -> String {
 
 /// Translate a key for the active handler's locale.
 pub fn t(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   key: String,
   args: List(#(String, String)),
 ) -> String {
@@ -110,7 +110,7 @@ pub fn tr(key: String, args: List(#(String, String))) -> String {
 
 /// Pluralizing translate for the active handler's locale.
 pub fn tn(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   key: String,
   count: Int,
   args: List(#(String, String)),

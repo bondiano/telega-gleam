@@ -52,7 +52,9 @@ pub fn get_domain(url: String) -> String {
 }
 
 /// Handle case when no URLs found in message
-pub fn handle_no_urls(ctx: bot.Context(session, error.TelegaError)) {
+pub fn handle_no_urls(
+  ctx: bot.Context(session, error.TelegaError, dependencies),
+) {
   let message =
     fmt.build()
     |> fmt.text("🤔 ")
@@ -72,7 +74,7 @@ pub fn handle_no_urls(ctx: bot.Context(session, error.TelegaError)) {
 
 /// Send a single photo from URL
 pub fn send_single_photo(
-  ctx: bot.Context(session, error.TelegaError),
+  ctx: bot.Context(session, error.TelegaError, dependencies),
   url: String,
 ) {
   let _ = reply.with_text(ctx, "📥 Processing image...")
@@ -99,7 +101,7 @@ pub fn send_single_photo(
 }
 
 pub fn send_media_group(
-  ctx: bot.Context(session, error.TelegaError),
+  ctx: bot.Context(session, error.TelegaError, dependencies),
   urls: List(String),
 ) {
   let count = list.length(urls)
@@ -193,7 +195,7 @@ pub fn send_media_group(
 }
 
 pub fn download_largest_photo(
-  ctx: bot.Context(session, error.TelegaError),
+  ctx: bot.Context(session, error.TelegaError, dependencies),
   photos: List(types.PhotoSize),
   index: Int,
 ) -> option.Option(String) {
@@ -222,7 +224,7 @@ pub fn download_largest_photo(
 }
 
 pub fn download_media_group_photos(
-  ctx: bot.Context(session, error.TelegaError),
+  ctx: bot.Context(session, error.TelegaError, dependencies),
   messages: List(types.Message),
 ) -> List(String) {
   messages

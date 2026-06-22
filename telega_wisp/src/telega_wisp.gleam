@@ -27,7 +27,7 @@ const secret_header = "x-telegram-bot-api-secret-token"
 /// }
 /// ```
 pub fn handle_bot(
-  telega telega: Telega(session, error),
+  telega telega: Telega(session, error, dependencies),
   req req: WispRequest,
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
@@ -55,7 +55,10 @@ pub fn handle_bot(
   wisp.ok()
 }
 
-fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
+fn is_secret_token_valid(
+  telega: Telega(session, error, dependencies),
+  req,
+) -> Bool {
   let secret_header_value =
     request.get_header(req, secret_header)
     |> result.unwrap("")
@@ -63,7 +66,10 @@ fn is_secret_token_valid(telega: Telega(session, error), req) -> Bool {
   telega.is_secret_token_valid(telega, secret_header_value)
 }
 
-fn is_bot_request(telega: Telega(session, error), req: WispRequest) -> Bool {
+fn is_bot_request(
+  telega: Telega(session, error, dependencies),
+  req: WispRequest,
+) -> Bool {
   let path = wisp.path_segments(req) |> string.join("/")
   telega.is_webhook_path(telega, path)
 }

@@ -19,8 +19,8 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn ctx_with_client(client) -> Context(String, TelegaError) {
-  let base: Context(String, TelegaError) =
+fn ctx_with_client(client) -> Context(String, TelegaError, Nil) {
+  let base: Context(String, TelegaError, Nil) =
     test_context.context_with(
       session: "initial",
       update: factory.text_update_with(text: "hi", from_id: 123, chat_id: 456),
@@ -250,7 +250,7 @@ fn successful_payment_message() -> types.Message {
 }
 
 pub fn wait_successful_payment_conversation_test() {
-  let buy_handler = fn(ctx: Context(Nil, TelegaError), _cmd) {
+  let buy_handler = fn(ctx: Context(Nil, TelegaError, Nil), _cmd) {
     let assert Ok(_) = reply.with_text(ctx, "Invoice sent")
     use ctx, payment <- payments.wait_successful_payment(
       ctx,

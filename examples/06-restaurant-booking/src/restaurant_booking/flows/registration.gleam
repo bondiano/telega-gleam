@@ -2,6 +2,7 @@ import gleam/bool
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
+import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 import restaurant_booking/sql
 import restaurant_booking/util
@@ -46,30 +47,30 @@ fn string_to_step(name: String) -> Result(RegistrationStep, Nil) {
 
 pub fn create_registration_flow(
   db: sqlight.Connection,
-) -> types.Flow(RegistrationStep, Nil, String) {
+) -> types.Flow(RegistrationStep, Nil, String, Dependencies) {
+  // The flow's *persistence backend* is built from `db` here, at init — it is
+  // resolved before any update arrives, so it cannot come from `ctx.dependencies`. The
+  // step handlers, in contrast, read their db for queries from `ctx.dependencies.db`.
   let storage = util.create_database_storage(db)
 
   builder.new("registration", storage, step_to_string, string_to_step)
-  |> builder.add_step(Welcome, fn(ctx, inst) { welcome_step(ctx, inst, db) })
+  |> builder.add_step(Welcome, welcome_step)
   |> builder.add_step(CollectName, collect_name_step)
   |> builder.add_step(CollectPhone, collect_phone_step)
   |> builder.add_step(CollectEmail, collect_email_step)
-  |> builder.add_step(ConfirmRegistration, fn(ctx, inst) {
-    confirm_registration_step(ctx, inst, db)
-  })
+  |> builder.add_step(ConfirmRegistration, confirm_registration_step)
   |> builder.on_complete(registration_complete)
   |> builder.on_error(registration_error)
   |> builder.build(initial: Welcome)
 }
 
 pub fn welcome_step(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-  db: sqlight.Connection,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   use user_in_db <- result.try(
     sql.get_user(
-      db,
+      ctx.dependencies.db,
       instance.instance_user_id(instance),
       instance.instance_chat_id(instance),
     )
@@ -90,9 +91,9 @@ pub fn welcome_step(
 }
 
 fn collect_name_step(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_step_data(instance, "user_input") {
     Some(name) -> {
       let instance = instance.clear_step_data_key(instance, "user_input")
@@ -120,9 +121,9 @@ fn collect_name_step(
 }
 
 fn ask_for_name(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case reply.with_text(ctx, i18n.t(ctx, "reg.ask_name", [])) {
     Ok(_) -> action.wait(ctx, instance)
     Error(_) -> action.cancel(ctx, instance)
@@ -130,9 +131,9 @@ fn ask_for_name(
 }
 
 fn collect_phone_step(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_step_data(instance, "user_input") {
     Some(phone) -> {
       let instance = instance.clear_step_data_key(instance, "user_input")
@@ -160,9 +161,9 @@ fn collect_phone_step(
 }
 
 fn ask_for_phone(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case reply.with_text(ctx, i18n.t(ctx, "reg.ask_phone", [])) {
     Ok(_) -> action.wait(ctx, instance)
     Error(_) -> action.cancel(ctx, instance)
@@ -170,9 +171,9 @@ fn ask_for_phone(
 }
 
 fn collect_email_step(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_step_data(instance, "user_input") {
     Some(email) -> {
       let instance = instance.clear_step_data_key(instance, "user_input")
@@ -214,16 +215,14 @@ fn collect_email_step(
 }
 
 fn confirm_registration_step(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-  db: sqlight.Connection,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_wait_result(instance) {
     types.BoolCallback(value: True) ->
       save_and_complete(
         ctx,
         instance.clear_step_data_key(instance, "callback_data"),
-        db,
       )
     types.BoolCallback(value: False) ->
       restart_registration(
@@ -236,10 +235,9 @@ fn confirm_registration_step(
 }
 
 fn save_and_complete(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-  db: sqlight.Connection,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case extract_registration_data(instance) {
     Error(e) -> {
       let _ = reply.with_text(ctx, "❌ " <> i18n.t(ctx, e, []))
@@ -248,7 +246,7 @@ fn save_and_complete(
     Ok(reg_data) -> {
       case
         sql.create_or_update_user(
-          db,
+          ctx.dependencies.db,
           instance.instance_user_id(instance),
           instance.instance_chat_id(instance),
           reg_data.name,
@@ -273,17 +271,17 @@ fn save_and_complete(
 }
 
 fn restart_registration(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   let _ = reply.with_text(ctx, i18n.t(ctx, "reg.restart", []))
   action.goto(ctx, instance.clear_step_data(instance), CollectName)
 }
 
 fn handle_text_response(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_step_data(instance, "user_input") {
     None -> ask_for_confirmation(ctx, instance)
     Some(text) -> {
@@ -316,9 +314,9 @@ fn parse_edit_command(
 }
 
 fn ask_for_confirmation(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   instance: types.FlowInstance,
-) -> types.StepResult(RegistrationStep, Nil, String) {
+) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case extract_registration_data(instance) {
     Ok(reg_data) -> {
       let email_display = case reg_data.email {
@@ -356,9 +354,9 @@ fn ask_for_confirmation(
 }
 
 fn registration_complete(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   _instance: types.FlowInstance,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
   let message =
     i18n.t(ctx, "reg.success", [#("restaurant", util.get_restaurant_name())])
 
@@ -369,10 +367,10 @@ fn registration_complete(
 }
 
 fn registration_error(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   _instance: types.FlowInstance,
   _error: option.Option(String),
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
   case reply.with_text(ctx, i18n.t(ctx, "reg.error", [])) {
     Ok(_) -> Ok(ctx)
     Error(_) -> Ok(ctx)

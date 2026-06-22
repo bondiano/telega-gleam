@@ -20,9 +20,9 @@ pub type TestError {
 }
 
 fn handlers_to_router_handler(
-  handlers: List(bot.Handler(TestSession, TestError)),
-) -> fn(bot.Context(TestSession, TestError), update.Update) ->
-  Result(bot.Context(TestSession, TestError), TestError) {
+  handlers: List(bot.Handler(TestSession, TestError, Nil)),
+) -> fn(bot.Context(TestSession, TestError, Nil), update.Update) ->
+  Result(bot.Context(TestSession, TestError, Nil), TestError) {
   fn(ctx, upd) {
     list.find_map(handlers, fn(handler) {
       case handler, upd {
@@ -51,8 +51,8 @@ fn start_test_factory() {
 }
 
 fn build_test_bot(
-  router_handler: fn(bot.Context(TestSession, TestError), update.Update) ->
-    Result(bot.Context(TestSession, TestError), TestError),
+  router_handler: fn(bot.Context(TestSession, TestError, Nil), update.Update) ->
+    Result(bot.Context(TestSession, TestError, Nil), TestError),
   session_settings: bot.SessionSettings(TestSession, TestError),
 ) -> bot.BotSubject {
   let assert Ok(registry) = registry.start("conv_test")
@@ -69,6 +69,7 @@ fn build_test_bot(
       router_handler:,
       session_settings:,
       catch_handler:,
+      dependencies: Nil,
       chat_factory:,
       name: None,
     )

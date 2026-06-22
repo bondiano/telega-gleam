@@ -19,8 +19,8 @@ pub fn text_step(
   prompt: String,
   data_key: String,
   next_step: step_type,
-) -> StepHandler(step_type, session, error) {
-  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+) -> StepHandler(step_type, session, error, dependencies) {
+  fn(ctx: Context(session, error, dependencies), instance_val: FlowInstance) {
     case instance.get_wait_result(instance_val) {
       TextInput(value:) -> {
         let instance_val = instance.store_data(instance_val, data_key, value)
@@ -61,11 +61,12 @@ pub fn text_step(
 /// )
 /// ```
 pub fn text_step_with(
-  prompt prompt: fn(Context(session, error), FlowInstance) -> String,
+  prompt prompt: fn(Context(session, error, dependencies), FlowInstance) ->
+    String,
   data_key data_key: String,
   next_step next_step: step_type,
-) -> StepHandler(step_type, session, error) {
-  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+) -> StepHandler(step_type, session, error, dependencies) {
+  fn(ctx: Context(session, error, dependencies), instance_val: FlowInstance) {
     case instance.get_wait_result(instance_val) {
       TextInput(value:) -> {
         let instance_val = instance.store_data(instance_val, data_key, value)
@@ -85,8 +86,8 @@ pub fn text_step_with(
 pub fn message_step(
   message_fn: fn(FlowInstance) -> String,
   next_step: Option(step_type),
-) -> StepHandler(step_type, session, error) {
-  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+) -> StepHandler(step_type, session, error, dependencies) {
+  fn(ctx: Context(session, error, dependencies), instance_val: FlowInstance) {
     let message = message_fn(instance_val)
     case reply.with_text(ctx, message) {
       Ok(_) -> {
@@ -113,10 +114,11 @@ pub fn message_step(
 /// )
 /// ```
 pub fn message_step_with(
-  message_fn message_fn: fn(Context(session, error), FlowInstance) -> String,
+  message_fn message_fn: fn(Context(session, error, dependencies), FlowInstance) ->
+    String,
   next_step next_step: Option(step_type),
-) -> StepHandler(step_type, session, error) {
-  fn(ctx: Context(session, error), instance_val: FlowInstance) {
+) -> StepHandler(step_type, session, error, dependencies) {
+  fn(ctx: Context(session, error, dependencies), instance_val: FlowInstance) {
     let message = message_fn(ctx, instance_val)
     case reply.with_text(ctx, message) {
       Ok(_) -> {
@@ -132,26 +134,26 @@ pub fn message_step_with(
 
 /// Create a router handler for resuming flows from callback queries
 pub fn create_resume_handler(
-  flow: Flow(step_type, session, error),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+  flow: Flow(step_type, session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   resume_handler(flow)
 }
 
 /// Create a router handler for resuming flows from callback queries with keyboard parsing
 pub fn create_resume_handler_with_keyboard(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   callback_data: keyboard.KeyboardCallbackData(String),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   resume_handler_with_keyboard(flow, callback_data)
 }
 
 /// Create a text handler for resuming flows
 pub fn create_text_handler(
-  flow: Flow(step_type, session, error),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+  flow: Flow(step_type, session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, upd) {
     case upd {
       update.TextUpdate(text:, from_id:, chat_id:, ..) -> {
@@ -174,9 +176,9 @@ pub fn create_text_handler(
 }
 
 fn resume_handler(
-  flow flow: Flow(step_type, session, error),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+  flow flow: Flow(step_type, session, error, dependencies),
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, upd) {
     case upd {
       update.CallbackQueryUpdate(query:, ..) -> {
@@ -198,10 +200,10 @@ fn resume_handler(
 }
 
 fn resume_handler_with_keyboard(
-  flow: Flow(step_type, session, error),
+  flow: Flow(step_type, session, error, dependencies),
   callback_data: keyboard.KeyboardCallbackData(String),
-) -> fn(Context(session, error), update.Update) ->
-  Result(Context(session, error), error) {
+) -> fn(Context(session, error, dependencies), update.Update) ->
+  Result(Context(session, error, dependencies), error) {
   fn(ctx, upd) {
     case upd {
       update.CallbackQueryUpdate(query:, ..) -> {

@@ -7,7 +7,6 @@ import gleam/list
 import gleam/result
 import gleam/string
 
-import sqlight
 import telega/bot.{type Context}
 import telega/keyboard
 import telega/model/types
@@ -15,15 +14,16 @@ import telega/reply
 import telega/update
 import telega_i18n.{type Catalog}
 
+import restaurant_booking/dependencies.{type Dependencies, Dependencies}
 import restaurant_booking/i18n
 
 /// `/language` — show an inline keyboard of the supported languages. Each
 /// language is labeled in its own name (a picker shouldn't depend on the
 /// current locale).
 pub fn language(
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   _cmd: update.Command,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
   let markup = keyboard.to_inline_markup(language_keyboard())
   case
     reply.with_markup(ctx, i18n.t(ctx, "settings.choose_language", []), markup)
@@ -36,12 +36,11 @@ pub fn language(
 /// Callback for `lang:<locale>` buttons: persist the choice, acknowledge the
 /// tap, then confirm in the newly chosen language.
 pub fn set_language(
-  catalog: Catalog,
-  db: sqlight.Connection,
-  ctx: Context(Nil, String),
+  ctx: Context(Nil, String, Dependencies),
   query_id: String,
   data: String,
-) -> Result(Context(Nil, String), String) {
+) -> Result(Context(Nil, String, Dependencies), String) {
+  let Dependencies(db:, catalog:) = ctx.dependencies
   let locale = parse_locale(catalog, data)
 
   use _ <- result.try(i18n.set_user_language(

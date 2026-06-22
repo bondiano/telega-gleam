@@ -31,7 +31,7 @@
 //// All handlers follow this signature:
 ////
 //// ```gleam
-//// fn handler(ctx: Context(session, error), data: Type) -> Result(Context(session, error), error)
+//// fn handler(ctx: Context(session, error, dependencies), data: Type) -> Result(Context(session, error, dependencies), error)
 //// ```
 ////
 //// Always return the updated context — it carries the (potentially modified) session.
@@ -71,19 +71,21 @@ import telega/update.{
 }
 
 /// Stores information about running bot instance
-pub opaque type Bot(session, error) {
+pub opaque type Bot(session, error, dependencies) {
   Bot(
     self: BotSubject,
     config: Config,
     bot_info: User,
-    catch_handler: CatchHandler(session, error),
+    catch_handler: CatchHandler(session, error, dependencies),
     session_settings: SessionSettings(session, error),
+    // Non-persisted services/dependencies shared by every handler.
+    dependencies: dependencies,
     // Store a handler function that encapsulates the router
-    router_handler: RouterHandler(session, error),
-    registry: Registry(ChatInstanceMessage(session, error)),
+    router_handler: RouterHandler(session, error, dependencies),
+    registry: Registry(ChatInstanceMessage(session, error, dependencies)),
     chat_factory: fsup.Supervisor(
-      ChatInstanceArgs(session, error),
-      ChatInstanceSubject(session, error),
+      ChatInstanceArgs(session, error, dependencies),
+      ChatInstanceSubject(session, error, dependencies),
     ),
     // --- Graceful lifecycle / drain ---
     // When `False`, new updates are rejected (replied with `False`) instead of
@@ -102,23 +104,25 @@ pub opaque type Bot(session, error) {
 }
 
 /// Arguments for starting a chat instance via factory supervisor.
-pub type ChatInstanceArgs(session, error) {
+pub type ChatInstanceArgs(session, error, dependencies) {
   ChatInstanceArgs(
     key: String,
     config: Config,
     session_settings: SessionSettings(session, error),
-    catch_handler: CatchHandler(session, error),
-    router_handler: RouterHandler(session, error),
+    catch_handler: CatchHandler(session, error, dependencies),
+    dependencies: dependencies,
+    router_handler: RouterHandler(session, error, dependencies),
     bot_info: User,
-    registry: Registry(ChatInstanceMessage(session, error)),
+    registry: Registry(ChatInstanceMessage(session, error, dependencies)),
     // Subject of the owning `Bot` actor, used to report update completion so
     // the bot can track in-flight work for graceful draining.
     bot_subject: BotSubject,
   )
 }
 
-type RouterHandler(session, error) =
-  fn(Context(session, error), Update) -> Result(Context(session, error), error)
+type RouterHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), Update) ->
+    Result(Context(session, error, dependencies), error)
 
 pub type BotSubject =
   Subject(BotMessage)
@@ -143,19 +147,20 @@ pub opaque type BotMessage {
 /// Handler called when an error occurs in handler
 /// If handler returns `Error`, the bot will be stopped and the error will be logged
 /// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
-pub type CatchHandler(session, error) =
-  fn(Context(session, error), error) -> Result(Nil, error)
+pub type CatchHandler(session, error, dependencies) =
+  fn(Context(session, error, dependencies), error) -> Result(Nil, error)
 
 pub fn start(
-  registry registry: Registry(ChatInstanceMessage(session, error)),
+  registry registry: Registry(ChatInstanceMessage(session, error, dependencies)),
   config config: Config,
   bot_info bot_info: User,
-  router_handler router_handler: RouterHandler(session, error),
+  router_handler router_handler: RouterHandler(session, error, dependencies),
   session_settings session_settings: SessionSettings(session, error),
-  catch_handler catch_handler: CatchHandler(session, error),
+  catch_handler catch_handler: CatchHandler(session, error, dependencies),
+  dependencies dependencies: dependencies,
   chat_factory chat_factory: fsup.Supervisor(
-    ChatInstanceArgs(session, error),
-    ChatInstanceSubject(session, error),
+    ChatInstanceArgs(session, error, dependencies),
+    ChatInstanceSubject(session, error, dependencies),
   ),
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
@@ -167,6 +172,7 @@ pub fn start(
         bot_info:,
         catch_handler:,
         session_settings:,
+        dependencies:,
         router_handler:,
         registry:,
         chat_factory:,
@@ -194,16 +200,16 @@ const bot_init_timeout = 1000
 
 /// Stops waiting for any handler for specific key (chat_id)
 pub fn cancel_conversation(
-  bot bot: Bot(session, error),
+  bot bot: Bot(session, error, dependencies),
   key key: String,
 ) -> Nil {
   actor.send(bot.self, CancelConversationBotMessage(key: key))
 }
 
 fn bot_loop(
-  bot: Bot(session, error),
+  bot: Bot(session, error, dependencies),
   message: BotMessage,
-) -> actor.Next(Bot(session, error), BotMessage) {
+) -> actor.Next(Bot(session, error, dependencies), BotMessage) {
   case message {
     HandleUpdateBotMessage(update:, reply_with:) ->
       case bot.accepting {
@@ -286,7 +292,7 @@ pub fn is_draining(bot_subject bot_subject: BotSubject) -> Bool {
 }
 
 fn handle_update_bot_message(
-  bot bot: Bot(session, error),
+  bot bot: Bot(session, error, dependencies),
   update update,
   reply_with reply_with,
 ) {
@@ -311,6 +317,7 @@ fn handle_update_bot_message(
           config: bot.config,
           session_settings: bot.session_settings,
           catch_handler: bot.catch_handler,
+          dependencies: bot.dependencies,
           router_handler: bot.router_handler,
           bot_info: bot.bot_info,
           registry: bot.registry,
@@ -332,36 +339,37 @@ fn handle_update_bot_message(
 
 // Chat Instance --------------------------------------------------------------------
 
-pub type ChatInstanceSubject(session, error) =
-  Subject(ChatInstanceMessage(session, error))
+pub type ChatInstanceSubject(session, error, dependencies) =
+  Subject(ChatInstanceMessage(session, error, dependencies))
 
-pub opaque type ChatInstanceMessage(session, error) {
+pub opaque type ChatInstanceMessage(session, error, dependencies) {
   HandleNewChatInstanceMessage(update: Update, reply_with: Subject(Bool))
   WaitHandlerChatInstanceMessage(
-    handler: Handler(session, error),
-    handle_else: Option(Handler(session, error)),
+    handler: Handler(session, error, dependencies),
+    handle_else: Option(Handler(session, error, dependencies)),
     timeout: Option(Int),
   )
 }
 
-type Continuation(session, error) {
+type Continuation(session, error, dependencies) {
   Continuation(
-    handler: Handler(session, error),
-    handle_else: Option(Handler(session, error)),
+    handler: Handler(session, error, dependencies),
+    handle_else: Option(Handler(session, error, dependencies)),
     ttl: Option(Timestamp),
   )
 }
 
-type ChatInstance(session, error) {
+type ChatInstance(session, error, dependencies) {
   ChatInstance(
     key: String,
     session: session,
+    dependencies: dependencies,
     config: Config,
     session_settings: SessionSettings(session, error),
-    self: ChatInstanceSubject(session, error),
-    continuation: Option(Continuation(session, error)),
-    router_handler: RouterHandler(session, error),
-    catch_handler: CatchHandler(session, error),
+    self: ChatInstanceSubject(session, error, dependencies),
+    continuation: Option(Continuation(session, error, dependencies)),
+    router_handler: RouterHandler(session, error, dependencies),
+    catch_handler: CatchHandler(session, error, dependencies),
     bot_info: User,
     // Subject of the owning `Bot` actor, notified when an update completes.
     bot_subject: BotSubject,
@@ -373,8 +381,8 @@ const initialisation_timeout = 10
 /// Start a chat instance. Used as the template function for factory_supervisor.
 /// Self-registers in the registry on start (handles both first start and restart after crash).
 pub fn start_chat_instance(
-  args: ChatInstanceArgs(session, error),
-) -> actor.StartResult(ChatInstanceSubject(session, error)) {
+  args: ChatInstanceArgs(session, error, dependencies),
+) -> actor.StartResult(ChatInstanceSubject(session, error, dependencies)) {
   let session = case args.session_settings.get_session(args.key) {
     Ok(Some(session)) -> session
     Ok(None) -> args.session_settings.default_session()
@@ -395,6 +403,7 @@ pub fn start_chat_instance(
         key: args.key,
         config: args.config,
         session:,
+        dependencies: args.dependencies,
         session_settings: args.session_settings,
         catch_handler: args.catch_handler,
         self: subject,
@@ -413,7 +422,10 @@ pub fn start_chat_instance(
   |> actor.start
 }
 
-fn loop_chat_instance(chat: ChatInstance(session, error), message) {
+fn loop_chat_instance(
+  chat: ChatInstance(session, error, dependencies),
+  message,
+) {
   case message {
     HandleNewChatInstanceMessage(update:, reply_with:) ->
       do_handle_new_chat_instance_message(
@@ -437,8 +449,8 @@ fn loop_chat_instance(chat: ChatInstance(session, error), message) {
 }
 
 fn do_handle_new_chat_instance_message(
-  context context: Context(session, error),
-  chat chat: ChatInstance(session, error),
+  context context: Context(session, error, dependencies),
+  chat chat: ChatInstance(session, error, dependencies),
   update update,
   reply_with reply_with,
 ) {
@@ -527,7 +539,10 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
   ]
 }
 
-fn stop_chat_instance(chat: ChatInstance(session, error), reason: String) {
+fn stop_chat_instance(
+  chat: ChatInstance(session, error, dependencies),
+  reason: String,
+) {
   // The update that was being handled is finished (the instance is going away),
   // so release its slot in the bot's in-flight counter before stopping.
   process.send(chat.bot_subject, UpdateHandledBotMessage)
@@ -541,7 +556,7 @@ fn stop_chat_instance(chat: ChatInstance(session, error), reason: String) {
 /// Reply to the update's caller and notify the owning bot that one in-flight
 /// update has finished, so the in-flight counter stays accurate for draining.
 fn ack(
-  chat: ChatInstance(session, error),
+  chat: ChatInstance(session, error, dependencies),
   reply_with: Subject(Bool),
   value: Bool,
 ) -> Nil {
@@ -550,11 +565,11 @@ fn ack(
 }
 
 fn do_handle_continuation(
-  context context: Context(session, error),
-  continuation continuation: Continuation(session, error),
+  context context: Context(session, error, dependencies),
+  continuation continuation: Continuation(session, error, dependencies),
   update update: Update,
   reply_with reply_with: Subject(Bool),
-  chat chat: ChatInstance(session, error),
+  chat chat: ChatInstance(session, error, dependencies),
 ) {
   case
     do_handle_with_telemetry(context:, update:, handler: continuation.handler)
@@ -657,13 +672,17 @@ fn do_handle_continuation(
 // Context ----------------------------------------------------------------------------
 
 /// Context holds information needed for the bot instance and the current update.
-pub type Context(session, error) {
+pub type Context(session, error, dependencies) {
   Context(
     key: String,
     update: Update,
     config: Config,
     session: session,
-    chat_subject: ChatInstanceSubject(session, error),
+    /// Non-persisted services/dependencies injected at bot init (DI container).
+    /// Unlike `session`, `dependencies` is never persisted — it holds things like a db
+    /// pool, http client, or i18n catalog. See `telega.with_dependencies`.
+    dependencies: dependencies,
+    chat_subject: ChatInstanceSubject(session, error, dependencies),
     /// Used to calculate the duration of the conversation in logs
     start_time: Option(Timestamp),
     log_prefix: Option(String),
@@ -672,14 +691,15 @@ pub type Context(session, error) {
 }
 
 fn new_context(
-  chat chat: ChatInstance(session, error),
+  chat chat: ChatInstance(session, error, dependencies),
   update update,
-) -> Context(session, error) {
+) -> Context(session, error, dependencies) {
   Context(
     update:,
     config: chat.config,
     key: chat.key,
     session: chat.session,
+    dependencies: chat.dependencies,
     chat_subject: chat.self,
     start_time: None,
     log_prefix: None,
@@ -703,9 +723,9 @@ pub type SessionSettings(session, error) {
 }
 
 pub fn next_session(
-  ctx ctx: Context(session, error),
+  ctx ctx: Context(session, error, dependencies),
   session session: session,
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   Ok(Context(..ctx, session:))
 }
 
@@ -742,75 +762,75 @@ pub type Hears {
 }
 
 // Handlers used for [conversation API](/docs/conversation)
-pub type Handler(session, error) {
+pub type Handler(session, error, dependencies) {
   /// Handle all messages.
   HandleAll(
-    handler: fn(Context(session, error), Update) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Update) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle a specific command.
   HandleCommand(
     command: String,
-    handler: fn(Context(session, error), Command) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Command) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle multiple commands.
   HandleCommands(
     commands: List(String),
-    handler: fn(Context(session, error), Command) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Command) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle text messages.
   HandleText(
-    handler: fn(Context(session, error), String) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), String) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle text message with a specific substring.
   HandleHears(
     hears: Hears,
-    handler: fn(Context(session, error), String) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), String) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle any message.
   HandleMessage(
-    handler: fn(Context(session, error), Message) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Message) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle voice messages.
   HandleVoice(
-    handler: fn(Context(session, error), Voice) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Voice) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle audio messages.
   HandleAudio(
-    handler: fn(Context(session, error), Audio) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Audio) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle video messages.
   HandleVideo(
-    handler: fn(Context(session, error), Video) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), Video) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle photo messages.
   HandlePhotos(
-    handler: fn(Context(session, error), List(PhotoSize)) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), List(PhotoSize)) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle web app data messages.
   HandleWebAppData(
-    handler: fn(Context(session, error), WebAppData) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), WebAppData) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle callback query. Context, data from callback query and `callback_query_id` are passed to the handler.
   HandleCallbackQuery(
     filter: CallbackQueryFilter,
-    handler: fn(Context(session, error), String, String) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), String, String) ->
+      Result(Context(session, error, dependencies), error),
   )
   /// Handle chat member update (when user joins/leaves a group). The bot must be an administrator in the chat and must explicitly specify "chat_member" in the list of `allowed_updates` to receive these updates.
   HandleChatMember(
-    handler: fn(Context(session, error), ChatMemberUpdated) ->
-      Result(Context(session, error), error),
+    handler: fn(Context(session, error, dependencies), ChatMemberUpdated) ->
+      Result(Context(session, error, dependencies), error),
   )
 }
 
@@ -819,11 +839,11 @@ pub type Handler(session, error) {
 /// `or` - calls if there are any other updates
 /// `timeout` - the conversation will be canceled after this timeout
 pub fn wait_handler(
-  ctx ctx: Context(session, error),
-  handler handler: Handler(session, error),
-  handle_else handle_else: Option(Handler(session, error)),
+  ctx ctx: Context(session, error, dependencies),
+  handler handler: Handler(session, error, dependencies),
+  handle_else handle_else: Option(Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
-) -> Result(Context(session, error), error) {
+) -> Result(Context(session, error, dependencies), error) {
   actor.send(
     ctx.chat_subject,
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
@@ -835,9 +855,9 @@ pub fn wait_handler(
 /// `telega.update` start/stop/exception telemetry span.
 /// A handler that did not match the update (`None`) emits `stop`.
 fn do_handle_with_telemetry(
-  context context: Context(session, error),
+  context context: Context(session, error, dependencies),
   update upd: Update,
-  handler handler: Handler(session, error),
+  handler handler: Handler(session, error, dependencies),
 ) {
   let metadata = update_telemetry_metadata(upd)
   let started_at = telemetry.monotonic_time()

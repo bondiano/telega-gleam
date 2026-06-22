@@ -200,7 +200,7 @@ pub fn expect_api_call(
 /// Runs the conversation test against a router with the given default session factory.
 pub fn run(
   ct: ConversationTest,
-  router: router.Router(session, error),
+  router: router.Router(session, error, Nil),
   default_session: fn() -> session,
 ) -> Nil {
   run_with(
@@ -213,8 +213,8 @@ pub fn run(
 /// Lower-level variant: runs the test with a custom router handler and session settings.
 pub fn run_with(
   ct: ConversationTest,
-  router_handler: fn(bot.Context(session, error), update.Update) ->
-    Result(bot.Context(session, error), error),
+  router_handler: fn(bot.Context(session, error, Nil), update.Update) ->
+    Result(bot.Context(session, error, Nil), error),
   session_settings: bot.SessionSettings(session, error),
 ) -> Nil {
   let #(client, calls) = mock.message_client()
@@ -224,17 +224,38 @@ pub fn run_with(
 /// Runs the test with a custom mock client (e.g. from `mock.routed_client`).
 pub fn run_with_mock(
   ct: ConversationTest,
-  router: router.Router(session, error),
+  router: router.Router(session, error, Nil),
   default_session: fn() -> session,
   client: client.TelegramClient,
   calls: process.Subject(mock.ApiCall),
 ) -> Nil {
-  run_with_client(
+  run_with_mock_with_dependencies(
+    ct,
+    router,
+    default_session,
+    client,
+    calls,
+    Nil,
+  )
+}
+
+/// Like `run_with_mock`, but for a router whose handlers read services from
+/// `ctx.dependencies`. Combines a custom mock client with injected `dependencies`.
+pub fn run_with_mock_with_dependencies(
+  ct: ConversationTest,
+  router: router.Router(session, error, dependencies),
+  default_session: fn() -> session,
+  client: client.TelegramClient,
+  calls: process.Subject(mock.ApiCall),
+  dependencies: dependencies,
+) -> Nil {
+  run_with_client_with_dependencies(
     ct,
     client,
     calls,
     fn(ctx, update) { router.handle(router, ctx, update) },
     test_context.session_settings(default: default_session),
+    dependencies,
   )
 }
 
@@ -243,9 +264,58 @@ pub fn run_with_client(
   ct: ConversationTest,
   client: client.TelegramClient,
   calls: process.Subject(mock.ApiCall),
-  router_handler: fn(bot.Context(session, error), update.Update) ->
-    Result(bot.Context(session, error), error),
+  router_handler: fn(bot.Context(session, error, Nil), update.Update) ->
+    Result(bot.Context(session, error, Nil), error),
   session_settings: bot.SessionSettings(session, error),
+) -> Nil {
+  run_with_client_with_dependencies(
+    ct,
+    client,
+    calls,
+    router_handler,
+    session_settings,
+    Nil,
+  )
+}
+
+/// Runs the conversation test against a router that needs injected dependencies
+/// (`dependencies`). Use this to drive a bot whose handlers read services from
+/// `ctx.dependencies` through the conversation DSL.
+///
+/// ```gleam
+/// conversation.conversation_test()
+/// |> conversation.send("/my_bookings")
+/// |> conversation.expect_reply_containing("No bookings")
+/// |> conversation.run_with_dependencies(build_router(), fn() { Nil }, Dependencies(db:, catalog:))
+/// ```
+pub fn run_with_dependencies(
+  ct: ConversationTest,
+  router: router.Router(session, error, dependencies),
+  default_session: fn() -> session,
+  dependencies: dependencies,
+) -> Nil {
+  let #(client, calls) = mock.message_client()
+  run_with_client_with_dependencies(
+    ct,
+    client,
+    calls,
+    fn(ctx, update) { router.handle(router, ctx, update) },
+    test_context.session_settings(default: default_session),
+    dependencies,
+  )
+}
+
+/// Lowest-level dependencies-aware runner: custom client, calls subject, router handler,
+/// session settings, and injected `dependencies`. All the other `run_*` helpers funnel
+/// through this — use it directly when you need full control over every input.
+pub fn run_with_client_with_dependencies(
+  ct: ConversationTest,
+  client: client.TelegramClient,
+  calls: process.Subject(mock.ApiCall),
+  router_handler: fn(bot.Context(session, error, dependencies), update.Update) ->
+    Result(bot.Context(session, error, dependencies), error),
+  session_settings: bot.SessionSettings(session, error),
+  dependencies: dependencies,
 ) -> Nil {
   let config = test_context.config_with_client(client)
 
@@ -263,6 +333,7 @@ pub fn run_with_client(
       router_handler:,
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
+      dependencies:,
       chat_factory: chat_factory_started.data,
       name: None,
     )
