@@ -331,6 +331,7 @@ pub fn run_with_client_with_dependencies(
       config:,
       bot_info: factory.bot_user(),
       router_handler:,
+      pre_handlers: [],
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
       dependencies:,

@@ -48,6 +48,7 @@ fn start_named_bot(
       config:,
       bot_info:,
       router_handler:,
+      pre_handlers: [],
       session_settings:,
       catch_handler:,
       dependencies: Nil,

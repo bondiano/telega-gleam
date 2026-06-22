@@ -49,6 +49,9 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     router: Option(Router(session, error, dependencies)),
     session_settings: Option(SessionSettings(session, error)),
     catch_handler: Option(bot.CatchHandler(session, error, dependencies)),
+    // Global pre-router middleware, run once per update before routing.
+    // Added via `use_pre_handler`; executed in registration order.
+    pre_handlers: List(bot.PreHandler(dependencies)),
     // Non-persisted services/dependencies injected into every `Context`.
     // Defaults to `Nil`; set via `with_dependencies`.
     dependencies: dependencies,
@@ -145,6 +148,7 @@ fn default_builder(
     router: None,
     session_settings: None,
     catch_handler: None,
+    pre_handlers: [],
     bot_subject: None,
     api_client: None,
     drop_pending_updates: None,
@@ -323,6 +327,7 @@ pub fn with_dependencies(
     router: None,
     catch_handler: None,
     on_start: None,
+    pre_handlers: [],
     dependencies:,
     session_settings: builder.session_settings,
     bot_subject: builder.bot_subject,
@@ -356,6 +361,41 @@ pub fn with_catch_handler(
   catch_handler: bot.CatchHandler(session, error, dependencies),
 ) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, catch_handler: Some(catch_handler))
+}
+
+/// Register a global pre-router middleware ([`bot.PreHandler`](./telega/bot.html#PreHandler)).
+///
+/// Pre-router middleware runs once per update inside the bot actor, *before*
+/// routing and before any chat instance is spawned or session loaded. Use it
+/// for cross-cutting concerns that apply to every update: anti-spam, analytics,
+/// and update deduplication. Returning `bot.Stop` drops the update before
+/// routing; `bot.Continue` lets it through to the next pre-handler and the
+/// router. Handlers run in the order they are registered, and the first `Stop`
+/// short-circuits the rest. Because they all run sequentially in the single bot
+/// actor, read-then-write logic (like dedup) is race-free across updates.
+///
+/// ```gleam
+/// // Drop updates from a banned chat before they reach any handler.
+/// telega.new_for_polling(api_client:)
+/// |> telega.use_pre_handler(fn(pre) {
+///   case pre.update.chat_id == banned_chat {
+///     True -> bot.Stop
+///     False -> bot.Continue
+///   }
+/// })
+/// |> telega.with_router(router)
+///
+/// // Webhook idempotency: drop updates Telegram re-delivers on retry.
+/// |> telega.use_pre_handler(idempotency.deduplicate(storage:, ttl_ms: 3600_000))
+/// ```
+pub fn use_pre_handler(
+  builder: TelegaBuilder(session, error, dependencies),
+  pre_handler: bot.PreHandler(dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(
+    ..builder,
+    pre_handlers: list.append(builder.pre_handlers, [pre_handler]),
+  )
 }
 
 /// Set whether to drop pending updates.
@@ -662,6 +702,7 @@ pub fn init(
         config:,
         bot_info:,
         router_handler:,
+        pre_handlers: builder.pre_handlers,
         session_settings:,
         catch_handler:,
         dependencies: builder.dependencies,
@@ -750,6 +791,7 @@ pub fn init_for_polling(
         config:,
         bot_info:,
         router_handler:,
+        pre_handlers: builder.pre_handlers,
         session_settings:,
         catch_handler:,
         dependencies: builder.dependencies,

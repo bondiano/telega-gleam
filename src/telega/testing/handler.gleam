@@ -148,6 +148,7 @@ pub fn with_test_bot_advanced_with_dependencies(
       config:,
       bot_info: factory.bot_user(),
       router_handler:,
+      pre_handlers: [],
       session_settings:,
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
       dependencies:,

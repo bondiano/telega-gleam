@@ -157,8 +157,45 @@ Available predicates include message-type filters (`is_text`, `is_command`,
 `has_photo`, `has_video`, `has_media`, `is_media_group`, `is_callback_query`),
 text-content filters (`text_equals`, `text_starts_with`, `text_contains`,
 `command_equals`), and user/chat filters (`from_user`, `from_users`, `in_chat`,
-`is_private_chat`, `is_group_chat`, `callback_data_starts_with`). Combine them
-with `and`/`and2`, `or`/`or2`, and `not`, or build your own with `filter`.
+`from_chats`, `is_private_chat`, `is_group_chat`, `callback_data_starts_with`).
+Combine them with `and`/`and2`, `or`/`or2`, and `not`, or build your own with
+`filter`.
+
+`from_users` / `from_chats` are whitelists; wrap them in `not` for a blacklist:
+
+```gleam
+// Only react in the support chats:
+router.on_filtered(router.from_chats([support_a, support_b]), handler)
+// React everywhere except a banned chat:
+router.on_filtered(router.not(router.from_chats([banned_chat])), handler)
+```
+
+### Role filters (`is_admin` / `is_owner`)
+
+Filters are pure predicates over the update, so they can't make API calls.
+Role checks need `getChatMember`, so they live in [`telega/roles`](https://hexdocs.pm/telega/telega/roles.html),
+which caches results in ETS (one round-trip is too slow to repeat per message).
+It exposes booleans (`is_admin` / `is_owner`), `use`-friendly guards
+(`ensure_admin` / `ensure_owner`), and router middleware (`require_admin` /
+`require_owner`):
+
+```gleam
+import telega/roles
+
+let cache = roles.new_cache(ttl_ms: 60_000)
+
+router.new("admin")
+|> router.on_command("ban", fn(ctx, _cmd) {
+  use ctx <- roles.ensure_admin(ctx, cache, on_denied: fn(ctx) {
+    reply.with_text(ctx, "Admins only.")
+  })
+  // ... only reached for admins/owner ...
+  Ok(ctx)
+})
+```
+
+"Admin" means administrator or owner; "owner" means the chat creator. Checks
+fail closed (access denied) on an API error. Pass `ttl_ms: 0` to disable caching.
 
 ## Middleware
 
@@ -173,6 +210,60 @@ router
 ```
 
 Built-ins: `with_logging`, `with_filter`, `with_recovery`, and `with_rate_limit`.
+
+## Pre-router middleware
+
+Router middleware runs *per router*, after an update has been dispatched to a
+chat instance and a session loaded. For cross-cutting concerns that apply to
+**every** update — anti-spam, analytics, deduplication — register a *pre-router*
+middleware with `telega.use_pre_handler`. It runs once per update inside the bot
+actor, **before** routing and before any chat instance is spawned, so it is
+cheaper and can drop an update outright:
+
+```gleam
+import telega
+import telega/bot
+
+telega.new_for_polling(api_client:)
+|> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
+  case is_banned(pre.update.chat_id) {
+    True -> bot.Stop      // drop before routing
+    False -> bot.Continue // let it through
+  }
+})
+|> telega.with_router(router)
+```
+
+Pre-handlers run in registration order; the first `bot.Stop` short-circuits the
+rest and the router. A `PreContext` carries the `update`, `config`,
+`dependencies`, and `bot_info` — but no `session` (it hasn't been loaded yet).
+Because they all run sequentially in the single bot actor, read-then-write logic
+is race-free across concurrent updates.
+
+### Webhook idempotency (deduplication)
+
+Telegram re-delivers an update (same `update_id`) when it doesn't get a `200` in
+time — on a slow response, a redeploy, or a network blip. That double-runs
+non-idempotent commands (sending an invoice, charging Stars). The
+[`telega/idempotency`](https://hexdocs.pm/telega/telega/idempotency.html) module
+provides a ready-made pre-router middleware that remembers each `update_id` in a
+[`KeyValueStorage`](https://hexdocs.pm/telega/telega/storage.html) for a TTL
+window and drops duplicates:
+
+```gleam
+import telega/idempotency
+import telega/storage/ets
+
+let assert Ok(store) = ets.new(name: "telega_dedup")
+
+telega.new(token:, url:, webhook_path:, secret_token:)
+|> telega.use_pre_handler(idempotency.deduplicate(storage: store, ttl_ms: 3600_000))
+|> telega.with_router(router)
+```
+
+Use a persistent backend (Postgres/SQLite/Redis) when running more than one node
+or to survive restarts. On a storage error the update is let through (fail-open):
+processing twice is recoverable, dropping a real update is not.
 
 ## Error handling
 

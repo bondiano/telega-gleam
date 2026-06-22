@@ -1065,17 +1065,22 @@ pub fn from_users(user_ids: List(Int)) -> Filter {
 /// Filter by chat ID
 pub fn in_chat(chat_id: Int) -> Filter {
   filter("in_chat:" <> string.inspect(chat_id), fn(update) {
-    case update {
-      update.TextUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.CommandUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.CallbackQueryUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.PhotoUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.VideoUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.VoiceUpdate(chat_id: cid, ..) -> cid == chat_id
-      update.AudioUpdate(chat_id: cid, ..) -> cid == chat_id
-      _ -> False
-    }
+    update.chat_id == chat_id
   })
+}
+
+/// Filter by multiple chat IDs. Matches when the update's chat is one of
+/// `chat_ids` — a whitelist of chats. Combine with `not` for a blacklist:
+///
+/// ```gleam
+/// // Only react in the support chats
+/// router.on_filtered(router.from_chats([-100_1, -100_2]), handler)
+///
+/// // React everywhere except the banned chats
+/// router.on_filtered(router.not(router.from_chats([-100_666])), handler)
+/// ```
+pub fn from_chats(chat_ids: List(Int)) -> Filter {
+  filter("from_chats", fn(update) { list.contains(chat_ids, update.chat_id) })
 }
 
 /// Filter for private chats

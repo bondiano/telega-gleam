@@ -82,6 +82,9 @@ pub opaque type Bot(session, error, dependencies) {
     dependencies: dependencies,
     // Store a handler function that encapsulates the router
     router_handler: RouterHandler(session, error, dependencies),
+    // Global pre-router middleware, run once per update before any chat
+    // instance is involved. Executed in order; first `Stop` short-circuits.
+    pre_handlers: List(PreHandler(dependencies)),
     registry: Registry(ChatInstanceMessage(session, error, dependencies)),
     chat_factory: fsup.Supervisor(
       ChatInstanceArgs(session, error, dependencies),
@@ -124,6 +127,39 @@ type RouterHandler(session, error, dependencies) =
   fn(Context(session, error, dependencies), Update) ->
     Result(Context(session, error, dependencies), error)
 
+/// Limited context handed to pre-router middleware. A `PreHandler` runs once per
+/// incoming update inside the `Bot` actor — *before* any chat instance is
+/// spawned or session is loaded — so it only carries update-level data, not a
+/// `session`. Use it for cross-cutting concerns that apply to every update:
+/// anti-spam, analytics, and update deduplication (`telega/idempotency`).
+pub type PreContext(dependencies) {
+  PreContext(
+    update: Update,
+    config: Config,
+    /// The same injected services available to handlers via `Context`.
+    dependencies: dependencies,
+    bot_info: User,
+  )
+}
+
+/// Decision returned by a `PreHandler`: keep processing the update through the
+/// router, or stop it here (drop it before routing).
+pub type PreRouterResult {
+  /// Continue to the next pre-router middleware and, eventually, the router.
+  Continue
+  /// Stop processing this update. The webhook/poller is told the update was
+  /// acknowledged (so Telegram does not retry it) but no handler runs.
+  Stop
+}
+
+/// Pre-router middleware: a single global pass over every update, run before
+/// routing. Registered with `telega.use_pre_handler` and executed in the order
+/// added; the first one that returns `Stop` short-circuits the rest and the
+/// router. Because they run sequentially inside the single `Bot` actor,
+/// read-then-write logic (e.g. dedup) is race-free across concurrent updates.
+pub type PreHandler(dependencies) =
+  fn(PreContext(dependencies)) -> PreRouterResult
+
 pub type BotSubject =
   Subject(BotMessage)
 
@@ -155,6 +191,7 @@ pub fn start(
   config config: Config,
   bot_info bot_info: User,
   router_handler router_handler: RouterHandler(session, error, dependencies),
+  pre_handlers pre_handlers: List(PreHandler(dependencies)),
   session_settings session_settings: SessionSettings(session, error),
   catch_handler catch_handler: CatchHandler(session, error, dependencies),
   dependencies dependencies: dependencies,
@@ -174,6 +211,7 @@ pub fn start(
         session_settings:,
         dependencies:,
         router_handler:,
+        pre_handlers:,
         registry:,
         chat_factory:,
         accepting: True,
@@ -220,12 +258,23 @@ fn bot_loop(
           actor.continue(bot)
         }
         True ->
-          case handle_update_bot_message(bot:, update:, reply_with:) {
-            Ok(_) -> actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
-            Error(error) -> {
-              log.error_d("Error in handler: ", error)
-              actor.stop()
+          case run_pre_handlers(bot, update) {
+            // A pre-router middleware dropped the update. Acknowledge it to the
+            // caller (so Telegram does not retry) without spawning a chat
+            // instance or touching the in-flight counter.
+            Stop -> {
+              process.send(reply_with, True)
+              actor.continue(bot)
             }
+            Continue ->
+              case handle_update_bot_message(bot:, update:, reply_with:) {
+                Ok(_) ->
+                  actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
+                Error(error) -> {
+                  log.error_d("Error in handler: ", error)
+                  actor.stop()
+                }
+              }
           }
       }
     UpdateHandledBotMessage -> {
@@ -288,6 +337,41 @@ pub fn is_draining(bot_subject bot_subject: BotSubject) -> Bool {
   case process.receive(reply, 1000) {
     Ok(draining) -> draining
     Error(_) -> False
+  }
+}
+
+/// Run the global pre-router middleware chain. Returns `Stop` as soon as one
+/// of them stops the update, otherwise `Continue`.
+fn run_pre_handlers(
+  bot: Bot(session, error, dependencies),
+  update: Update,
+) -> PreRouterResult {
+  case bot.pre_handlers {
+    [] -> Continue
+    handlers -> {
+      let pre_ctx =
+        PreContext(
+          update:,
+          config: bot.config,
+          dependencies: bot.dependencies,
+          bot_info: bot.bot_info,
+        )
+      do_run_pre_handlers(handlers, pre_ctx)
+    }
+  }
+}
+
+fn do_run_pre_handlers(
+  handlers: List(PreHandler(dependencies)),
+  pre_ctx: PreContext(dependencies),
+) -> PreRouterResult {
+  case handlers {
+    [] -> Continue
+    [handler, ..rest] ->
+      case handler(pre_ctx) {
+        Stop -> Stop
+        Continue -> do_run_pre_handlers(rest, pre_ctx)
+      }
   }
 }
 
