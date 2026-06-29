@@ -1,5 +1,5 @@
 name = "telega_storage_sqlite"
-version = "1.0.0"
+version = "2.0.0"
 description = "SQLite storage adapter for the Telega Telegram Bot Library"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
