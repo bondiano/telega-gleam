@@ -56,16 +56,25 @@ tasks:
   publish:
     desc: >
       Publish the core telega package, then every ecosystem package, to Hex.
-      Bump the `version` of each package you changed first — Hex rejects
-      republishing an existing version, so unchanged packages are simply
-      reported as skipped at the end.
+      Bump the `version` of each package you changed first. Any package whose
+      current version is already on Hex is skipped (checked via the Hex API),
+      so the task is safe to re-run after a partial publish.
     cmds:
       - task: publish:core
       - task: publish:packages
 
   publish:core:
-    desc: Publish the core telega package to Hex
-    cmd: gleam publish
+    desc: Publish the core telega package to Hex (skips if this version is already on Hex)
+    cmd: |
+      set -u
+      NAME=$(sed -nE 's/^name = "([^"]+)"/\1/p' gleam.toml)
+      VERSION=$(sed -nE 's/^version = "([^"]+)"/\1/p' gleam.toml)
+      CODE=$(curl -s -o /dev/null -w '%{http_code}' "https://hex.pm/api/packages/${NAME}/releases/${VERSION}")
+      if [ "${CODE}" = "200" ]; then
+        echo "==> ${NAME}@${VERSION} already on Hex — skipping"
+      else
+        gleam publish
+      fi
 
   publish:packages:
     desc: >
@@ -83,7 +92,13 @@ tasks:
       failed=""
       for pkg in {{.PACKAGES}}; do
         echo ""
-        echo "==> Publishing ${pkg}"
+        VERSION=$(sed -nE 's/^version = "([^"]+)"/\1/p' "${pkg}/gleam.toml")
+        CODE=$(curl -s -o /dev/null -w '%{http_code}' "https://hex.pm/api/packages/${pkg}/releases/${VERSION}")
+        if [ "${CODE}" = "200" ]; then
+          echo "==> ${pkg}@${VERSION} already on Hex — skipping"
+          continue
+        fi
+        echo "==> Publishing ${pkg}@${VERSION}"
         swapped=0
         if grep -q '^telega = { path = "\.\." }' "${pkg}/gleam.toml"; then
           sed -i.bak "s#^telega = { path = \"\.\.\" }#telega = \"${REQ}\"#" "${pkg}/gleam.toml"
@@ -97,8 +112,8 @@ tasks:
       done
       if [ -n "${failed}" ]; then
         echo ""
-        echo "Not published (already on Hex or errored):${failed}"
+        echo "Failed to publish (errored):${failed}"
         exit 1
       fi
       echo ""
-      echo "All packages published."
+      echo "All packages published (or already on Hex)."
