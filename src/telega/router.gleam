@@ -1162,6 +1162,24 @@ pub fn callback_data_starts_with(prefix: String) -> Filter {
   })
 }
 
+/// Evaluate a composable `Filter` against an update.
+///
+/// This is the bridge that lets the filter combinators (`and`/`or`/`not`,
+/// `is_text`, `has_photo`, …) be reused outside the router — most notably to
+/// drive `telega.wait_filtered` / `telega.wait_for` in conversations:
+///
+/// ```gleam
+/// use ctx, upd <- telega.wait_for(
+///   ctx,
+///   filter: router.matches(router.or2(router.is_text(), router.has_photo()), _),
+///   or: None,
+///   timeout: None,
+/// )
+/// ```
+pub fn matches(filter: Filter, update: Update) -> Bool {
+  evaluate_filter(filter, update)
+}
+
 /// Evaluate a filter against an update
 fn evaluate_filter(f: Filter, update: Update) -> Bool {
   case f {

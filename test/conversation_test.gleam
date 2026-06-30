@@ -5,8 +5,10 @@ import gleam/otp/supervision
 import gleam/result
 import gleeunit/should
 
+import telega
 import telega/bot
 import telega/internal/registry
+import telega/router
 import telega/testing/context
 import telega/testing/factory
 import telega/update
@@ -259,5 +261,71 @@ pub fn conversation_with_handle_else_test() {
       panic as "Got unexpected message format for second persist call"
     Error(_timeout) ->
       panic as "No second persist call - handle_else was never triggered"
+  }
+}
+
+/// `wait_filtered` lets one continuation wait for several update types at once
+/// via the router's `or`/`and` combinators. Here we wait for text OR photo: a
+/// non-matching voice update keeps the chat waiting, and the following photo
+/// resolves the continuation with the raw update for type discrimination.
+pub fn wait_filtered_or_combinator_test() {
+  let session_storage = process.new_subject()
+
+  let session_settings =
+    bot.SessionSettings(
+      persist_session: fn(key, session) {
+        process.send(session_storage, #("persist", key, session))
+        Ok(session)
+      },
+      get_session: fn(_key) { Ok(None) },
+      default_session: fn() { TestSession(name: "default") },
+    )
+
+  let handlers = [
+    bot.HandleCommand("waitmedia", fn(ctx, _command) {
+      telega.wait_filtered(
+        ctx:,
+        filter: router.or2(router.is_text(), router.has_photo()),
+        or: None,
+        timeout: Some(5000),
+        continue: fn(ctx, upd) {
+          let marker = case upd {
+            update.TextUpdate(text:, ..) -> "text:" <> text
+            update.PhotoUpdate(..) -> "photo"
+            _ -> "other"
+          }
+          bot.next_session(ctx, TestSession(name: marker))
+        },
+      )
+    }),
+  ]
+
+  let bot_subject =
+    build_test_bot(handlers_to_router_handler(handlers), session_settings)
+
+  bot.handle_update(bot_subject, factory.command_update(command: "waitmedia"))
+  |> should.be_true
+
+  // Voice does not match text|photo -> the continuation re-arms, no resolution.
+  bot.handle_update(bot_subject, factory.voice_update())
+  |> should.be_true
+
+  // Photo matches -> continuation fires with the raw PhotoUpdate.
+  bot.handle_update(bot_subject, factory.photo_update())
+  |> should.be_true
+
+  // Drain persists until we see the photo marker (proves the photo branch ran).
+  let resolved = drain_until_marker(session_storage, "photo")
+  resolved |> should.be_true
+}
+
+fn drain_until_marker(
+  storage: process.Subject(#(String, String, TestSession)),
+  marker: String,
+) -> Bool {
+  case process.receive(storage, 1000) {
+    Ok(#("persist", _key, TestSession(name:))) if name == marker -> True
+    Ok(_other) -> drain_until_marker(storage, marker)
+    Error(_timeout) -> False
   }
 }

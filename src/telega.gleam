@@ -1359,6 +1359,47 @@ pub fn wait_for(
   bot.wait_handler(ctx:, timeout:, handle_else:, handler: filter_handler)
 }
 
+/// Pauses the current chat actor's handler and waits for an update that matches
+/// a composable `router.Filter`.
+///
+/// Unlike the typed waiters (`wait_text`, `wait_photos`, …) which each listen
+/// for a single update type, this accepts the router's filter combinators, so a
+/// single continuation can wait for several types at once. Combine with
+/// `router.or`/`router.or2` (any), `router.and`/`router.and2` (all) and
+/// `router.not`:
+///
+/// ```gleam
+/// use ctx, upd <- wait_filtered(
+///   ctx,
+///   filter: router.or2(router.is_text(), router.has_photo()),
+///   or: None,
+///   timeout: None,
+/// )
+/// case upd {
+///   update.TextUpdate(text:, ..) -> // ...
+///   update.PhotoUpdate(photos:, ..) -> // ...
+///   _ -> // ...
+/// }
+/// ```
+///
+/// `wait_for` remains the escape hatch for a raw `fn(Update) -> Bool` predicate.
+pub fn wait_filtered(
+  ctx ctx: Context(session, error, dependencies),
+  filter filter: router.Filter,
+  or handle_else: Option(bot.Handler(session, error, dependencies)),
+  timeout timeout: Option(Int),
+  continue continue: fn(Context(session, error, dependencies), update.Update) ->
+    Result(Context(session, error, dependencies), error),
+) -> Result(Context(session, error, dependencies), error) {
+  wait_for(
+    ctx:,
+    filter: router.matches(filter, _),
+    or: handle_else,
+    timeout:,
+    continue:,
+  )
+}
+
 /// Start polling with default configuration for a Telega instance.
 /// This is useful when you want to manually start polling outside the supervision tree.
 pub fn start_polling_default(
