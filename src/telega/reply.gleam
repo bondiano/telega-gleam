@@ -21,6 +21,9 @@ import telega/model/types.{
 
 /// Use this method to send text messages.
 ///
+/// Uses the client's default parse mode if one is configured
+/// via `client.set_default_parse_mode`.
+///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_text(
   ctx ctx: Context(session, error, dependencies),
@@ -33,7 +36,7 @@ pub fn with_text(
       chat_id: Str(ctx.key),
       business_connection_id: None,
       message_thread_id: None,
-      parse_mode: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
       entities: None,
       link_preview_options: None,
       disable_notification: None,
@@ -47,6 +50,9 @@ pub fn with_text(
 }
 
 /// Use this method to send text messages with keyboard markup.
+///
+/// Uses the client's default parse mode if one is configured
+/// via `client.set_default_parse_mode`.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessage
 pub fn with_markup(
@@ -62,7 +68,7 @@ pub fn with_markup(
       reply_markup: Some(reply_markup),
       business_connection_id: None,
       message_thread_id: None,
-      parse_mode: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
       entities: None,
       link_preview_options: None,
       disable_notification: None,
@@ -264,11 +270,22 @@ pub fn with_dice(
 /// Use this method to edit text and game messages.
 /// On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
 ///
+/// If `parameters.parse_mode` is `None`, the client's default parse mode
+/// (set via `client.set_default_parse_mode`) is used.
+///
 /// **Official reference:** https://core.telegram.org/bots/api#editmessagetext
 pub fn edit_text(
   ctx ctx: Context(session, error, dependencies),
   parameters parameters: EditMessageTextParameters,
 ) -> Result(Message, error.TelegaError) {
+  let parameters = case parameters.parse_mode {
+    None ->
+      EditMessageTextParameters(
+        ..parameters,
+        parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      )
+    Some(_) -> parameters
+  }
   api.edit_message_text(ctx.config.api_client, parameters)
 }
 

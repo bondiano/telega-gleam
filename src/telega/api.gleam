@@ -546,7 +546,7 @@ pub fn send_poll(
 pub fn send_chat_action(
   client client: client.TelegramClient,
   parameters parameters: SendChatActionParameters,
-) -> Result(Message, error.TelegaError) {
+) -> Result(Bool, error.TelegaError) {
   let body_json = encoder.encode_send_chat_action_parameters(parameters)
 
   new_post_request(
@@ -555,7 +555,7 @@ pub fn send_chat_action(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_decoder())
+  |> map_response(decode.bool)
 }
 
 /// Use this method to change the chosen reactions on a message. Service messages of some types can't be reacted to. Automatically forwarded messages from a channel to its discussion group have the same available reactions as messages in the channel. Bots can't use paid reactions. Returns _True_ on success.

@@ -15,10 +15,12 @@
 //// }
 //// ```
 
+import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -26,6 +28,7 @@ import gleam/string
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
+import telega/format.{type ParseMode}
 import telega/internal/request_queue.{type RequestQueue}
 import telega/telemetry
 
@@ -40,6 +43,27 @@ pub type FetchClient =
 
 pub type FetchBitsClient =
   fn(Request(BitArray)) -> Result(Response(BitArray), TelegaError)
+
+/// Middleware around a single API call: it receives the outgoing request and
+/// a `next` continuation. It can modify the request before calling `next`,
+/// short-circuit the chain by returning a result without calling `next`,
+/// or inspect/transform the result after `next` returns.
+///
+/// Transformers run inside the `telega.api_call` telemetry span,
+/// so their latency is included in the span duration.
+///
+/// ```gleam
+/// let log_calls = fn(request, next) {
+///   io.println("calling " <> client.request_method(request))
+///   next(request)
+/// }
+/// let client = client.new(token:, fetch_client:) |> client.use_transformer(log_calls)
+/// ```
+pub type ApiRequestTransformer =
+  fn(
+    TelegramApiRequest,
+    fn(TelegramApiRequest) -> Result(Response(String), TelegaError),
+  ) -> Result(Response(String), TelegaError)
 
 pub opaque type TelegramClient {
   TelegramClient(
@@ -56,6 +80,10 @@ pub opaque type TelegramClient {
     fetch_bits_client: Option(FetchBitsClient),
     /// Request queue for rate limiting
     request_queue: Option(RequestQueue),
+    /// Middleware chain applied around every API call. First added is outermost.
+    transformers: List(ApiRequestTransformer),
+    /// Default parse mode used by `telega/reply` text helpers when no explicit one is set.
+    default_parse_mode: Option(ParseMode),
   )
 }
 
@@ -71,7 +99,40 @@ pub fn new(
     fetch_client:,
     fetch_bits_client: None,
     request_queue: None,
+    transformers: [],
+    default_parse_mode: None,
   )
+}
+
+/// Add a transformer to the client's middleware chain.
+/// Transformers run in the order they were added: the first added
+/// is the outermost (sees the request first, the result last).
+pub fn use_transformer(
+  client client: TelegramClient,
+  transformer transformer: ApiRequestTransformer,
+) -> TelegramClient {
+  TelegramClient(
+    ..client,
+    transformers: list.append(client.transformers, [transformer]),
+  )
+}
+
+/// Set the default parse mode for `telega/reply` text helpers
+/// (`with_text`, `with_markup`, `edit_text`, ...). Explicit helpers like
+/// `with_html` and parameters with a parse mode already set are not affected.
+pub fn set_default_parse_mode(
+  client client: TelegramClient,
+  parse_mode parse_mode: ParseMode,
+) -> TelegramClient {
+  TelegramClient(..client, default_parse_mode: Some(parse_mode))
+}
+
+/// Get the default parse mode as an API string (e.g. `Some("HTML")`),
+/// or `None` if no default is configured.
+pub fn default_parse_mode_string(
+  client client: TelegramClient,
+) -> Option(String) {
+  option.map(client.default_parse_mode, format.parse_mode_to_string)
 }
 
 /// Create a new Telegram client with default request queue configuration.
@@ -93,16 +154,31 @@ pub fn fetch(
   request api_request: TelegramApiRequest,
   client client: TelegramClient,
 ) -> Result(Response(String), TelegaError) {
+  use <- fetch_with_telemetry(api_request.method)
+  use api_request <- apply_transformers(client.transformers, api_request)
+
   let method = api_request.method
   use api_request <- result.try(api_to_request(api_request))
-
-  use <- fetch_with_telemetry(method)
   case client.request_queue {
     Some(queue) ->
       request_queue.execute(queue, fn() { send_request(client, api_request) })
 
     None ->
       send_with_retry(client, method, api_request, client.max_retry_attempts)
+  }
+}
+
+fn apply_transformers(
+  transformers: List(ApiRequestTransformer),
+  request: TelegramApiRequest,
+  terminal: fn(TelegramApiRequest) -> Result(Response(String), TelegaError),
+) -> Result(Response(String), TelegaError) {
+  case transformers {
+    [] -> terminal(request)
+    [transformer, ..rest] ->
+      transformer(request, fn(request) {
+        apply_transformers(rest, request, terminal)
+      })
   }
 }
 
@@ -320,11 +396,13 @@ pub fn fetch_with_rule(
   client client: TelegramClient,
   rule_id rule_id: String,
 ) -> Result(Response(String), TelegaError) {
+  use <- fetch_with_telemetry(api_request.method)
+  use api_request <- apply_transformers(client.transformers, api_request)
+
   let method = api_request.method
   use api_request <- result.try(api_to_request(api_request))
   let request_id = utils.random_string(32)
 
-  use <- fetch_with_telemetry(method)
   case client.request_queue {
     Some(queue) ->
       request_queue.execute_with_rule(queue, request_id, rule_id, fn() {
@@ -377,15 +455,26 @@ fn fetch_with_telemetry(
   result
 }
 
-fn emit_api_retry(method: String, attempt: Int) {
+fn emit_api_retry(method: String, attempt: Int, retry_delay: Int) {
   telemetry.execute(
     ["telega", "api_call", "retry"],
-    [#("retry_after", default_retry_delay)],
+    [#("retry_after", retry_delay)],
     [
       #("method", telemetry.StringValue(method)),
       #("attempt", telemetry.IntValue(attempt)),
     ],
   )
+}
+
+/// Extract the delay in milliseconds from a 429 response's
+/// `parameters.retry_after` (seconds), falling back to the default delay.
+fn retry_delay_from_response(response: Response(String)) -> Int {
+  json.parse(
+    response.body,
+    decode.at(["parameters", "retry_after"], decode.int),
+  )
+  |> result.map(fn(retry_after) { retry_after * 1000 })
+  |> result.unwrap(default_retry_delay)
 }
 
 fn send_with_retry(
@@ -404,15 +493,24 @@ fn send_with_retry(
           case response.status {
             429 -> {
               // Rate limited, wait and retry
-              emit_api_retry(method, client.max_retry_attempts - retries + 1)
-              process.sleep(default_retry_delay)
+              let retry_delay = retry_delay_from_response(response)
+              emit_api_retry(
+                method,
+                client.max_retry_attempts - retries + 1,
+                retry_delay,
+              )
+              process.sleep(retry_delay)
               send_with_retry(client, method, api_request, retries - 1)
             }
             _ -> Ok(response)
           }
         }
         Error(_) -> {
-          emit_api_retry(method, client.max_retry_attempts - retries + 1)
+          emit_api_retry(
+            method,
+            client.max_retry_attempts - retries + 1,
+            default_retry_delay,
+          )
           process.sleep(default_retry_delay)
           send_with_retry(client, method, api_request, retries - 1)
         }
@@ -462,6 +560,31 @@ pub opaque type TelegramApiRequest {
     query: Option(List(#(String, String))),
     method: String,
   )
+}
+
+/// Get the Telegram API method name of a request (e.g. "sendMessage").
+pub fn request_method(request request: TelegramApiRequest) -> String {
+  request.method
+}
+
+/// Get the JSON body of a request. Returns `None` for GET requests.
+pub fn request_body(request request: TelegramApiRequest) -> Option(String) {
+  case request {
+    TelegramApiPostRequest(body:, ..) -> Some(body)
+    TelegramApiGetRequest(..) -> None
+  }
+}
+
+/// Transform the JSON body of a POST request. GET requests are returned unchanged.
+pub fn map_request_body(
+  request request: TelegramApiRequest,
+  mapper mapper: fn(String) -> String,
+) -> TelegramApiRequest {
+  case request {
+    TelegramApiPostRequest(url:, body:, method:) ->
+      TelegramApiPostRequest(url:, body: mapper(body), method:)
+    TelegramApiGetRequest(..) -> request
+  }
 }
 
 pub fn new_post_request(
