@@ -7,6 +7,7 @@ import restaurant_booking/i18n
 import restaurant_booking/sql
 import sqlight
 import telega/bot.{type Context}
+import telega/chat_action
 import telega/format as fmt
 import telega/reply
 import telega/telemetry
@@ -29,6 +30,9 @@ pub fn my_bookings(
   let db = ctx.dependencies.db
   let chat_id = ctx.update.chat_id
   let telegram_id = ctx.update.from_id
+
+  // Show "typing…" while we query the database and format the reply.
+  use <- chat_action.with_action(ctx, chat_action.Typing)
 
   case db_span("get_user", fn() { sql.get_user(db, telegram_id, chat_id) }) {
     Ok([user, ..]) -> show_user_bookings(db, ctx, user.id)

@@ -6,6 +6,7 @@ import gleam/result
 import gleam/string
 
 import telega/bot
+import telega/chat_action
 import telega/error
 import telega/file
 import telega/format as fmt
@@ -77,10 +78,12 @@ pub fn send_single_photo(
   ctx: bot.Context(session, error.TelegaError, dependencies),
   url: String,
 ) {
-  let _ = reply.with_text(ctx, "📥 Processing image...")
-
   let caption = "🖼️ From: " <> get_domain(url)
   let photo = media_group.photo_with_caption(file.Url(url), caption)
+
+  // Telegram fetches the image from the URL itself, which can take a while —
+  // keep the "sending photo…" indicator alive until the upload finishes.
+  use <- chat_action.with_action(ctx, chat_action.UploadPhoto)
 
   case reply.with_media_group(ctx, [photo]) {
     Ok(_) -> Ok(ctx)
@@ -134,6 +137,10 @@ pub fn send_media_group(
 
       media_group.add_photo_url_with_caption(builder, url, caption)
     })
+
+  // Uploading an album of remote URLs is the slowest path in this bot —
+  // re-broadcast "sending photo…" until reply.with_media_group returns.
+  use <- chat_action.with_action(ctx, chat_action.UploadPhoto)
 
   case media_group.validate_and_build(builder) {
     Error(media_group.InvalidMediaCount(n)) -> {

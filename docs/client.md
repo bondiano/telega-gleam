@@ -117,3 +117,28 @@ actual delay in `retry_after` (milliseconds).
 For proactive rate limiting (staying under the limits instead of reacting to
 429s), enable the request queue with `client.set_request_queue` — see the
 docs in `telega/client`.
+
+## Keeping a chat action alive (`telega/chat_action`)
+
+Telegram clears a chat action indicator ("typing…", "sending photo…") about
+5 seconds after `sendChatAction`, so a single call is not enough for a
+long-running handler. `chat_action.with_action` sends the action immediately
+and re-sends it every ~4 seconds until the wrapped function returns:
+
+```gleam
+import telega/chat_action
+
+fn handler(ctx, _) {
+  use <- chat_action.with_action(ctx, chat_action.Typing)
+  // long-running work: LLM call, file processing, etc.
+  reply.with_text(ctx, "Done!")
+}
+```
+
+`with_action_every` accepts a custom interval in milliseconds — useful for
+tests and long uploads.
+
+The repeating sender runs in an unlinked worker process that monitors the
+caller. It stops when the wrapped function returns or when the calling
+process dies, so no processes leak even if the handler crashes — and a
+worker failure never takes the handler down.
