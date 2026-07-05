@@ -7543,6 +7543,66 @@ pub type SendLivePhotoParameters {
   )
 }
 
+// SendPaidMediaParameters ------------------------------------------------------------
+
+/// Parameters for `sendPaidMedia`.
+/// https://core.telegram.org/bots/api#sendpaidmedia
+pub type SendPaidMediaParameters {
+  SendPaidMediaParameters(
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`). If the chat is a channel, all Telegram Star proceeds from this media will be credited to the chat's balance. Otherwise, they will be credited to the bot's balance.
+    chat_id: IntOrString,
+    /// The number of Telegram Stars that must be paid to buy access to the media; 1-10000
+    star_count: Int,
+    /// A JSON-serialized array describing the media to be sent; up to 10 items
+    media: List(InputPaidMedia),
+    /// Bot-defined paid media payload, 0-128 bytes. This will not be displayed to the user, use it for your internal processes.
+    payload: Option(String),
+    /// Media caption, 0-1024 characters after entities parsing
+    caption: Option(String),
+    /// Mode for parsing entities in the media caption. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.
+    parse_mode: Option(String),
+    /// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of _parse_mode_
+    caption_entities: Option(List(MessageEntity)),
+    /// Pass True, if the caption must be shown above the message media
+    show_caption_above_media: Option(Bool),
+    /// Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.
+    disable_notification: Option(Bool),
+    /// Protects the contents of the sent message from forwarding and saving
+    protect_content: Option(Bool),
+    /// Pass True to allow up to 1000 messages per second, ignoring [broadcasting limits](https://core.telegram.org/bots/faq#how-can-i-message-all-of-my-bot-39s-subscribers-at-once) for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance
+    allow_paid_broadcast: Option(Bool),
+    /// Description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove a reply keyboard or to force a reply from the user
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+pub fn new_send_paid_media_parameters(
+  chat_id chat_id: IntOrString,
+  star_count star_count: Int,
+  media media: List(InputPaidMedia),
+) -> SendPaidMediaParameters {
+  SendPaidMediaParameters(
+    chat_id:,
+    star_count:,
+    media:,
+    business_connection_id: None,
+    payload: None,
+    caption: None,
+    parse_mode: None,
+    caption_entities: None,
+    show_caption_above_media: None,
+    disable_notification: None,
+    protect_content: None,
+    allow_paid_broadcast: None,
+    reply_parameters: None,
+    reply_markup: None,
+  )
+}
+
 /// Parameters for `getManagedBotAccessSettings` (Bot API 10.0).
 pub type GetManagedBotAccessSettingsParameters {
   GetManagedBotAccessSettingsParameters(

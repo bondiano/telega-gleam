@@ -72,10 +72,10 @@ import telega/model/types.{
   type SendGiftParameters, type SendInvoiceParameters,
   type SendLivePhotoParameters, type SendLocationParameters,
   type SendMediaGroupParameters, type SendMessageDraftParameters,
-  type SendMessageParameters, type SendPhotoParameters, type SendPollParameters,
-  type SendStickerParameters, type SendVenueParameters,
-  type SendVideoNoteParameters, type SendVideoParameters,
-  type SendVoiceParameters, type SentGuestMessage,
+  type SendMessageParameters, type SendPaidMediaParameters,
+  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
+  type SendVenueParameters, type SendVideoNoteParameters,
+  type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
   type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
@@ -2620,6 +2620,24 @@ pub fn send_invoice(
   new_post_request(
     client:,
     path: "sendInvoice",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Use this method to send paid media. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendpaidmedia
+pub fn send_paid_media(
+  client client: client.TelegramClient,
+  parameters parameters: SendPaidMediaParameters,
+) -> Result(Message, error.TelegaError) {
+  let body_json = encoder.encode_send_paid_media_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendPaidMedia",
     body: json.to_string(body_json),
   )
   |> fetch(client)

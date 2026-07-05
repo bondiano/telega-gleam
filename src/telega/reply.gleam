@@ -13,10 +13,11 @@ import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
   type FileOrString, type ForwardMessageParameters, type InputMedia,
-  type Message, type SendDiceParameters, type SendMessageReplyMarkupParameters,
-  EditMessageTextParameters, LabeledPrice, SendDiceParameters,
-  SendInvoiceParameters, SendMediaGroupParameters, SendMessageParameters,
-  SendPollParameters, SendStickerParameters, Str,
+  type InputPaidMedia, type Message, type SendDiceParameters,
+  type SendMessageReplyMarkupParameters, EditMessageTextParameters, LabeledPrice,
+  SendDiceParameters, SendInvoiceParameters, SendMediaGroupParameters,
+  SendMessageParameters, SendPaidMediaParameters, SendPollParameters,
+  SendStickerParameters, Str,
 }
 
 /// Use this method to send text messages.
@@ -518,6 +519,49 @@ pub fn with_media_group(
       message_effect_id: None,
       reply_parameters: None,
       allow_paid_broadcast: None,
+    ),
+  )
+}
+
+/// Use this method to send paid media — photos and videos that the user must
+/// pay Telegram Stars to unlock.
+///
+/// Uses the client's default parse mode if one is configured
+/// via `client.set_default_parse_mode`.
+///
+/// ## Example
+/// ```gleam
+/// reply.with_paid_media(ctx, star_count: 10, media: [
+///   types.InputPaidMediaPhotoInputPaidMedia(types.InputPaidMediaPhoto(
+///     type_: "photo",
+///     media: "https://example.com/photo.jpg",
+///   )),
+/// ])
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendpaidmedia
+pub fn with_paid_media(
+  ctx ctx: Context(session, error, dependencies),
+  star_count star_count: Int,
+  media media: List(InputPaidMedia),
+) -> Result(Message, error.TelegaError) {
+  api.send_paid_media(
+    ctx.config.api_client,
+    parameters: SendPaidMediaParameters(
+      chat_id: Str(ctx.key),
+      star_count:,
+      media:,
+      business_connection_id: None,
+      payload: None,
+      caption: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      caption_entities: None,
+      show_caption_above_media: None,
+      disable_notification: None,
+      protect_content: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
     ),
   )
 }

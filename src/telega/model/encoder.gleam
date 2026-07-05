@@ -149,11 +149,11 @@ import telega/model/types.{
   type SendInvoiceParameters, type SendLivePhotoParameters,
   type SendLocationParameters, type SendMediaGroupParameters,
   type SendMessageDraftParameters, type SendMessageParameters,
-  type SendMessageReplyMarkupParameters, type SendPhotoParameters,
-  type SendPollParameters, type SendStickerParameters, type SendVenueParameters,
-  type SendVideoNoteParameters, type SendVideoParameters,
-  type SendVoiceParameters, type SentGuestMessage, type SentWebAppMessage,
-  type SetBusinessAccountBioParameters,
+  type SendMessageReplyMarkupParameters, type SendPaidMediaParameters,
+  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
+  type SendVenueParameters, type SendVideoNoteParameters,
+  type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
+  type SentWebAppMessage, type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
   type SetBusinessAccountProfilePhotoParameters,
@@ -9221,5 +9221,55 @@ pub fn encode_get_user_personal_chat_messages_parameters(
   json_object_filter_nulls([
     #("user_id", json.int(params.user_id)),
     #("message_ids", json.array(params.message_ids, json.int)),
+  ])
+}
+
+// SendPaidMediaParameters -------------------------------------------------------------------------------------------
+
+pub fn encode_send_paid_media_parameters(
+  params: SendPaidMediaParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("star_count", json.int(params.star_count)),
+    #("media", json.array(params.media, encode_input_paid_media)),
+    #("payload", json.nullable(params.payload, json.string)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "show_caption_above_media",
+      json.nullable(params.show_caption_above_media, json.bool),
+    ),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
   ])
 }
