@@ -58,6 +58,7 @@ import telega/internal/config.{type Config}
 import telega/internal/log
 import telega/internal/registry.{type Registry}
 
+import telega/client
 import telega/error
 import telega/model/types.{
   type Audio, type ChatMemberUpdated, type Message, type PhotoSize, type User,
@@ -69,6 +70,7 @@ import telega/update.{
   CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
   WebAppUpdate,
 }
+import telega/webhook_reply.{type Envelope}
 
 /// Stores information about running bot instance
 pub opaque type Bot(session, error, dependencies) {
@@ -166,8 +168,14 @@ pub type BotSubject =
 pub opaque type BotMessage {
   CancelConversationBotMessage(key: String)
   // `reply_with` is a subject with `is_ok` field
-  // It is used to notify the adapter that the update was handled successfully or not
-  HandleUpdateBotMessage(update: Update, reply_with: Subject(Bool))
+  // It is used to notify the adapter that the update was handled successfully or not.
+  // `envelope`, when present, lets the handler claim one API call for delivery
+  // in the webhook HTTP response body (see `telega/webhook_reply`).
+  HandleUpdateBotMessage(
+    update: Update,
+    reply_with: Subject(Bool),
+    envelope: Option(Envelope),
+  )
   // Sent by a chat instance once it finishes handling one update (success or
   // handled error). Used to keep the in-flight counter accurate for draining.
   UpdateHandledBotMessage
@@ -249,7 +257,7 @@ fn bot_loop(
   message: BotMessage,
 ) -> actor.Next(Bot(session, error, dependencies), BotMessage) {
   case message {
-    HandleUpdateBotMessage(update:, reply_with:) ->
+    HandleUpdateBotMessage(update:, reply_with:, envelope:) ->
       case bot.accepting {
         // Draining — reject new updates so the caller (polling worker or
         // webhook dispatch) knows the update was not handled.
@@ -267,7 +275,9 @@ fn bot_loop(
               actor.continue(bot)
             }
             Continue ->
-              case handle_update_bot_message(bot:, update:, reply_with:) {
+              case
+                handle_update_bot_message(bot:, update:, reply_with:, envelope:)
+              {
                 Ok(_) ->
                   actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
                 Error(error) -> {
@@ -379,6 +389,7 @@ fn handle_update_bot_message(
   bot bot: Bot(session, error, dependencies),
   update update,
   reply_with reply_with,
+  envelope envelope,
 ) {
   let key = build_session_key(update)
 
@@ -386,7 +397,7 @@ fn handle_update_bot_message(
     Some(chat_subject) -> {
       actor.send(
         chat_subject,
-        HandleNewChatInstanceMessage(update:, reply_with:),
+        HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
       )
       |> Ok
     }
@@ -414,7 +425,7 @@ fn handle_update_bot_message(
       // No need to register here — start_chat_instance self-registers
       actor.send(
         started.data,
-        HandleNewChatInstanceMessage(update:, reply_with:),
+        HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
       )
       |> Ok
     }
@@ -427,7 +438,11 @@ pub type ChatInstanceSubject(session, error, dependencies) =
   Subject(ChatInstanceMessage(session, error, dependencies))
 
 pub opaque type ChatInstanceMessage(session, error, dependencies) {
-  HandleNewChatInstanceMessage(update: Update, reply_with: Subject(Bool))
+  HandleNewChatInstanceMessage(
+    update: Update,
+    reply_with: Subject(Bool),
+    envelope: Option(Envelope),
+  )
   WaitHandlerChatInstanceMessage(
     handler: Handler(session, error, dependencies),
     handle_else: Option(Handler(session, error, dependencies)),
@@ -511,9 +526,9 @@ fn loop_chat_instance(
   message,
 ) {
   case message {
-    HandleNewChatInstanceMessage(update:, reply_with:) ->
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:) ->
       do_handle_new_chat_instance_message(
-        context: new_context(chat:, update:),
+        context: new_context_with_envelope(chat:, update:, envelope:),
         chat:,
         update:,
         reply_with:,
@@ -791,6 +806,28 @@ fn new_context(
   )
 }
 
+/// Build the update's context; when the update was dispatched with a
+/// webhook-reply envelope, wrap the API client in a per-update transformer so
+/// the handler's first eligible call can be claimed for the webhook response.
+fn new_context_with_envelope(
+  chat chat: ChatInstance(session, error, dependencies),
+  update update,
+  envelope envelope: Option(Envelope),
+) -> Context(session, error, dependencies) {
+  let context = new_context(chat:, update:)
+  case envelope {
+    None -> context
+    Some(envelope) -> {
+      let api_client =
+        client.use_transformer(
+          context.config.api_client,
+          webhook_reply.transformer(envelope),
+        )
+      Context(..context, config: config.Config(..context.config, api_client:))
+    }
+  }
+}
+
 // Session --------------------------------------------------------------------------
 
 pub type SessionSettings(session, error) {
@@ -829,7 +866,23 @@ pub fn get_session(
 // User should use methods from `telega` module.
 @internal
 pub fn handle_update(bot_subject bot_subject, update update) {
-  process.call_forever(bot_subject, HandleUpdateBotMessage(update, _))
+  process.call_forever(bot_subject, HandleUpdateBotMessage(update, _, None))
+}
+
+// Dispatch an update with a webhook-reply envelope without blocking. The
+// caller (`telega.handle_update_webhook`) listens on both `reply_with` and
+// the envelope itself. Users should use `telega.handle_update_webhook`.
+@internal
+pub fn dispatch_update_with_envelope(
+  bot_subject bot_subject: BotSubject,
+  update update: Update,
+  reply_with reply_with: Subject(Bool),
+  envelope envelope: Envelope,
+) -> Nil {
+  process.send(
+    bot_subject,
+    HandleUpdateBotMessage(update:, reply_with:, envelope: Some(envelope)),
+  )
 }
 
 // Handler ------------------------------------------------------------------------

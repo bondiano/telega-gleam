@@ -26,6 +26,7 @@ import telega/polling
 import telega/router.{type Router}
 import telega/telemetry
 import telega/update
+import telega/webhook_reply
 
 pub opaque type Telega(session, error, dependencies) {
   Telega(
@@ -849,6 +850,78 @@ pub fn handle_update(
 ) -> Bool {
   let update = update.raw_to_update(raw_update)
   bot.handle_update(telega.bot_subject, update)
+}
+
+/// What the webhook HTTP endpoint should answer for an update processed with
+/// `handle_update_webhook`.
+pub type WebhookResponse {
+  /// Answer with an empty `200 OK`; every bot API call went (or will go) over
+  /// HTTP as usual.
+  EmptyResponse
+  /// Answer with this JSON body (`{"method": "...", ...}`) and
+  /// `Content-Type: application/json` — Telegram executes the embedded API
+  /// call, saving one HTTP round-trip.
+  JsonResponse(body: String)
+}
+
+type WebhookEvent {
+  ReplyClaimed(
+    reply: webhook_reply.WebhookReply,
+    granted: process.Subject(Bool),
+  )
+  UpdateHandled
+}
+
+/// Handle an update, allowing the handler to answer it directly in the
+/// webhook HTTP response body ([webhook reply](https://core.telegram.org/bots/api#making-requests-when-getting-updates)).
+///
+/// Waits up to `timeout` ms for the handler to either claim an eligible API
+/// call (see `telega/webhook_reply`) or finish. On a claim it returns
+/// `JsonResponse` for the adapter to send back; otherwise `EmptyResponse`.
+/// After the timeout the handler keeps running in the background and all its
+/// API calls go over regular HTTP.
+///
+/// Pick a `timeout` safely below Telegram's webhook timeout — e.g. 5000 ms.
+/// Adapters expose this as `handle_bot_with_reply`; use this function directly
+/// only when implementing your own adapter.
+///
+/// > ⚠️ A claimed call resolves to a synthetic stub in the handler: `True` for
+/// > boolean methods, a fake `Message` (`message_id: -1`, `date: 0`) for
+/// > `sendMessage`. Full guide in the `telega/webhook_reply` module docs.
+pub fn handle_update_webhook(
+  telega telega: Telega(session, error, dependencies),
+  update raw_update: Update,
+  timeout timeout: Int,
+) -> WebhookResponse {
+  let update = update.raw_to_update(raw_update)
+  let envelope: webhook_reply.Envelope = process.new_subject()
+  let done = process.new_subject()
+
+  bot.dispatch_update_with_envelope(
+    bot_subject: telega.bot_subject,
+    update:,
+    reply_with: done,
+    envelope:,
+  )
+
+  let selector =
+    process.new_selector()
+    |> process.select_map(envelope, fn(message) {
+      let webhook_reply.Claim(reply:, granted:) = message
+      ReplyClaimed(reply:, granted:)
+    })
+    |> process.select_map(done, fn(_handled) { UpdateHandled })
+
+  case process.selector_receive(from: selector, within: timeout) {
+    Ok(ReplyClaimed(reply:, granted:)) -> {
+      process.send(granted, True)
+      JsonResponse(body: webhook_reply.to_response_body(reply))
+    }
+    // Handler finished without claiming, or timed out — plain 200. In the
+    // timeout case any later claim finds no waiting grantor and falls back to
+    // a regular HTTP call.
+    Ok(UpdateHandled) | Error(Nil) -> EmptyResponse
+  }
 }
 
 /// Get the bot's information.

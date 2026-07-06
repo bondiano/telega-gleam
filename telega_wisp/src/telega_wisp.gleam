@@ -1,4 +1,5 @@
 import gleam/bool
+import gleam/dynamic.{type Dynamic}
 import gleam/erlang/process
 import gleam/http/request
 import gleam/result
@@ -31,14 +32,7 @@ pub fn handle_bot(
   req req: WispRequest,
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
-  use <- bool.lazy_guard(!is_bot_request(telega, req), handler)
-  use json <- wisp.require_json(req)
-  use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
-    wisp.response(401)
-  })
-  // While the bot is draining (graceful shutdown) reject updates with 503 so
-  // Telegram retries them after the deploy instead of losing them.
-  use <- bool.lazy_guard(telega.is_draining(telega), fn() { wisp.response(503) })
+  use json <- accept_bot_request(telega, req, handler)
 
   // Telegram will wait response from the server, before sending the next update
   // So we need to handle it in a separate process and return response immediately.
@@ -53,6 +47,57 @@ pub fn handle_bot(
   })
 
   wisp.ok()
+}
+
+/// Like `handle_bot`, but lets the handler answer the update directly in the
+/// webhook HTTP response body ([webhook reply](https://core.telegram.org/bots/api#making-requests-when-getting-updates)),
+/// saving one HTTP round-trip for the first eligible API call.
+///
+/// Unlike `handle_bot`, the request process waits up to `timeout` ms for the
+/// handler to either claim a reply or finish; after the timeout it answers an
+/// empty `200 OK` and the handler keeps running in the background. Pick a
+/// `timeout` safely below Telegram's webhook timeout — e.g. 5000 ms.
+///
+/// > ⚠️ A claimed call resolves to a synthetic stub inside the handler (`True`
+/// > for boolean methods, a fake `Message` for `sendMessage`).
+/// > Full guide in telega's `telega/webhook_reply` module docs.
+pub fn handle_bot_with_reply(
+  telega telega: Telega(session, error, dependencies),
+  req req: WispRequest,
+  timeout timeout: Int,
+  next handler: fn() -> WispResponse,
+) -> WispResponse {
+  use json <- accept_bot_request(telega, req, handler)
+
+  case update.decode_raw(json) {
+    Ok(message) ->
+      case telega.handle_update_webhook(telega, message, timeout) {
+        telega.JsonResponse(body:) -> wisp.json_response(body, 200)
+        telega.EmptyResponse -> wisp.ok()
+      }
+    Error(_) -> wisp.response(400)
+  }
+}
+
+/// Common webhook gate shared by `handle_bot` and `handle_bot_with_reply`:
+/// non-webhook paths go to `next`, then the JSON body is required, the secret
+/// token validated (401), and updates are rejected with 503 while the bot is
+/// draining (graceful shutdown) so Telegram retries them after the deploy
+/// instead of losing them.
+fn accept_bot_request(
+  telega: Telega(session, error, dependencies),
+  req: WispRequest,
+  next: fn() -> WispResponse,
+  run: fn(Dynamic) -> WispResponse,
+) -> WispResponse {
+  use <- bool.lazy_guard(!is_bot_request(telega, req), next)
+  use json <- wisp.require_json(req)
+  use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
+    wisp.response(401)
+  })
+  use <- bool.lazy_guard(telega.is_draining(telega), fn() { wisp.response(503) })
+
+  run(json)
 }
 
 fn is_secret_token_valid(
