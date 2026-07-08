@@ -1,5 +1,5 @@
 name = "telega"
-version = "2.0.0"
+version = "2.1.0"
 description = "Gleam Telegram Bot Library"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
