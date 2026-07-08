@@ -1,0 +1,13 @@
+---
+version: 2.0.1
+title: dialog:widget:paged_select_page2_frame
+file: ./test/telega/dialog_widget_test.gleam
+test_name: paged_select_second_page_frame_test
+---
+parse_mode: HTML
+---
+widget
+---
+[ Plum ](w:s:pick:plum)
+[ Fig ](w:s:pick:fig)
+[ ‹ ](w:s:prev) | [ 2/3 ](noop) | [ › ](w:s:next)

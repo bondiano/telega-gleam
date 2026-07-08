@@ -1,0 +1,12 @@
+---
+version: 2.0.1
+title: dialog:settings:confirm_frame
+file: ./test/telega/dialog_test.gleam
+test_name: confirm_window_frame_test
+---
+parse_mode: HTML
+---
+<b>Save?</b>
+Alice / ru
+---
+[ Yes ](yes) | [ No ](no)

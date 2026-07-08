@@ -11,6 +11,7 @@ Telega provides a built-in testing toolkit under `telega/testing/` for writing i
 | `telega/testing/mock` | Mock Telegram client with API call recording and assertions |
 | `telega/testing/factory` | Deterministic test data factories (users, chats, messages, updates) |
 | `telega/testing/context` | Test config and context builders |
+| `telega/testing/render` | Pure canonicalizers for snapshot testing (API-call transcripts, keyboard grids) |
 
 ## Quick Start
 
@@ -368,6 +369,74 @@ let message = factory.message(text: "hello")
 let bot = factory.bot_user()
 ```
 
+## Snapshot Testing
+
+For tests where the interesting output is *everything the user sees* — message
+text, keyboard layout, the exact sequence of API calls — assert-by-substring
+gets verbose and misses regressions. Instead, snapshot the full canonical
+output with a snapshot library like [birdie](https://hexdocs.pm/birdie) and
+review diffs on change.
+
+`telega/testing/render` provides pure canonicalizers (plain `String` output,
+no dependency on any snapshot library):
+
+| Function | Output |
+|----------|--------|
+| `calls_transcript(calls)` | Numbered list of recorded API calls: method name + canonical JSON body (token stripped, keys sorted) |
+| `keyboard_grid(markup)` | ASCII grid of an inline keyboard: `[ text ](payload)` cells, one row per line |
+| `formatted_frame(formatted)` | Parse mode header + rendered text of a `format.FormattedText` |
+| `window_frame(window)` | Full visible frame of a dialog window: parse mode, media, text, button grid (see [dialogs.md](./dialogs.md) § Testing) |
+| `canonical_json(string)` | Any JSON re-serialized with sorted keys and stable indentation |
+
+### Example: snapshot a whole interaction
+
+```gleam
+import birdie
+import telega/testing/mock
+import telega/testing/render
+
+pub fn start_command_transcript_test() {
+  let #(client, calls) = mock.message_client()
+  // ... drive your bot with the mock client ...
+
+  mock.get_calls(calls)
+  |> render.calls_transcript
+  |> birdie.snap(title: "my_bot:start:transcript")
+}
+```
+
+The first run records the snapshot; review and accept it with
+`gleam run -m birdie` (or `gleam run -m birdie accept`). Accepted snapshots
+live in `test/birdie_snapshots/` and belong in git. On any behavior change the
+test fails with a diff — review it like a code change.
+
+### Example: snapshot a keyboard
+
+```gleam
+import birdie
+import telega/keyboard
+import telega/model/types.{SendMessageReplyInlineKeyboardMarkupParameters}
+import telega/testing/render
+
+pub fn menu_keyboard_test() {
+  let assert SendMessageReplyInlineKeyboardMarkupParameters(markup) =
+    keyboard.to_inline_markup(build_menu_keyboard())
+
+  render.keyboard_grid(markup)
+  |> birdie.snap(title: "my_bot:menu:keyboard")
+}
+```
+
+### Conventions
+
+- Snapshot titles: `"<module>:<entity>:<case>"` (e.g. `format:daily_report:html`). Birdie requires globally unique titles — one test, one snapshot.
+- Keep snapshots deterministic: use `telega/testing/factory` data (fixed ids and dates) and the mock client (token never reaches the transcript).
+- Localized bots: pin the same frame once per locale (suffix the title:
+  `booking:confirm:frame_en` / `frame_ru`). With `telega_i18n`, wrap the
+  render in `telega_i18n.enter(catalog:, locale:)` / `leave()` — see
+  `examples/06-restaurant-booking/test/booking_dialog_test.gleam`.
+- CI: `gleam test` fails on unaccepted snapshots, so a snapshot diff can't slip through unreviewed.
+
 ## Database-Dependent Tests
 
 For tests that need a database (e.g., flow persistence), use a helper pattern:
@@ -407,4 +476,5 @@ pub fn my_db_test() {
 | Call-order-dependent responses | `mock.stateful_client(handler: fn(req, n) { ... })` |
 | Custom client in conversation DSL | `conversation.run_with_mock(...)` or `conversation.run_with_client(...)` |
 | Session state | Check `ctx.session` from `handler.test_handler()` result |
+| Full visible output (text + keyboards + call sequence) | `telega/testing/render` + birdie snapshots |
 | Injected services (`dependencies`) | `context.context_with_dependencies()`, `conversation.run_with_dependencies()`, `handler.with_test_bot_with_dependencies()` |

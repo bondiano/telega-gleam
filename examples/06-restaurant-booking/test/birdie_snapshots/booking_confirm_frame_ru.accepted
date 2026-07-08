@@ -1,0 +1,24 @@
+---
+version: 2.0.1
+title: booking:confirm:frame_ru
+file: ./test/booking_dialog_test.gleam
+test_name: confirm_frame_ru_snapshot_test
+---
+parse_mode: HTML
+---
+🎉 Подтвердите бронь:
+
+📅 Дата: 2024-12-25
+🕐 Время: 19:30
+👥 Гостей: 4
+📍 Зона: 🌿 Терраса
+✨ Пожелания: 🎂 Праздничный торт, 💐 Цветы на стол
+🏠 Доставка торта: Springfield, Evergreen Terrace 742
+🍽️ Ресторан: Bella Vista Restaurant
+
+Мы подберём для вас свободный столик!
+---
+[ ✅ Подтвердить бронь ](book)
+[ 🏠 Указать адрес доставки ](address)
+[ 📷 Посмотреть зал ](photo)
+[ ‹ Назад ](back)

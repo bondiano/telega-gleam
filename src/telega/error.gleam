@@ -68,6 +68,39 @@ pub fn to_string(error: TelegaError) -> String {
   }
 }
 
+/// The edit was a no-op: new content equals the current one. Safe to treat
+/// as success.
+///
+/// The Bot API has no structured error codes, so a case-insensitive substring
+/// match on the 400 description is the only way to classify this error.
+pub fn is_message_not_modified(error error: TelegaError) -> Bool {
+  is_400_with(error, "message is not modified")
+}
+
+/// The message to edit no longer exists (deleted by the user or too old).
+///
+/// The Bot API has no structured error codes, so a case-insensitive substring
+/// match on the 400 description is the only way to classify this error.
+pub fn is_message_not_found(error error: TelegaError) -> Bool {
+  is_400_with(error, "message to edit not found")
+}
+
+/// The message exists but cannot be edited (e.g. not sent by the bot).
+///
+/// The Bot API has no structured error codes, so a case-insensitive substring
+/// match on the 400 description is the only way to classify this error.
+pub fn is_message_cant_be_edited(error error: TelegaError) -> Bool {
+  is_400_with(error, "message can't be edited")
+}
+
+fn is_400_with(error: TelegaError, needle: String) -> Bool {
+  case error {
+    TelegramApiError(error_code: 400, description:) ->
+      string.contains(string.lowercase(description), needle)
+    _ -> False
+  }
+}
+
 /// Helper to replace `result.try` for api call and error mapping.
 pub fn try(
   result: Result(a, TelegaError),

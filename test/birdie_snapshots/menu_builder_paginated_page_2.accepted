@@ -1,0 +1,11 @@
+---
+version: 2.0.1
+title: menu_builder:paginated:page_2
+---
+[ Item 4 ](menu:paginated:select:3)
+[ Item 5 ](menu:paginated:select:4)
+[ Item 6 ](menu:paginated:select:5)
+[ 🏠 Main ](menu:paginated:main)
+[ ◀️ Prev ](menu:paginated:page:1)
+[ Page 2/3 ](copy:Page 2/3)
+[ Next ▶️ ](menu:paginated:page:3)

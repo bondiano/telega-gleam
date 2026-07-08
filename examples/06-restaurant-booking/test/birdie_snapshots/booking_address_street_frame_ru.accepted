@@ -1,0 +1,11 @@
+---
+version: 2.0.1
+title: booking:address:street_frame_ru
+file: ./test/booking_dialog_test.gleam
+test_name: address_street_frame_ru_snapshot_test
+---
+parse_mode: HTML
+---
+🛣️ Спрингфилд — записали. Теперь улица и номер дома:
+---
+[ ‹ Назад ](back)

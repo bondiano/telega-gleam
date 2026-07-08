@@ -170,6 +170,36 @@ pub fn send_message_stub_decodes_test() {
   mock.assert_no_calls(from: calls)
 }
 
+pub fn without_claim_suppresses_claiming_test() {
+  let #(client, calls, envelope) = enveloped_client(routes: bool_routes())
+
+  let results = process.new_subject()
+  process.spawn(fn() {
+    // Inside without_claim: no claim is attempted, the call goes over HTTP.
+    let inside =
+      webhook_reply.without_claim(fn() {
+        api.answer_callback_query(client, answer_params("quiet"))
+      })
+    // Outside: claiming works again (the suppressed call did not consume the
+    // one claim attempt per update).
+    let outside = api.answer_callback_query(client, answer_params("loud"))
+    process.send(results, #(inside, outside))
+  })
+
+  // The first (and only) Claim on the envelope is the outside call.
+  let assert Ok(webhook_reply.Claim(reply:, granted:)) =
+    process.receive(envelope, 1000)
+  string.contains(reply.params_json, "loud") |> should.be_true
+  process.send(granted, True)
+
+  let assert Ok(#(Ok(True), Ok(True))) = process.receive(results, 1000)
+
+  // Only the suppressed call reached HTTP.
+  let calls = mock.assert_call_count(from: calls, expected: 1)
+  let assert [ApiCall(request:)] = calls
+  string.contains(request.body, "quiet") |> should.be_true
+}
+
 pub fn to_response_body_splices_method_test() {
   webhook_reply.WebhookReply(
     method: "answerCallbackQuery",

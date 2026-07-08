@@ -1,0 +1,24 @@
+---
+version: 2.0.1
+title: booking:confirm:frame_en
+file: ./test/booking_dialog_test.gleam
+test_name: confirm_frame_en_snapshot_test
+---
+parse_mode: HTML
+---
+🎉 Confirm your reservation:
+
+📅 Date: 2024-12-25
+🕐 Time: 19:30
+👥 Guests: 4
+📍 Seating: 🌿 Terrace
+✨ Extras: 🎂 Birthday cake, 💐 Flowers on the table
+🏠 Cake delivery: Springfield, Evergreen Terrace 742
+🍽️ Restaurant: Bella Vista Restaurant
+
+We'll book an available table for you!
+---
+[ ✅ Confirm booking ](book)
+[ 🏠 Add delivery address ](address)
+[ 📷 See the dining hall ](photo)
+[ ‹ Back ](back)

@@ -1,0 +1,7 @@
+---
+version: 2.0.1
+title: menu_builder:settings:toggles
+---
+[ 🔔 Notifications ✅ ](menu:settings:toggle_notifications)
+[ 🎨 Dark Mode ❌ ](menu:settings:toggle_dark_mode)
+[ 🔊 Sound ✅ ](menu:settings:toggle_sound)

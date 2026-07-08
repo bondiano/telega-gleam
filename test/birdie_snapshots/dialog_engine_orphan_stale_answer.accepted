@@ -1,0 +1,12 @@
+---
+version: 2.0.1
+title: dialog:engine:orphan_stale_answer
+file: ./test/telega/dialog_test.gleam
+test_name: orphan_dialog_callback_answered_stale_test
+---
+1. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false,
+  "text": "⏳"
+}

@@ -11,7 +11,7 @@ Use flows when you need:
 - **Type-safe navigation** — steps are algebraic data types, not strings
 - **Reusable logic** — compose flows sequentially, conditionally, or in parallel
 
-For simple multi-message interactions that don't need persistence, the [Conversation API](./conversation.md) may be a better fit.
+For simple multi-message interactions that don't need persistence, the [Conversation API](./conversation.md) may be a better fit. For single-message button UIs (settings panels, wizards that edit one message in place) consider [Dialogs](./dialogs.md) — a declarative layer compiled on top of flows.
 
 ### Flows vs Conversations
 

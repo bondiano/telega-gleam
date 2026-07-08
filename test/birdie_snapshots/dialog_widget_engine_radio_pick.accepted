@@ -1,0 +1,94 @@
+---
+version: 2.0.1
+title: dialog:widget:engine_radio_pick
+file: ./test/telega/dialog_widget_test.gleam
+test_name: engine_radio_pick_persists_store_test
+---
+1. sendMessage
+{
+  "chat_id": 501,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:hall",
+          "text": "● Hall"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:terrace",
+          "text": "○ Terrace"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:cake",
+          "text": "☐ Cake"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:flowers",
+          "text": "☐ Flowers"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:candles",
+          "text": "☐ Candles"
+        }
+      ]
+    ]
+  },
+  "text": "Preferences"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 501,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:hall",
+          "text": "○ Hall"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:terrace",
+          "text": "● Terrace"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:cake",
+          "text": "☐ Cake"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:flowers",
+          "text": "☐ Flowers"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:candles",
+          "text": "☐ Candles"
+        }
+      ]
+    ]
+  },
+  "text": "Preferences"
+}

@@ -1,0 +1,45 @@
+---
+version: 2.0.1
+title: dialog:engine:stale_message_guard
+file: ./test/telega/dialog_test.gleam
+test_name: engine_press_on_outdated_message_is_stale_test
+---
+1. sendMessage
+{
+  "chat_id": 211,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:settings:menu:lang:en",
+          "text": "EN"
+        },
+        {
+          "callback_data": "dlg:settings:menu:lang:ru",
+          "text": "RU"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:settings:menu:name",
+          "text": "Name"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:settings:menu:done",
+          "text": "Done"
+        }
+      ]
+    ]
+  },
+  "text": "<b>Settings</b>\nlang: en, name: "
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false,
+  "text": "⏳"
+}

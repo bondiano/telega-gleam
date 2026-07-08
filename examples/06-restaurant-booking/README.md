@@ -4,8 +4,9 @@ A complete restaurant table booking system demonstrating Telega's persistent flo
 
 ## Features Demonstrated
 
-- 🍽️ **Multi-step conversational flows** - User registration and table booking with persistence
-- 📊 **Unified storage** - Sessions *and* flows persisted via `telega_storage_sqlite`, with no hand-written storage code
+- 🍽️ **Multi-step conversational flows** - User registration as a hand-written flow with persistence
+- 🪟 **Declarative dialogs** - Table booking (`/book`) as a `telega/dialog`: windows rendered into one live message, Back navigation, in-window validation errors
+- 📊 **Unified storage** - Sessions, flows *and* dialogs persisted via `telega_storage_sqlite`, with no hand-written storage code
 - 🔄 **Flow resumption** - Continue conversations after interruptions and across restarts
 - ✅ **Input validation** - Robust error handling and user feedback
 - 🗄️ **Real-time data** - Live table availability checking
@@ -52,6 +53,75 @@ pub fn create_database_storage(db: sqlight.Connection) -> types.FlowStorage(Stri
   |> storage.flow_storage_from_storage
 }
 ```
+
+### Booking dialog vs. hand-written flows
+
+Registration and menu are hand-written flows (`telega/flow`): each step sends
+its own messages and parses its own callbacks. Booking (`/book`) shows the
+higher-level alternative — a **declarative dialog** (`telega/dialog`):
+
+- each window is a pure `render(state, ctx) -> RenderedWindow` plus handlers
+  returning `Stay`/`Goto`/`Back`/`Done` — no manual `edit`, no callback parsing
+- the engine keeps **one live message** and edits it on every transition —
+  including **media windows**: the `photo` window attaches a
+  `PhotoMedia` and the engine recreates the message on text ↔ media
+  transitions (the Bot API can't edit one into the other)
+- interactive keyboards are **managed widgets** (`telega/dialog/widget`):
+  the `time` window pages through 12 half-hour slots (`paged_select`), the
+  `guests` window is a `select` grid, and the `prefs` window combines a
+  `radio` (seating area) with a `multiselect` (extras) — the engine renders
+  their buttons, handles their callbacks, and persists their selections;
+  the confirm window reads them back with `dialog.widget_store`
+- validation errors are part of the state and re-rendered inside the window
+- the optional delivery address is a **sub-dialog** (`dialog.subdialog`): a
+  reusable two-window dialog with its own state type (`AddressState`) started
+  from the confirm window via `StartSub`; it takes over the same live
+  message, its `Done` hands the exported result to the confirm window's
+  `on_sub_result` (which stores the address in `BookingState`), and `‹ Back`
+  on its first window cancels it
+- state persists through the same SQLite storage, so a half-finished booking
+  (including widget selections and a half-entered address) survives restarts;
+  `/cancel` aborts it
+
+```gleam
+// flows/booking.gleam
+dialog.new(id: "booking", storage:, initial_state:, encode_state:, decode_state:)
+|> dialog.window_with_input(id: "date", render: render_date, on_action:, on_text:)
+|> dialog.window_with_widgets(id: "time", ..., widgets: [
+  widget.paged_select(id: "slot", items: time_slot_items, page_size: 6,
+    columns: 3, on_selected: time_selected),
+])
+|> dialog.window_with_widgets(id: "guests", ..., widgets: [
+  widget.select(id: "n", items: guest_items, columns: 3, on_selected: guests_selected),
+])
+|> dialog.window_with_widgets(id: "prefs", ..., widgets: [
+  widget.radio(id: "zone", items: zone_items, default: Some("hall")),
+  widget.multiselect(id: "extras", items: extra_items, min: 0, max: 3, done: "confirm"),
+])
+|> dialog.window(id: "confirm", render: render_confirm, on_action:)
+|> dialog.window(id: "photo", render: render_photo, on_action:)  // media window
+|> dialog.subdialog(sub: create_address_dialog(storage),         // city → street
+  init: fn(_booking, _args) { AddressState(city: "", street: "") },
+  result: address_result)
+|> dialog.on_sub_result(window: "confirm", handler: confirm_sub_result)
+|> dialog.initial("date")
+|> dialog.on_done(booking_done)
+|> dialog.with_labels(dialog_labels)  // i18n for the Done button / stale notice
+|> dialog.build()
+```
+
+The dialog is registered without a trigger (`dialog.attach`) and started from
+the `/book` handler after the registration check via `dialog.start`. Window
+renders are pure, so `test/booking_dialog_test.gleam` checks the frames with
+`telega/testing/render.window_frame` — no network, no actors.
+
+> **Migration note:** booking used to be a hand-written flow registered as
+> `"booking"`; the dialog compiles to the flow name `"__dialog:booking"`.
+> Persisted instances are keyed by flow name, so renaming a flow (or turning
+> it into a dialog) **orphans** any instances saved under the old name — they
+> are never resumed and never expire on their own. After such a rename, clean
+> the stale rows from the sessions storage (here: the `telega_storage` SQLite
+> table, keys prefixed with the old flow name).
 
 ### Observability
 

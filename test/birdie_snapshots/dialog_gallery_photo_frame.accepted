@@ -1,0 +1,13 @@
+---
+version: 2.0.1
+title: dialog:gallery:photo_frame
+file: ./test/telega/dialog_test.gleam
+test_name: gallery_photo_window_frame_test
+---
+parse_mode: HTML
+media: photo file_b (spoiler)
+---
+Photo b
+---
+[ A ](pick:a) | [ B ](pick:b)
+[ ‹ Back ](back)

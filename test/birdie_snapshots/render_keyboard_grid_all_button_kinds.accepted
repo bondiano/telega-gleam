@@ -1,0 +1,9 @@
+---
+version: 2.0.1
+title: render:keyboard_grid:all_button_kinds
+file: ./test/telega/render_test.gleam
+test_name: keyboard_grid_test
+---
+[ ○ English ](lang:en) | [ ● Русский ](lang:ru)
+[ Docs ](url:https://example.com) | [ App ](web_app:https://app.example.com)
+[ 1/3 ](copy:1/3) | [ Share ](switch:query) | [ Here ](switch_current:q2)

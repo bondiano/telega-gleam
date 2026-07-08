@@ -1,0 +1,17 @@
+---
+version: 2.0.1
+title: format:daily_report:html
+file: ./test/format_test.gleam
+test_name: complex_formatting_html_test
+---
+parse_mode: HTML
+---
+<b>📊 Daily Report</b>
+
+<u>Statistics:</u>
+• Users: <code>1234</code>
+• Messages: <code>5678</code>
+
+<tg-spoiler>Secret data</tg-spoiler>
+<a href="https://example.com?a=1&amp;b=2">Details &amp; more</a>
+<pre><code class="language-gleam">let x = 42</code></pre>

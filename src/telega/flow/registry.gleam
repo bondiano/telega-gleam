@@ -30,6 +30,19 @@ pub opaque type FlowRegistry(session, error, dependencies) {
       ),
     ),
     flow_map: Dict(String, Flow(Dynamic, session, error, dependencies)),
+    // Per-flow callback payload filters (by flow name). A waiting flow with a
+    // filter only auto-resumes on callback payloads it accepts, so several
+    // waiting flows can coexist without stealing each other's button presses.
+    callback_filters: Dict(String, fn(String) -> Bool),
+    // Fallbacks for callbacks no waiting flow consumed, matched on the raw
+    // payload in registration order (see `with_orphan_callback_handler`).
+    orphan_callback_handlers: List(
+      #(
+        fn(String) -> Bool,
+        fn(Context(session, error, dependencies), String) ->
+          Result(Context(session, error, dependencies), error),
+      ),
+    ),
     cancel_commands: List(
       #(
         String,
@@ -42,7 +55,13 @@ pub opaque type FlowRegistry(session, error, dependencies) {
 
 /// Create a new empty flow registry
 pub fn new_registry() -> FlowRegistry(session, error, dependencies) {
-  FlowRegistry(flows: [], flow_map: dict.new(), cancel_commands: [])
+  FlowRegistry(
+    flows: [],
+    flow_map: dict.new(),
+    callback_filters: dict.new(),
+    orphan_callback_handlers: [],
+    cancel_commands: [],
+  )
 }
 
 /// Add a flow to the registry with a trigger
@@ -79,6 +98,41 @@ pub fn register_callable(
     ..registry,
     flows: registry.flows,
     flow_map: dict.insert(registry.flow_map, flow.name, coerced_flow),
+  )
+}
+
+/// Restrict a registered flow's callback auto-resume to payloads accepted by
+/// `filter`. Auto-resume normally delivers a callback to the first waiting
+/// flow regardless of payload; with a filter, a press that belongs to another
+/// flow's keyboard skips this one and reaches its real target. Used by the
+/// dialog engine, whose payloads are self-identifying (`dlg:<dialog_id>:...`).
+pub fn with_callback_filter(
+  registry: FlowRegistry(session, error, dependencies),
+  flow_name flow_name: String,
+  filter filter: fn(String) -> Bool,
+) -> FlowRegistry(session, error, dependencies) {
+  FlowRegistry(
+    ..registry,
+    callback_filters: dict.insert(registry.callback_filters, flow_name, filter),
+  )
+}
+
+/// Handle callback payloads that no waiting flow consumed. Handlers are
+/// tried in registration order; the first whose `matches` accepts the raw
+/// payload runs. Used by dialogs to answer presses on messages of already
+/// finished dialogs (otherwise the spinner hangs and the press is silently
+/// swallowed by the registry's catch-all route).
+pub fn with_orphan_callback_handler(
+  registry: FlowRegistry(session, error, dependencies),
+  matches matches: fn(String) -> Bool,
+  handler handler: fn(Context(session, error, dependencies), String) ->
+    Result(Context(session, error, dependencies), error),
+) -> FlowRegistry(session, error, dependencies) {
+  FlowRegistry(
+    ..registry,
+    orphan_callback_handlers: list.append(registry.orphan_callback_handlers, [
+      #(matches, handler),
+    ]),
   )
 }
 
@@ -350,7 +404,10 @@ fn auto_resume_handler(
                     let data =
                       dict.from_list([
                         #("user_input", text),
-                        #("__wait_result", "text:" <> text),
+                        #(
+                          instance.wait_result_key,
+                          instance.encode_text_wait_result(text),
+                        ),
                       ])
 
                     engine.resume_with_instance(flow, ctx, inst, Some(data))
@@ -388,30 +445,39 @@ fn auto_resume_callback_handler(
         case acc {
           Some(_) -> acc
           None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let wait_result_value =
-                      instance.encode_callback_wait_result(data)
-                    let callback_data =
-                      dict.from_list([
-                        #("callback_data", data),
-                        #("__wait_result", wait_result_value),
-                      ])
-                    engine.resume_with_instance(
-                      flow,
-                      ctx,
-                      inst,
-                      Some(callback_data),
-                    )
-                    |> Some
+            let accepts = case dict.get(registry.callback_filters, flow.name) {
+              Ok(filter) -> filter(data)
+              Error(_) -> True
+            }
+            case accepts {
+              False -> None
+              True -> {
+                let flow_id = storage.generate_id(user_id, chat_id, flow.name)
+                case flow.storage.load(flow_id) {
+                  Ok(Some(inst)) if inst.wait_token != None -> {
+                    case run_timeout_and_cleanup(flow, ctx, inst) {
+                      #(True, _) -> None
+                      #(False, _) -> {
+                        let wait_result_value =
+                          instance.encode_callback_wait_result(data)
+                        let callback_data =
+                          dict.from_list([
+                            #("callback_data", data),
+                            #(instance.wait_result_key, wait_result_value),
+                          ])
+                        engine.resume_with_instance(
+                          flow,
+                          ctx,
+                          inst,
+                          Some(callback_data),
+                        )
+                        |> Some
+                      }
+                    }
                   }
+                  _ -> None
                 }
               }
-              _ -> None
             }
           }
         }
@@ -419,7 +485,15 @@ fn auto_resume_callback_handler(
 
     case result {
       Some(res) -> res
-      None -> Ok(ctx)
+      None ->
+        case
+          list.find(registry.orphan_callback_handlers, fn(entry) {
+            entry.0(data)
+          })
+        {
+          Ok(#(_matches, handler)) -> handler(ctx, data)
+          Error(_) -> Ok(ctx)
+        }
     }
   }
 }
@@ -447,7 +521,7 @@ fn auto_resume_photo_handler(
                   #(False, _) -> {
                     let data =
                       dict.from_list([
-                        #("__wait_result", "photo:" <> file_ids_str),
+                        #(instance.wait_result_key, "photo:" <> file_ids_str),
                         #("__photos", file_ids_str),
                       ])
                     engine.resume_with_instance(flow, ctx, inst, Some(data))
@@ -489,7 +563,7 @@ fn auto_resume_video_handler(
                   #(False, _) -> {
                     let data =
                       dict.from_list([
-                        #("__wait_result", "video:" <> video.file_id),
+                        #(instance.wait_result_key, "video:" <> video.file_id),
                         #("__video_file_id", video.file_id),
                       ])
                     engine.resume_with_instance(flow, ctx, inst, Some(data))
@@ -531,7 +605,7 @@ fn auto_resume_voice_handler(
                   #(False, _) -> {
                     let data =
                       dict.from_list([
-                        #("__wait_result", "voice:" <> voice.file_id),
+                        #(instance.wait_result_key, "voice:" <> voice.file_id),
                         #("__voice_file_id", voice.file_id),
                       ])
                     engine.resume_with_instance(flow, ctx, inst, Some(data))
@@ -573,7 +647,7 @@ fn auto_resume_audio_handler(
                   #(False, _) -> {
                     let data =
                       dict.from_list([
-                        #("__wait_result", "audio:" <> audio.file_id),
+                        #(instance.wait_result_key, "audio:" <> audio.file_id),
                         #("__audio_file_id", audio.file_id),
                       ])
                     engine.resume_with_instance(flow, ctx, inst, Some(data))
@@ -623,7 +697,7 @@ fn auto_resume_location_handler(
                             let data =
                               dict.from_list([
                                 #(
-                                  "__wait_result",
+                                  instance.wait_result_key,
                                   "location:" <> lat_str <> "," <> lng_str,
                                 ),
                                 #("__location_lat", lat_str),
@@ -682,7 +756,7 @@ fn auto_resume_command_handler(
                         let data =
                           dict.from_list([
                             #(
-                              "__wait_result",
+                              instance.wait_result_key,
                               "command:" <> command.command <> ":" <> payload,
                             ),
                             #("command", command.command),

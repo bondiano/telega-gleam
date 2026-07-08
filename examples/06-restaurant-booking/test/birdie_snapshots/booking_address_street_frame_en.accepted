@@ -1,0 +1,11 @@
+---
+version: 2.0.1
+title: booking:address:street_frame_en
+file: ./test/booking_dialog_test.gleam
+test_name: address_street_frame_en_snapshot_test
+---
+parse_mode: HTML
+---
+🛣️ Springfield — got it. Now the street and house number:
+---
+[ ‹ Back ](back)

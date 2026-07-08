@@ -1,0 +1,19 @@
+---
+version: 2.0.1
+title: format:daily_report:markdown
+file: ./test/format_test.gleam
+test_name: complex_formatting_markdown_test
+---
+parse_mode: Markdown
+---
+*📊 Daily Report*
+
+Statistics:
+• Users: `1234`
+• Messages: `5678`
+
+Secret data
+[Details & more](https://example.com?a=1&b=2)
+```
+let x = 42
+```

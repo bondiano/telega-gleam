@@ -2,7 +2,7 @@
 # This is the default locale (see `restaurant_booking/i18n`).
 
 [help]
-text = "🍽️ Restaurant Booking Bot\n\nAvailable commands:\n/start - Register or update your profile\n/menu - Browse our menu and order food\n/book - Make a new table reservation\n/my_bookings - View your reservations\n/language - Change language\n/help - Show this message"
+text = "🍽️ Restaurant Booking Bot\n\nAvailable commands:\n/start - Register or update your profile\n/menu - Browse our menu and order food\n/book - Make a new table reservation\n/my_bookings - View your reservations\n/cancel - Abort the current conversation\n/language - Change language\n/help - Show this message"
 
 [settings]
 choose_language = "🌍 Choose your language:"
@@ -11,7 +11,10 @@ language_set = "✅ Language set to English"
 [common]
 yes = "✅ Yes"
 no = "❌ No"
+back = "‹ Back"
+stale = "⏳ This menu is outdated"
 try_again = "Please try again."
+cancelled = "✅ Cancelled. Use /book or /start whenever you're ready."
 registration_required = "❌ You need to register first!\n\nUse /start to create your profile."
 
 [error]
@@ -20,7 +23,8 @@ name_too_long = "Name is too long"
 invalid_phone = "Phone number must be between 10 and 15 digits"
 invalid_email = "Invalid email format"
 invalid_date = "Date format must be YYYY-MM-DD"
-invalid_time = "Time format must be HH:MM"
+invalid_time = "Please pick one of the offered time slots"
+invalid_guests = "The number of guests must be between 1 and 6"
 
 [bookings]
 none = "📋 Your Bookings\n\nYou don't have any bookings yet.\nUse /book to make a reservation!"
@@ -57,12 +61,30 @@ save_failed = "❌ Failed to save: {error}"
 [book]
 welcome = "🍽️ Let's make your reservation at {restaurant}!\n\nI'll help you book the perfect table."
 ask_date = "📅 Enter date (YYYY-MM-DD):\nExample: 2024-12-25"
-ask_time = "🕐 Enter time (HH:MM):\nExample: 19:30\n\nHours: Mon-Thu 17:00-23:00, Fri-Sat 17:00-24:00, Sun 17:00-22:00"
-ask_guests = "👥 How many guests? (1-12)"
-confirm = "🎉 Confirm your reservation:\n\n📅 Date: {date}\n🕐 Time: {time}\n👥 Guests: {guests}\n🍽️ Restaurant: {restaurant}\n\nWe'll book an available table for you!"
+ask_time = "🕐 Choose a time:\n\nHours: evening service 17:00-22:30, every half hour"
+ask_guests = "👥 How many guests?"
+ask_prefs = "✨ Almost there!\n\nPick a seating area, add any extras, then press Done."
+prefs_done = "✅ Done"
+zone_hall = "🏠 Main hall"
+zone_terrace = "🌿 Terrace"
+zone_window = "🪟 By the window"
+extra_kids_chair = "👶 Kids chair"
+extra_cake = "🎂 Birthday cake"
+extra_flowers = "💐 Flowers on the table"
+extras_none = "—"
+confirm = "🎉 Confirm your reservation:\n\n📅 Date: {date}\n🕐 Time: {time}\n👥 Guests: {guests}\n📍 Seating: {zone}\n✨ Extras: {extras}\n🏠 Cake delivery: {address}\n🍽️ Restaurant: {restaurant}\n\nWe'll book an available table for you!"
+add_address = "🏠 Add delivery address"
+address_none = "—"
+confirm_button = "✅ Confirm booking"
 success = "✅ Booking confirmed!\n\nConfirmation: {code}\n📅 {date} at {time}\n👥 {guests} guests\n\nThank you for choosing {restaurant}!"
 error = "❌ Booking error: {error}\nUse /book to try again."
 no_tables = "No tables available for that date and time"
+view_photo = "📷 See the dining hall"
+photo_caption = "Our dining hall at {restaurant} — cozy tables for up to 6 guests."
+
+[address]
+ask_city = "🏙️ Which city should we deliver the leftovers cake to?\n\nType the city name (or go back):"
+ask_street = "🛣️ {city} — got it. Now the street and house number:"
 
 [menu]
 title = "🍽️ {restaurant} Menu"

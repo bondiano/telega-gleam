@@ -1,0 +1,13 @@
+---
+version: 2.0.1
+title: dialog:widget:radio_picked_frame
+file: ./test/telega/dialog_widget_test.gleam
+test_name: radio_picked_overrides_default_test
+---
+parse_mode: HTML
+---
+widget
+---
+[ ○ Apple ](w:z:pick:apple)
+[ ○ Pear ](w:z:pick:pear)
+[ ● Plum ](w:z:pick:plum)

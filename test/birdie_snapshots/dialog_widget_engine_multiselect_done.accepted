@@ -1,0 +1,178 @@
+---
+version: 2.0.1
+title: dialog:widget:engine_multiselect_done
+file: ./test/telega/dialog_widget_test.gleam
+test_name: engine_multiselect_toggle_and_done_test
+---
+1. sendMessage
+{
+  "chat_id": 502,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:hall",
+          "text": "● Hall"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:terrace",
+          "text": "○ Terrace"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:cake",
+          "text": "☐ Cake"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:flowers",
+          "text": "☐ Flowers"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:candles",
+          "text": "☐ Candles"
+        }
+      ]
+    ]
+  },
+  "text": "Preferences"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 502,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:hall",
+          "text": "● Hall"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:terrace",
+          "text": "○ Terrace"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:cake",
+          "text": "☑ Cake"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:flowers",
+          "text": "☐ Flowers"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:candles",
+          "text": "☐ Candles"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:done",
+          "text": "✓"
+        }
+      ]
+    ]
+  },
+  "text": "Preferences"
+}
+
+4. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+5. editMessageText
+{
+  "chat_id": 502,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:hall",
+          "text": "● Hall"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:z:pick:terrace",
+          "text": "○ Terrace"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:cake",
+          "text": "☑ Cake"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:flowers",
+          "text": "☑ Flowers"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:tgl:candles",
+          "text": "☐ Candles"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:prefs:main:w:x:done",
+          "text": "✓"
+        }
+      ]
+    ]
+  },
+  "text": "Preferences"
+}
+
+6. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+7. editMessageText
+{
+  "chat_id": 502,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:prefs:confirm:save",
+          "text": "Save"
+        }
+      ]
+    ]
+  },
+  "text": "zone=hall extras=cake,flowers"
+}

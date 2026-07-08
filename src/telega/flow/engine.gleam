@@ -7,13 +7,13 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import telega/bot.{type Context}
-import telega/flow/instance
+import telega/flow/instance.{wait_result_key}
 import telega/flow/types.{
   type Flow, type FlowAction, type FlowEnterHook, type FlowExitHook,
   type FlowInstance, type FlowLeaveHook, type FlowStorage, type ParallelConfig,
   type StepEnterHook, type StepLeaveHook, type StepMiddleware, type StepResult,
   type SubflowConfig, Back, Cancel, Complete, CompleteParallelStep, EnterSubflow,
-  Exit, FlowInstance, FlowStackFrame, FlowState, GoTo, Next, NextString,
+  Exit, FlowInstance, FlowStackFrame, FlowState, GoTo, Jump, Next, NextString,
   ParallelState, ReturnFromSubflow, StartParallel, Wait, WaitCallback,
   WaitCallbackWithTimeout, WaitWithTimeout,
 }
@@ -316,7 +316,7 @@ fn process_action(
             instance.state.current_step,
             ..instance.state.history
           ]),
-          step_data: dict.delete(instance.step_data, "__wait_result"),
+          step_data: dict.delete(instance.step_data, wait_result_key),
           updated_at: utils.current_time_ms(),
         )
 
@@ -334,7 +334,7 @@ fn process_action(
             instance.state.current_step,
             ..instance.state.history
           ]),
-          step_data: dict.delete(instance.step_data, "__wait_result"),
+          step_data: dict.delete(instance.step_data, wait_result_key),
           updated_at: utils.current_time_ms(),
         )
 
@@ -486,6 +486,22 @@ fn process_action(
       }
     }
 
+    Jump(step) -> {
+      let step_name = flow.step_to_string(step)
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(..instance.state, current_step: step_name),
+          step_data: dict.delete(instance.step_data, wait_result_key),
+          updated_at: utils.current_time_ms(),
+        )
+
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> execute_step(flow, ctx, updated_instance)
+        Error(err) -> handle_error(flow, ctx, instance, Some(err))
+      }
+    }
+
     Back -> {
       case instance.state.history {
         [previous_step, ..rest] -> {
@@ -497,7 +513,7 @@ fn process_action(
                 current_step: previous_step,
                 history: rest,
               ),
-              step_data: dict.delete(instance.step_data, "__wait_result"),
+              step_data: dict.delete(instance.step_data, wait_result_key),
               updated_at: utils.current_time_ms(),
             )
 
@@ -513,6 +529,11 @@ fn process_action(
     Complete(data) -> {
       let completed_instance =
         FlowInstance(..instance, state: FlowState(..instance.state, data: data))
+      // Delete before running completion callbacks: the flow is finished, and
+      // a failing on_complete/exit hook must not resurrect the instance —
+      // otherwise side effects already performed by the completing step could
+      // be repeated on the next event.
+      let _ = flow.storage.delete(instance.id)
       case flow.on_complete {
         Some(handler) -> {
           case handler(ctx, completed_instance) {
@@ -524,23 +545,18 @@ fn process_action(
                   completed_instance,
                 )
               {
-                Ok(final_ctx) -> {
-                  let _ = flow.storage.delete(instance.id)
-                  Ok(final_ctx)
-                }
-                Error(err) -> handle_error(flow, ctx, instance, Some(err))
+                Ok(final_ctx) -> Ok(final_ctx)
+                Error(err) ->
+                  handle_error(flow, ctx, completed_instance, Some(err))
               }
             }
-            Error(err) -> handle_error(flow, ctx, instance, Some(err))
+            Error(err) -> handle_error(flow, ctx, completed_instance, Some(err))
           }
         }
         None -> {
           case run_flow_exit_hook(flow.on_flow_exit, ctx, completed_instance) {
-            Ok(final_ctx) -> {
-              let _ = flow.storage.delete(instance.id)
-              Ok(final_ctx)
-            }
-            Error(err) -> handle_error(flow, ctx, instance, Some(err))
+            Ok(final_ctx) -> Ok(final_ctx)
+            Error(err) -> handle_error(flow, ctx, completed_instance, Some(err))
           }
         }
       }
@@ -934,7 +950,7 @@ fn process_subflow_action(
             instance.state.current_step,
             ..instance.state.history
           ]),
-          step_data: dict.delete(instance.step_data, "__wait_result"),
+          step_data: dict.delete(instance.step_data, wait_result_key),
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
@@ -952,7 +968,7 @@ fn process_subflow_action(
             instance.state.current_step,
             ..instance.state.history
           ]),
-          step_data: dict.delete(instance.step_data, "__wait_result"),
+          step_data: dict.delete(instance.step_data, wait_result_key),
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
@@ -984,6 +1000,22 @@ fn process_subflow_action(
       }
     }
 
+    Jump(step) -> {
+      let step_name = flow.step_to_string(step)
+      let updated_instance =
+        FlowInstance(
+          ..instance,
+          state: FlowState(..instance.state, current_step: step_name),
+          step_data: dict.delete(instance.step_data, wait_result_key),
+          updated_at: utils.current_time_ms(),
+        )
+      case flow.storage.save(updated_instance) {
+        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Error(err) ->
+          handle_subflow_error(flow, ctx, instance, Some(err), config)
+      }
+    }
+
     Back -> {
       case instance.state.history {
         [previous_step, ..rest] -> {
@@ -995,7 +1027,7 @@ fn process_subflow_action(
                 current_step: previous_step,
                 history: rest,
               ),
-              step_data: dict.delete(instance.step_data, "__wait_result"),
+              step_data: dict.delete(instance.step_data, wait_result_key),
               updated_at: utils.current_time_ms(),
             )
           case flow.storage.save(updated_instance) {

@@ -1,0 +1,11 @@
+---
+version: 2.0.1
+title: dialog:widget:pager_middle_page
+file: ./test/telega/dialog_widget_test.gleam
+test_name: pager_middle_page_frame_test
+---
+parse_mode: HTML
+---
+widget
+---
+[ ‹ ](w:p:prev) | [ 2/3 ](noop) | [ › ](w:p:next)

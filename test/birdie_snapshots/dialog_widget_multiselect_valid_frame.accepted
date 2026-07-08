@@ -1,0 +1,16 @@
+---
+version: 2.0.1
+title: dialog:widget:multiselect_valid_frame
+file: ./test/telega/dialog_widget_test.gleam
+test_name: multiselect_valid_selection_shows_done_test
+---
+parse_mode: HTML
+---
+widget
+---
+[ ☐ Apple ](w:x:tgl:apple)
+[ ☑ Pear ](w:x:tgl:pear)
+[ ☐ Plum ](w:x:tgl:plum)
+[ ☑ Fig ](w:x:tgl:fig)
+[ ☐ Kiwi ](w:x:tgl:kiwi)
+[ ✓ ](w:x:done)

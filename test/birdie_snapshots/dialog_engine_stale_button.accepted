@@ -1,0 +1,69 @@
+---
+version: 2.0.1
+title: dialog:engine:stale_button
+file: ./test/telega/dialog_test.gleam
+test_name: engine_stale_button_answers_and_stays_test
+---
+1. sendMessage
+{
+  "chat_id": 204,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:settings:menu:lang:en",
+          "text": "EN"
+        },
+        {
+          "callback_data": "dlg:settings:menu:lang:ru",
+          "text": "RU"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:settings:menu:name",
+          "text": "Name"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:settings:menu:done",
+          "text": "Done"
+        }
+      ]
+    ]
+  },
+  "text": "<b>Settings</b>\nlang: en, name: "
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 204,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:settings:name:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  },
+  "text": "What's your name?"
+}
+
+4. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false,
+  "text": "⏳"
+}

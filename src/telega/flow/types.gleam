@@ -218,6 +218,10 @@ pub type FlowAction(step_type) {
   WaitCallbackWithTimeout(timeout_ms: Int)
   /// Jump to any step (clears step data)
   GoTo(step_type)
+  /// Jump to any step preserving history and flow stack as-is (no push, no
+  /// erase). For programmatic navigation that manages history itself — e.g.
+  /// the dialog engine's sub-dialog enter/return transitions.
+  Jump(step_type)
   /// Exit flow with result
   Exit(Option(Dict(String, String)))
   /// Return from subflow

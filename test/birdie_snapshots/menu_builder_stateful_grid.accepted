@@ -1,0 +1,7 @@
+---
+version: 2.0.1
+title: menu_builder:stateful:grid
+---
+[ ➕ Increment ](menu:stateful:increment)
+[ ➖ Decrement ](menu:stateful:decrement)
+[ 🔄 Reset ](menu:stateful:reset)

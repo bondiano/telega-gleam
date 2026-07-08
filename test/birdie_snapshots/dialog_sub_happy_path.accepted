@@ -1,0 +1,94 @@
+---
+version: 2.0.1
+title: dialog:sub:happy_path
+file: ./test/telega/dialog_sub_test.gleam
+test_name: sub_happy_path_test
+---
+1. sendMessage
+{
+  "chat_id": 601,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:profile:menu:address",
+          "text": "Address"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:profile:menu:finish",
+          "text": "Finish"
+        }
+      ]
+    ]
+  },
+  "text": "Profile. Address: none"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 601,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:profile:address.city:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  },
+  "text": "City? (Springfield|)"
+}
+
+4. editMessageText
+{
+  "chat_id": 601,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:profile:address.street:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  },
+  "text": "Street? (Shelbyville|)"
+}
+
+5. editMessageText
+{
+  "chat_id": 601,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:profile:menu:address",
+          "text": "Address"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:profile:menu:finish",
+          "text": "Finish"
+        }
+      ]
+    ]
+  },
+  "text": "Profile. Address: Shelbyville, Evergreen Terrace 742"
+}

@@ -190,7 +190,10 @@ fn resume_handler(
         let resume_data =
           dict.from_list([
             #("callback_data", data),
-            #("__wait_result", instance.encode_callback_wait_result(data)),
+            #(
+              instance.wait_result_key,
+              instance.encode_callback_wait_result(data),
+            ),
           ])
         engine.resume_with_token(flow, ctx, token, Some(resume_data))
       }
@@ -212,7 +215,7 @@ fn resume_handler_with_keyboard(
         let resume_data =
           dict.from_list([
             #("callback_data", data),
-            #("__wait_result", wait_result_value),
+            #(instance.wait_result_key, wait_result_value),
           ])
         case keyboard.unpack_callback(data, callback_data) {
           Ok(callback) ->

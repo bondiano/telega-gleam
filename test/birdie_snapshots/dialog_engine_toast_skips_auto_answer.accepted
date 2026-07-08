@@ -1,0 +1,47 @@
+---
+version: 2.0.1
+title: dialog:engine:toast_skips_auto_answer
+file: ./test/telega/dialog_test.gleam
+test_name: engine_toast_skips_auto_answer_test
+---
+1. sendMessage
+{
+  "chat_id": 208,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:toasty:main:ping",
+          "text": "Ping"
+        }
+      ]
+    ]
+  },
+  "text": "Hi"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false,
+  "text": "pong!"
+}
+
+3. editMessageText
+{
+  "chat_id": 208,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:toasty:main:ping",
+          "text": "Ping"
+        }
+      ]
+    ]
+  },
+  "text": "Hi"
+}

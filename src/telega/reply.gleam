@@ -16,8 +16,8 @@ import telega/model/types.{
   type InputPaidMedia, type Message, type SendDiceParameters,
   type SendMessageReplyMarkupParameters, EditMessageTextParameters, LabeledPrice,
   SendDiceParameters, SendInvoiceParameters, SendMediaGroupParameters,
-  SendMessageParameters, SendPaidMediaParameters, SendPollParameters,
-  SendStickerParameters, Str,
+  SendMessageParameters, SendPaidMediaParameters, SendPhotoParameters,
+  SendPollParameters, SendStickerParameters, Str,
 }
 
 /// Use this method to send text messages.
@@ -266,6 +266,46 @@ pub fn with_dice(
     })
 
   api.send_dice(ctx.config.api_client, parameters)
+}
+
+/// Use this method to send a photo — by `file_id`, URL, or upload.
+///
+/// The caption uses the client's default parse mode if one is configured
+/// via `client.set_default_parse_mode`.
+///
+/// ## Example
+/// ```gleam
+/// reply.with_photo(ctx, types.StringV("https://example.com/cat.jpg"), Some("A cat"))
+/// ```
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendphoto
+pub fn with_photo(
+  ctx ctx: Context(session, error, dependencies),
+  photo photo: FileOrString,
+  caption caption: Option(String),
+) -> Result(Message, error.TelegaError) {
+  api.send_photo(
+    ctx.config.api_client,
+    parameters: SendPhotoParameters(
+      chat_id: Str(ctx.key),
+      photo:,
+      caption:,
+      parse_mode: option.then(caption, fn(_) {
+        client.default_parse_mode_string(ctx.config.api_client)
+      }),
+      business_connection_id: None,
+      message_thread_id: None,
+      caption_entities: None,
+      show_caption_above_media: None,
+      has_spoiler: None,
+      disable_notification: None,
+      protect_content: None,
+      allow_paid_broadcast: None,
+      message_effect_id: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
 }
 
 /// Use this method to edit text and game messages.

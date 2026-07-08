@@ -1,0 +1,11 @@
+---
+version: 2.0.1
+title: dialog:settings:name_frame
+file: ./test/telega/dialog_test.gleam
+test_name: name_window_frame_test
+---
+parse_mode: HTML
+---
+What's your name?
+---
+[ ‹ Back ](back)

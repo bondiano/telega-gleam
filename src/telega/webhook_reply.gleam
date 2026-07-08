@@ -97,6 +97,7 @@
 //// string.contains(body, "\"method\":\"answerCallbackQuery\"")
 //// ```
 
+import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/process.{type Subject}
 import gleam/http/response.{type Response}
@@ -142,7 +143,10 @@ pub fn transformer(
 
   fn(request, next) {
     let method = client.request_method(request)
-    case is_claimable(method), client.request_body(request) {
+    case
+      is_claimable(method) && !claim_suppressed(),
+      client.request_body(request)
+    {
       True, Some(params_json) ->
         case atomics_add_get(claimed, 1, 1) {
           1 -> {
@@ -162,6 +166,41 @@ pub fn transformer(
     }
   }
 }
+
+// Claim suppression ----------------------------------------------------------
+//
+// A claimed call resolves to a synthetic stub — `sendMessage` in particular
+// yields a fake `message_id: -1`. Callers that need the real result (the
+// dialog engine tracks the sent message's id to edit it later) opt their
+// calls out via `without_claim`. The transformer runs in the calling process,
+// so a process-dictionary flag is race-free.
+
+const suppress_key = "__telega_webhook_reply_suppress"
+
+/// Run `work` with webhook-reply claiming disabled for the calling process.
+/// Use around API calls whose real result you need — a claimed call would
+/// resolve to a synthetic stub instead (see the module doc).
+pub fn without_claim(work work: fn() -> a) -> a {
+  let _ = pdict_put(suppress_key, "1")
+  let result = work()
+  let _ = pdict_erase(suppress_key)
+  result
+}
+
+fn claim_suppressed() -> Bool {
+  pdict_get(suppress_key)
+  |> decode.run(decode.string)
+  |> result.is_ok
+}
+
+@external(erlang, "erlang", "put")
+fn pdict_put(key: String, value: String) -> Dynamic
+
+@external(erlang, "erlang", "get")
+fn pdict_get(key: String) -> Dynamic
+
+@external(erlang, "erlang", "erase")
+fn pdict_erase(key: String) -> Dynamic
 
 /// Whether a method may be answered in the webhook response body.
 /// Only methods whose synthetic result is honest (`True` for boolean methods)

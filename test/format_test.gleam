@@ -1,7 +1,9 @@
+import birdie
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import telega/format
+import telega/testing/render
 
 pub fn main() {
   gleeunit.main()
@@ -204,8 +206,9 @@ pub fn formatted_text_render_markdown_v2_test() {
   |> should.equal(format.MarkdownV2)
 }
 
-pub fn complex_formatting_test() {
+fn daily_report(mode: format.ParseMode) -> format.FormatBuilder {
   format.build()
+  |> format.with_mode(mode)
   |> format.bold_text("📊 Daily Report")
   |> format.line_break()
   |> format.line_break()
@@ -219,10 +222,31 @@ pub fn complex_formatting_test() {
   |> format.line_break()
   |> format.line_break()
   |> format.spoiler_text("Secret data")
-  |> format.to_html()
-  |> should.equal(
-    "<b>📊 Daily Report</b>\n\n<u>Statistics:</u>\n• Users: <code>1234</code>\n• Messages: <code>5678</code>\n\n<tg-spoiler>Secret data</tg-spoiler>",
-  )
+  |> format.line_break()
+  |> format.link_text("Details & more", "https://example.com?a=1&b=2")
+  |> format.line_break()
+  |> format.pre_text("let x = 42", Some("gleam"))
+}
+
+pub fn complex_formatting_html_test() {
+  daily_report(format.HTML)
+  |> format.to_formatted()
+  |> render.formatted_frame
+  |> birdie.snap(title: "format:daily_report:html")
+}
+
+pub fn complex_formatting_markdown_test() {
+  daily_report(format.Markdown)
+  |> format.to_formatted()
+  |> render.formatted_frame
+  |> birdie.snap(title: "format:daily_report:markdown")
+}
+
+pub fn complex_formatting_markdown_v2_test() {
+  daily_report(format.MarkdownV2)
+  |> format.to_formatted()
+  |> render.formatted_frame
+  |> birdie.snap(title: "format:daily_report:markdown_v2")
 }
 
 pub fn empty_text_test() {

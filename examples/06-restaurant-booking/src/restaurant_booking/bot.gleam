@@ -5,8 +5,10 @@ import gleam/string
 import sqlight
 
 import telega
+import telega/dialog
 import telega/flow/registry
 import telega/flow/types
+import telega/reply
 import telega/router.{type Router}
 import telega_httpc
 
@@ -60,14 +62,21 @@ pub fn build_router(
   // here only to build each flow's *persistence backend* — that storage is
   // created at init, before any update arrives, so it can't come from `ctx`.
   let registration_flow = registration.create_registration_flow(db)
-  let booking_flow = booking.create_booking_flow(db)
   let menu_flow = menu.create_menu_flow(db)
+  // Booking is a declarative dialog (`telega/dialog`) compiled onto the same
+  // flow machinery — registered without a trigger and started from the
+  // `/book` handler after the registration check.
+  let booking_dialog = booking.create_booking_dialog(db)
 
   let flow_registry =
     registry.new_registry()
     |> registry.register(types.OnCommand("/start"), registration_flow)
-    |> registry.register(types.OnCommand("/book"), booking_flow)
     |> registry.register(types.OnCommand("/menu"), menu_flow)
+    |> dialog.attach(booking_dialog)
+    |> registry.register_cancel_command_with("/cancel", fn(ctx, _cancelled) {
+      let _ = reply.with_text(ctx, i18n.t(ctx, "common.cancelled", []))
+      Ok(ctx)
+    })
 
   let base =
     router.new(cfg.restaurant_name <> constants.bot_name_suffix)
@@ -75,6 +84,7 @@ pub fn build_router(
     |> router.on_command("/help", handlers.help)
     |> router.on_command("/language", settings.language)
     |> router.on_command("/my_bookings", handlers.my_bookings)
+    |> router.on_command("/book", booking.start_booking(flow_registry))
 
   // Register one exact callback per locale (`lang:en`, `lang:ru`). Exact matches
   // take priority over the flows' catch-all callback handler, which is a prefix.

@@ -1,0 +1,13 @@
+---
+version: 2.0.1
+title: dialog:widget:select_frame
+file: ./test/telega/dialog_widget_test.gleam
+test_name: select_frame_test
+---
+parse_mode: HTML
+---
+widget
+---
+[ Apple ](w:s:pick:apple) | [ Pear ](w:s:pick:pear)
+[ Plum ](w:s:pick:plum) | [ Fig ](w:s:pick:fig)
+[ Kiwi ](w:s:pick:kiwi)

@@ -760,6 +760,30 @@ pub fn inline_button(
   }
 }
 
+/// Create a new inline button with raw string callback data.
+/// Unlike `inline_button`, no typed `KeyboardCallback` packing or validation
+/// is performed — the string is used as-is.
+pub fn inline_raw_callback_button(
+  text text: String,
+  callback_data callback_data: String,
+) -> InlineKeyboardButton {
+  InlineKeyboardButton(
+    text:,
+    icon_custom_emoji_id: None,
+    style: None,
+    callback_data: Some(callback_data),
+    url: None,
+    login_url: None,
+    pay: None,
+    switch_inline_query: None,
+    switch_inline_query_current_chat: None,
+    switch_inline_query_chosen_chat: None,
+    web_app: None,
+    callback_game: None,
+    copy_text: None,
+  )
+}
+
 /// Create an inline URL button
 pub fn inline_url_button(
   text text: String,

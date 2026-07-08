@@ -1,0 +1,46 @@
+---
+version: 2.0.1
+title: dialog:engine:back_empty_history_stays
+file: ./test/telega/dialog_test.gleam
+test_name: engine_back_on_initial_window_re_renders_test
+---
+1. sendMessage
+{
+  "chat_id": 209,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:rooted:home:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  },
+  "text": "Home: initial"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 209,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:rooted:home:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  },
+  "text": "Home: carried-in-back"
+}

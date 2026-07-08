@@ -171,12 +171,24 @@ pub fn get_data(instance: FlowInstance, key key: String) -> Option(String) {
   |> result.unwrap(None)
 }
 
+/// Step-data key under which auto-resume handlers store the encoded wait
+/// result. Owned here so the literal exists in exactly one module.
+@internal
+pub const wait_result_key = "__wait_result"
+
 /// Get the result of waiting for user input or callback
 pub fn get_wait_result(instance: FlowInstance) -> WaitResult {
-  case get_step_data(instance, "__wait_result") {
+  case get_step_data(instance, wait_result_key) {
     None -> Pending
     Some(raw) -> parse_wait_result(raw)
   }
+}
+
+/// Drop a consumed wait result so a later re-execution of the same step sees
+/// `Pending` instead of re-processing the old event.
+@internal
+pub fn clear_wait_result(instance: FlowInstance) -> FlowInstance {
+  clear_step_data_key(instance, wait_result_key)
 }
 
 /// Convert a FlowInstance to a flat row for database storage
@@ -405,6 +417,12 @@ pub fn get_current_step(
   instance: FlowInstance,
 ) -> Result(step_type, Nil) {
   flow.string_to_step(instance.state.current_step)
+}
+
+/// Encode text wait result
+@internal
+pub fn encode_text_wait_result(text: String) -> String {
+  "text:" <> text
 }
 
 /// Encode callback wait result

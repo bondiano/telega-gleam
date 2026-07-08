@@ -7,6 +7,7 @@ import gleam/result
 import gleeunit
 import gleeunit/should
 import telega/bot
+import telega/error
 import telega/flow/action
 import telega/flow/builder
 import telega/flow/engine
@@ -1532,6 +1533,41 @@ pub fn engine_on_complete_handler_test() {
     )
 
   let assert Ok("complete:Bob") = process.receive(events, 100)
+}
+
+pub fn engine_complete_deletes_before_failing_on_complete_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("complete_del", ets, test_step_to_string, string_to_test_step)
+    |> builder.on_complete(fn(_ctx, _inst) {
+      Error(error.ActorError("on_complete boom"))
+    })
+    |> builder.add_step(Start, fn(ctx, inst) { action.complete(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  // The instance is deleted BEFORE on_complete runs: the failing hook cannot
+  // resurrect the flow, so a repeated event cannot re-run the completing
+  // step's side effects.
+  let flow_id = storage.generate_id(1, 2, "complete_del")
+  let assert Ok(None) = ets.load(flow_id)
 }
 
 // ============================================================================

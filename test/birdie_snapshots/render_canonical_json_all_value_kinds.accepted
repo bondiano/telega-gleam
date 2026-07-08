@@ -1,0 +1,20 @@
+---
+version: 2.0.1
+title: render:canonical_json:all_value_kinds
+file: ./test/telega/render_test.gleam
+test_name: canonical_json_sorts_keys_and_indents_test
+---
+{
+  "alpha": {
+    "nested_a": null,
+    "nested_b": true
+  },
+  "empty_list": [],
+  "empty_object": {},
+  "list": [
+    1.5,
+    2.0
+  ],
+  "text": "line\n\"quoted\"",
+  "zebra": 1
+}

@@ -1,0 +1,6 @@
+---
+version: 2.0.1
+title: menu_builder:simple:grid
+---
+[ Action 1 ](menu:simple:action1)
+[ Action 2 ](menu:simple:action2)

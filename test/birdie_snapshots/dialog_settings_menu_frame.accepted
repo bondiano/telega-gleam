@@ -1,0 +1,14 @@
+---
+version: 2.0.1
+title: dialog:settings:menu_frame
+file: ./test/telega/dialog_test.gleam
+test_name: menu_window_frame_test
+---
+parse_mode: HTML
+---
+<b>Settings</b>
+lang: en, name: 
+---
+[ EN ](lang:en) | [ RU ](lang:ru)
+[ Name ](name)
+[ Done ](done)

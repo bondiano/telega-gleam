@@ -1,0 +1,101 @@
+---
+version: 2.0.1
+title: dialog:engine:media_to_media_edit
+file: ./test/telega/dialog_test.gleam
+test_name: engine_media_to_media_edits_in_place_test
+---
+1. sendMessage
+{
+  "chat_id": 402,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:gallery:cover:open",
+          "text": "Open"
+        }
+      ]
+    ]
+  },
+  "text": "Gallery"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. deleteMessage
+{
+  "chat_id": 402,
+  "message_id": 1
+}
+
+4. sendPhoto
+{
+  "caption": "Photo a",
+  "chat_id": 402,
+  "parse_mode": "HTML",
+  "photo": "file_a",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:gallery:photo:pick:a",
+          "text": "A"
+        },
+        {
+          "callback_data": "dlg:gallery:photo:pick:b",
+          "text": "B"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:gallery:photo:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  }
+}
+
+5. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+6. editMessageMedia
+{
+  "chat_id": 402,
+  "media": {
+    "caption": "Photo b",
+    "has_spoiler": true,
+    "media": "file_b",
+    "parse_mode": "HTML",
+    "type": "photo"
+  },
+  "message_id": 1,
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:gallery:photo:pick:a",
+          "text": "A"
+        },
+        {
+          "callback_data": "dlg:gallery:photo:pick:b",
+          "text": "B"
+        }
+      ],
+      [
+        {
+          "callback_data": "dlg:gallery:photo:back",
+          "text": "‹ Back"
+        }
+      ]
+    ]
+  }
+}

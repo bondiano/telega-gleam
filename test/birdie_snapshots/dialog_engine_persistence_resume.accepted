@@ -1,0 +1,27 @@
+---
+version: 2.0.1
+title: dialog:engine:persistence_resume
+file: ./test/telega/dialog_test.gleam
+test_name: engine_persistence_json_roundtrip_test
+---
+1. editMessageText
+{
+  "chat_id": 207,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:settings:confirm:yes",
+          "text": "Yes"
+        },
+        {
+          "callback_data": "dlg:settings:confirm:no",
+          "text": "No"
+        }
+      ]
+    ]
+  },
+  "text": "<b>Save?</b>\nAlice / en"
+}

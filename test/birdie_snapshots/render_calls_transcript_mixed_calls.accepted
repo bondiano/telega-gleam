@@ -1,0 +1,28 @@
+---
+version: 2.0.1
+title: render:calls_transcript:mixed_calls
+file: ./test/telega/render_test.gleam
+test_name: calls_transcript_test
+---
+1. sendMessage
+{
+  "chat_id": 123,
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "ok",
+          "text": "Ok"
+        }
+      ]
+    ]
+  },
+  "text": "Hello"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "42"
+}
+
+3. getMe

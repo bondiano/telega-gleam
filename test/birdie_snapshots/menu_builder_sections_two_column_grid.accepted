@@ -1,0 +1,7 @@
+---
+version: 2.0.1
+title: menu_builder:sections:two_column_grid
+---
+[ 📈 Analytics ](menu:complex:analytics) | [ 📋 Reports ](menu:complex:reports)
+[ 🔧 Settings ](menu:complex:settings) | [ 🚫 🚫 Maintenance ](menu:complex:maintenance)
+[ ℹ️ Help ](menu:complex:help) | [ ← Home ](menu:complex:home)

@@ -1,0 +1,5 @@
+---
+version: 2.0.1
+title: menu_builder:confirmation:grid
+---
+[ ✅ Yes, Delete ](menu:delete_confirmation:confirm_delete) | [ ❌ Cancel ](menu:delete_confirmation:cancel_delete)
