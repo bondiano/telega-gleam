@@ -1,8 +1,12 @@
+import gleam/json
 import gleeunit
 
 import bot
 
+import telega/model/encoder
 import telega/testing/conversation
+import telega/testing/factory
+import telega/testing/mock
 
 pub fn main() {
   gleeunit.main()
@@ -30,10 +34,25 @@ pub fn text_without_urls_test() {
 }
 
 pub fn text_with_single_url_test() {
+  let #(client, calls) =
+    mock.routed_client(routes: [
+      mock.route_with_response(
+        path_contains: "sendMediaGroup",
+        response: mock.ok_response(
+          result: json.preprocessed_array([
+            encoder.encode_message(factory.message(text: "")),
+          ]),
+        ),
+      ),
+    ])
+
   conversation.conversation_test()
   |> conversation.send("https://example.com/photo.jpg")
-  |> conversation.expect_reply_containing("Processing")
-  |> conversation.run(bot.build_router(), fn() { Nil })
+  |> conversation.expect_api_call(
+    path_contains: "sendMediaGroup",
+    body_contains: "example.com",
+  )
+  |> conversation.run_with_mock(bot.build_router(), fn() { Nil }, client, calls)
 }
 
 pub fn photo_download_failure_test() {
