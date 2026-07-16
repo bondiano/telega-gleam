@@ -109,6 +109,27 @@ TelegaRootSupervisor (OneForOne)
 
 Each `telega.init*` call creates an independent tree with its own ETS registry, so multiple bot instances don't conflict.
 
+### Running under your own supervision tree
+
+`telega.supervised` (webhook) and `telega.supervised_for_polling` (polling) wrap the corresponding `init` into a `ChildSpecification`, so the bot's tree becomes a child of your application's supervisor — a crashed bot is re-initialized by your tree, and ordering against the resources it needs (a database pool, caches) is expressed as child order:
+
+```gleam
+import gleam/otp/static_supervisor as supervisor
+
+let assert Ok(_) =
+  supervisor.new(supervisor.RestForOne)
+  |> supervisor.add(db_pool_child)
+  |> supervisor.add(
+    telega.new_for_polling(api_client:)
+    |> telega.with_router(router)
+    |> telega.with_nil_session()
+    |> telega.supervised_for_polling(),
+  )
+  |> supervisor.start
+```
+
+Supervisors don't hand child data back; when you need the `Telega` instance outside the tree (webhook adapters, manual `shutdown`), capture it from the `with_on_start` hook — see the `telega.supervised` documentation for the pattern.
+
 ### Graceful shutdown
 
 ```gleam

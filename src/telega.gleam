@@ -4,6 +4,7 @@ import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/otp/actor
 import gleam/otp/factory_supervisor as fsup
 import gleam/otp/static_supervisor as sup
 import gleam/otp/supervision
@@ -839,6 +840,70 @@ pub fn init_for_polling(
     supervisor_pid: sup_started.pid,
     poller: Some(poller),
   )
+}
+
+/// Run the bot as a child of your own supervision tree (webhook mode).
+///
+/// Wraps `init` into a `ChildSpecification`: telega still builds and owns its
+/// internal `chat factory → bot` tree, but that tree's root becomes a child
+/// of YOUR supervisor. If the bot tree dies, your supervisor restarts it by
+/// re-running `init` — `setWebhook`, `getMe` and a fresh internal tree.
+///
+/// Add it after the resources the bot depends on (database pool, caches) —
+/// with a `RestForOne` strategy a dead dependency restarts the bot too:
+///
+/// ```gleam
+/// let bot_ready = process.new_subject()
+/// let bot_child =
+///   telega.new(api_client:, url:, webhook_path:, secret_token:)
+///   |> telega.with_router(router)
+///   |> telega.with_on_start(fn(bot) { Ok(process.send(bot_ready, bot)) })
+///   |> telega.supervised()
+///
+/// let assert Ok(_) =
+///   static_supervisor.new(static_supervisor.RestForOne)
+///   |> static_supervisor.add(db_pool_child)
+///   |> static_supervisor.add(bot_child)
+///   |> static_supervisor.start
+///
+/// // Webhook adapters need the instance — receive it from the hook.
+/// let assert Ok(bot) = process.receive(bot_ready, within: 10_000)
+/// ```
+///
+/// The started `Telega` instance is the child's data; supervisors don't hand
+/// child data back, so capture it in `with_on_start` as above when you need
+/// it outside the tree (webhook adapters, manual `shutdown`). Stopping your
+/// tree stops the bot the standard OTP way (no drain); for a drained stop use
+/// `shutdown` or `with_signal_handlers`.
+pub fn supervised(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> supervision.ChildSpecification(Telega(session, error, dependencies)) {
+  supervision.supervisor(fn() { child_started(init(builder)) })
+}
+
+/// Run the bot as a child of your own supervision tree (long-polling mode).
+///
+/// The polling counterpart of `supervised` — wraps `init_for_polling`, so a
+/// restart re-runs `getMe` and starts a fresh `chat factory → bot → polling`
+/// tree. See `supervised` for the wiring pattern; in polling mode you rarely
+/// need the `Telega` instance afterwards, so the `with_on_start` capture is
+/// optional.
+pub fn supervised_for_polling(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> supervision.ChildSpecification(Telega(session, error, dependencies)) {
+  supervision.supervisor(fn() { child_started(init_for_polling(builder)) })
+}
+
+fn child_started(
+  started: Result(Telega(session, error, dependencies), error.TelegaError),
+) -> Result(
+  actor.Started(Telega(session, error, dependencies)),
+  actor.StartError,
+) {
+  case started {
+    Ok(telega) -> Ok(actor.Started(pid: telega.supervisor_pid, data: telega))
+    Error(e) -> Error(actor.InitFailed(error.to_string(e)))
+  }
 }
 
 /// Handle an update.
