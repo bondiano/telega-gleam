@@ -136,7 +136,13 @@ pub fn non_allowlisted_method_is_not_claimed_test() {
 
   api.set_my_commands(
     client:,
-    commands: [types.BotCommand(command: "start", description: "Start", is_ephemeral: None)],
+    commands: [
+      types.BotCommand(
+        command: "start",
+        description: "Start",
+        is_ephemeral: None,
+      ),
+    ],
     parameters: None,
   )
   |> should.equal(Ok(True))
