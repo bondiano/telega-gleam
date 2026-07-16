@@ -43,6 +43,7 @@ pub fn bot_user() -> types.User {
     allows_users_to_create_topics: None,
     can_manage_bots: None,
     supports_guest_queries: None,
+    supports_join_request_queries: None,
   )
 }
 
@@ -66,6 +67,7 @@ pub fn user() -> types.User {
     allows_users_to_create_topics: None,
     can_manage_bots: None,
     supports_guest_queries: None,
+    supports_join_request_queries: None,
   )
 }
 
@@ -219,6 +221,11 @@ pub fn message_with(
     managed_bot_created: None,
     poll_option_added: None,
     poll_option_deleted: None,
+    community_chat_added: None,
+    community_chat_removed: None,
+    ephemeral_message_id: None,
+    receiver_user: None,
+    rich_message: None,
   )
 }
 
@@ -259,6 +266,7 @@ pub fn raw_update_with(
     removed_chat_boost: None,
     managed_bot: None,
     guest_message: None,
+    subscription: None,
   )
 }
 

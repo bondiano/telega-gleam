@@ -14,14 +14,14 @@ import telega/model/decoder
 import telega/model/encoder
 import telega/model/types.{
   type AddStickerToSetParameters, type AnswerCallbackQueryParameters,
-  type AnswerGuestQueryParameters, type AnswerInlineQueryParameters,
-  type AnswerPreCheckoutQueryParameters, type AnswerShippingQueryParameters,
-  type ApproveChatJoinRequestParameters, type BanChatMemberParameters,
-  type BanChatSenderChatParameters, type BotAccessSettings, type BotCommand,
-  type BotCommandParameters, type BotDescription, type BotName,
-  type BotShortDescription, type BusinessConnection,
-  type ChatAdministratorRights, type ChatFullInfo, type ChatInviteLink,
-  type ChatMember, type CloseForumTopicParameters,
+  type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
+  type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
+  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
+  type BanChatMemberParameters, type BanChatSenderChatParameters,
+  type BotAccessSettings, type BotCommand, type BotCommandParameters,
+  type BotDescription, type BotName, type BotShortDescription,
+  type BusinessConnection, type ChatAdministratorRights, type ChatFullInfo,
+  type ChatInviteLink, type ChatMember, type CloseForumTopicParameters,
   type CloseGeneralForumTopicParameters, type ConvertGiftToStarsParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
   type CreateChatInviteLinkParameters,
@@ -30,12 +30,16 @@ import telega/model/types.{
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
   type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
-  type DeleteChatStickerSetParameters, type DeleteForumTopicParameters,
-  type DeleteMessageParameters, type DeleteMessageReactionParameters,
-  type DeleteMessagesParameters, type DeleteStickerFromSetParameters,
-  type DeleteStickerSetParameters, type DeleteStoryParameters,
-  type EditChatInviteLinkParameters,
-  type EditChatSubscriptionInviteLinkParameters, type EditForumTopicParameters,
+  type DeleteChatStickerSetParameters, type DeleteEphemeralMessageParameters,
+  type DeleteForumTopicParameters, type DeleteMessageParameters,
+  type DeleteMessageReactionParameters, type DeleteMessagesParameters,
+  type DeleteStickerFromSetParameters, type DeleteStickerSetParameters,
+  type DeleteStoryParameters, type EditChatInviteLinkParameters,
+  type EditChatSubscriptionInviteLinkParameters,
+  type EditEphemeralMessageCaptionParameters,
+  type EditEphemeralMessageMediaParameters,
+  type EditEphemeralMessageReplyMarkupParameters,
+  type EditEphemeralMessageTextParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
   type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
   type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
@@ -67,13 +71,15 @@ import telega/model/types.{
   type ReplaceStickerInSetParameters, type RepostStoryParameters,
   type RestrictChatMemberParameters, type RevokeChatInviteLinkParameters,
   type SendAnimationParameters, type SendAudioParameters,
-  type SendChatActionParameters, type SendContactParameters,
-  type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
-  type SendGiftParameters, type SendInvoiceParameters,
-  type SendLivePhotoParameters, type SendLocationParameters,
-  type SendMediaGroupParameters, type SendMessageDraftParameters,
-  type SendMessageParameters, type SendPaidMediaParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
+  type SendChatActionParameters, type SendChatJoinRequestWebAppParameters,
+  type SendContactParameters, type SendDiceParameters,
+  type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
+  type SendInvoiceParameters, type SendLivePhotoParameters,
+  type SendLocationParameters, type SendMediaGroupParameters,
+  type SendMessageDraftParameters, type SendMessageParameters,
+  type SendPaidMediaParameters, type SendPhotoParameters,
+  type SendPollParameters, type SendRichMessageDraftParameters,
+  type SendRichMessageParameters, type SendStickerParameters,
   type SendVenueParameters, type SendVideoNoteParameters,
   type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
   type SetBusinessAccountBioParameters,
@@ -3009,6 +3015,176 @@ pub fn get_user_personal_chat_messages(
   )
   |> fetch(client)
   |> map_response(decode.list(decoder.message_decoder()))
+}
+
+// Bot API 10.2 ----------------------------------------------------------------
+
+/// Use this method to send a rich message. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendrichmessage
+pub fn send_rich_message(
+  client client: client.TelegramClient,
+  parameters parameters: SendRichMessageParameters,
+) -> Result(Message, error.TelegaError) {
+  let body_json = encoder.encode_send_rich_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendRichMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Use this method to send a draft of a rich message to a private chat. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendrichmessagedraft
+pub fn send_rich_message_draft(
+  client client: client.TelegramClient,
+  parameters parameters: SendRichMessageDraftParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_send_rich_message_draft_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendRichMessageDraft",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to delete an ephemeral message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#deleteephemeralmessage
+pub fn delete_ephemeral_message(
+  client client: client.TelegramClient,
+  parameters parameters: DeleteEphemeralMessageParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_delete_ephemeral_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "deleteEphemeralMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to edit the text of an ephemeral message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editephemeralmessagetext
+pub fn edit_ephemeral_message_text(
+  client client: client.TelegramClient,
+  parameters parameters: EditEphemeralMessageTextParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_edit_ephemeral_message_text_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editEphemeralMessageText",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to edit the caption of an ephemeral message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editephemeralmessagecaption
+pub fn edit_ephemeral_message_caption(
+  client client: client.TelegramClient,
+  parameters parameters: EditEphemeralMessageCaptionParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_edit_ephemeral_message_caption_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editEphemeralMessageCaption",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to edit the media content of an ephemeral message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editephemeralmessagemedia
+pub fn edit_ephemeral_message_media(
+  client client: client.TelegramClient,
+  parameters parameters: EditEphemeralMessageMediaParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_edit_ephemeral_message_media_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editEphemeralMessageMedia",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to edit only the reply markup of an ephemeral message. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editephemeralmessagereplymarkup
+pub fn edit_ephemeral_message_reply_markup(
+  client client: client.TelegramClient,
+  parameters parameters: EditEphemeralMessageReplyMarkupParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_edit_ephemeral_message_reply_markup_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editEphemeralMessageReplyMarkup",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to answer a chat join request query. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answerchatjoinrequestquery
+pub fn answer_chat_join_request_query(
+  client client: client.TelegramClient,
+  parameters parameters: AnswerChatJoinRequestQueryParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_answer_chat_join_request_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerChatJoinRequestQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to open a Web App to process a chat join request. Returns _True_ on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendchatjoinrequestwebapp
+pub fn send_chat_join_request_web_app(
+  client client: client.TelegramClient,
+  parameters parameters: SendChatJoinRequestWebAppParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json =
+    encoder.encode_send_chat_join_request_web_app_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendChatJoinRequestWebApp",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
 }
 
 // Common Helpers --------------------------------------------------------------------------------------

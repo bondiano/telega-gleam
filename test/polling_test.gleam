@@ -38,6 +38,7 @@ fn create_test_update(id: Int) -> Update {
     removed_chat_boost: None,
     managed_bot: None,
     guest_message: None,
+    subscription: None,
   )
 }
 

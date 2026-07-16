@@ -5,7 +5,7 @@
 
 import gleam/option.{type Option, None}
 
-// This file is auto-generated for Bot API 10.0 from the Telegram Bot API spec.
+// This file is auto-generated for Bot API 10.2 from the Telegram Bot API spec.
 // Do not edit above the MANUAL marker — run `task codegen` to regenerate.
 
 pub type BackgroundFill {
@@ -81,6 +81,7 @@ pub type InlineQueryResult {
 
 pub type InputMessageContent {
   InputTextMessageContentInputMessageContent(InputTextMessageContent)
+  InputRichMessageContentInputMessageContent(InputRichMessageContent)
   InputLocationMessageContentInputMessageContent(InputLocationMessageContent)
   InputVenueMessageContentInputMessageContent(InputVenueMessageContent)
   InputContactMessageContentInputMessageContent(InputContactMessageContent)
@@ -106,6 +107,7 @@ pub type InputPollMedia {
 
 pub type InputPollOptionMedia {
   InputMediaAnimationInputPollOptionMedia(InputMediaAnimation)
+  InputMediaLinkInputPollOptionMedia(InputMediaLink)
   InputMediaLivePhotoInputPollOptionMedia(InputMediaLivePhoto)
   InputMediaLocationInputPollOptionMedia(InputMediaLocation)
   InputMediaPhotoInputPollOptionMedia(InputMediaPhoto)
@@ -117,6 +119,32 @@ pub type InputPollOptionMedia {
 pub type InputProfilePhoto {
   InputProfilePhotoStaticInputProfilePhoto(InputProfilePhotoStatic)
   InputProfilePhotoAnimatedInputProfilePhoto(InputProfilePhotoAnimated)
+}
+
+pub type InputRichBlock {
+  InputRichBlockParagraphInputRichBlock(InputRichBlockParagraph)
+  InputRichBlockSectionHeadingInputRichBlock(InputRichBlockSectionHeading)
+  InputRichBlockPreformattedInputRichBlock(InputRichBlockPreformatted)
+  InputRichBlockFooterInputRichBlock(InputRichBlockFooter)
+  InputRichBlockDividerInputRichBlock(InputRichBlockDivider)
+  InputRichBlockMathematicalExpressionInputRichBlock(
+    InputRichBlockMathematicalExpression,
+  )
+  InputRichBlockAnchorInputRichBlock(InputRichBlockAnchor)
+  InputRichBlockListInputRichBlock(InputRichBlockList)
+  InputRichBlockBlockQuotationInputRichBlock(InputRichBlockBlockQuotation)
+  InputRichBlockPullQuotationInputRichBlock(InputRichBlockPullQuotation)
+  InputRichBlockCollageInputRichBlock(InputRichBlockCollage)
+  InputRichBlockSlideshowInputRichBlock(InputRichBlockSlideshow)
+  InputRichBlockTableInputRichBlock(InputRichBlockTable)
+  InputRichBlockDetailsInputRichBlock(InputRichBlockDetails)
+  InputRichBlockMapInputRichBlock(InputRichBlockMap)
+  InputRichBlockAnimationInputRichBlock(InputRichBlockAnimation)
+  InputRichBlockAudioInputRichBlock(InputRichBlockAudio)
+  InputRichBlockPhotoInputRichBlock(InputRichBlockPhoto)
+  InputRichBlockVideoInputRichBlock(InputRichBlockVideo)
+  InputRichBlockVoiceNoteInputRichBlock(InputRichBlockVoiceNote)
+  InputRichBlockThinkingInputRichBlock(InputRichBlockThinking)
 }
 
 pub type InputStoryContent {
@@ -194,6 +222,60 @@ pub type RevenueWithdrawalState {
   RevenueWithdrawalStateFailedRevenueWithdrawalState(
     RevenueWithdrawalStateFailed,
   )
+}
+
+pub type RichBlock {
+  RichBlockParagraphRichBlock(RichBlockParagraph)
+  RichBlockSectionHeadingRichBlock(RichBlockSectionHeading)
+  RichBlockPreformattedRichBlock(RichBlockPreformatted)
+  RichBlockFooterRichBlock(RichBlockFooter)
+  RichBlockDividerRichBlock(RichBlockDivider)
+  RichBlockMathematicalExpressionRichBlock(RichBlockMathematicalExpression)
+  RichBlockAnchorRichBlock(RichBlockAnchor)
+  RichBlockListRichBlock(RichBlockList)
+  RichBlockBlockQuotationRichBlock(RichBlockBlockQuotation)
+  RichBlockPullQuotationRichBlock(RichBlockPullQuotation)
+  RichBlockCollageRichBlock(RichBlockCollage)
+  RichBlockSlideshowRichBlock(RichBlockSlideshow)
+  RichBlockTableRichBlock(RichBlockTable)
+  RichBlockDetailsRichBlock(RichBlockDetails)
+  RichBlockMapRichBlock(RichBlockMap)
+  RichBlockAnimationRichBlock(RichBlockAnimation)
+  RichBlockAudioRichBlock(RichBlockAudio)
+  RichBlockPhotoRichBlock(RichBlockPhoto)
+  RichBlockVideoRichBlock(RichBlockVideo)
+  RichBlockVoiceNoteRichBlock(RichBlockVoiceNote)
+  RichBlockThinkingRichBlock(RichBlockThinking)
+}
+
+pub type RichText {
+  StringRichText(String)
+  ListRichText(List(RichText))
+  RichTextBoldRichText(RichTextBold)
+  RichTextItalicRichText(RichTextItalic)
+  RichTextUnderlineRichText(RichTextUnderline)
+  RichTextStrikethroughRichText(RichTextStrikethrough)
+  RichTextSpoilerRichText(RichTextSpoiler)
+  RichTextDateTimeRichText(RichTextDateTime)
+  RichTextTextMentionRichText(RichTextTextMention)
+  RichTextSubscriptRichText(RichTextSubscript)
+  RichTextSuperscriptRichText(RichTextSuperscript)
+  RichTextMarkedRichText(RichTextMarked)
+  RichTextCodeRichText(RichTextCode)
+  RichTextCustomEmojiRichText(RichTextCustomEmoji)
+  RichTextMathematicalExpressionRichText(RichTextMathematicalExpression)
+  RichTextUrlRichText(RichTextUrl)
+  RichTextEmailAddressRichText(RichTextEmailAddress)
+  RichTextPhoneNumberRichText(RichTextPhoneNumber)
+  RichTextBankCardNumberRichText(RichTextBankCardNumber)
+  RichTextMentionRichText(RichTextMention)
+  RichTextHashtagRichText(RichTextHashtag)
+  RichTextCashtagRichText(RichTextCashtag)
+  RichTextBotCommandRichText(RichTextBotCommand)
+  RichTextAnchorRichText(RichTextAnchor)
+  RichTextAnchorLinkRichText(RichTextAnchorLink)
+  RichTextReferenceRichText(RichTextReference)
+  RichTextReferenceLinkRichText(RichTextReferenceLink)
 }
 
 pub type StoryAreaType {
@@ -415,6 +497,8 @@ pub type BotCommand {
     command: String,
     /// Description of the command; 1-256 characters
     description: String,
+    /// Optional. True, if the command sends an ephemeral message, which can be seen only by the sender of the message and the bot
+    is_ephemeral: Option(Bool),
   )
 }
 
@@ -503,6 +587,18 @@ pub type BotShortDescription {
   BotShortDescription(
     /// The bot's short description
     short_description: String,
+  )
+}
+
+/// **Official reference:** This object contains information about changes to a user payment subscription toward the current bot.
+pub type BotSubscriptionUpdated {
+  BotSubscriptionUpdated(
+    /// User who subscribed for payments toward the bot
+    user: User,
+    /// Bot-specified invoice payload
+    invoice_payload: String,
+    /// The new state of the subscription. Currently, it can be one of "canceled" if the user canceled the subscription, "active" if the user re-enabled a previously canceled subscription, or "failed" if payment for the subscription failed.
+    state: String,
   )
 }
 
@@ -694,7 +790,7 @@ pub type ChatAdministratorRights {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
-    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted defaults to the value of can_pin_messages.
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted, defaults to the value of can_pin_messages.
     can_manage_tags: Option(Bool),
   )
 }
@@ -894,6 +990,10 @@ pub type ChatFullInfo {
     unique_gift_colors: Option(UniqueGiftColors),
     /// Optional. The number of Telegram Stars a general user has to pay to send a message to the chat
     paid_message_star_count: Option(Int),
+    /// Optional. The bot that processes join request queries in the chat. The field is only available to chat administrators.
+    guard_bot: Option(User),
+    /// Optional. The Community to which the chat belongs
+    community: Option(Community),
   )
 }
 
@@ -940,6 +1040,8 @@ pub type ChatJoinRequest {
     bio: Option(String),
     /// Optional. Chat invite link that was used by the user to send the join request
     invite_link: Option(ChatInviteLink),
+    /// Optional. Identifier of the join request query; for bots assigned to process join requests only. If present, then the bot must call sendChatJoinRequestWebApp or directly call answerChatJoinRequestQuery within 10 seconds.
+    query_id: Option(String),
   )
 }
 
@@ -994,7 +1096,7 @@ pub type ChatMemberAdministrator {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
-    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted defaults to the value of can_pin_messages.
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted, defaults to the value of can_pin_messages.
     can_manage_tags: Option(Bool),
     /// Optional. Custom title for this user
     custom_title: Option(String),
@@ -1062,7 +1164,7 @@ pub type ChatMemberRestricted {
     user: User,
     /// True, if the user is a member of the chat at the moment of the request
     is_member: Bool,
-    /// True, if the user is allowed to send text messages, contacts, giveaways, giveaway winners, invoices, locations and venues
+    /// True, if the user is allowed to send text messages, rich messages, contacts, giveaways, giveaway winners, invoices, locations and venues
     can_send_messages: Bool,
     /// True, if the user is allowed to send audios
     can_send_audios: Bool,
@@ -1140,7 +1242,7 @@ pub type ChatOwnerLeft {
 /// **Official reference:** Describes actions that a non-administrator user is allowed to take in a chat.
 pub type ChatPermissions {
   ChatPermissions(
-    /// Optional. True, if the user is allowed to send text messages, contacts, giveaways, giveaway winners, invoices, locations and venues
+    /// Optional. True, if the user is allowed to send text messages, rich messages, contacts, giveaways, giveaway winners, invoices, locations and venues
     can_send_messages: Option(Bool),
     /// Optional. True, if the user is allowed to send audios
     can_send_audios: Option(Bool),
@@ -1170,7 +1272,7 @@ pub type ChatPermissions {
     can_invite_users: Option(Bool),
     /// Optional. True, if the user is allowed to pin messages. Ignored in public supergroups.
     can_pin_messages: Option(Bool),
-    /// Optional. True, if the user is allowed to create forum topics. If omitted defaults to the value of can_pin_messages.
+    /// Optional. True, if the user is allowed to create forum topics. If omitted, defaults to the value of can_pin_messages.
     can_manage_topics: Option(Bool),
   )
 }
@@ -1277,6 +1379,29 @@ pub type ChosenInlineResult {
   )
 }
 
+/// **Official reference:** Represents a community (a group of chats).
+pub type Community {
+  Community(
+    /// Unique identifier for this community. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
+    id: Int,
+    /// Name of the community
+    name: String,
+  )
+}
+
+/// **Official reference:** Describes a service message about a chat being added to a community.
+pub type CommunityChatAdded {
+  CommunityChatAdded(
+    /// The new community to which the chat belongs
+    community: Community,
+  )
+}
+
+/// **Official reference:** Describes a service message about a chat being removed from a community. Currently holds no information.
+pub type CommunityChatRemoved {
+  CommunityChatRemoved
+}
+
 /// **Official reference:** This object represents a phone contact.
 pub type Contact {
   Contact(
@@ -1314,7 +1439,7 @@ pub type Dice {
 /// **Official reference:** Describes a service message about a change in the price of direct messages sent to a channel chat.
 pub type DirectMessagePriceChanged {
   DirectMessagePriceChanged(
-    /// True, if direct messages are enabled for the channel chat; false otherwise
+    /// True, if direct messages are enabled for the channel chat; False otherwise
     are_direct_messages_enabled: Bool,
     /// Optional. The new number of Telegram Stars that must be paid by users for each direct message sent to the channel. Does not apply to users who have been exempted by administrators. Defaults to 0.
     direct_message_star_count: Option(Int),
@@ -1904,7 +2029,7 @@ pub type InlineQueryResultCachedGif {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -1930,7 +2055,7 @@ pub type InlineQueryResultCachedMpeg4Gif {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -1958,7 +2083,7 @@ pub type InlineQueryResultCachedPhoto {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -2002,7 +2127,7 @@ pub type InlineQueryResultCachedVideo {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -2138,7 +2263,7 @@ pub type InlineQueryResultGif {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -2208,7 +2333,7 @@ pub type InlineQueryResultMpeg4Gif {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -2242,7 +2367,7 @@ pub type InlineQueryResultPhoto {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Inline keyboard attached to the message
     reply_markup: Option(InlineKeyboardMarkup),
@@ -2308,7 +2433,7 @@ pub type InlineQueryResultVideo {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Video width
     video_width: Option(Int),
@@ -2426,7 +2551,7 @@ pub type InputInvoiceMessageContent {
     prices: List(LabeledPrice),
     /// Optional. The maximum accepted amount for tips in the smallest units of the currency (integer, not float/double). For example, for a maximum tip of US$ 1.45 pass max_tip_amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies). Defaults to 0. Not supported for payments in Telegram Stars.
     max_tip_amount: Option(Int),
-    /// Optional. A JSON-serialized array of suggested amounts of tip in the smallest units of the currency (integer, not float/double). At most 4 suggested tip amounts can be specified. The suggested tip amounts must be positive, passed in a strictly increased order and must not exceed max_tip_amount.
+    /// Optional. A JSON-serialized Array of suggested amounts of tip in the smallest units of the currency (integer, not float/double). At most 4 suggested tip amounts can be specified. The suggested tip amounts must be positive, passed in a strictly increased order and must not exceed max_tip_amount.
     suggested_tip_amounts: Option(List(Int)),
     /// Optional. A JSON-serialized object for data about the invoice, which will be shared with the payment provider. A detailed description of the required fields should be provided by the payment provider.
     provider_data: Option(String),
@@ -2476,7 +2601,7 @@ pub type InputLocationMessageContent {
 /// **Official reference:** Represents an animation file (GIF or H.264/MPEG-4 AVC video without sound) to be sent.
 pub type InputMediaAnimation {
   InputMediaAnimation(
-    /// Type of the result, must be animation
+    /// Type of the media, must be animation
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2488,7 +2613,7 @@ pub type InputMediaAnimation {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Animation width
     width: Option(Int),
@@ -2504,7 +2629,7 @@ pub type InputMediaAnimation {
 /// **Official reference:** Represents an audio file to be treated as music to be sent.
 pub type InputMediaAudio {
   InputMediaAudio(
-    /// Type of the result, must be audio
+    /// Type of the media, must be audio
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2528,7 +2653,7 @@ pub type InputMediaAudio {
 /// **Official reference:** Represents a general file to be sent.
 pub type InputMediaDocument {
   InputMediaDocument(
-    /// Type of the result, must be document
+    /// Type of the media, must be document
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2545,10 +2670,20 @@ pub type InputMediaDocument {
   )
 }
 
+/// **Official reference:** Represents an HTTP link to be sent.
+pub type InputMediaLink {
+  InputMediaLink(
+    /// Type of the media, must be link
+    type_: String,
+    /// HTTP URL of the link
+    url: String,
+  )
+}
+
 /// **Official reference:** Represents a live photo to be sent.
 pub type InputMediaLivePhoto {
   InputMediaLivePhoto(
-    /// Type of the result, must be live_photo
+    /// Type of the media, must be live_photo
     type_: String,
     /// Video of the live photo to send. Pass a file_id to send a file that exists on the Telegram servers (recommended) or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files. Sending live photos by a URL is currently unsupported.
     media: String,
@@ -2560,7 +2695,7 @@ pub type InputMediaLivePhoto {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Pass True if the live photo needs to be covered with a spoiler animation
     has_spoiler: Option(Bool),
@@ -2570,7 +2705,7 @@ pub type InputMediaLivePhoto {
 /// **Official reference:** Represents a location to be sent.
 pub type InputMediaLocation {
   InputMediaLocation(
-    /// Type of the result, must be location
+    /// Type of the media, must be location
     type_: String,
     /// Latitude of the location
     latitude: Float,
@@ -2584,7 +2719,7 @@ pub type InputMediaLocation {
 /// **Official reference:** Represents a photo to be sent.
 pub type InputMediaPhoto {
   InputMediaPhoto(
-    /// Type of the result, must be photo
+    /// Type of the media, must be photo
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2594,7 +2729,7 @@ pub type InputMediaPhoto {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Pass True if the photo needs to be covered with a spoiler animation
     has_spoiler: Option(Bool),
@@ -2604,7 +2739,7 @@ pub type InputMediaPhoto {
 /// **Official reference:** Represents a sticker file to be sent.
 pub type InputMediaSticker {
   InputMediaSticker(
-    /// Type of the result, must be sticker
+    /// Type of the media, must be sticker
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a .WEBP sticker from the Internet, or pass "attach://<file_attach_name>" to upload a new .WEBP, .TGS, or .WEBM sticker using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2616,7 +2751,7 @@ pub type InputMediaSticker {
 /// **Official reference:** Represents a venue to be sent.
 pub type InputMediaVenue {
   InputMediaVenue(
-    /// Type of the result, must be venue
+    /// Type of the media, must be venue
     type_: String,
     /// Latitude of the location
     latitude: Float,
@@ -2640,7 +2775,7 @@ pub type InputMediaVenue {
 /// **Official reference:** Represents a video to be sent.
 pub type InputMediaVideo {
   InputMediaVideo(
-    /// Type of the result, must be video
+    /// Type of the media, must be video
     type_: String,
     /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     media: String,
@@ -2656,7 +2791,7 @@ pub type InputMediaVideo {
     parse_mode: Option(String),
     /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
     caption_entities: Option(List(MessageEntity)),
-    /// Optional. Pass True, if the caption must be shown above the message media
+    /// Optional. Pass True if the caption must be shown above the message media
     show_caption_above_media: Option(Bool),
     /// Optional. Video width
     width: Option(Int),
@@ -2668,6 +2803,24 @@ pub type InputMediaVideo {
     supports_streaming: Option(Bool),
     /// Optional. Pass True if the video needs to be covered with a spoiler animation
     has_spoiler: Option(Bool),
+  )
+}
+
+/// **Official reference:** Represents a voice message file to be sent.
+pub type InputMediaVoiceNote {
+  InputMediaVoiceNote(
+    /// Type of the media, must be voice_note
+    type_: String,
+    /// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+    media: String,
+    /// Optional. Caption of the voice message to be sent, 0-1024 characters after entities parsing
+    caption: Option(String),
+    /// Optional. Mode for parsing entities in the voice message caption. See formatting options for more details.
+    parse_mode: Option(String),
+    /// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+    caption_entities: Option(List(MessageEntity)),
+    /// Optional. Duration of the voice message in seconds
+    duration: Option(Int),
   )
 }
 
@@ -2750,6 +2903,306 @@ pub type InputProfilePhotoStatic {
     type_: String,
     /// The static profile photo. Profile photos can't be reused and can only be uploaded as a new file, so you can pass "attach://<file_attach_name>" if the photo was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
     photo: String,
+  )
+}
+
+/// **Official reference:** A block with an anchor, corresponding to the HTML tag <a> with the attribute name.
+pub type InputRichBlockAnchor {
+  InputRichBlockAnchor(
+    /// Type of the block, always "anchor"
+    type_: String,
+    /// The name of the anchor
+    name: String,
+  )
+}
+
+/// **Official reference:** A block with an animation, corresponding to the HTML tag <video>.
+pub type InputRichBlockAnimation {
+  InputRichBlockAnimation(
+    /// Type of the block, always "animation"
+    type_: String,
+    /// The animation. Caption is ignored.
+    animation: InputMediaAnimation,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a music file, corresponding to the HTML tag <audio>.
+pub type InputRichBlockAudio {
+  InputRichBlockAudio(
+    /// Type of the block, always "audio"
+    type_: String,
+    /// The audio. Caption is ignored.
+    audio: InputMediaAudio,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block quotation, corresponding to the HTML tag <blockquote>.
+pub type InputRichBlockBlockQuotation {
+  InputRichBlockBlockQuotation(
+    /// Type of the block, always "blockquote"
+    type_: String,
+    /// Content of the block
+    blocks: List(InputRichBlock),
+    /// Optional. Credit of the block
+    credit: Option(RichText),
+  )
+}
+
+/// **Official reference:** A collage, corresponding to the custom HTML tag <tg-collage>.
+pub type InputRichBlockCollage {
+  InputRichBlockCollage(
+    /// Type of the block, always "collage"
+    type_: String,
+    /// Elements of the collage
+    blocks: List(InputRichBlock),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** An expandable block for details disclosure, corresponding to the HTML tag <details>.
+pub type InputRichBlockDetails {
+  InputRichBlockDetails(
+    /// Type of the block, always "details"
+    type_: String,
+    /// Always shown summary of the block
+    summary: RichText,
+    /// Content of the block
+    blocks: List(InputRichBlock),
+    /// Optional. Pass True if the content of the block is visible by default
+    is_open: Option(Bool),
+  )
+}
+
+/// **Official reference:** A divider, corresponding to the HTML tag <hr/>.
+pub type InputRichBlockDivider {
+  InputRichBlockDivider(
+    /// Type of the block, always "divider"
+    type_: String,
+  )
+}
+
+/// **Official reference:** A footer, corresponding to the HTML tag <footer>.
+pub type InputRichBlockFooter {
+  InputRichBlockFooter(
+    /// Type of the block, always "footer"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A list of blocks, corresponding to the HTML tag <ul> or <ol> with multiple nested tags <li>.
+pub type InputRichBlockList {
+  InputRichBlockList(
+    /// Type of the block, always "list"
+    type_: String,
+    /// Items of the list
+    items: List(InputRichBlockListItem),
+  )
+}
+
+/// **Official reference:** An item of a list to be sent.
+pub type InputRichBlockListItem {
+  InputRichBlockListItem(
+    /// The content of the item
+    blocks: List(InputRichBlock),
+    /// Optional. Pass True if the item has a checkbox
+    has_checkbox: Option(Bool),
+    /// Optional. Pass True if the item has a checked checkbox
+    is_checked: Option(Bool),
+    /// Optional. For ordered lists, the numeric value of the item label
+    value: Option(Int),
+    /// Optional. For ordered lists, the type of the item label; must be one of "a" for lowercase letters, "A" for uppercase letters, "i" for lowercase Roman numerals, "I" for uppercase Roman numerals, or "1" for decimal numbers
+    type_: Option(String),
+  )
+}
+
+/// **Official reference:** A block with a map, corresponding to the custom HTML tag <tg-map>. The map's width and height must not exceed 10000 in total. The width and height ratio must be at most 20.
+pub type InputRichBlockMap {
+  InputRichBlockMap(
+    /// Type of the block, always "map"
+    type_: String,
+    /// Location of the center of the map
+    location: Location,
+    /// Map zoom level; 0-24
+    zoom: Int,
+    /// Map width; 0-10000
+    width: Int,
+    /// Map height; 0-10000
+    height: Int,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a mathematical expression in LaTeX format, corresponding to the custom HTML tag <tg-math-block>.
+pub type InputRichBlockMathematicalExpression {
+  InputRichBlockMathematicalExpression(
+    /// Type of the block, always "mathematical_expression"
+    type_: String,
+    /// The mathematical expression in LaTeX format
+    expression: String,
+  )
+}
+
+/// **Official reference:** A text paragraph, corresponding to the HTML tag <p>.
+pub type InputRichBlockParagraph {
+  InputRichBlockParagraph(
+    /// Type of the block, always "paragraph"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A block with a photo, corresponding to the HTML tag <img>.
+pub type InputRichBlockPhoto {
+  InputRichBlockPhoto(
+    /// Type of the block, always "photo"
+    type_: String,
+    /// The photo. Caption is ignored.
+    photo: InputMediaPhoto,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A preformatted text block, corresponding to the nested HTML tags <pre> and <code>.
+pub type InputRichBlockPreformatted {
+  InputRichBlockPreformatted(
+    /// Type of the block, always "pre"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Optional. The programming language of the text
+    language: Option(String),
+  )
+}
+
+/// **Official reference:** A quotation with centered text, loosely corresponding to the HTML tag <aside>.
+pub type InputRichBlockPullQuotation {
+  InputRichBlockPullQuotation(
+    /// Type of the block, always "pullquote"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Optional. Credit of the block
+    credit: Option(RichText),
+  )
+}
+
+/// **Official reference:** A section heading, corresponding to the HTML tags <h1>, <h2>, <h3>, <h4>, <h5>, or <h6>.
+pub type InputRichBlockSectionHeading {
+  InputRichBlockSectionHeading(
+    /// Type of the block, always "heading"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Relative size of the text font; 1-6, 1 is the largest, 6 is the smallest
+    size: Int,
+  )
+}
+
+/// **Official reference:** A slideshow, corresponding to the custom HTML tag <tg-slideshow>.
+pub type InputRichBlockSlideshow {
+  InputRichBlockSlideshow(
+    /// Type of the block, always "slideshow"
+    type_: String,
+    /// Elements of the slideshow
+    blocks: List(InputRichBlock),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A table, corresponding to the HTML tag <table>.
+pub type InputRichBlockTable {
+  InputRichBlockTable(
+    /// Type of the block, always "table"
+    type_: String,
+    /// Cells of the table
+    cells: List(List(RichBlockTableCell)),
+    /// Optional. Pass True if the table has borders
+    is_bordered: Option(Bool),
+    /// Optional. Pass True if the table is striped
+    is_striped: Option(Bool),
+    /// Optional. Caption of the table
+    caption: Option(RichText),
+  )
+}
+
+/// **Official reference:** A block with a "Thinking..." placeholder, corresponding to the custom HTML tag <tg-thinking>. The block may be used only in sendRichMessageDraft, therefore it can't be received in messages. See https://t.me/addemoji/AIActions for examples of custom emoji that are recommended for usage in the block.
+pub type InputRichBlockThinking {
+  InputRichBlockThinking(
+    /// Type of the block, always "thinking"
+    type_: String,
+    /// Text of the block. See https://t.me/addemoji/AIActions for examples of custom emoji that are recommended for usage in the block.
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A block with a video, corresponding to the HTML tag <video>.
+pub type InputRichBlockVideo {
+  InputRichBlockVideo(
+    /// Type of the block, always "video"
+    type_: String,
+    /// The video. Caption is ignored.
+    video: InputMediaVideo,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a voice note, corresponding to the HTML tag <audio>.
+pub type InputRichBlockVoiceNote {
+  InputRichBlockVoiceNote(
+    /// Type of the block, always "voice_note"
+    type_: String,
+    /// The voice note. Caption is ignored.
+    voice_note: InputMediaVoiceNote,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** Describes a rich message to be sent. Exactly one of the fields html, markdown, or blocks must be used.
+pub type InputRichMessage {
+  InputRichMessage(
+    /// Optional. Content of the rich message to send described as a list of blocks
+    blocks: Option(List(InputRichBlock)),
+    /// Optional. Content of the rich message to send described using HTML formatting. See rich message formatting options for more details. Use media field to specify the media used in the message.
+    html: Option(String),
+    /// Optional. Content of the rich message to send described using Markdown formatting. See rich message formatting options for more details. Use media field to specify the media used in the message.
+    markdown: Option(String),
+    /// Optional. List of media that are specified in the markdown or html fields using tg://photo?id=, tg://video?id=, and tg://audio?id= links
+    media: Option(List(InputRichMessageMedia)),
+    /// Optional. Pass True if the rich message must be shown right-to-left
+    is_rtl: Option(Bool),
+    /// Optional. Pass True to skip automatic detection of entities (e.g., URLs, email addresses, username mentions, hashtags, cashtags, bot commands, or phone numbers) in the text
+    skip_entity_detection: Option(Bool),
+  )
+}
+
+/// **Official reference:** Represents the content of a rich message to be sent as the result of an inline query.
+pub type InputRichMessageContent {
+  InputRichMessageContent(
+    /// The message to be sent
+    rich_message: InputRichMessage,
+  )
+}
+
+/// **Official reference:** Describes a media element embedded in an outgoing rich message.
+pub type InputRichMessageMedia {
+  InputRichMessageMedia(
+    /// Unique identifier of the media used in a tg://photo?id=, tg://video?id=, or tg://audio?id= link. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed.
+    id: String,
+    /// The media to be sent. Everything except the media itself and its properties is ignored.
+    media: InputMediaAnimation,
   )
 }
 
@@ -2951,6 +3404,14 @@ pub type LabeledPrice {
   )
 }
 
+/// **Official reference:** Represents an HTTP link.
+pub type Link {
+  Link(
+    /// URL of the link
+    url: String,
+  )
+}
+
 /// **Official reference:** Describes the options used for link preview generation.
 pub type LinkPreviewOptions {
   LinkPreviewOptions(
@@ -3098,7 +3559,7 @@ pub type MenuButtonWebApp {
 /// **Official reference:** This object represents a message.
 pub type Message {
   Message(
-    /// Unique message identifier inside this chat. In specific instances (e.g., message containing a video sent to a big chat), the server might automatically schedule a message instead of sending it immediately. In such cases, this field will be 0 and the relevant message will be unusable until it is actually sent.
+    /// Unique message identifier inside this chat; 0 for ephemeral messages. In specific instances (e.g., a message containing a video sent to a big chat), the server might automatically schedule a message instead of sending it immediately. In such cases, this field will be 0 and the relevant message will be unusable until it is actually sent.
     message_id: Int,
     /// Optional. Unique identifier of a message thread or forum topic to which the message belongs; for supergroups and private chats only
     message_thread_id: Option(Int),
@@ -3114,6 +3575,10 @@ pub type Message {
     sender_business_bot: Option(User),
     /// Optional. Tag or custom title of the sender of the message; for supergroups only
     sender_tag: Option(String),
+    /// Optional. For ephemeral messages, the user who received the message
+    receiver_user: Option(User),
+    /// Optional. For ephemeral messages, identifier of the ephemeral message inside this chat. The identifier may be reused for another ephemeral message after the message is deleted or expires.
+    ephemeral_message_id: Option(Int),
     /// Date the message was sent in Unix time. It is always a positive number, representing a valid date.
     date: Int,
     /// Optional. The unique identifier for the guest query. Use this identifier with the method answerGuestQuery to send a response message. If non-empty, the message belongs to the chat where the guest bot was summoned, which may not coincide with other existing bot chats sharing the same identifier.
@@ -3128,7 +3593,7 @@ pub type Message {
     is_topic_message: Option(Bool),
     /// Optional. True, if the message is a channel post that was automatically forwarded to the connected discussion group
     is_automatic_forward: Option(Bool),
-    /// Optional. For replies in the same chat and message thread, the original message. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply.
+    /// Optional. For replies in the same chat and message thread, the original message. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply. If the message is a reply to an ephemeral message, then this field may be omitted.
     reply_to_message: Option(Message),
     /// Optional. Information about the message that is being replied to, which may come from another chat or forum topic
     external_reply: Option(ExternalReplyInfo),
@@ -3170,6 +3635,8 @@ pub type Message {
     suggested_post_info: Option(SuggestedPostInfo),
     /// Optional. Unique identifier of the message effect added to the message
     effect_id: Option(String),
+    /// Optional. Message is a rich formatted message
+    rich_message: Option(RichMessage),
     /// Optional. Message is an animation, information about the animation. For backward compatibility, when this field is set, the document field will also be set.
     animation: Option(Animation),
     /// Optional. Message is an audio file, information about the file
@@ -3274,6 +3741,10 @@ pub type Message {
     checklist_tasks_done: Option(ChecklistTasksDone),
     /// Optional. Service message: tasks were added to a checklist
     checklist_tasks_added: Option(ChecklistTasksAdded),
+    /// Optional. Service message: chat added to a Community
+    community_chat_added: Option(CommunityChatAdded),
+    /// Optional. Service message: chat removed from a Community
+    community_chat_removed: Option(CommunityChatRemoved),
     /// Optional. Service message: the price for paid messages in the corresponding direct messages chat of a channel has changed
     direct_message_price_changed: Option(DirectMessagePriceChanged),
     /// Optional. Service message: forum topic created
@@ -3856,6 +4327,8 @@ pub type PollMedia {
     audio: Option(Audio),
     /// Optional. Media is a general file, information about the file; currently, can't be received in a poll option
     document: Option(Document),
+    /// Optional. The HTTP link attached to the poll option
+    link: Option(Link),
     /// Optional. Media is a live photo, information about the live photo
     live_photo: Option(LivePhoto),
     /// Optional. Media is a shared location, information about the location
@@ -4030,11 +4503,11 @@ pub type ReplyKeyboardMarkup {
   ReplyKeyboardMarkup(
     /// Array of button rows, each represented by an Array of KeyboardButton objects
     keyboard: List(List(KeyboardButton)),
-    /// Optional. Requests clients to always show the keyboard when the regular keyboard is hidden. Defaults to false, in which case the custom keyboard can be hidden and opened with a keyboard icon.
+    /// Optional. Requests clients to always show the keyboard when the regular keyboard is hidden. Defaults to False, in which case the custom keyboard can be hidden and opened with a keyboard icon.
     is_persistent: Option(Bool),
-    /// Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
+    /// Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to False, in which case the custom keyboard is always of the same height as the app's standard keyboard.
     resize_keyboard: Option(Bool),
-    /// Optional. Requests clients to hide the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat - the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
+    /// Optional. Requests clients to hide the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat - the user can press a special button in the input field to see the custom keyboard again. Defaults to False.
     one_time_keyboard: Option(Bool),
     /// Optional. The placeholder to be shown in the input field when the keyboard is active; 1-64 characters
     input_field_placeholder: Option(String),
@@ -4056,13 +4529,15 @@ pub type ReplyKeyboardRemove {
 /// **Official reference:** Describes reply parameters for the message that is being sent.
 pub type ReplyParameters {
   ReplyParameters(
-    /// Identifier of the message that will be replied to in the current chat, or in the chat chat_id if it is specified
-    message_id: Int,
-    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the bot, supergroup or channel in the format @username. Not supported for messages sent on behalf of a business account and messages from channel direct messages chats.
+    /// Optional. Identifier of the message that will be replied to in the current chat, or in the chat chat_id if it is specified. Required if ephemeral_message_id isn't specified.
+    message_id: Option(Int),
+    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the bot, supergroup or channel in the format @username. Not supported for messages sent on behalf of a business account, messages from channel direct messages chats and ephemeral messages.
     chat_id: Option(IntOrString),
-    /// Optional. Pass True if the message should be sent even if the specified message to be replied to is not found. Always False for replies in another chat or forum topic. Always True for messages sent on behalf of a business account.
+    /// Optional. Identifier of the incoming ephemeral message that will be replied to in the current chat. A reply to an ephemeral message must itself be an ephemeral message. An ephemeral message may only be replied to within 15 seconds of being sent. Required if message_id isn't specified.
+    ephemeral_message_id: Option(Int),
+    /// Optional. Pass True if the message should be sent even if the specified message to be replied to is not found. Always False for replies in another chat or forum topic, and sent ephemeral messages. Always True for messages sent on behalf of a business account.
     allow_sending_without_reply: Option(Bool),
-    /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities. The message will fail to send if the quote isn't found in the original message.
+    /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, custom_emoji, and date_time entities. The message will fail to send if the quote isn't found in the original message. Ignored for ephemeral messages.
     quote: Option(String),
     /// Optional. Mode for parsing entities in the quote. See formatting options for more details.
     quote_parse_mode: Option(String),
@@ -4111,6 +4586,596 @@ pub type RevenueWithdrawalStateSucceeded {
     /// Date the withdrawal was completed in Unix time
     date: Int,
     /// An HTTPS URL that can be used to see transaction details
+    url: String,
+  )
+}
+
+/// **Official reference:** A block with an anchor, corresponding to the HTML tag <a> with the attribute name.
+pub type RichBlockAnchor {
+  RichBlockAnchor(
+    /// Type of the block, always "anchor"
+    type_: String,
+    /// The name of the anchor
+    name: String,
+  )
+}
+
+/// **Official reference:** A block with an animation, corresponding to the HTML tag <video>.
+pub type RichBlockAnimation {
+  RichBlockAnimation(
+    /// Type of the block, always "animation"
+    type_: String,
+    /// The animation
+    animation: Animation,
+    /// Optional. True, if the media preview is covered by a spoiler animation
+    has_spoiler: Option(Bool),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a music file, corresponding to the HTML tag <audio>.
+pub type RichBlockAudio {
+  RichBlockAudio(
+    /// Type of the block, always "audio"
+    type_: String,
+    /// The audio
+    audio: Audio,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block quotation, corresponding to the HTML tag <blockquote>.
+pub type RichBlockBlockQuotation {
+  RichBlockBlockQuotation(
+    /// Type of the block, always "blockquote"
+    type_: String,
+    /// Content of the block
+    blocks: List(RichBlock),
+    /// Optional. Credit of the block
+    credit: Option(RichText),
+  )
+}
+
+/// **Official reference:** Caption of a rich formatted block.
+pub type RichBlockCaption {
+  RichBlockCaption(
+    /// Block caption
+    text: RichText,
+    /// Optional. Block credit which corresponds to the HTML tag <cite>
+    credit: Option(RichText),
+  )
+}
+
+/// **Official reference:** A collage, corresponding to the custom HTML tag <tg-collage>.
+pub type RichBlockCollage {
+  RichBlockCollage(
+    /// Type of the block, always "collage"
+    type_: String,
+    /// Elements of the collage
+    blocks: List(RichBlock),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** An expandable block for details disclosure, corresponding to the HTML tag <details>.
+pub type RichBlockDetails {
+  RichBlockDetails(
+    /// Type of the block, always "details"
+    type_: String,
+    /// Always shown summary of the block
+    summary: RichText,
+    /// Content of the block
+    blocks: List(RichBlock),
+    /// Optional. True, if the content of the block is visible by default
+    is_open: Option(Bool),
+  )
+}
+
+/// **Official reference:** A divider, corresponding to the HTML tag <hr/>.
+pub type RichBlockDivider {
+  RichBlockDivider(
+    /// Type of the block, always "divider"
+    type_: String,
+  )
+}
+
+/// **Official reference:** A footer, corresponding to the HTML tag <footer>.
+pub type RichBlockFooter {
+  RichBlockFooter(
+    /// Type of the block, always "footer"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A list of blocks, corresponding to the HTML tag <ul> or <ol> with multiple nested tags <li>.
+pub type RichBlockList {
+  RichBlockList(
+    /// Type of the block, always "list"
+    type_: String,
+    /// Items of the list
+    items: List(RichBlockListItem),
+  )
+}
+
+/// **Official reference:** An item of a list.
+pub type RichBlockListItem {
+  RichBlockListItem(
+    /// Label of the item
+    label: String,
+    /// The content of the item
+    blocks: List(RichBlock),
+    /// Optional. True, if the item has a checkbox
+    has_checkbox: Option(Bool),
+    /// Optional. True, if the item has a checked checkbox
+    is_checked: Option(Bool),
+    /// Optional. For ordered lists, the numeric value of the item label
+    value: Option(Int),
+    /// Optional. For ordered lists, the type of the item label; must be one of "a" for lowercase letters, "A" for uppercase letters, "i" for lowercase Roman numerals, "I" for uppercase Roman numerals, or "1" for decimal numbers
+    type_: Option(String),
+  )
+}
+
+/// **Official reference:** A block with a map, corresponding to the custom HTML tag <tg-map>.
+pub type RichBlockMap {
+  RichBlockMap(
+    /// Type of the block, always "map"
+    type_: String,
+    /// Location of the center of the map
+    location: Location,
+    /// Map zoom level; 13-20
+    zoom: Int,
+    /// Expected width of the map
+    width: Int,
+    /// Expected height of the map
+    height: Int,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a mathematical expression in LaTeX format, corresponding to the custom HTML tag <tg-math-block>.
+pub type RichBlockMathematicalExpression {
+  RichBlockMathematicalExpression(
+    /// Type of the block, always "mathematical_expression"
+    type_: String,
+    /// The mathematical expression in LaTeX format
+    expression: String,
+  )
+}
+
+/// **Official reference:** A text paragraph, corresponding to the HTML tag <p>.
+pub type RichBlockParagraph {
+  RichBlockParagraph(
+    /// Type of the block, always "paragraph"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A block with a photo, corresponding to the HTML tag <img>.
+pub type RichBlockPhoto {
+  RichBlockPhoto(
+    /// Type of the block, always "photo"
+    type_: String,
+    /// Available sizes of the photo
+    photo: List(PhotoSize),
+    /// Optional. True, if the media preview is covered by a spoiler animation
+    has_spoiler: Option(Bool),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A preformatted text block, corresponding to the nested HTML tags <pre> and <code>.
+pub type RichBlockPreformatted {
+  RichBlockPreformatted(
+    /// Type of the block, always "pre"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Optional. The programming language of the text
+    language: Option(String),
+  )
+}
+
+/// **Official reference:** A quotation with centered text, loosely corresponding to the HTML tag <aside>.
+pub type RichBlockPullQuotation {
+  RichBlockPullQuotation(
+    /// Type of the block, always "pullquote"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Optional. Credit of the block
+    credit: Option(RichText),
+  )
+}
+
+/// **Official reference:** A section heading, corresponding to the HTML tags <h1>, <h2>, <h3>, <h4>, <h5>, or <h6>.
+pub type RichBlockSectionHeading {
+  RichBlockSectionHeading(
+    /// Type of the block, always "heading"
+    type_: String,
+    /// Text of the block
+    text: RichText,
+    /// Relative size of the text font; 1-6, 1 is the largest, 6 is the smallest
+    size: Int,
+  )
+}
+
+/// **Official reference:** A slideshow, corresponding to the custom HTML tag <tg-slideshow>.
+pub type RichBlockSlideshow {
+  RichBlockSlideshow(
+    /// Type of the block, always "slideshow"
+    type_: String,
+    /// Elements of the slideshow
+    blocks: List(RichBlock),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A table, corresponding to the HTML tag <table>.
+pub type RichBlockTable {
+  RichBlockTable(
+    /// Type of the block, always "table"
+    type_: String,
+    /// Cells of the table
+    cells: List(List(RichBlockTableCell)),
+    /// Optional. True, if the table has borders
+    is_bordered: Option(Bool),
+    /// Optional. True, if the table is striped
+    is_striped: Option(Bool),
+    /// Optional. Caption of the table
+    caption: Option(RichText),
+  )
+}
+
+/// **Official reference:** Cell in a table.
+pub type RichBlockTableCell {
+  RichBlockTableCell(
+    /// Optional. Text in the cell. If omitted, then the cell is invisible.
+    text: Option(RichText),
+    /// Optional. True, if the cell is a header cell
+    is_header: Option(Bool),
+    /// Optional. The number of columns the cell spans if it is bigger than 1
+    colspan: Option(Int),
+    /// Optional. The number of rows the cell spans if it is bigger than 1
+    rowspan: Option(Int),
+    /// Horizontal cell content alignment. Currently, must be one of "left", "center", or "right".
+    align: String,
+    /// Vertical cell content alignment. Currently, must be one of "top", "middle", or "bottom".
+    valign: String,
+  )
+}
+
+/// **Official reference:** A block with a "Thinking..." placeholder, corresponding to the custom HTML tag <tg-thinking>. The block may be used only in sendRichMessageDraft, therefore it can't be received in messages. See https://t.me/addemoji/AIActions for examples of custom emoji that are recommended for usage in the block.
+pub type RichBlockThinking {
+  RichBlockThinking(
+    /// Type of the block, always "thinking"
+    type_: String,
+    /// Text of the block. See https://t.me/addemoji/AIActions for examples of custom emoji that are recommended for usage in the block.
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A block with a video, corresponding to the HTML tag <video>.
+pub type RichBlockVideo {
+  RichBlockVideo(
+    /// Type of the block, always "video"
+    type_: String,
+    /// The video
+    video: Video,
+    /// Optional. True, if the media preview is covered by a spoiler animation
+    has_spoiler: Option(Bool),
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block with a voice note, corresponding to the HTML tag <audio>.
+pub type RichBlockVoiceNote {
+  RichBlockVoiceNote(
+    /// Type of the block, always "voice_note"
+    type_: String,
+    /// The voice note
+    voice_note: Voice,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** Rich formatted message.
+pub type RichMessage {
+  RichMessage(
+    /// Content of the message
+    blocks: List(RichBlock),
+    /// Optional. True, if the rich message must be shown right-to-left
+    is_rtl: Option(Bool),
+  )
+}
+
+/// **Official reference:** An anchor.
+pub type RichTextAnchor {
+  RichTextAnchor(
+    /// Type of the rich text, always "anchor"
+    type_: String,
+    /// The name of the anchor
+    name: String,
+  )
+}
+
+/// **Official reference:** A link to an anchor.
+pub type RichTextAnchorLink {
+  RichTextAnchorLink(
+    /// Type of the rich text, always "anchor_link"
+    type_: String,
+    /// The link text
+    text: RichText,
+    /// The name of the anchor. If the name is empty, then the link brings back to the top of the message.
+    anchor_name: String,
+  )
+}
+
+/// **Official reference:** A text with a bank card number.
+pub type RichTextBankCardNumber {
+  RichTextBankCardNumber(
+    /// Type of the rich text, always "bank_card_number"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The bank card number
+    bank_card_number: String,
+  )
+}
+
+/// **Official reference:** A bold text.
+pub type RichTextBold {
+  RichTextBold(
+    /// Type of the rich text, always "bold"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A bot command.
+pub type RichTextBotCommand {
+  RichTextBotCommand(
+    /// Type of the rich text, always "bot_command"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The bot command
+    bot_command: String,
+  )
+}
+
+/// **Official reference:** A cashtag.
+pub type RichTextCashtag {
+  RichTextCashtag(
+    /// Type of the rich text, always "cashtag"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The cashtag
+    cashtag: String,
+  )
+}
+
+/// **Official reference:** A monowidth text.
+pub type RichTextCode {
+  RichTextCode(
+    /// Type of the rich text, always "code"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A custom emoji.
+pub type RichTextCustomEmoji {
+  RichTextCustomEmoji(
+    /// Type of the rich text, always "custom_emoji"
+    type_: String,
+    /// Unique identifier of the custom emoji. Use getCustomEmojiStickers to get full information about the sticker.
+    custom_emoji_id: String,
+    /// Alternative emoji for the custom emoji
+    alternative_text: String,
+  )
+}
+
+/// **Official reference:** Formatted date and time.
+pub type RichTextDateTime {
+  RichTextDateTime(
+    /// Type of the rich text, always "date_time"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The Unix time associated with the entity
+    unix_time: Int,
+    /// The string that defines the formatting of the date and time. See date-time entity formatting for more details.
+    date_time_format: String,
+  )
+}
+
+/// **Official reference:** A text with an email address.
+pub type RichTextEmailAddress {
+  RichTextEmailAddress(
+    /// Type of the rich text, always "email_address"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The email address
+    email_address: String,
+  )
+}
+
+/// **Official reference:** A hashtag.
+pub type RichTextHashtag {
+  RichTextHashtag(
+    /// Type of the rich text, always "hashtag"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The hashtag
+    hashtag: String,
+  )
+}
+
+/// **Official reference:** An italicized text.
+pub type RichTextItalic {
+  RichTextItalic(
+    /// Type of the rich text, always "italic"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A marked text.
+pub type RichTextMarked {
+  RichTextMarked(
+    /// Type of the rich text, always "marked"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A mathematical expression.
+pub type RichTextMathematicalExpression {
+  RichTextMathematicalExpression(
+    /// Type of the rich text, always "mathematical_expression"
+    type_: String,
+    /// The expression in LaTeX format
+    expression: String,
+  )
+}
+
+/// **Official reference:** A mention by a username.
+pub type RichTextMention {
+  RichTextMention(
+    /// Type of the rich text, always "mention"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The username
+    username: String,
+  )
+}
+
+/// **Official reference:** A text with a phone number.
+pub type RichTextPhoneNumber {
+  RichTextPhoneNumber(
+    /// Type of the rich text, always "phone_number"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The phone number
+    phone_number: String,
+  )
+}
+
+/// **Official reference:** A reference.
+pub type RichTextReference {
+  RichTextReference(
+    /// Type of the rich text, always "reference"
+    type_: String,
+    /// Text of the reference
+    text: RichText,
+    /// The name of the reference
+    name: String,
+  )
+}
+
+/// **Official reference:** A link to a reference.
+pub type RichTextReferenceLink {
+  RichTextReferenceLink(
+    /// Type of the rich text, always "reference_link"
+    type_: String,
+    /// The link text
+    text: RichText,
+    /// The name of the reference
+    reference_name: String,
+  )
+}
+
+/// **Official reference:** A text covered by a spoiler.
+pub type RichTextSpoiler {
+  RichTextSpoiler(
+    /// Type of the rich text, always "spoiler"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A strikethrough text.
+pub type RichTextStrikethrough {
+  RichTextStrikethrough(
+    /// Type of the rich text, always "strikethrough"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A subscript text.
+pub type RichTextSubscript {
+  RichTextSubscript(
+    /// Type of the rich text, always "subscript"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A superscript text.
+pub type RichTextSuperscript {
+  RichTextSuperscript(
+    /// Type of the rich text, always "superscript"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A mention of a Telegram user by their identifier.
+pub type RichTextTextMention {
+  RichTextTextMention(
+    /// Type of the rich text, always "text_mention"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// The mentioned user
+    user: User,
+  )
+}
+
+/// **Official reference:** An underlined text.
+pub type RichTextUnderline {
+  RichTextUnderline(
+    /// Type of the rich text, always "underline"
+    type_: String,
+    /// The text
+    text: RichText,
+  )
+}
+
+/// **Official reference:** A text with a link.
+pub type RichTextUrl {
+  RichTextUrl(
+    /// Type of the rich text, always "url"
+    type_: String,
+    /// The text
+    text: RichText,
+    /// URL of the link
     url: String,
   )
 }
@@ -4454,9 +5519,9 @@ pub type SuggestedPostPaid {
   SuggestedPostPaid(
     /// Optional. Message containing the suggested post. Note that the Message object in this field will not contain the reply_to_message field even if it itself is a reply.
     suggested_post_message: Option(Message),
-    /// Currency in which the payment was made. Currently, one of "XTR" for Telegram Stars or "TON" for toncoins.
+    /// Currency in which the payment was made. Currently, one of "XTR" for Telegram Stars or "TON" for TON grams.
     currency: String,
-    /// Optional. The amount of the currency that was received by the channel in nanotoncoins; for payments in toncoins only
+    /// Optional. The amount of the currency that was received by the channel in nanograms; for payments in TON grams only
     amount: Option(Int),
     /// Optional. The amount of Telegram Stars that was received by the channel; for payments in Telegram Stars only
     star_amount: Option(StarAmount),
@@ -4476,9 +5541,9 @@ pub type SuggestedPostParameters {
 /// **Official reference:** Describes the price of a suggested post.
 pub type SuggestedPostPrice {
   SuggestedPostPrice(
-    /// Currency in which the post will be paid. Currently, must be one of "XTR" for Telegram Stars or "TON" for toncoins.
+    /// Currency in which the post will be paid. Currently, must be one of "XTR" for Telegram Stars or "TON" for TON grams.
     currency: String,
-    /// The amount of the currency that will be paid for the post in the smallest units of the currency, i.e. Telegram Stars or nanotoncoins. Currently, price in Telegram Stars must be between 5 and 100000, and price in nanotoncoins must be between 10000000 and 10000000000000.
+    /// The amount of the currency that will be paid for the post in the smallest units of the currency, i.e. Telegram Stars or nanograms. Currently, price in Telegram Stars must be between 5 and 100000, and price in nanograms must be between 10000000 and 10000000000000.
     amount: Int,
   )
 }
@@ -4690,9 +5755,9 @@ pub type UniqueGiftInfo {
     gift: UniqueGift,
     /// Origin of the gift. Currently, either "upgrade" for gifts upgraded from regular gifts, "transfer" for gifts transferred from other users or channels, "resale" for gifts bought from other users, "gifted_upgrade" for upgrades purchased after the gift was sent, or "offer" for gifts bought or sold through gift purchase offers.
     origin: String,
-    /// Optional. For gifts bought from other users, the currency in which the payment for the gift was done. Currently, one of "XTR" for Telegram Stars or "TON" for toncoins.
+    /// Optional. For gifts bought from other users, the currency in which the payment for the gift was done. Currently, one of "XTR" for Telegram Stars or "TON" for TON grams.
     last_resale_currency: Option(String),
-    /// Optional. For gifts bought from other users, the price paid for the gift in either Telegram Stars or nanotoncoins
+    /// Optional. For gifts bought from other users, the price paid for the gift in either Telegram Stars or nanograms
     last_resale_amount: Option(Int),
     /// Optional. Unique identifier of the received gift for the bot; only present for gifts received on behalf of business accounts
     owned_gift_id: Option(String),
@@ -4784,6 +5849,8 @@ pub type Update {
     removed_chat_boost: Option(ChatBoostRemoved),
     /// Optional. A new bot was created to be managed by the bot, or token or owner of a managed bot was changed
     managed_bot: Option(ManagedBotUpdated),
+    /// Optional. User payment subscription has changed
+    subscription: Option(BotSubscriptionUpdated),
   )
 }
 
@@ -4824,6 +5891,8 @@ pub type User {
     allows_users_to_create_topics: Option(Bool),
     /// Optional. True, if other bots can be created to be controlled by the bot. Returned only in getMe.
     can_manage_bots: Option(Bool),
+    /// Optional. True, if the bot supports join request queries and can be assigned to process them. Returned only in getMe.
+    supports_join_request_queries: Option(Bool),
   )
 }
 
@@ -7540,6 +8609,156 @@ pub type SendLivePhotoParameters {
     reply_parameters: Option(ReplyParameters),
     /// Optional. Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+// Bot API 10.2 ---------------------------------------------------------------
+
+/// Parameters for `sendRichMessage` (Bot API 10.2).
+pub type SendRichMessageParameters {
+  SendRichMessageParameters(
+    /// Optional. Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: Option(String),
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Optional. Unique identifier for the target message thread (topic) of the forum
+    message_thread_id: Option(Int),
+    /// Optional. Identifier of the direct messages topic to which the message will be sent
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object describing the rich message to send
+    rich_message: InputRichMessage,
+    /// Optional. Sends the message silently
+    disable_notification: Option(Bool),
+    /// Optional. Protects the contents of the sent message from forwarding and saving
+    protect_content: Option(Bool),
+    /// Optional. Pass True to allow up to 1000 messages per second for a fee of 0.1 Telegram Stars per message
+    allow_paid_broadcast: Option(Bool),
+    /// Optional. Unique identifier of the message effect to be added to the message
+    message_effect_id: Option(String),
+    /// Optional. A JSON-serialized object containing the parameters of the suggested post to send
+    suggested_post_parameters: Option(SuggestedPostParameters),
+    /// Optional. Description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// Optional. Additional interface options
+    reply_markup: Option(SendMessageReplyMarkupParameters),
+  )
+}
+
+/// Parameters for `sendRichMessageDraft` (Bot API 10.2).
+pub type SendRichMessageDraftParameters {
+  SendRichMessageDraftParameters(
+    /// Unique identifier for the target chat
+    chat_id: Int,
+    /// Optional. Unique identifier for the target message thread (topic) of the forum
+    message_thread_id: Option(Int),
+    /// Identifier of the draft
+    draft_id: Int,
+    /// A JSON-serialized object describing the rich message draft
+    rich_message: InputRichMessage,
+  )
+}
+
+/// Parameters for `deleteEphemeralMessage` (Bot API 10.2).
+pub type DeleteEphemeralMessageParameters {
+  DeleteEphemeralMessageParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the user who received the ephemeral message
+    receiver_user_id: Int,
+    /// Identifier of the ephemeral message to delete
+    ephemeral_message_id: Int,
+  )
+}
+
+/// Parameters for `editEphemeralMessageText` (Bot API 10.2).
+pub type EditEphemeralMessageTextParameters {
+  EditEphemeralMessageTextParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the user who received the ephemeral message
+    receiver_user_id: Int,
+    /// Identifier of the ephemeral message to edit
+    ephemeral_message_id: Int,
+    /// New text of the message, 1-4096 characters after entities parsing
+    text: String,
+    /// Optional. Mode for parsing entities in the message text
+    parse_mode: Option(String),
+    /// Optional. A JSON-serialized list of special entities that appear in message text
+    entities: Option(List(MessageEntity)),
+    /// Optional. Link preview generation options for the message
+    link_preview_options: Option(LinkPreviewOptions),
+    /// Optional. A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+/// Parameters for `editEphemeralMessageCaption` (Bot API 10.2).
+pub type EditEphemeralMessageCaptionParameters {
+  EditEphemeralMessageCaptionParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the user who received the ephemeral message
+    receiver_user_id: Int,
+    /// Identifier of the ephemeral message to edit
+    ephemeral_message_id: Int,
+    /// Optional. New caption of the message, 0-1024 characters after entities parsing
+    caption: Option(String),
+    /// Optional. Mode for parsing entities in the message caption
+    parse_mode: Option(String),
+    /// Optional. A JSON-serialized list of special entities that appear in the caption
+    caption_entities: Option(List(MessageEntity)),
+    /// Optional. A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+/// Parameters for `editEphemeralMessageMedia` (Bot API 10.2).
+pub type EditEphemeralMessageMediaParameters {
+  EditEphemeralMessageMediaParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the user who received the ephemeral message
+    receiver_user_id: Int,
+    /// Identifier of the ephemeral message to edit
+    ephemeral_message_id: Int,
+    /// A JSON-serialized object for a new media content of the message
+    media: InputMedia,
+    /// Optional. A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+/// Parameters for `editEphemeralMessageReplyMarkup` (Bot API 10.2).
+pub type EditEphemeralMessageReplyMarkupParameters {
+  EditEphemeralMessageReplyMarkupParameters(
+    /// Unique identifier for the target chat or username of the target channel
+    chat_id: IntOrString,
+    /// Unique identifier of the user who received the ephemeral message
+    receiver_user_id: Int,
+    /// Identifier of the ephemeral message to edit
+    ephemeral_message_id: Int,
+    /// Optional. A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+/// Parameters for `answerChatJoinRequestQuery` (Bot API 10.2).
+pub type AnswerChatJoinRequestQueryParameters {
+  AnswerChatJoinRequestQueryParameters(
+    /// Unique identifier of the join request query as returned in `ChatJoinRequest.query_id`
+    chat_join_request_query_id: String,
+    /// Result of the join request query, one of "approved", "declined" or "default"
+    result: String,
+  )
+}
+
+/// Parameters for `sendChatJoinRequestWebApp` (Bot API 10.2).
+pub type SendChatJoinRequestWebAppParameters {
+  SendChatJoinRequestWebAppParameters(
+    /// Unique identifier of the join request query as returned in `ChatJoinRequest.query_id`
+    chat_join_request_query_id: String,
+    /// An HTTPS URL of a Web App to be opened to process the join request
+    web_app_url: String,
   )
 }
 

@@ -1694,7 +1694,11 @@ fn maybe_sync_commands(
       let client = config.api_client
       let base_commands =
         list.map(described, fn(pair) {
-          types.BotCommand(command: pair.0, description: pair.1)
+          types.BotCommand(
+            command: pair.0,
+            description: pair.1,
+            is_ephemeral: None,
+          )
         })
 
       use _ <- result.try(api.set_my_commands(
@@ -1711,7 +1715,11 @@ fn maybe_sync_commands(
               list.map(described, fn(pair) {
                 let description =
                   translate(pair.0, locale) |> option.unwrap(pair.1)
-                types.BotCommand(command: pair.0, description:)
+                types.BotCommand(
+                  command: pair.0,
+                  description:,
+                  is_ephemeral: None,
+                )
               })
 
             api.set_my_commands(

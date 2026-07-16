@@ -9,20 +9,21 @@ import telega/internal/utils.{json_object_filter_nulls}
 import telega/model/types.{
   type AcceptedGiftTypes, type AddStickerToSetParameters, type AffiliateInfo,
   type Animation, type AnswerCallbackQueryParameters,
-  type AnswerGuestQueryParameters, type AnswerInlineQueryParameters,
-  type AnswerPreCheckoutQueryParameters, type AnswerShippingQueryParameters,
-  type ApproveChatJoinRequestParameters, type Audio, type BackgroundFill,
-  type BackgroundFillFreeformGradient, type BackgroundFillGradient,
-  type BackgroundFillSolid, type BackgroundType, type BackgroundTypeChatTheme,
-  type BackgroundTypeFill, type BackgroundTypePattern,
-  type BackgroundTypeWallpaper, type BanChatMemberParameters,
-  type BanChatSenderChatParameters, type Birthdate, type BotAccessSettings,
-  type BotCommand, type BotCommandParameters, type BotCommandScope,
-  type BotCommandScopeAllChatAdministrators, type BotCommandScopeAllGroupChats,
-  type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
-  type BotCommandScopeChatAdministrators, type BotCommandScopeChatMember,
-  type BotCommandScopeDefault, type BotDescription, type BotName,
-  type BotShortDescription, type BusinessBotRights, type BusinessConnection,
+  type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
+  type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
+  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
+  type Audio, type BackgroundFill, type BackgroundFillFreeformGradient,
+  type BackgroundFillGradient, type BackgroundFillSolid, type BackgroundType,
+  type BackgroundTypeChatTheme, type BackgroundTypeFill,
+  type BackgroundTypePattern, type BackgroundTypeWallpaper,
+  type BanChatMemberParameters, type BanChatSenderChatParameters, type Birthdate,
+  type BotAccessSettings, type BotCommand, type BotCommandParameters,
+  type BotCommandScope, type BotCommandScopeAllChatAdministrators,
+  type BotCommandScopeAllGroupChats, type BotCommandScopeAllPrivateChats,
+  type BotCommandScopeChat, type BotCommandScopeChatAdministrators,
+  type BotCommandScopeChatMember, type BotCommandScopeDefault,
+  type BotDescription, type BotName, type BotShortDescription,
+  type BotSubscriptionUpdated, type BusinessBotRights, type BusinessConnection,
   type BusinessIntro, type BusinessLocation, type BusinessMessagesDeleted,
   type BusinessOpeningHours, type BusinessOpeningHoursInterval,
   type CallbackGame, type CallbackQuery, type Chat, type ChatAction,
@@ -37,22 +38,26 @@ import telega/model/types.{
   type ChatPermissions, type ChatPhoto, type ChatShared, type Checklist,
   type ChecklistTask, type ChecklistTasksAdded, type ChecklistTasksDone,
   type ChosenInlineResult, type CloseForumTopicParameters,
-  type CloseGeneralForumTopicParameters, type Contact,
-  type ConvertGiftToStarsParameters, type CopyMessageParameters,
-  type CopyMessagesParameters, type CopyTextButton,
+  type CloseGeneralForumTopicParameters, type Community, type CommunityChatAdded,
+  type CommunityChatRemoved, type Contact, type ConvertGiftToStarsParameters,
+  type CopyMessageParameters, type CopyMessagesParameters, type CopyTextButton,
   type CreateChatInviteLinkParameters,
   type CreateChatSubscriptionInviteLinkParameters,
   type CreateForumTopicParameters, type CreateInvoiceLinkParameters,
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
   type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
-  type DeleteChatStickerSetParameters, type DeleteForumTopicParameters,
-  type DeleteMessageParameters, type DeleteMessageReactionParameters,
-  type DeleteMessagesParameters, type DeleteStickerFromSetParameters,
-  type DeleteStickerSetParameters, type DeleteStoryParameters, type Dice,
-  type DirectMessagePriceChanged, type DirectMessagesTopic, type Document,
-  type EditChatInviteLinkParameters,
-  type EditChatSubscriptionInviteLinkParameters, type EditForumTopicParameters,
+  type DeleteChatStickerSetParameters, type DeleteEphemeralMessageParameters,
+  type DeleteForumTopicParameters, type DeleteMessageParameters,
+  type DeleteMessageReactionParameters, type DeleteMessagesParameters,
+  type DeleteStickerFromSetParameters, type DeleteStickerSetParameters,
+  type DeleteStoryParameters, type Dice, type DirectMessagePriceChanged,
+  type DirectMessagesTopic, type Document, type EditChatInviteLinkParameters,
+  type EditChatSubscriptionInviteLinkParameters,
+  type EditEphemeralMessageCaptionParameters,
+  type EditEphemeralMessageMediaParameters,
+  type EditEphemeralMessageReplyMarkupParameters,
+  type EditEphemeralMessageTextParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
   type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
   type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
@@ -96,26 +101,39 @@ import telega/model/types.{
   type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
   type InputInvoiceMessageContent, type InputLocationMessageContent,
   type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaLivePhoto, type InputMediaLocation,
-  type InputMediaPhoto, type InputMediaSticker, type InputMediaVenue,
-  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
-  type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
-  type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
-  type InputPollOptionMedia, type InputProfilePhoto,
+  type InputMediaDocument, type InputMediaLink, type InputMediaLivePhoto,
+  type InputMediaLocation, type InputMediaPhoto, type InputMediaSticker,
+  type InputMediaVenue, type InputMediaVideo, type InputMediaVoiceNote,
+  type InputMessageContent, type InputPaidMedia, type InputPaidMediaLivePhoto,
+  type InputPaidMediaPhoto, type InputPaidMediaVideo, type InputPollMedia,
+  type InputPollOption, type InputPollOptionMedia, type InputProfilePhoto,
   type InputProfilePhotoAnimated, type InputProfilePhotoStatic,
-  type InputSticker, type InputStoryContent, type InputStoryContentPhoto,
+  type InputRichBlock, type InputRichBlockAnchor, type InputRichBlockAnimation,
+  type InputRichBlockAudio, type InputRichBlockBlockQuotation,
+  type InputRichBlockCollage, type InputRichBlockDetails,
+  type InputRichBlockDivider, type InputRichBlockFooter, type InputRichBlockList,
+  type InputRichBlockListItem, type InputRichBlockMap,
+  type InputRichBlockMathematicalExpression, type InputRichBlockParagraph,
+  type InputRichBlockPhoto, type InputRichBlockPreformatted,
+  type InputRichBlockPullQuotation, type InputRichBlockSectionHeading,
+  type InputRichBlockSlideshow, type InputRichBlockTable,
+  type InputRichBlockThinking, type InputRichBlockVideo,
+  type InputRichBlockVoiceNote, type InputRichMessage,
+  type InputRichMessageContent, type InputRichMessageMedia, type InputSticker,
+  type InputStoryContent, type InputStoryContentPhoto,
   type InputStoryContentVideo, type InputTextMessageContent,
   type InputVenueMessageContent, type IntOrString, type Invoice,
   type KeyboardButton, type KeyboardButtonPollType,
   type KeyboardButtonRequestChat, type KeyboardButtonRequestManagedBot,
   type KeyboardButtonRequestUsers, type LabeledPrice, type LeaveChatParameters,
-  type LinkPreviewOptions, type LivePhoto, type Location, type LocationAddress,
-  type LoginUrl, type ManagedBotCreated, type ManagedBotUpdated,
-  type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
-  type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
-  type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
-  type MessageId, type MessageOrigin, type MessageOriginChannel,
-  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
+  type Link, type LinkPreviewOptions, type LivePhoto, type Location,
+  type LocationAddress, type LoginUrl, type ManagedBotCreated,
+  type ManagedBotUpdated, type MaskPosition, type MaybeInaccessibleMessage,
+  type MenuButton, type MenuButtonCommands, type MenuButtonDefault,
+  type MenuButtonWebApp, type Message, type MessageAutoDeleteTimerChanged,
+  type MessageEntity, type MessageId, type MessageOrigin,
+  type MessageOriginChannel, type MessageOriginChat,
+  type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
   type PaidMedia, type PaidMediaInfo, type PaidMediaLivePhoto,
@@ -142,18 +160,38 @@ import telega/model/types.{
   type ResponseParameters, type RestrictChatMemberParameters,
   type RevenueWithdrawalState, type RevenueWithdrawalStateFailed,
   type RevenueWithdrawalStatePending, type RevenueWithdrawalStateSucceeded,
-  type RevokeChatInviteLinkParameters, type SendAnimationParameters,
-  type SendAudioParameters, type SendChatActionParameters,
+  type RevokeChatInviteLinkParameters, type RichBlock, type RichBlockAnchor,
+  type RichBlockAnimation, type RichBlockAudio, type RichBlockBlockQuotation,
+  type RichBlockCaption, type RichBlockCollage, type RichBlockDetails,
+  type RichBlockDivider, type RichBlockFooter, type RichBlockList,
+  type RichBlockListItem, type RichBlockMap,
+  type RichBlockMathematicalExpression, type RichBlockParagraph,
+  type RichBlockPhoto, type RichBlockPreformatted, type RichBlockPullQuotation,
+  type RichBlockSectionHeading, type RichBlockSlideshow, type RichBlockTable,
+  type RichBlockTableCell, type RichBlockThinking, type RichBlockVideo,
+  type RichBlockVoiceNote, type RichMessage, type RichText, type RichTextAnchor,
+  type RichTextAnchorLink, type RichTextBankCardNumber, type RichTextBold,
+  type RichTextBotCommand, type RichTextCashtag, type RichTextCode,
+  type RichTextCustomEmoji, type RichTextDateTime, type RichTextEmailAddress,
+  type RichTextHashtag, type RichTextItalic, type RichTextMarked,
+  type RichTextMathematicalExpression, type RichTextMention,
+  type RichTextPhoneNumber, type RichTextReference, type RichTextReferenceLink,
+  type RichTextSpoiler, type RichTextStrikethrough, type RichTextSubscript,
+  type RichTextSuperscript, type RichTextTextMention, type RichTextUnderline,
+  type RichTextUrl, type SendAnimationParameters, type SendAudioParameters,
+  type SendChatActionParameters, type SendChatJoinRequestWebAppParameters,
   type SendContactParameters, type SendDiceParameters,
   type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
   type SendInvoiceParameters, type SendLivePhotoParameters,
   type SendLocationParameters, type SendMediaGroupParameters,
   type SendMessageDraftParameters, type SendMessageParameters,
   type SendMessageReplyMarkupParameters, type SendPaidMediaParameters,
-  type SendPhotoParameters, type SendPollParameters, type SendStickerParameters,
-  type SendVenueParameters, type SendVideoNoteParameters,
-  type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
-  type SentWebAppMessage, type SetBusinessAccountBioParameters,
+  type SendPhotoParameters, type SendPollParameters,
+  type SendRichMessageDraftParameters, type SendRichMessageParameters,
+  type SendStickerParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SentGuestMessage, type SentWebAppMessage,
+  type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
   type SetBusinessAccountProfilePhotoParameters,
@@ -242,27 +280,42 @@ import telega/model/types.{
   InputMediaAnimationInputPollMedia, InputMediaAnimationInputPollOptionMedia,
   InputMediaAudioInputMedia, InputMediaAudioInputPollMedia,
   InputMediaDocumentInputMedia, InputMediaDocumentInputPollMedia,
-  InputMediaLivePhotoInputMedia, InputMediaLivePhotoInputPollMedia,
-  InputMediaLivePhotoInputPollOptionMedia, InputMediaLocationInputMedia,
-  InputMediaLocationInputPollMedia, InputMediaLocationInputPollOptionMedia,
-  InputMediaPhotoInputMedia, InputMediaPhotoInputPollMedia,
-  InputMediaPhotoInputPollOptionMedia, InputMediaStickerInputMedia,
-  InputMediaStickerInputPollOptionMedia, InputMediaVenueInputMedia,
-  InputMediaVenueInputPollMedia, InputMediaVenueInputPollOptionMedia,
-  InputMediaVideoInputMedia, InputMediaVideoInputPollMedia,
-  InputMediaVideoInputPollOptionMedia, InputPaidMediaLivePhotoInputPaidMedia,
-  InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideoInputPaidMedia,
-  InputProfilePhotoAnimatedInputProfilePhoto,
-  InputProfilePhotoStaticInputProfilePhoto,
+  InputMediaLinkInputPollOptionMedia, InputMediaLivePhotoInputMedia,
+  InputMediaLivePhotoInputPollMedia, InputMediaLivePhotoInputPollOptionMedia,
+  InputMediaLocationInputMedia, InputMediaLocationInputPollMedia,
+  InputMediaLocationInputPollOptionMedia, InputMediaPhotoInputMedia,
+  InputMediaPhotoInputPollMedia, InputMediaPhotoInputPollOptionMedia,
+  InputMediaStickerInputMedia, InputMediaStickerInputPollOptionMedia,
+  InputMediaVenueInputMedia, InputMediaVenueInputPollMedia,
+  InputMediaVenueInputPollOptionMedia, InputMediaVideoInputMedia,
+  InputMediaVideoInputPollMedia, InputMediaVideoInputPollOptionMedia,
+  InputPaidMediaLivePhotoInputPaidMedia, InputPaidMediaPhotoInputPaidMedia,
+  InputPaidMediaVideoInputPaidMedia, InputProfilePhotoAnimatedInputProfilePhoto,
+  InputProfilePhotoStaticInputProfilePhoto, InputRichBlockAnchorInputRichBlock,
+  InputRichBlockAnimationInputRichBlock, InputRichBlockAudioInputRichBlock,
+  InputRichBlockBlockQuotationInputRichBlock,
+  InputRichBlockCollageInputRichBlock, InputRichBlockDetailsInputRichBlock,
+  InputRichBlockDividerInputRichBlock, InputRichBlockFooterInputRichBlock,
+  InputRichBlockListInputRichBlock, InputRichBlockMapInputRichBlock,
+  InputRichBlockMathematicalExpressionInputRichBlock,
+  InputRichBlockParagraphInputRichBlock, InputRichBlockPhotoInputRichBlock,
+  InputRichBlockPreformattedInputRichBlock,
+  InputRichBlockPullQuotationInputRichBlock,
+  InputRichBlockSectionHeadingInputRichBlock,
+  InputRichBlockSlideshowInputRichBlock, InputRichBlockTableInputRichBlock,
+  InputRichBlockThinkingInputRichBlock, InputRichBlockVideoInputRichBlock,
+  InputRichBlockVoiceNoteInputRichBlock,
+  InputRichMessageContentInputMessageContent,
   InputStoryContentPhotoInputStoryContent,
   InputStoryContentVideoInputStoryContent,
   InputTextMessageContentInputMessageContent,
-  InputVenueMessageContentInputMessageContent, Int, MenuButtonCommandsMenuButton,
-  MenuButtonDefaultMenuButton, MenuButtonWebAppMenuButton,
-  MessageMaybeInaccessibleMessage, MessageOriginChannelMessageOrigin,
-  MessageOriginChatMessageOrigin, MessageOriginHiddenUserMessageOrigin,
-  MessageOriginUserMessageOrigin, OwnedGiftRegularOwnedGift,
-  OwnedGiftUniqueOwnedGift, PaidMediaLivePhotoPaidMedia, PaidMediaPhotoPaidMedia,
+  InputVenueMessageContentInputMessageContent, Int, ListRichText,
+  MenuButtonCommandsMenuButton, MenuButtonDefaultMenuButton,
+  MenuButtonWebAppMenuButton, MessageMaybeInaccessibleMessage,
+  MessageOriginChannelMessageOrigin, MessageOriginChatMessageOrigin,
+  MessageOriginHiddenUserMessageOrigin, MessageOriginUserMessageOrigin,
+  OwnedGiftRegularOwnedGift, OwnedGiftUniqueOwnedGift,
+  PaidMediaLivePhotoPaidMedia, PaidMediaPhotoPaidMedia,
   PaidMediaPreviewPaidMedia, PaidMediaVideoPaidMedia,
   PassportElementErrorDataFieldPassportElementError,
   PassportElementErrorFilePassportElementError,
@@ -278,6 +331,26 @@ import telega/model/types.{
   RevenueWithdrawalStateFailedRevenueWithdrawalState,
   RevenueWithdrawalStatePendingRevenueWithdrawalState,
   RevenueWithdrawalStateSucceededRevenueWithdrawalState,
+  RichBlockAnchorRichBlock, RichBlockAnimationRichBlock, RichBlockAudioRichBlock,
+  RichBlockBlockQuotationRichBlock, RichBlockCollageRichBlock,
+  RichBlockDetailsRichBlock, RichBlockDividerRichBlock, RichBlockFooterRichBlock,
+  RichBlockListRichBlock, RichBlockMapRichBlock,
+  RichBlockMathematicalExpressionRichBlock, RichBlockParagraphRichBlock,
+  RichBlockPhotoRichBlock, RichBlockPreformattedRichBlock,
+  RichBlockPullQuotationRichBlock, RichBlockSectionHeadingRichBlock,
+  RichBlockSlideshowRichBlock, RichBlockTableRichBlock,
+  RichBlockThinkingRichBlock, RichBlockVideoRichBlock,
+  RichBlockVoiceNoteRichBlock, RichTextAnchorLinkRichText,
+  RichTextAnchorRichText, RichTextBankCardNumberRichText, RichTextBoldRichText,
+  RichTextBotCommandRichText, RichTextCashtagRichText, RichTextCodeRichText,
+  RichTextCustomEmojiRichText, RichTextDateTimeRichText,
+  RichTextEmailAddressRichText, RichTextHashtagRichText, RichTextItalicRichText,
+  RichTextMarkedRichText, RichTextMathematicalExpressionRichText,
+  RichTextMentionRichText, RichTextPhoneNumberRichText,
+  RichTextReferenceLinkRichText, RichTextReferenceRichText,
+  RichTextSpoilerRichText, RichTextStrikethroughRichText,
+  RichTextSubscriptRichText, RichTextSuperscriptRichText,
+  RichTextTextMentionRichText, RichTextUnderlineRichText, RichTextUrlRichText,
   SendMessageReplyForceReplyMarkupParameters,
   SendMessageReplyInlineKeyboardMarkupParameters,
   SendMessageReplyRemoveKeyboardMarkupParameters,
@@ -285,7 +358,7 @@ import telega/model/types.{
   StoryAreaTypeLocationStoryAreaType,
   StoryAreaTypeSuggestedReactionStoryAreaType,
   StoryAreaTypeUniqueGiftStoryAreaType, StoryAreaTypeWeatherStoryAreaType, Str,
-  StringV, TransactionPartnerAffiliateProgramTransactionPartner,
+  StringRichText, StringV, TransactionPartnerAffiliateProgramTransactionPartner,
   TransactionPartnerChatTransactionPartner,
   TransactionPartnerFragmentTransactionPartner,
   TransactionPartnerOtherTransactionPartner,
@@ -295,7 +368,7 @@ import telega/model/types.{
   UploadVideo, UploadVideoNote, UploadVoice,
 }
 
-// This file is auto-generated for Bot API 10.0 from the Telegram Bot API spec.
+// This file is auto-generated for Bot API 10.2 from the Telegram Bot API spec.
 // Do not edit above the MANUAL marker — run `task codegen` to regenerate.
 
 pub fn encode_accepted_gift_types(
@@ -475,6 +548,7 @@ pub fn encode_bot_command(bot_command: BotCommand) -> Json {
   json_object_filter_nulls([
     #("command", json.string(bot_command.command)),
     #("description", json.string(bot_command.description)),
+    #("is_ephemeral", json.nullable(bot_command.is_ephemeral, json.bool)),
   ])
 }
 
@@ -558,6 +632,16 @@ pub fn encode_bot_short_description(
 ) -> Json {
   json_object_filter_nulls([
     #("short_description", json.string(bot_short_description.short_description)),
+  ])
+}
+
+pub fn encode_bot_subscription_updated(
+  bot_subscription_updated: BotSubscriptionUpdated,
+) -> Json {
+  json_object_filter_nulls([
+    #("user", encode_user(bot_subscription_updated.user)),
+    #("invoice_payload", json.string(bot_subscription_updated.invoice_payload)),
+    #("state", json.string(bot_subscription_updated.state)),
   ])
 }
 
@@ -1038,6 +1122,8 @@ pub fn encode_chat_full_info(chat_full_info: ChatFullInfo) -> Json {
       "paid_message_star_count",
       json.nullable(chat_full_info.paid_message_star_count, json.int),
     ),
+    #("guard_bot", json.nullable(chat_full_info.guard_bot, encode_user)),
+    #("community", json.nullable(chat_full_info.community, encode_community)),
   ])
 }
 
@@ -1077,6 +1163,7 @@ pub fn encode_chat_join_request(chat_join_request: ChatJoinRequest) -> Json {
       "invite_link",
       json.nullable(chat_join_request.invite_link, encode_chat_invite_link),
     ),
+    #("query_id", json.nullable(chat_join_request.query_id, json.string)),
   ])
 }
 
@@ -1467,6 +1554,27 @@ pub fn encode_chosen_inline_result(
     ),
     #("query", json.string(chosen_inline_result.query)),
   ])
+}
+
+pub fn encode_community(community: Community) -> Json {
+  json_object_filter_nulls([
+    #("id", json.int(community.id)),
+    #("name", json.string(community.name)),
+  ])
+}
+
+pub fn encode_community_chat_added(
+  community_chat_added: CommunityChatAdded,
+) -> Json {
+  json_object_filter_nulls([
+    #("community", encode_community(community_chat_added.community)),
+  ])
+}
+
+pub fn encode_community_chat_removed(
+  _community_chat_removed: CommunityChatRemoved,
+) -> Json {
+  json_object_filter_nulls([])
 }
 
 pub fn encode_contact(contact: Contact) -> Json {
@@ -3250,6 +3358,13 @@ pub fn encode_input_media_document(
   ])
 }
 
+pub fn encode_input_media_link(input_media_link: InputMediaLink) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_link.type_)),
+    #("url", json.string(input_media_link.url)),
+  ])
+}
+
 pub fn encode_input_media_live_photo(
   input_media_live_photo: InputMediaLivePhoto,
 ) -> Json {
@@ -3385,6 +3500,28 @@ pub fn encode_input_media_video(input_media_video: InputMediaVideo) -> Json {
   ])
 }
 
+pub fn encode_input_media_voice_note(
+  input_media_voice_note: InputMediaVoiceNote,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_media_voice_note.type_)),
+    #("media", json.string(input_media_voice_note.media)),
+    #("caption", json.nullable(input_media_voice_note.caption, json.string)),
+    #(
+      "parse_mode",
+      json.nullable(input_media_voice_note.parse_mode, json.string),
+    ),
+    #(
+      "caption_entities",
+      json.nullable(input_media_voice_note.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #("duration", json.nullable(input_media_voice_note.duration, json.int)),
+  ])
+}
+
 pub fn encode_input_paid_media_live_photo(
   input_paid_media_live_photo: InputPaidMediaLivePhoto,
 ) -> Json {
@@ -3469,6 +3606,364 @@ pub fn encode_input_profile_photo_static(
   json_object_filter_nulls([
     #("type", json.string(input_profile_photo_static.type_)),
     #("photo", json.string(input_profile_photo_static.photo)),
+  ])
+}
+
+pub fn encode_input_rich_block_anchor(
+  input_rich_block_anchor: InputRichBlockAnchor,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_anchor.type_)),
+    #("name", json.string(input_rich_block_anchor.name)),
+  ])
+}
+
+pub fn encode_input_rich_block_animation(
+  input_rich_block_animation: InputRichBlockAnimation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_animation.type_)),
+    #(
+      "animation",
+      encode_input_media_animation(input_rich_block_animation.animation),
+    ),
+    #(
+      "caption",
+      json.nullable(
+        input_rich_block_animation.caption,
+        encode_rich_block_caption,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_audio(
+  input_rich_block_audio: InputRichBlockAudio,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_audio.type_)),
+    #("audio", encode_input_media_audio(input_rich_block_audio.audio)),
+    #(
+      "caption",
+      json.nullable(input_rich_block_audio.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_block_quotation(
+  input_rich_block_block_quotation: InputRichBlockBlockQuotation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_block_quotation.type_)),
+    #(
+      "blocks",
+      json.array(_, encode_input_rich_block)(
+        input_rich_block_block_quotation.blocks,
+      ),
+    ),
+    #(
+      "credit",
+      json.nullable(input_rich_block_block_quotation.credit, encode_rich_text),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_collage(
+  input_rich_block_collage: InputRichBlockCollage,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_collage.type_)),
+    #(
+      "blocks",
+      json.array(_, encode_input_rich_block)(input_rich_block_collage.blocks),
+    ),
+    #(
+      "caption",
+      json.nullable(input_rich_block_collage.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_details(
+  input_rich_block_details: InputRichBlockDetails,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_details.type_)),
+    #("summary", encode_rich_text(input_rich_block_details.summary)),
+    #(
+      "blocks",
+      json.array(_, encode_input_rich_block)(input_rich_block_details.blocks),
+    ),
+    #("is_open", json.nullable(input_rich_block_details.is_open, json.bool)),
+  ])
+}
+
+pub fn encode_input_rich_block_divider(
+  input_rich_block_divider: InputRichBlockDivider,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_divider.type_)),
+  ])
+}
+
+pub fn encode_input_rich_block_footer(
+  input_rich_block_footer: InputRichBlockFooter,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_footer.type_)),
+    #("text", encode_rich_text(input_rich_block_footer.text)),
+  ])
+}
+
+pub fn encode_input_rich_block_list(
+  input_rich_block_list: InputRichBlockList,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_list.type_)),
+    #(
+      "items",
+      json.array(_, encode_input_rich_block_list_item)(
+        input_rich_block_list.items,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_list_item(
+  input_rich_block_list_item: InputRichBlockListItem,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "blocks",
+      json.array(_, encode_input_rich_block)(input_rich_block_list_item.blocks),
+    ),
+    #(
+      "has_checkbox",
+      json.nullable(input_rich_block_list_item.has_checkbox, json.bool),
+    ),
+    #(
+      "is_checked",
+      json.nullable(input_rich_block_list_item.is_checked, json.bool),
+    ),
+    #("value", json.nullable(input_rich_block_list_item.value, json.int)),
+    #("type", json.nullable(input_rich_block_list_item.type_, json.string)),
+  ])
+}
+
+pub fn encode_input_rich_block_map(
+  input_rich_block_map: InputRichBlockMap,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_map.type_)),
+    #("location", encode_location(input_rich_block_map.location)),
+    #("zoom", json.int(input_rich_block_map.zoom)),
+    #("width", json.int(input_rich_block_map.width)),
+    #("height", json.int(input_rich_block_map.height)),
+    #(
+      "caption",
+      json.nullable(input_rich_block_map.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_mathematical_expression(
+  input_rich_block_mathematical_expression: InputRichBlockMathematicalExpression,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_mathematical_expression.type_)),
+    #(
+      "expression",
+      json.string(input_rich_block_mathematical_expression.expression),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_paragraph(
+  input_rich_block_paragraph: InputRichBlockParagraph,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_paragraph.type_)),
+    #("text", encode_rich_text(input_rich_block_paragraph.text)),
+  ])
+}
+
+pub fn encode_input_rich_block_photo(
+  input_rich_block_photo: InputRichBlockPhoto,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_photo.type_)),
+    #("photo", encode_input_media_photo(input_rich_block_photo.photo)),
+    #(
+      "caption",
+      json.nullable(input_rich_block_photo.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_preformatted(
+  input_rich_block_preformatted: InputRichBlockPreformatted,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_preformatted.type_)),
+    #("text", encode_rich_text(input_rich_block_preformatted.text)),
+    #(
+      "language",
+      json.nullable(input_rich_block_preformatted.language, json.string),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_pull_quotation(
+  input_rich_block_pull_quotation: InputRichBlockPullQuotation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_pull_quotation.type_)),
+    #("text", encode_rich_text(input_rich_block_pull_quotation.text)),
+    #(
+      "credit",
+      json.nullable(input_rich_block_pull_quotation.credit, encode_rich_text),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_section_heading(
+  input_rich_block_section_heading: InputRichBlockSectionHeading,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_section_heading.type_)),
+    #("text", encode_rich_text(input_rich_block_section_heading.text)),
+    #("size", json.int(input_rich_block_section_heading.size)),
+  ])
+}
+
+pub fn encode_input_rich_block_slideshow(
+  input_rich_block_slideshow: InputRichBlockSlideshow,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_slideshow.type_)),
+    #(
+      "blocks",
+      json.array(_, encode_input_rich_block)(input_rich_block_slideshow.blocks),
+    ),
+    #(
+      "caption",
+      json.nullable(
+        input_rich_block_slideshow.caption,
+        encode_rich_block_caption,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_table(
+  input_rich_block_table: InputRichBlockTable,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_table.type_)),
+    #(
+      "cells",
+      fn(rows) {
+        json.array(rows, fn(row) {
+          json.array(row, encode_rich_block_table_cell)
+        })
+      }(input_rich_block_table.cells),
+    ),
+    #(
+      "is_bordered",
+      json.nullable(input_rich_block_table.is_bordered, json.bool),
+    ),
+    #("is_striped", json.nullable(input_rich_block_table.is_striped, json.bool)),
+    #(
+      "caption",
+      json.nullable(input_rich_block_table.caption, encode_rich_text),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_thinking(
+  input_rich_block_thinking: InputRichBlockThinking,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_thinking.type_)),
+    #("text", encode_rich_text(input_rich_block_thinking.text)),
+  ])
+}
+
+pub fn encode_input_rich_block_video(
+  input_rich_block_video: InputRichBlockVideo,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_video.type_)),
+    #("video", encode_input_media_video(input_rich_block_video.video)),
+    #(
+      "caption",
+      json.nullable(input_rich_block_video.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_block_voice_note(
+  input_rich_block_voice_note: InputRichBlockVoiceNote,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(input_rich_block_voice_note.type_)),
+    #(
+      "voice_note",
+      encode_input_media_voice_note(input_rich_block_voice_note.voice_note),
+    ),
+    #(
+      "caption",
+      json.nullable(
+        input_rich_block_voice_note.caption,
+        encode_rich_block_caption,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_message(input_rich_message: InputRichMessage) -> Json {
+  json_object_filter_nulls([
+    #(
+      "blocks",
+      json.nullable(input_rich_message.blocks, json.array(
+        _,
+        encode_input_rich_block,
+      )),
+    ),
+    #("html", json.nullable(input_rich_message.html, json.string)),
+    #("markdown", json.nullable(input_rich_message.markdown, json.string)),
+    #(
+      "media",
+      json.nullable(input_rich_message.media, json.array(
+        _,
+        encode_input_rich_message_media,
+      )),
+    ),
+    #("is_rtl", json.nullable(input_rich_message.is_rtl, json.bool)),
+    #(
+      "skip_entity_detection",
+      json.nullable(input_rich_message.skip_entity_detection, json.bool),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_message_content(
+  input_rich_message_content: InputRichMessageContent,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "rich_message",
+      encode_input_rich_message(input_rich_message_content.rich_message),
+    ),
+  ])
+}
+
+pub fn encode_input_rich_message_media(
+  input_rich_message_media: InputRichMessageMedia,
+) -> Json {
+  json_object_filter_nulls([
+    #("id", json.string(input_rich_message_media.id)),
+    #("media", encode_input_media_animation(input_rich_message_media.media)),
   ])
 }
 
@@ -3749,6 +4244,12 @@ pub fn encode_labeled_price(labeled_price: LabeledPrice) -> Json {
   ])
 }
 
+pub fn encode_link(link: Link) -> Json {
+  json_object_filter_nulls([
+    #("url", json.string(link.url)),
+  ])
+}
+
 pub fn encode_link_preview_options(
   link_preview_options: LinkPreviewOptions,
 ) -> Json {
@@ -3892,6 +4393,11 @@ pub fn encode_message(message: Message) -> Json {
       json.nullable(message.sender_business_bot, encode_user),
     ),
     #("sender_tag", json.nullable(message.sender_tag, json.string)),
+    #("receiver_user", json.nullable(message.receiver_user, encode_user)),
+    #(
+      "ephemeral_message_id",
+      json.nullable(message.ephemeral_message_id, json.int),
+    ),
     #("date", json.int(message.date)),
     #("guest_query_id", json.nullable(message.guest_query_id, json.string)),
     #(
@@ -3959,6 +4465,7 @@ pub fn encode_message(message: Message) -> Json {
       json.nullable(message.suggested_post_info, encode_suggested_post_info),
     ),
     #("effect_id", json.nullable(message.effect_id, json.string)),
+    #("rich_message", json.nullable(message.rich_message, encode_rich_message)),
     #("animation", json.nullable(message.animation, encode_animation)),
     #("audio", json.nullable(message.audio, encode_audio)),
     #("document", json.nullable(message.document, encode_document)),
@@ -4091,6 +4598,17 @@ pub fn encode_message(message: Message) -> Json {
     #(
       "checklist_tasks_added",
       json.nullable(message.checklist_tasks_added, encode_checklist_tasks_added),
+    ),
+    #(
+      "community_chat_added",
+      json.nullable(message.community_chat_added, encode_community_chat_added),
+    ),
+    #(
+      "community_chat_removed",
+      json.nullable(
+        message.community_chat_removed,
+        encode_community_chat_removed,
+      ),
     ),
     #(
       "direct_message_price_changed",
@@ -4714,6 +5232,7 @@ pub fn encode_poll_media(poll_media: PollMedia) -> Json {
     #("animation", json.nullable(poll_media.animation, encode_animation)),
     #("audio", json.nullable(poll_media.audio, encode_audio)),
     #("document", json.nullable(poll_media.document, encode_document)),
+    #("link", json.nullable(poll_media.link, encode_link)),
     #("live_photo", json.nullable(poll_media.live_photo, encode_live_photo)),
     #("location", json.nullable(poll_media.location, encode_location)),
     #(
@@ -4931,8 +5450,12 @@ pub fn encode_reply_keyboard_remove(
 
 pub fn encode_reply_parameters(reply_parameters: ReplyParameters) -> Json {
   json_object_filter_nulls([
-    #("message_id", json.int(reply_parameters.message_id)),
+    #("message_id", json.nullable(reply_parameters.message_id, json.int)),
     #("chat_id", json.nullable(reply_parameters.chat_id, encode_int_or_string)),
+    #(
+      "ephemeral_message_id",
+      json.nullable(reply_parameters.ephemeral_message_id, json.int),
+    ),
     #(
       "allow_sending_without_reply",
       json.nullable(reply_parameters.allow_sending_without_reply, json.bool),
@@ -4999,6 +5522,504 @@ pub fn encode_revenue_withdrawal_state_succeeded(
     #("type", json.string(revenue_withdrawal_state_succeeded.type_)),
     #("date", json.int(revenue_withdrawal_state_succeeded.date)),
     #("url", json.string(revenue_withdrawal_state_succeeded.url)),
+  ])
+}
+
+pub fn encode_rich_block_anchor(rich_block_anchor: RichBlockAnchor) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_anchor.type_)),
+    #("name", json.string(rich_block_anchor.name)),
+  ])
+}
+
+pub fn encode_rich_block_animation(
+  rich_block_animation: RichBlockAnimation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_animation.type_)),
+    #("animation", encode_animation(rich_block_animation.animation)),
+    #("has_spoiler", json.nullable(rich_block_animation.has_spoiler, json.bool)),
+    #(
+      "caption",
+      json.nullable(rich_block_animation.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_audio(rich_block_audio: RichBlockAudio) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_audio.type_)),
+    #("audio", encode_audio(rich_block_audio.audio)),
+    #(
+      "caption",
+      json.nullable(rich_block_audio.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_block_quotation(
+  rich_block_block_quotation: RichBlockBlockQuotation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_block_quotation.type_)),
+    #(
+      "blocks",
+      json.array(_, encode_rich_block)(rich_block_block_quotation.blocks),
+    ),
+    #(
+      "credit",
+      json.nullable(rich_block_block_quotation.credit, encode_rich_text),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_caption(rich_block_caption: RichBlockCaption) -> Json {
+  json_object_filter_nulls([
+    #("text", encode_rich_text(rich_block_caption.text)),
+    #("credit", json.nullable(rich_block_caption.credit, encode_rich_text)),
+  ])
+}
+
+pub fn encode_rich_block_collage(rich_block_collage: RichBlockCollage) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_collage.type_)),
+    #("blocks", json.array(_, encode_rich_block)(rich_block_collage.blocks)),
+    #(
+      "caption",
+      json.nullable(rich_block_collage.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_details(rich_block_details: RichBlockDetails) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_details.type_)),
+    #("summary", encode_rich_text(rich_block_details.summary)),
+    #("blocks", json.array(_, encode_rich_block)(rich_block_details.blocks)),
+    #("is_open", json.nullable(rich_block_details.is_open, json.bool)),
+  ])
+}
+
+pub fn encode_rich_block_divider(rich_block_divider: RichBlockDivider) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_divider.type_)),
+  ])
+}
+
+pub fn encode_rich_block_footer(rich_block_footer: RichBlockFooter) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_footer.type_)),
+    #("text", encode_rich_text(rich_block_footer.text)),
+  ])
+}
+
+pub fn encode_rich_block_list(rich_block_list: RichBlockList) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_list.type_)),
+    #(
+      "items",
+      json.array(_, encode_rich_block_list_item)(rich_block_list.items),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_list_item(
+  rich_block_list_item: RichBlockListItem,
+) -> Json {
+  json_object_filter_nulls([
+    #("label", json.string(rich_block_list_item.label)),
+    #("blocks", json.array(_, encode_rich_block)(rich_block_list_item.blocks)),
+    #(
+      "has_checkbox",
+      json.nullable(rich_block_list_item.has_checkbox, json.bool),
+    ),
+    #("is_checked", json.nullable(rich_block_list_item.is_checked, json.bool)),
+    #("value", json.nullable(rich_block_list_item.value, json.int)),
+    #("type", json.nullable(rich_block_list_item.type_, json.string)),
+  ])
+}
+
+pub fn encode_rich_block_map(rich_block_map: RichBlockMap) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_map.type_)),
+    #("location", encode_location(rich_block_map.location)),
+    #("zoom", json.int(rich_block_map.zoom)),
+    #("width", json.int(rich_block_map.width)),
+    #("height", json.int(rich_block_map.height)),
+    #(
+      "caption",
+      json.nullable(rich_block_map.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_mathematical_expression(
+  rich_block_mathematical_expression: RichBlockMathematicalExpression,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_mathematical_expression.type_)),
+    #("expression", json.string(rich_block_mathematical_expression.expression)),
+  ])
+}
+
+pub fn encode_rich_block_paragraph(
+  rich_block_paragraph: RichBlockParagraph,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_paragraph.type_)),
+    #("text", encode_rich_text(rich_block_paragraph.text)),
+  ])
+}
+
+pub fn encode_rich_block_photo(rich_block_photo: RichBlockPhoto) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_photo.type_)),
+    #("photo", json.array(_, encode_photo_size)(rich_block_photo.photo)),
+    #("has_spoiler", json.nullable(rich_block_photo.has_spoiler, json.bool)),
+    #(
+      "caption",
+      json.nullable(rich_block_photo.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_preformatted(
+  rich_block_preformatted: RichBlockPreformatted,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_preformatted.type_)),
+    #("text", encode_rich_text(rich_block_preformatted.text)),
+    #("language", json.nullable(rich_block_preformatted.language, json.string)),
+  ])
+}
+
+pub fn encode_rich_block_pull_quotation(
+  rich_block_pull_quotation: RichBlockPullQuotation,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_pull_quotation.type_)),
+    #("text", encode_rich_text(rich_block_pull_quotation.text)),
+    #(
+      "credit",
+      json.nullable(rich_block_pull_quotation.credit, encode_rich_text),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_section_heading(
+  rich_block_section_heading: RichBlockSectionHeading,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_section_heading.type_)),
+    #("text", encode_rich_text(rich_block_section_heading.text)),
+    #("size", json.int(rich_block_section_heading.size)),
+  ])
+}
+
+pub fn encode_rich_block_slideshow(
+  rich_block_slideshow: RichBlockSlideshow,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_slideshow.type_)),
+    #("blocks", json.array(_, encode_rich_block)(rich_block_slideshow.blocks)),
+    #(
+      "caption",
+      json.nullable(rich_block_slideshow.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_table(rich_block_table: RichBlockTable) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_table.type_)),
+    #(
+      "cells",
+      fn(rows) {
+        json.array(rows, fn(row) {
+          json.array(row, encode_rich_block_table_cell)
+        })
+      }(rich_block_table.cells),
+    ),
+    #("is_bordered", json.nullable(rich_block_table.is_bordered, json.bool)),
+    #("is_striped", json.nullable(rich_block_table.is_striped, json.bool)),
+    #("caption", json.nullable(rich_block_table.caption, encode_rich_text)),
+  ])
+}
+
+pub fn encode_rich_block_table_cell(
+  rich_block_table_cell: RichBlockTableCell,
+) -> Json {
+  json_object_filter_nulls([
+    #("text", json.nullable(rich_block_table_cell.text, encode_rich_text)),
+    #("is_header", json.nullable(rich_block_table_cell.is_header, json.bool)),
+    #("colspan", json.nullable(rich_block_table_cell.colspan, json.int)),
+    #("rowspan", json.nullable(rich_block_table_cell.rowspan, json.int)),
+    #("align", json.string(rich_block_table_cell.align)),
+    #("valign", json.string(rich_block_table_cell.valign)),
+  ])
+}
+
+pub fn encode_rich_block_thinking(
+  rich_block_thinking: RichBlockThinking,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_thinking.type_)),
+    #("text", encode_rich_text(rich_block_thinking.text)),
+  ])
+}
+
+pub fn encode_rich_block_video(rich_block_video: RichBlockVideo) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_video.type_)),
+    #("video", encode_video(rich_block_video.video)),
+    #("has_spoiler", json.nullable(rich_block_video.has_spoiler, json.bool)),
+    #(
+      "caption",
+      json.nullable(rich_block_video.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_block_voice_note(
+  rich_block_voice_note: RichBlockVoiceNote,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_block_voice_note.type_)),
+    #("voice_note", encode_voice(rich_block_voice_note.voice_note)),
+    #(
+      "caption",
+      json.nullable(rich_block_voice_note.caption, encode_rich_block_caption),
+    ),
+  ])
+}
+
+pub fn encode_rich_message(rich_message: RichMessage) -> Json {
+  json_object_filter_nulls([
+    #("blocks", json.array(_, encode_rich_block)(rich_message.blocks)),
+    #("is_rtl", json.nullable(rich_message.is_rtl, json.bool)),
+  ])
+}
+
+pub fn encode_rich_text_anchor(rich_text_anchor: RichTextAnchor) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_anchor.type_)),
+    #("name", json.string(rich_text_anchor.name)),
+  ])
+}
+
+pub fn encode_rich_text_anchor_link(
+  rich_text_anchor_link: RichTextAnchorLink,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_anchor_link.type_)),
+    #("text", encode_rich_text(rich_text_anchor_link.text)),
+    #("anchor_name", json.string(rich_text_anchor_link.anchor_name)),
+  ])
+}
+
+pub fn encode_rich_text_bank_card_number(
+  rich_text_bank_card_number: RichTextBankCardNumber,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_bank_card_number.type_)),
+    #("text", encode_rich_text(rich_text_bank_card_number.text)),
+    #(
+      "bank_card_number",
+      json.string(rich_text_bank_card_number.bank_card_number),
+    ),
+  ])
+}
+
+pub fn encode_rich_text_bold(rich_text_bold: RichTextBold) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_bold.type_)),
+    #("text", encode_rich_text(rich_text_bold.text)),
+  ])
+}
+
+pub fn encode_rich_text_bot_command(
+  rich_text_bot_command: RichTextBotCommand,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_bot_command.type_)),
+    #("text", encode_rich_text(rich_text_bot_command.text)),
+    #("bot_command", json.string(rich_text_bot_command.bot_command)),
+  ])
+}
+
+pub fn encode_rich_text_cashtag(rich_text_cashtag: RichTextCashtag) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_cashtag.type_)),
+    #("text", encode_rich_text(rich_text_cashtag.text)),
+    #("cashtag", json.string(rich_text_cashtag.cashtag)),
+  ])
+}
+
+pub fn encode_rich_text_code(rich_text_code: RichTextCode) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_code.type_)),
+    #("text", encode_rich_text(rich_text_code.text)),
+  ])
+}
+
+pub fn encode_rich_text_custom_emoji(
+  rich_text_custom_emoji: RichTextCustomEmoji,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_custom_emoji.type_)),
+    #("custom_emoji_id", json.string(rich_text_custom_emoji.custom_emoji_id)),
+    #("alternative_text", json.string(rich_text_custom_emoji.alternative_text)),
+  ])
+}
+
+pub fn encode_rich_text_date_time(
+  rich_text_date_time: RichTextDateTime,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_date_time.type_)),
+    #("text", encode_rich_text(rich_text_date_time.text)),
+    #("unix_time", json.int(rich_text_date_time.unix_time)),
+    #("date_time_format", json.string(rich_text_date_time.date_time_format)),
+  ])
+}
+
+pub fn encode_rich_text_email_address(
+  rich_text_email_address: RichTextEmailAddress,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_email_address.type_)),
+    #("text", encode_rich_text(rich_text_email_address.text)),
+    #("email_address", json.string(rich_text_email_address.email_address)),
+  ])
+}
+
+pub fn encode_rich_text_hashtag(rich_text_hashtag: RichTextHashtag) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_hashtag.type_)),
+    #("text", encode_rich_text(rich_text_hashtag.text)),
+    #("hashtag", json.string(rich_text_hashtag.hashtag)),
+  ])
+}
+
+pub fn encode_rich_text_italic(rich_text_italic: RichTextItalic) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_italic.type_)),
+    #("text", encode_rich_text(rich_text_italic.text)),
+  ])
+}
+
+pub fn encode_rich_text_marked(rich_text_marked: RichTextMarked) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_marked.type_)),
+    #("text", encode_rich_text(rich_text_marked.text)),
+  ])
+}
+
+pub fn encode_rich_text_mathematical_expression(
+  rich_text_mathematical_expression: RichTextMathematicalExpression,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_mathematical_expression.type_)),
+    #("expression", json.string(rich_text_mathematical_expression.expression)),
+  ])
+}
+
+pub fn encode_rich_text_mention(rich_text_mention: RichTextMention) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_mention.type_)),
+    #("text", encode_rich_text(rich_text_mention.text)),
+    #("username", json.string(rich_text_mention.username)),
+  ])
+}
+
+pub fn encode_rich_text_phone_number(
+  rich_text_phone_number: RichTextPhoneNumber,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_phone_number.type_)),
+    #("text", encode_rich_text(rich_text_phone_number.text)),
+    #("phone_number", json.string(rich_text_phone_number.phone_number)),
+  ])
+}
+
+pub fn encode_rich_text_reference(
+  rich_text_reference: RichTextReference,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_reference.type_)),
+    #("text", encode_rich_text(rich_text_reference.text)),
+    #("name", json.string(rich_text_reference.name)),
+  ])
+}
+
+pub fn encode_rich_text_reference_link(
+  rich_text_reference_link: RichTextReferenceLink,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_reference_link.type_)),
+    #("text", encode_rich_text(rich_text_reference_link.text)),
+    #("reference_name", json.string(rich_text_reference_link.reference_name)),
+  ])
+}
+
+pub fn encode_rich_text_spoiler(rich_text_spoiler: RichTextSpoiler) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_spoiler.type_)),
+    #("text", encode_rich_text(rich_text_spoiler.text)),
+  ])
+}
+
+pub fn encode_rich_text_strikethrough(
+  rich_text_strikethrough: RichTextStrikethrough,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_strikethrough.type_)),
+    #("text", encode_rich_text(rich_text_strikethrough.text)),
+  ])
+}
+
+pub fn encode_rich_text_subscript(
+  rich_text_subscript: RichTextSubscript,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_subscript.type_)),
+    #("text", encode_rich_text(rich_text_subscript.text)),
+  ])
+}
+
+pub fn encode_rich_text_superscript(
+  rich_text_superscript: RichTextSuperscript,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_superscript.type_)),
+    #("text", encode_rich_text(rich_text_superscript.text)),
+  ])
+}
+
+pub fn encode_rich_text_text_mention(
+  rich_text_text_mention: RichTextTextMention,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_text_mention.type_)),
+    #("text", encode_rich_text(rich_text_text_mention.text)),
+    #("user", encode_user(rich_text_text_mention.user)),
+  ])
+}
+
+pub fn encode_rich_text_underline(
+  rich_text_underline: RichTextUnderline,
+) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_underline.type_)),
+    #("text", encode_rich_text(rich_text_underline.text)),
+  ])
+}
+
+pub fn encode_rich_text_url(rich_text_url: RichTextUrl) -> Json {
+  json_object_filter_nulls([
+    #("type", json.string(rich_text_url.type_)),
+    #("text", encode_rich_text(rich_text_url.text)),
+    #("url", json.string(rich_text_url.url)),
   ])
 }
 
@@ -5741,6 +6762,10 @@ pub fn encode_update(update: Update) -> Json {
       "managed_bot",
       json.nullable(update.managed_bot, encode_managed_bot_updated),
     ),
+    #(
+      "subscription",
+      json.nullable(update.subscription, encode_bot_subscription_updated),
+    ),
   ])
 }
 
@@ -5781,6 +6806,10 @@ pub fn encode_user(user: User) -> Json {
       json.nullable(user.allows_users_to_create_topics, json.bool),
     ),
     #("can_manage_bots", json.nullable(user.can_manage_bots, json.bool)),
+    #(
+      "supports_join_request_queries",
+      json.nullable(user.supports_join_request_queries, json.bool),
+    ),
   ])
 }
 
@@ -6102,6 +7131,8 @@ pub fn encode_input_message_content(value: InputMessageContent) -> Json {
   case value {
     InputTextMessageContentInputMessageContent(inner_value) ->
       encode_input_text_message_content(inner_value)
+    InputRichMessageContentInputMessageContent(inner_value) ->
+      encode_input_rich_message_content(inner_value)
     InputLocationMessageContentInputMessageContent(inner_value) ->
       encode_input_location_message_content(inner_value)
     InputVenueMessageContentInputMessageContent(inner_value) ->
@@ -6149,6 +7180,8 @@ pub fn encode_input_poll_option_media(value: InputPollOptionMedia) -> Json {
   case value {
     InputMediaAnimationInputPollOptionMedia(inner_value) ->
       encode_input_media_animation(inner_value)
+    InputMediaLinkInputPollOptionMedia(inner_value) ->
+      encode_input_media_link(inner_value)
     InputMediaLivePhotoInputPollOptionMedia(inner_value) ->
       encode_input_media_live_photo(inner_value)
     InputMediaLocationInputPollOptionMedia(inner_value) ->
@@ -6170,6 +7203,53 @@ pub fn encode_input_profile_photo(value: InputProfilePhoto) -> Json {
       encode_input_profile_photo_static(inner_value)
     InputProfilePhotoAnimatedInputProfilePhoto(inner_value) ->
       encode_input_profile_photo_animated(inner_value)
+  }
+}
+
+pub fn encode_input_rich_block(value: InputRichBlock) -> Json {
+  case value {
+    InputRichBlockParagraphInputRichBlock(inner_value) ->
+      encode_input_rich_block_paragraph(inner_value)
+    InputRichBlockSectionHeadingInputRichBlock(inner_value) ->
+      encode_input_rich_block_section_heading(inner_value)
+    InputRichBlockPreformattedInputRichBlock(inner_value) ->
+      encode_input_rich_block_preformatted(inner_value)
+    InputRichBlockFooterInputRichBlock(inner_value) ->
+      encode_input_rich_block_footer(inner_value)
+    InputRichBlockDividerInputRichBlock(inner_value) ->
+      encode_input_rich_block_divider(inner_value)
+    InputRichBlockMathematicalExpressionInputRichBlock(inner_value) ->
+      encode_input_rich_block_mathematical_expression(inner_value)
+    InputRichBlockAnchorInputRichBlock(inner_value) ->
+      encode_input_rich_block_anchor(inner_value)
+    InputRichBlockListInputRichBlock(inner_value) ->
+      encode_input_rich_block_list(inner_value)
+    InputRichBlockBlockQuotationInputRichBlock(inner_value) ->
+      encode_input_rich_block_block_quotation(inner_value)
+    InputRichBlockPullQuotationInputRichBlock(inner_value) ->
+      encode_input_rich_block_pull_quotation(inner_value)
+    InputRichBlockCollageInputRichBlock(inner_value) ->
+      encode_input_rich_block_collage(inner_value)
+    InputRichBlockSlideshowInputRichBlock(inner_value) ->
+      encode_input_rich_block_slideshow(inner_value)
+    InputRichBlockTableInputRichBlock(inner_value) ->
+      encode_input_rich_block_table(inner_value)
+    InputRichBlockDetailsInputRichBlock(inner_value) ->
+      encode_input_rich_block_details(inner_value)
+    InputRichBlockMapInputRichBlock(inner_value) ->
+      encode_input_rich_block_map(inner_value)
+    InputRichBlockAnimationInputRichBlock(inner_value) ->
+      encode_input_rich_block_animation(inner_value)
+    InputRichBlockAudioInputRichBlock(inner_value) ->
+      encode_input_rich_block_audio(inner_value)
+    InputRichBlockPhotoInputRichBlock(inner_value) ->
+      encode_input_rich_block_photo(inner_value)
+    InputRichBlockVideoInputRichBlock(inner_value) ->
+      encode_input_rich_block_video(inner_value)
+    InputRichBlockVoiceNoteInputRichBlock(inner_value) ->
+      encode_input_rich_block_voice_note(inner_value)
+    InputRichBlockThinkingInputRichBlock(inner_value) ->
+      encode_input_rich_block_thinking(inner_value)
   }
 }
 
@@ -6278,6 +7358,98 @@ pub fn encode_revenue_withdrawal_state(value: RevenueWithdrawalState) -> Json {
       encode_revenue_withdrawal_state_succeeded(inner_value)
     RevenueWithdrawalStateFailedRevenueWithdrawalState(inner_value) ->
       encode_revenue_withdrawal_state_failed(inner_value)
+  }
+}
+
+pub fn encode_rich_block(value: RichBlock) -> Json {
+  case value {
+    RichBlockParagraphRichBlock(inner_value) ->
+      encode_rich_block_paragraph(inner_value)
+    RichBlockSectionHeadingRichBlock(inner_value) ->
+      encode_rich_block_section_heading(inner_value)
+    RichBlockPreformattedRichBlock(inner_value) ->
+      encode_rich_block_preformatted(inner_value)
+    RichBlockFooterRichBlock(inner_value) ->
+      encode_rich_block_footer(inner_value)
+    RichBlockDividerRichBlock(inner_value) ->
+      encode_rich_block_divider(inner_value)
+    RichBlockMathematicalExpressionRichBlock(inner_value) ->
+      encode_rich_block_mathematical_expression(inner_value)
+    RichBlockAnchorRichBlock(inner_value) ->
+      encode_rich_block_anchor(inner_value)
+    RichBlockListRichBlock(inner_value) -> encode_rich_block_list(inner_value)
+    RichBlockBlockQuotationRichBlock(inner_value) ->
+      encode_rich_block_block_quotation(inner_value)
+    RichBlockPullQuotationRichBlock(inner_value) ->
+      encode_rich_block_pull_quotation(inner_value)
+    RichBlockCollageRichBlock(inner_value) ->
+      encode_rich_block_collage(inner_value)
+    RichBlockSlideshowRichBlock(inner_value) ->
+      encode_rich_block_slideshow(inner_value)
+    RichBlockTableRichBlock(inner_value) -> encode_rich_block_table(inner_value)
+    RichBlockDetailsRichBlock(inner_value) ->
+      encode_rich_block_details(inner_value)
+    RichBlockMapRichBlock(inner_value) -> encode_rich_block_map(inner_value)
+    RichBlockAnimationRichBlock(inner_value) ->
+      encode_rich_block_animation(inner_value)
+    RichBlockAudioRichBlock(inner_value) -> encode_rich_block_audio(inner_value)
+    RichBlockPhotoRichBlock(inner_value) -> encode_rich_block_photo(inner_value)
+    RichBlockVideoRichBlock(inner_value) -> encode_rich_block_video(inner_value)
+    RichBlockVoiceNoteRichBlock(inner_value) ->
+      encode_rich_block_voice_note(inner_value)
+    RichBlockThinkingRichBlock(inner_value) ->
+      encode_rich_block_thinking(inner_value)
+  }
+}
+
+pub fn encode_rich_text(value: RichText) -> Json {
+  case value {
+    StringRichText(inner_value) -> json.string(inner_value)
+    ListRichText(inner_value) -> json.array(inner_value, encode_rich_text)
+    RichTextBoldRichText(inner_value) -> encode_rich_text_bold(inner_value)
+    RichTextItalicRichText(inner_value) -> encode_rich_text_italic(inner_value)
+    RichTextUnderlineRichText(inner_value) ->
+      encode_rich_text_underline(inner_value)
+    RichTextStrikethroughRichText(inner_value) ->
+      encode_rich_text_strikethrough(inner_value)
+    RichTextSpoilerRichText(inner_value) ->
+      encode_rich_text_spoiler(inner_value)
+    RichTextDateTimeRichText(inner_value) ->
+      encode_rich_text_date_time(inner_value)
+    RichTextTextMentionRichText(inner_value) ->
+      encode_rich_text_text_mention(inner_value)
+    RichTextSubscriptRichText(inner_value) ->
+      encode_rich_text_subscript(inner_value)
+    RichTextSuperscriptRichText(inner_value) ->
+      encode_rich_text_superscript(inner_value)
+    RichTextMarkedRichText(inner_value) -> encode_rich_text_marked(inner_value)
+    RichTextCodeRichText(inner_value) -> encode_rich_text_code(inner_value)
+    RichTextCustomEmojiRichText(inner_value) ->
+      encode_rich_text_custom_emoji(inner_value)
+    RichTextMathematicalExpressionRichText(inner_value) ->
+      encode_rich_text_mathematical_expression(inner_value)
+    RichTextUrlRichText(inner_value) -> encode_rich_text_url(inner_value)
+    RichTextEmailAddressRichText(inner_value) ->
+      encode_rich_text_email_address(inner_value)
+    RichTextPhoneNumberRichText(inner_value) ->
+      encode_rich_text_phone_number(inner_value)
+    RichTextBankCardNumberRichText(inner_value) ->
+      encode_rich_text_bank_card_number(inner_value)
+    RichTextMentionRichText(inner_value) ->
+      encode_rich_text_mention(inner_value)
+    RichTextHashtagRichText(inner_value) ->
+      encode_rich_text_hashtag(inner_value)
+    RichTextCashtagRichText(inner_value) ->
+      encode_rich_text_cashtag(inner_value)
+    RichTextBotCommandRichText(inner_value) ->
+      encode_rich_text_bot_command(inner_value)
+    RichTextAnchorRichText(inner_value) -> encode_rich_text_anchor(inner_value)
+    RichTextAnchorLinkRichText(inner_value) ->
+      encode_rich_text_anchor_link(inner_value)
+    RichTextReferenceRichText(inner_value) ->
+      encode_rich_text_reference(inner_value)
+    RichTextReferenceLinkRichText(inner_value) ->
+      encode_rich_text_reference_link(inner_value)
   }
 }
 
@@ -6429,7 +7601,7 @@ pub fn bot_commands_from(
   commands
   |> list.map(fn(cmd) {
     let #(command, description) = cmd
-    BotCommand(command: command, description: description)
+    BotCommand(command:, description:, is_ephemeral: None)
   })
 }
 
@@ -9271,5 +10443,174 @@ pub fn encode_send_paid_media_parameters(
         encode_send_message_reply_markup_parameters,
       ),
     ),
+  ])
+}
+
+// Bot API 10.2 ------------------------------------------------------------------
+
+pub fn encode_send_rich_message_parameters(
+  params: SendRichMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #("rich_message", encode_input_rich_message(params.rich_message)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
+  ])
+}
+
+pub fn encode_send_rich_message_draft_parameters(
+  params: SendRichMessageDraftParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", json.int(params.chat_id)),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #("draft_id", json.int(params.draft_id)),
+    #("rich_message", encode_input_rich_message(params.rich_message)),
+  ])
+}
+
+pub fn encode_delete_ephemeral_message_parameters(
+  params: DeleteEphemeralMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("receiver_user_id", json.int(params.receiver_user_id)),
+    #("ephemeral_message_id", json.int(params.ephemeral_message_id)),
+  ])
+}
+
+pub fn encode_edit_ephemeral_message_text_parameters(
+  params: EditEphemeralMessageTextParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("receiver_user_id", json.int(params.receiver_user_id)),
+    #("ephemeral_message_id", json.int(params.ephemeral_message_id)),
+    #("text", json.string(params.text)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "entities",
+      json.nullable(params.entities, json.array(_, encode_message_entity)),
+    ),
+    #(
+      "link_preview_options",
+      json.nullable(params.link_preview_options, encode_link_preview_options),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+pub fn encode_edit_ephemeral_message_caption_parameters(
+  params: EditEphemeralMessageCaptionParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("receiver_user_id", json.int(params.receiver_user_id)),
+    #("ephemeral_message_id", json.int(params.ephemeral_message_id)),
+    #("caption", json.nullable(params.caption, json.string)),
+    #("parse_mode", json.nullable(params.parse_mode, json.string)),
+    #(
+      "caption_entities",
+      json.nullable(params.caption_entities, json.array(
+        _,
+        encode_message_entity,
+      )),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+pub fn encode_edit_ephemeral_message_media_parameters(
+  params: EditEphemeralMessageMediaParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("receiver_user_id", json.int(params.receiver_user_id)),
+    #("ephemeral_message_id", json.int(params.ephemeral_message_id)),
+    #("media", encode_input_media(params.media)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+pub fn encode_edit_ephemeral_message_reply_markup_parameters(
+  params: EditEphemeralMessageReplyMarkupParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("receiver_user_id", json.int(params.receiver_user_id)),
+    #("ephemeral_message_id", json.int(params.ephemeral_message_id)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+pub fn encode_answer_chat_join_request_query_parameters(
+  params: AnswerChatJoinRequestQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "chat_join_request_query_id",
+      json.string(params.chat_join_request_query_id),
+    ),
+    #("result", json.string(params.result)),
+  ])
+}
+
+pub fn encode_send_chat_join_request_web_app_parameters(
+  params: SendChatJoinRequestWebAppParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #(
+      "chat_join_request_query_id",
+      json.string(params.chat_join_request_query_id),
+    ),
+    #("web_app_url", json.string(params.web_app_url)),
   ])
 }

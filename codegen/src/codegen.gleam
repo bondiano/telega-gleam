@@ -307,6 +307,47 @@ fn type_to_gleam(type_: List(String)) -> String {
   }
 }
 
+/// Constructor name for a union subtype. Record subtypes follow the
+/// `<Subtype><Union>` convention; primitive and array subtypes (e.g.
+/// RichText's `String` / `Array of RichText` members) need a mapped prefix.
+fn variant_ctor_name(sub: String, union_name: String) -> String {
+  case sub {
+    "Integer" -> "Int" <> union_name
+    "Float" | "Float number" -> "Float" <> union_name
+    "Boolean" -> "Bool" <> union_name
+    "Array of " <> inner ->
+      case inner == union_name {
+        True -> "List" <> union_name
+        False -> "List" <> inner <> union_name
+      }
+    _ -> sub <> union_name
+  }
+}
+
+/// Gleam payload type wrapped by a union variant.
+fn variant_payload_type(sub: String) -> String {
+  case sub {
+    "Integer" -> "Int"
+    "Float" | "Float number" -> "Float"
+    "Boolean" -> "Bool"
+    "Array of " <> inner -> "List(" <> map_type(array_inner(inner)) <> ")"
+    _ -> sub
+  }
+}
+
+/// Encoder expression applied to a union variant's `inner_value`.
+fn variant_encoder_call(sub: String) -> String {
+  case sub {
+    "String" -> "json.string(inner_value)"
+    "Integer" -> "json.int(inner_value)"
+    "Float" | "Float number" -> "json.float(inner_value)"
+    "Boolean" -> "json.bool(inner_value)"
+    "Array of " <> inner ->
+      "json.array(inner_value, encode_" <> justin.snake_case(inner) <> ")"
+    _ -> "encode_" <> justin.snake_case(sub) <> "(inner_value)"
+  }
+}
+
 fn map_field_name(name: String) -> String {
   case name {
     "type" -> "type_"
@@ -363,7 +404,11 @@ fn generate_model_type(model: Model) -> String {
 fn generate_union_type(union: Union) -> String {
   let subtypes =
     list.map(union.subtypes, fn(sub) {
-      "  " <> sub <> union.name <> "(" <> sub <> ")"
+      "  "
+      <> variant_ctor_name(sub, union.name)
+      <> "("
+      <> variant_payload_type(sub)
+      <> ")"
     })
   "pub type " <> union.name <> " {\n" <> string.join(subtypes, "\n") <> "\n}\n"
 }
@@ -464,8 +509,7 @@ fn generate_union_decoder(union: DecodableUnion) -> String {
       <> "\" -> {\n      use value <- decode.then("
       <> justin.snake_case(variant.type_name)
       <> "_decoder())\n      decode.success("
-      <> variant.type_name
-      <> union.name
+      <> variant_ctor_name(variant.type_name, union.name)
       <> "(value))\n    }"
     })
 
@@ -558,11 +602,9 @@ fn generate_union_encoder(union: Union) -> String {
   let cases =
     list.map(union.subtypes, fn(sub) {
       "    "
-      <> sub
-      <> union.name
-      <> "(inner_value) -> encode_"
-      <> justin.snake_case(sub)
-      <> "(inner_value)"
+      <> variant_ctor_name(sub, union.name)
+      <> "(inner_value) -> "
+      <> variant_encoder_call(sub)
     })
   signature <> "  case value {\n" <> string.join(cases, "\n") <> "\n  }\n}\n"
 }
@@ -846,7 +888,7 @@ fn run() -> Result(String, String) {
   // whether they carry fields (matched as `Name(`) or are no-arg (bare word).
   let union_variant_ctors =
     list.flat_map(unions, fn(u) {
-      list.map(u.subtypes, fn(sub) { sub <> u.name })
+      list.map(u.subtypes, fn(sub) { variant_ctor_name(sub, u.name) })
     })
   let #(empty_model_names, field_model_names) =
     list.partition(models, fn(m) { m.fields == [] })

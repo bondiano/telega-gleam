@@ -4,6 +4,7 @@ import gleeunit
 import gleeunit/should
 
 import telega/model/decoder
+import telega/model/types
 
 pub fn main() {
   gleeunit.main()
@@ -111,4 +112,32 @@ pub fn message_decoder_with_entities_test() {
     Some([entity]) -> entity.type_ |> should.equal("bot_command")
     _ -> panic as "expected exactly one entity"
   }
+}
+
+// Bot API 10.2: RichText is a recursive union mixing bare strings, arrays,
+// and `type`-tagged records — decoded by the hand-written rich_text_decoder.
+pub fn rich_text_decoder_recursive_test() {
+  let body =
+    "[\"Hello, \", {\"type\": \"bold\", \"text\": {\"type\": \"url\", \"text\": \"link\", \"url\": \"https://example.com\"}}]"
+
+  let assert Ok(types.ListRichText([first, second])) =
+    json.parse(body, decoder.rich_text_decoder())
+
+  first |> should.equal(types.StringRichText("Hello, "))
+  let assert types.RichTextBoldRichText(bold) = second
+  let assert types.RichTextUrlRichText(url) = bold.text
+  url.url |> should.equal("https://example.com")
+  url.text |> should.equal(types.StringRichText("link"))
+}
+
+pub fn rich_message_decoder_test() {
+  let body =
+    "{\"blocks\": [{\"type\": \"paragraph\", \"text\": \"plain\"}], \"is_rtl\": true}"
+
+  let assert Ok(rich_message) = json.parse(body, decoder.rich_message_decoder())
+
+  rich_message.is_rtl |> should.equal(Some(True))
+  let assert [types.RichBlockParagraphRichBlock(paragraph)] =
+    rich_message.blocks
+  paragraph.text |> should.equal(types.StringRichText("plain"))
 }

@@ -14,21 +14,22 @@ import telega/model/types.{
   type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
   type BotCommandScopeChatAdministrators, type BotCommandScopeChatMember,
   type BotCommandScopeDefault, type BotDescription, type BotName,
-  type BotShortDescription, type BusinessBotRights, type BusinessConnection,
-  type BusinessIntro, type BusinessLocation, type BusinessMessagesDeleted,
-  type BusinessOpeningHours, type BusinessOpeningHoursInterval,
-  type CallbackGame, type CallbackQuery, type Chat, type ChatAdministratorRights,
-  type ChatBackground, type ChatBoost, type ChatBoostAdded,
-  type ChatBoostRemoved, type ChatBoostSource, type ChatBoostSourceGiftCode,
-  type ChatBoostSourceGiveaway, type ChatBoostSourcePremium,
-  type ChatBoostUpdated, type ChatFullInfo, type ChatInviteLink,
-  type ChatJoinRequest, type ChatLocation, type ChatMember,
+  type BotShortDescription, type BotSubscriptionUpdated, type BusinessBotRights,
+  type BusinessConnection, type BusinessIntro, type BusinessLocation,
+  type BusinessMessagesDeleted, type BusinessOpeningHours,
+  type BusinessOpeningHoursInterval, type CallbackGame, type CallbackQuery,
+  type Chat, type ChatAdministratorRights, type ChatBackground, type ChatBoost,
+  type ChatBoostAdded, type ChatBoostRemoved, type ChatBoostSource,
+  type ChatBoostSourceGiftCode, type ChatBoostSourceGiveaway,
+  type ChatBoostSourcePremium, type ChatBoostUpdated, type ChatFullInfo,
+  type ChatInviteLink, type ChatJoinRequest, type ChatLocation, type ChatMember,
   type ChatMemberAdministrator, type ChatMemberBanned, type ChatMemberLeft,
   type ChatMemberMember, type ChatMemberOwner, type ChatMemberRestricted,
   type ChatMemberUpdated, type ChatOwnerChanged, type ChatOwnerLeft,
   type ChatPermissions, type ChatPhoto, type ChatShared, type Checklist,
   type ChecklistTask, type ChecklistTasksAdded, type ChecklistTasksDone,
-  type ChosenInlineResult, type Contact, type CopyTextButton, type Dice,
+  type ChosenInlineResult, type Community, type CommunityChatAdded,
+  type CommunityChatRemoved, type Contact, type CopyTextButton, type Dice,
   type DirectMessagePriceChanged, type DirectMessagesTopic, type Document,
   type EncryptedCredentials, type EncryptedPassportElement,
   type ExternalReplyInfo, type File, type FileOrString, type ForceReply,
@@ -52,26 +53,38 @@ import telega/model/types.{
   type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
   type InputInvoiceMessageContent, type InputLocationMessageContent,
   type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaLivePhoto, type InputMediaLocation,
-  type InputMediaPhoto, type InputMediaSticker, type InputMediaVenue,
-  type InputMediaVideo, type InputMessageContent, type InputPaidMedia,
-  type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
-  type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
-  type InputPollOptionMedia, type InputProfilePhoto,
+  type InputMediaDocument, type InputMediaLink, type InputMediaLivePhoto,
+  type InputMediaLocation, type InputMediaPhoto, type InputMediaSticker,
+  type InputMediaVenue, type InputMediaVideo, type InputMediaVoiceNote,
+  type InputMessageContent, type InputPaidMedia, type InputPaidMediaLivePhoto,
+  type InputPaidMediaPhoto, type InputPaidMediaVideo, type InputPollMedia,
+  type InputPollOption, type InputPollOptionMedia, type InputProfilePhoto,
   type InputProfilePhotoAnimated, type InputProfilePhotoStatic,
-  type InputSticker, type InputStoryContent, type InputStoryContentPhoto,
+  type InputRichBlock, type InputRichBlockAnchor, type InputRichBlockAnimation,
+  type InputRichBlockAudio, type InputRichBlockBlockQuotation,
+  type InputRichBlockCollage, type InputRichBlockDetails,
+  type InputRichBlockDivider, type InputRichBlockFooter, type InputRichBlockList,
+  type InputRichBlockListItem, type InputRichBlockMap,
+  type InputRichBlockMathematicalExpression, type InputRichBlockParagraph,
+  type InputRichBlockPhoto, type InputRichBlockPreformatted,
+  type InputRichBlockPullQuotation, type InputRichBlockSectionHeading,
+  type InputRichBlockSlideshow, type InputRichBlockTable,
+  type InputRichBlockThinking, type InputRichBlockVideo,
+  type InputRichBlockVoiceNote, type InputRichMessage,
+  type InputRichMessageContent, type InputRichMessageMedia, type InputSticker,
+  type InputStoryContent, type InputStoryContentPhoto,
   type InputStoryContentVideo, type InputTextMessageContent,
   type InputVenueMessageContent, type IntOrString, type Invoice,
   type KeyboardButton, type KeyboardButtonPollType,
   type KeyboardButtonRequestChat, type KeyboardButtonRequestManagedBot,
-  type KeyboardButtonRequestUsers, type LabeledPrice, type LinkPreviewOptions,
-  type LivePhoto, type Location, type LocationAddress, type LoginUrl,
-  type ManagedBotCreated, type ManagedBotUpdated, type MaskPosition,
-  type MaybeInaccessibleMessage, type MenuButton, type MenuButtonCommands,
-  type MenuButtonDefault, type MenuButtonWebApp, type Message,
-  type MessageAutoDeleteTimerChanged, type MessageEntity, type MessageId,
-  type MessageOrigin, type MessageOriginChannel, type MessageOriginChat,
-  type MessageOriginHiddenUser, type MessageOriginUser,
+  type KeyboardButtonRequestUsers, type LabeledPrice, type Link,
+  type LinkPreviewOptions, type LivePhoto, type Location, type LocationAddress,
+  type LoginUrl, type ManagedBotCreated, type ManagedBotUpdated,
+  type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
+  type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
+  type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
+  type MessageId, type MessageOrigin, type MessageOriginChannel,
+  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
   type PaidMedia, type PaidMediaInfo, type PaidMediaLivePhoto,
@@ -91,12 +104,29 @@ import telega/model/types.{
   type RefundedPayment, type ReplyKeyboardMarkup, type ReplyKeyboardRemove,
   type ReplyParameters, type ResponseParameters, type RevenueWithdrawalState,
   type RevenueWithdrawalStateFailed, type RevenueWithdrawalStatePending,
-  type RevenueWithdrawalStateSucceeded, type SentGuestMessage,
-  type SentWebAppMessage, type SharedUser, type ShippingAddress,
-  type ShippingOption, type ShippingQuery, type StarAmount, type StarTransaction,
-  type StarTransactions, type Sticker, type StickerSet, type Story,
-  type StoryArea, type StoryAreaPosition, type StoryAreaType,
-  type StoryAreaTypeLink, type StoryAreaTypeLocation,
+  type RevenueWithdrawalStateSucceeded, type RichBlock, type RichBlockAnchor,
+  type RichBlockAnimation, type RichBlockAudio, type RichBlockBlockQuotation,
+  type RichBlockCaption, type RichBlockCollage, type RichBlockDetails,
+  type RichBlockDivider, type RichBlockFooter, type RichBlockList,
+  type RichBlockListItem, type RichBlockMap,
+  type RichBlockMathematicalExpression, type RichBlockParagraph,
+  type RichBlockPhoto, type RichBlockPreformatted, type RichBlockPullQuotation,
+  type RichBlockSectionHeading, type RichBlockSlideshow, type RichBlockTable,
+  type RichBlockTableCell, type RichBlockThinking, type RichBlockVideo,
+  type RichBlockVoiceNote, type RichMessage, type RichText, type RichTextAnchor,
+  type RichTextAnchorLink, type RichTextBankCardNumber, type RichTextBold,
+  type RichTextBotCommand, type RichTextCashtag, type RichTextCode,
+  type RichTextCustomEmoji, type RichTextDateTime, type RichTextEmailAddress,
+  type RichTextHashtag, type RichTextItalic, type RichTextMarked,
+  type RichTextMathematicalExpression, type RichTextMention,
+  type RichTextPhoneNumber, type RichTextReference, type RichTextReferenceLink,
+  type RichTextSpoiler, type RichTextStrikethrough, type RichTextSubscript,
+  type RichTextSuperscript, type RichTextTextMention, type RichTextUnderline,
+  type RichTextUrl, type SentGuestMessage, type SentWebAppMessage,
+  type SharedUser, type ShippingAddress, type ShippingOption, type ShippingQuery,
+  type StarAmount, type StarTransaction, type StarTransactions, type Sticker,
+  type StickerSet, type Story, type StoryArea, type StoryAreaPosition,
+  type StoryAreaType, type StoryAreaTypeLink, type StoryAreaTypeLocation,
   type StoryAreaTypeSuggestedReaction, type StoryAreaTypeUniqueGift,
   type StoryAreaTypeWeather, type SuccessfulPayment,
   type SuggestedPostApprovalFailed, type SuggestedPostApproved,
@@ -132,11 +162,11 @@ import telega/model/types.{
   BotCommandScopeChatBotCommandScope, BotCommandScopeChatMember,
   BotCommandScopeChatMemberBotCommandScope, BotCommandScopeDefault,
   BotCommandScopeDefaultBotCommandScope, BotDescription, BotName,
-  BotShortDescription, BusinessBotRights, BusinessConnection, BusinessIntro,
-  BusinessLocation, BusinessMessagesDeleted, BusinessOpeningHours,
-  BusinessOpeningHoursInterval, CallbackGame, CallbackQuery, Chat,
-  ChatAdministratorRights, ChatBackground, ChatBoost, ChatBoostAdded,
-  ChatBoostRemoved, ChatBoostSourceGiftCode,
+  BotShortDescription, BotSubscriptionUpdated, BusinessBotRights,
+  BusinessConnection, BusinessIntro, BusinessLocation, BusinessMessagesDeleted,
+  BusinessOpeningHours, BusinessOpeningHoursInterval, CallbackGame,
+  CallbackQuery, Chat, ChatAdministratorRights, ChatBackground, ChatBoost,
+  ChatBoostAdded, ChatBoostRemoved, ChatBoostSourceGiftCode,
   ChatBoostSourceGiftCodeChatBoostSource, ChatBoostSourceGiveaway,
   ChatBoostSourceGiveawayChatBoostSource, ChatBoostSourcePremium,
   ChatBoostSourcePremiumChatBoostSource, ChatBoostUpdated, ChatFullInfo,
@@ -148,17 +178,18 @@ import telega/model/types.{
   ChatMemberRestrictedChatMember, ChatMemberUpdated, ChatOwnerChanged,
   ChatOwnerLeft, ChatPermissions, ChatPhoto, ChatShared, Checklist,
   ChecklistTask, ChecklistTasksAdded, ChecklistTasksDone, ChosenInlineResult,
-  Contact, CopyTextButton, Dice, DirectMessagePriceChanged, DirectMessagesTopic,
-  Document, EncryptedCredentials, EncryptedPassportElement, ExternalReplyInfo,
-  File, FileV, ForceReply, ForumTopic, ForumTopicClosed, ForumTopicCreated,
-  ForumTopicEdited, ForumTopicReopened, Game, GameHighScore,
-  GeneralForumTopicHidden, GeneralForumTopicUnhidden, Gift, GiftBackground,
-  GiftInfo, Gifts, Giveaway, GiveawayCompleted, GiveawayCreated, GiveawayWinners,
-  InaccessibleMessage, InaccessibleMessageMaybeInaccessibleMessage,
-  InlineKeyboardButton, InlineKeyboardMarkup, InlineQuery,
-  InlineQueryResultArticle, InlineQueryResultArticleInlineQueryResult,
-  InlineQueryResultAudio, InlineQueryResultCachedAudio,
-  InlineQueryResultCachedAudioInlineQueryResult, InlineQueryResultCachedDocument,
+  Community, CommunityChatAdded, CommunityChatRemoved, Contact, CopyTextButton,
+  Dice, DirectMessagePriceChanged, DirectMessagesTopic, Document,
+  EncryptedCredentials, EncryptedPassportElement, ExternalReplyInfo, File, FileV,
+  ForceReply, ForumTopic, ForumTopicClosed, ForumTopicCreated, ForumTopicEdited,
+  ForumTopicReopened, Game, GameHighScore, GeneralForumTopicHidden,
+  GeneralForumTopicUnhidden, Gift, GiftBackground, GiftInfo, Gifts, Giveaway,
+  GiveawayCompleted, GiveawayCreated, GiveawayWinners, InaccessibleMessage,
+  InaccessibleMessageMaybeInaccessibleMessage, InlineKeyboardButton,
+  InlineKeyboardMarkup, InlineQuery, InlineQueryResultArticle,
+  InlineQueryResultArticleInlineQueryResult, InlineQueryResultAudio,
+  InlineQueryResultCachedAudio, InlineQueryResultCachedAudioInlineQueryResult,
+  InlineQueryResultCachedDocument,
   InlineQueryResultCachedDocumentInlineQueryResult, InlineQueryResultCachedGif,
   InlineQueryResultCachedGifInlineQueryResult, InlineQueryResultCachedMpeg4Gif,
   InlineQueryResultCachedMpeg4GifInlineQueryResult, InlineQueryResultCachedPhoto,
@@ -183,34 +214,57 @@ import telega/model/types.{
   InputMediaAnimationInputMedia, InputMediaAnimationInputPollMedia,
   InputMediaAnimationInputPollOptionMedia, InputMediaAudio,
   InputMediaAudioInputMedia, InputMediaAudioInputPollMedia, InputMediaDocument,
-  InputMediaDocumentInputMedia, InputMediaDocumentInputPollMedia,
-  InputMediaLivePhoto, InputMediaLivePhotoInputMedia,
-  InputMediaLivePhotoInputPollMedia, InputMediaLivePhotoInputPollOptionMedia,
-  InputMediaLocation, InputMediaLocationInputMedia,
-  InputMediaLocationInputPollMedia, InputMediaLocationInputPollOptionMedia,
-  InputMediaPhoto, InputMediaPhotoInputMedia, InputMediaPhotoInputPollMedia,
+  InputMediaDocumentInputMedia, InputMediaDocumentInputPollMedia, InputMediaLink,
+  InputMediaLinkInputPollOptionMedia, InputMediaLivePhoto,
+  InputMediaLivePhotoInputMedia, InputMediaLivePhotoInputPollMedia,
+  InputMediaLivePhotoInputPollOptionMedia, InputMediaLocation,
+  InputMediaLocationInputMedia, InputMediaLocationInputPollMedia,
+  InputMediaLocationInputPollOptionMedia, InputMediaPhoto,
+  InputMediaPhotoInputMedia, InputMediaPhotoInputPollMedia,
   InputMediaPhotoInputPollOptionMedia, InputMediaSticker,
   InputMediaStickerInputMedia, InputMediaStickerInputPollOptionMedia,
   InputMediaVenue, InputMediaVenueInputMedia, InputMediaVenueInputPollMedia,
   InputMediaVenueInputPollOptionMedia, InputMediaVideo,
   InputMediaVideoInputMedia, InputMediaVideoInputPollMedia,
-  InputMediaVideoInputPollOptionMedia, InputPaidMediaLivePhoto,
-  InputPaidMediaLivePhotoInputPaidMedia, InputPaidMediaPhoto,
-  InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideo,
+  InputMediaVideoInputPollOptionMedia, InputMediaVoiceNote,
+  InputPaidMediaLivePhoto, InputPaidMediaLivePhotoInputPaidMedia,
+  InputPaidMediaPhoto, InputPaidMediaPhotoInputPaidMedia, InputPaidMediaVideo,
   InputPaidMediaVideoInputPaidMedia, InputPollOption, InputProfilePhotoAnimated,
   InputProfilePhotoAnimatedInputProfilePhoto, InputProfilePhotoStatic,
-  InputProfilePhotoStaticInputProfilePhoto, InputSticker, InputStoryContentPhoto,
-  InputStoryContentPhotoInputStoryContent, InputStoryContentVideo,
-  InputStoryContentVideoInputStoryContent, InputTextMessageContent,
-  InputTextMessageContentInputMessageContent, InputVenueMessageContent,
-  InputVenueMessageContentInputMessageContent, Int, Invoice, KeyboardButton,
-  KeyboardButtonPollType, KeyboardButtonRequestChat,
+  InputProfilePhotoStaticInputProfilePhoto, InputRichBlockAnchor,
+  InputRichBlockAnchorInputRichBlock, InputRichBlockAnimation,
+  InputRichBlockAnimationInputRichBlock, InputRichBlockAudio,
+  InputRichBlockAudioInputRichBlock, InputRichBlockBlockQuotation,
+  InputRichBlockBlockQuotationInputRichBlock, InputRichBlockCollage,
+  InputRichBlockCollageInputRichBlock, InputRichBlockDetails,
+  InputRichBlockDetailsInputRichBlock, InputRichBlockDivider,
+  InputRichBlockDividerInputRichBlock, InputRichBlockFooter,
+  InputRichBlockFooterInputRichBlock, InputRichBlockList,
+  InputRichBlockListInputRichBlock, InputRichBlockListItem, InputRichBlockMap,
+  InputRichBlockMapInputRichBlock, InputRichBlockMathematicalExpression,
+  InputRichBlockMathematicalExpressionInputRichBlock, InputRichBlockParagraph,
+  InputRichBlockParagraphInputRichBlock, InputRichBlockPhoto,
+  InputRichBlockPhotoInputRichBlock, InputRichBlockPreformatted,
+  InputRichBlockPreformattedInputRichBlock, InputRichBlockPullQuotation,
+  InputRichBlockPullQuotationInputRichBlock, InputRichBlockSectionHeading,
+  InputRichBlockSectionHeadingInputRichBlock, InputRichBlockSlideshow,
+  InputRichBlockSlideshowInputRichBlock, InputRichBlockTable,
+  InputRichBlockTableInputRichBlock, InputRichBlockThinking,
+  InputRichBlockThinkingInputRichBlock, InputRichBlockVideo,
+  InputRichBlockVideoInputRichBlock, InputRichBlockVoiceNote,
+  InputRichBlockVoiceNoteInputRichBlock, InputRichMessage,
+  InputRichMessageContent, InputRichMessageMedia, InputSticker,
+  InputStoryContentPhoto, InputStoryContentPhotoInputStoryContent,
+  InputStoryContentVideo, InputStoryContentVideoInputStoryContent,
+  InputTextMessageContent, InputTextMessageContentInputMessageContent,
+  InputVenueMessageContent, InputVenueMessageContentInputMessageContent, Int,
+  Invoice, KeyboardButton, KeyboardButtonPollType, KeyboardButtonRequestChat,
   KeyboardButtonRequestManagedBot, KeyboardButtonRequestUsers, LabeledPrice,
-  LinkPreviewOptions, LivePhoto, Location, LocationAddress, LoginUrl,
-  ManagedBotCreated, ManagedBotUpdated, MaskPosition, MenuButtonCommands,
-  MenuButtonCommandsMenuButton, MenuButtonDefault, MenuButtonDefaultMenuButton,
-  MenuButtonWebApp, MenuButtonWebAppMenuButton, Message,
-  MessageAutoDeleteTimerChanged, MessageEntity, MessageId,
+  Link, LinkPreviewOptions, ListRichText, LivePhoto, Location, LocationAddress,
+  LoginUrl, ManagedBotCreated, ManagedBotUpdated, MaskPosition,
+  MenuButtonCommands, MenuButtonCommandsMenuButton, MenuButtonDefault,
+  MenuButtonDefaultMenuButton, MenuButtonWebApp, MenuButtonWebAppMenuButton,
+  Message, MessageAutoDeleteTimerChanged, MessageEntity, MessageId,
   MessageMaybeInaccessibleMessage, MessageOriginChannel,
   MessageOriginChannelMessageOrigin, MessageOriginChat,
   MessageOriginChatMessageOrigin, MessageOriginHiddenUser,
@@ -246,19 +300,51 @@ import telega/model/types.{
   RevenueWithdrawalStatePending,
   RevenueWithdrawalStatePendingRevenueWithdrawalState,
   RevenueWithdrawalStateSucceeded,
-  RevenueWithdrawalStateSucceededRevenueWithdrawalState, SentGuestMessage,
-  SentWebAppMessage, SharedUser, ShippingAddress, ShippingOption, ShippingQuery,
-  StarAmount, StarTransaction, StarTransactions, Sticker, StickerSet, Story,
-  StoryArea, StoryAreaPosition, StoryAreaTypeLink,
+  RevenueWithdrawalStateSucceededRevenueWithdrawalState, RichBlockAnchor,
+  RichBlockAnchorRichBlock, RichBlockAnimation, RichBlockAnimationRichBlock,
+  RichBlockAudio, RichBlockAudioRichBlock, RichBlockBlockQuotation,
+  RichBlockBlockQuotationRichBlock, RichBlockCaption, RichBlockCollage,
+  RichBlockCollageRichBlock, RichBlockDetails, RichBlockDetailsRichBlock,
+  RichBlockDivider, RichBlockDividerRichBlock, RichBlockFooter,
+  RichBlockFooterRichBlock, RichBlockList, RichBlockListItem,
+  RichBlockListRichBlock, RichBlockMap, RichBlockMapRichBlock,
+  RichBlockMathematicalExpression, RichBlockMathematicalExpressionRichBlock,
+  RichBlockParagraph, RichBlockParagraphRichBlock, RichBlockPhoto,
+  RichBlockPhotoRichBlock, RichBlockPreformatted, RichBlockPreformattedRichBlock,
+  RichBlockPullQuotation, RichBlockPullQuotationRichBlock,
+  RichBlockSectionHeading, RichBlockSectionHeadingRichBlock, RichBlockSlideshow,
+  RichBlockSlideshowRichBlock, RichBlockTable, RichBlockTableCell,
+  RichBlockTableRichBlock, RichBlockThinking, RichBlockThinkingRichBlock,
+  RichBlockVideo, RichBlockVideoRichBlock, RichBlockVoiceNote,
+  RichBlockVoiceNoteRichBlock, RichMessage, RichTextAnchor, RichTextAnchorLink,
+  RichTextAnchorLinkRichText, RichTextAnchorRichText, RichTextBankCardNumber,
+  RichTextBankCardNumberRichText, RichTextBold, RichTextBoldRichText,
+  RichTextBotCommand, RichTextBotCommandRichText, RichTextCashtag,
+  RichTextCashtagRichText, RichTextCode, RichTextCodeRichText,
+  RichTextCustomEmoji, RichTextCustomEmojiRichText, RichTextDateTime,
+  RichTextDateTimeRichText, RichTextEmailAddress, RichTextEmailAddressRichText,
+  RichTextHashtag, RichTextHashtagRichText, RichTextItalic,
+  RichTextItalicRichText, RichTextMarked, RichTextMarkedRichText,
+  RichTextMathematicalExpression, RichTextMathematicalExpressionRichText,
+  RichTextMention, RichTextMentionRichText, RichTextPhoneNumber,
+  RichTextPhoneNumberRichText, RichTextReference, RichTextReferenceLink,
+  RichTextReferenceLinkRichText, RichTextReferenceRichText, RichTextSpoiler,
+  RichTextSpoilerRichText, RichTextStrikethrough, RichTextStrikethroughRichText,
+  RichTextSubscript, RichTextSubscriptRichText, RichTextSuperscript,
+  RichTextSuperscriptRichText, RichTextTextMention, RichTextTextMentionRichText,
+  RichTextUnderline, RichTextUnderlineRichText, RichTextUrl, RichTextUrlRichText,
+  SentGuestMessage, SentWebAppMessage, SharedUser, ShippingAddress,
+  ShippingOption, ShippingQuery, StarAmount, StarTransaction, StarTransactions,
+  Sticker, StickerSet, Story, StoryArea, StoryAreaPosition, StoryAreaTypeLink,
   StoryAreaTypeLinkStoryAreaType, StoryAreaTypeLocation,
   StoryAreaTypeLocationStoryAreaType, StoryAreaTypeSuggestedReaction,
   StoryAreaTypeSuggestedReactionStoryAreaType, StoryAreaTypeUniqueGift,
   StoryAreaTypeUniqueGiftStoryAreaType, StoryAreaTypeWeather,
-  StoryAreaTypeWeatherStoryAreaType, Str, StringV, SuccessfulPayment,
-  SuggestedPostApprovalFailed, SuggestedPostApproved, SuggestedPostDeclined,
-  SuggestedPostInfo, SuggestedPostPaid, SuggestedPostParameters,
-  SuggestedPostPrice, SuggestedPostRefunded, SwitchInlineQueryChosenChat,
-  TextQuote, TransactionPartnerAffiliateProgram,
+  StoryAreaTypeWeatherStoryAreaType, Str, StringRichText, StringV,
+  SuccessfulPayment, SuggestedPostApprovalFailed, SuggestedPostApproved,
+  SuggestedPostDeclined, SuggestedPostInfo, SuggestedPostPaid,
+  SuggestedPostParameters, SuggestedPostPrice, SuggestedPostRefunded,
+  SwitchInlineQueryChosenChat, TextQuote, TransactionPartnerAffiliateProgram,
   TransactionPartnerAffiliateProgramTransactionPartner, TransactionPartnerChat,
   TransactionPartnerChatTransactionPartner, TransactionPartnerFragment,
   TransactionPartnerFragmentTransactionPartner, TransactionPartnerOther,
@@ -273,7 +359,7 @@ import telega/model/types.{
   VideoQuality, Voice, WebAppData, WebAppInfo, WebhookInfo, WriteAccessAllowed,
 }
 
-// This file is auto-generated for Bot API 10.0 from the Telegram Bot API spec.
+// This file is auto-generated for Bot API 10.2 from the Telegram Bot API spec.
 // Do not edit above the MANUAL marker — run `task codegen` to regenerate.
 
 pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
@@ -527,7 +613,16 @@ pub fn bot_access_settings_decoder() -> decode.Decoder(BotAccessSettings) {
 pub fn bot_command_decoder() -> decode.Decoder(BotCommand) {
   use command <- decode.field("command", decode.string)
   use description <- decode.field("description", decode.string)
-  decode.success(BotCommand(command: command, description: description))
+  use is_ephemeral <- decode.optional_field(
+    "is_ephemeral",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(BotCommand(
+    command: command,
+    description: description,
+    is_ephemeral: is_ephemeral,
+  ))
 }
 
 pub fn bot_command_scope_all_chat_administrators_decoder() -> decode.Decoder(
@@ -601,6 +696,19 @@ pub fn bot_name_decoder() -> decode.Decoder(BotName) {
 pub fn bot_short_description_decoder() -> decode.Decoder(BotShortDescription) {
   use short_description <- decode.field("short_description", decode.string)
   decode.success(BotShortDescription(short_description: short_description))
+}
+
+pub fn bot_subscription_updated_decoder() -> decode.Decoder(
+  BotSubscriptionUpdated,
+) {
+  use user <- decode.field("user", user_decoder())
+  use invoice_payload <- decode.field("invoice_payload", decode.string)
+  use state <- decode.field("state", decode.string)
+  decode.success(BotSubscriptionUpdated(
+    user: user,
+    invoice_payload: invoice_payload,
+    state: state,
+  ))
 }
 
 pub fn business_bot_rights_decoder() -> decode.Decoder(BusinessBotRights) {
@@ -1255,6 +1363,16 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     None,
     decode.optional(decode.int),
   )
+  use guard_bot <- decode.optional_field(
+    "guard_bot",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use community <- decode.optional_field(
+    "community",
+    None,
+    decode.optional(community_decoder()),
+  )
   decode.success(ChatFullInfo(
     id: id,
     type_: type_,
@@ -1307,6 +1425,8 @@ pub fn chat_full_info_decoder() -> decode.Decoder(ChatFullInfo) {
     first_profile_audio: first_profile_audio,
     unique_gift_colors: unique_gift_colors,
     paid_message_star_count: paid_message_star_count,
+    guard_bot: guard_bot,
+    community: community,
   ))
 }
 
@@ -1372,6 +1492,11 @@ pub fn chat_join_request_decoder() -> decode.Decoder(ChatJoinRequest) {
     None,
     decode.optional(chat_invite_link_decoder()),
   )
+  use query_id <- decode.optional_field(
+    "query_id",
+    None,
+    decode.optional(decode.string),
+  )
   decode.success(ChatJoinRequest(
     chat: chat,
     from: from,
@@ -1379,6 +1504,7 @@ pub fn chat_join_request_decoder() -> decode.Decoder(ChatJoinRequest) {
     date: date,
     bio: bio,
     invite_link: invite_link,
+    query_id: query_id,
   ))
 }
 
@@ -1883,6 +2009,21 @@ pub fn chosen_inline_result_decoder() -> decode.Decoder(ChosenInlineResult) {
     inline_message_id: inline_message_id,
     query: query,
   ))
+}
+
+pub fn community_decoder() -> decode.Decoder(Community) {
+  use id <- decode.field("id", decode.int)
+  use name <- decode.field("name", decode.string)
+  decode.success(Community(id: id, name: name))
+}
+
+pub fn community_chat_added_decoder() -> decode.Decoder(CommunityChatAdded) {
+  use community <- decode.field("community", community_decoder())
+  decode.success(CommunityChatAdded(community: community))
+}
+
+pub fn community_chat_removed_decoder() -> decode.Decoder(CommunityChatRemoved) {
+  decode.success(CommunityChatRemoved)
 }
 
 pub fn contact_decoder() -> decode.Decoder(Contact) {
@@ -4318,6 +4459,12 @@ pub fn input_media_document_decoder() -> decode.Decoder(InputMediaDocument) {
   ))
 }
 
+pub fn input_media_link_decoder() -> decode.Decoder(InputMediaLink) {
+  use type_ <- decode.field("type", decode.string)
+  use url <- decode.field("url", decode.string)
+  decode.success(InputMediaLink(type_: type_, url: url))
+}
+
 pub fn input_media_live_photo_decoder() -> decode.Decoder(InputMediaLivePhoto) {
   use type_ <- decode.field("type", decode.string)
   use media <- decode.field("media", decode.string)
@@ -4542,6 +4689,39 @@ pub fn input_media_video_decoder() -> decode.Decoder(InputMediaVideo) {
   ))
 }
 
+pub fn input_media_voice_note_decoder() -> decode.Decoder(InputMediaVoiceNote) {
+  use type_ <- decode.field("type", decode.string)
+  use media <- decode.field("media", decode.string)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(decode.string),
+  )
+  use parse_mode <- decode.optional_field(
+    "parse_mode",
+    None,
+    decode.optional(decode.string),
+  )
+  use caption_entities <- decode.optional_field(
+    "caption_entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use duration <- decode.optional_field(
+    "duration",
+    None,
+    decode.optional(decode.int),
+  )
+  decode.success(InputMediaVoiceNote(
+    type_: type_,
+    media: media,
+    caption: caption,
+    parse_mode: parse_mode,
+    caption_entities: caption_entities,
+    duration: duration,
+  ))
+}
+
 pub fn input_paid_media_live_photo_decoder() -> decode.Decoder(
   InputPaidMediaLivePhoto,
 ) {
@@ -4656,6 +4836,393 @@ pub fn input_profile_photo_static_decoder() -> decode.Decoder(
   use type_ <- decode.field("type", decode.string)
   use photo <- decode.field("photo", decode.string)
   decode.success(InputProfilePhotoStatic(type_: type_, photo: photo))
+}
+
+pub fn input_rich_block_anchor_decoder() -> decode.Decoder(InputRichBlockAnchor) {
+  use type_ <- decode.field("type", decode.string)
+  use name <- decode.field("name", decode.string)
+  decode.success(InputRichBlockAnchor(type_: type_, name: name))
+}
+
+pub fn input_rich_block_animation_decoder() -> decode.Decoder(
+  InputRichBlockAnimation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use animation <- decode.field("animation", input_media_animation_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockAnimation(
+    type_: type_,
+    animation: animation,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_audio_decoder() -> decode.Decoder(InputRichBlockAudio) {
+  use type_ <- decode.field("type", decode.string)
+  use audio <- decode.field("audio", input_media_audio_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockAudio(
+    type_: type_,
+    audio: audio,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_block_quotation_decoder() -> decode.Decoder(
+  InputRichBlockBlockQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(input_rich_block_decoder()))
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(InputRichBlockBlockQuotation(
+    type_: type_,
+    blocks: blocks,
+    credit: credit,
+  ))
+}
+
+pub fn input_rich_block_collage_decoder() -> decode.Decoder(
+  InputRichBlockCollage,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(input_rich_block_decoder()))
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockCollage(
+    type_: type_,
+    blocks: blocks,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_details_decoder() -> decode.Decoder(
+  InputRichBlockDetails,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use summary <- decode.field("summary", rich_text_decoder())
+  use blocks <- decode.field("blocks", decode.list(input_rich_block_decoder()))
+  use is_open <- decode.optional_field(
+    "is_open",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputRichBlockDetails(
+    type_: type_,
+    summary: summary,
+    blocks: blocks,
+    is_open: is_open,
+  ))
+}
+
+pub fn input_rich_block_divider_decoder() -> decode.Decoder(
+  InputRichBlockDivider,
+) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(InputRichBlockDivider(type_: type_))
+}
+
+pub fn input_rich_block_footer_decoder() -> decode.Decoder(InputRichBlockFooter) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(InputRichBlockFooter(type_: type_, text: text))
+}
+
+pub fn input_rich_block_list_decoder() -> decode.Decoder(InputRichBlockList) {
+  use type_ <- decode.field("type", decode.string)
+  use items <- decode.field(
+    "items",
+    decode.list(input_rich_block_list_item_decoder()),
+  )
+  decode.success(InputRichBlockList(type_: type_, items: items))
+}
+
+pub fn input_rich_block_list_item_decoder() -> decode.Decoder(
+  InputRichBlockListItem,
+) {
+  use blocks <- decode.field("blocks", decode.list(input_rich_block_decoder()))
+  use has_checkbox <- decode.optional_field(
+    "has_checkbox",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_checked <- decode.optional_field(
+    "is_checked",
+    None,
+    decode.optional(decode.bool),
+  )
+  use value <- decode.optional_field("value", None, decode.optional(decode.int))
+  use type_ <- decode.optional_field(
+    "type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputRichBlockListItem(
+    blocks: blocks,
+    has_checkbox: has_checkbox,
+    is_checked: is_checked,
+    value: value,
+    type_: type_,
+  ))
+}
+
+pub fn input_rich_block_map_decoder() -> decode.Decoder(InputRichBlockMap) {
+  use type_ <- decode.field("type", decode.string)
+  use location <- decode.field("location", location_decoder())
+  use zoom <- decode.field("zoom", decode.int)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockMap(
+    type_: type_,
+    location: location,
+    zoom: zoom,
+    width: width,
+    height: height,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_mathematical_expression_decoder() -> decode.Decoder(
+  InputRichBlockMathematicalExpression,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use expression <- decode.field("expression", decode.string)
+  decode.success(InputRichBlockMathematicalExpression(
+    type_: type_,
+    expression: expression,
+  ))
+}
+
+pub fn input_rich_block_paragraph_decoder() -> decode.Decoder(
+  InputRichBlockParagraph,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(InputRichBlockParagraph(type_: type_, text: text))
+}
+
+pub fn input_rich_block_photo_decoder() -> decode.Decoder(InputRichBlockPhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use photo <- decode.field("photo", input_media_photo_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockPhoto(
+    type_: type_,
+    photo: photo,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_preformatted_decoder() -> decode.Decoder(
+  InputRichBlockPreformatted,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use language <- decode.optional_field(
+    "language",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputRichBlockPreformatted(
+    type_: type_,
+    text: text,
+    language: language,
+  ))
+}
+
+pub fn input_rich_block_pull_quotation_decoder() -> decode.Decoder(
+  InputRichBlockPullQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(InputRichBlockPullQuotation(
+    type_: type_,
+    text: text,
+    credit: credit,
+  ))
+}
+
+pub fn input_rich_block_section_heading_decoder() -> decode.Decoder(
+  InputRichBlockSectionHeading,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use size <- decode.field("size", decode.int)
+  decode.success(InputRichBlockSectionHeading(
+    type_: type_,
+    text: text,
+    size: size,
+  ))
+}
+
+pub fn input_rich_block_slideshow_decoder() -> decode.Decoder(
+  InputRichBlockSlideshow,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(input_rich_block_decoder()))
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockSlideshow(
+    type_: type_,
+    blocks: blocks,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_table_decoder() -> decode.Decoder(InputRichBlockTable) {
+  use type_ <- decode.field("type", decode.string)
+  use cells <- decode.field(
+    "cells",
+    decode.list(decode.list(rich_block_table_cell_decoder())),
+  )
+  use is_bordered <- decode.optional_field(
+    "is_bordered",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_striped <- decode.optional_field(
+    "is_striped",
+    None,
+    decode.optional(decode.bool),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(InputRichBlockTable(
+    type_: type_,
+    cells: cells,
+    is_bordered: is_bordered,
+    is_striped: is_striped,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_thinking_decoder() -> decode.Decoder(
+  InputRichBlockThinking,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(InputRichBlockThinking(type_: type_, text: text))
+}
+
+pub fn input_rich_block_video_decoder() -> decode.Decoder(InputRichBlockVideo) {
+  use type_ <- decode.field("type", decode.string)
+  use video <- decode.field("video", input_media_video_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockVideo(
+    type_: type_,
+    video: video,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_voice_note_decoder() -> decode.Decoder(
+  InputRichBlockVoiceNote,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use voice_note <- decode.field("voice_note", input_media_voice_note_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockVoiceNote(
+    type_: type_,
+    voice_note: voice_note,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_message_decoder() -> decode.Decoder(InputRichMessage) {
+  use blocks <- decode.optional_field(
+    "blocks",
+    None,
+    decode.optional(decode.list(input_rich_block_decoder())),
+  )
+  use html <- decode.optional_field(
+    "html",
+    None,
+    decode.optional(decode.string),
+  )
+  use markdown <- decode.optional_field(
+    "markdown",
+    None,
+    decode.optional(decode.string),
+  )
+  use media <- decode.optional_field(
+    "media",
+    None,
+    decode.optional(decode.list(input_rich_message_media_decoder())),
+  )
+  use is_rtl <- decode.optional_field(
+    "is_rtl",
+    None,
+    decode.optional(decode.bool),
+  )
+  use skip_entity_detection <- decode.optional_field(
+    "skip_entity_detection",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InputRichMessage(
+    blocks: blocks,
+    html: html,
+    markdown: markdown,
+    media: media,
+    is_rtl: is_rtl,
+    skip_entity_detection: skip_entity_detection,
+  ))
+}
+
+pub fn input_rich_message_content_decoder() -> decode.Decoder(
+  InputRichMessageContent,
+) {
+  use rich_message <- decode.field("rich_message", input_rich_message_decoder())
+  decode.success(InputRichMessageContent(rich_message: rich_message))
+}
+
+pub fn input_rich_message_media_decoder() -> decode.Decoder(
+  InputRichMessageMedia,
+) {
+  use id <- decode.field("id", decode.string)
+  use media <- decode.field("media", input_media_animation_decoder())
+  decode.success(InputRichMessageMedia(id: id, media: media))
 }
 
 pub fn input_sticker_decoder() -> decode.Decoder(InputSticker) {
@@ -5008,6 +5575,11 @@ pub fn labeled_price_decoder() -> decode.Decoder(LabeledPrice) {
   decode.success(LabeledPrice(label: label, amount: amount))
 }
 
+pub fn link_decoder() -> decode.Decoder(Link) {
+  use url <- decode.field("url", decode.string)
+  decode.success(Link(url: url))
+}
+
 pub fn link_preview_options_decoder() -> decode.Decoder(LinkPreviewOptions) {
   use is_disabled <- decode.optional_field(
     "is_disabled",
@@ -5233,6 +5805,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(decode.string),
   )
+  use receiver_user <- decode.optional_field(
+    "receiver_user",
+    None,
+    decode.optional(user_decoder()),
+  )
+  use ephemeral_message_id <- decode.optional_field(
+    "ephemeral_message_id",
+    None,
+    decode.optional(decode.int),
+  )
   use date <- decode.field("date", decode.int)
   use guest_query_id <- decode.optional_field(
     "guest_query_id",
@@ -5364,6 +5946,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     "effect_id",
     None,
     decode.optional(decode.string),
+  )
+  use rich_message <- decode.optional_field(
+    "rich_message",
+    None,
+    decode.optional(rich_message_decoder()),
   )
   use animation <- decode.optional_field(
     "animation",
@@ -5625,6 +6212,16 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(checklist_tasks_added_decoder()),
   )
+  use community_chat_added <- decode.optional_field(
+    "community_chat_added",
+    None,
+    decode.optional(community_chat_added_decoder()),
+  )
+  use community_chat_removed <- decode.optional_field(
+    "community_chat_removed",
+    None,
+    decode.optional(community_chat_removed_decoder()),
+  )
   use direct_message_price_changed <- decode.optional_field(
     "direct_message_price_changed",
     None,
@@ -5764,6 +6361,8 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     sender_boost_count: sender_boost_count,
     sender_business_bot: sender_business_bot,
     sender_tag: sender_tag,
+    receiver_user: receiver_user,
+    ephemeral_message_id: ephemeral_message_id,
     date: date,
     guest_query_id: guest_query_id,
     business_connection_id: business_connection_id,
@@ -5792,6 +6391,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     link_preview_options: link_preview_options,
     suggested_post_info: suggested_post_info,
     effect_id: effect_id,
+    rich_message: rich_message,
     animation: animation,
     audio: audio,
     document: document,
@@ -5844,6 +6444,8 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     chat_background_set: chat_background_set,
     checklist_tasks_done: checklist_tasks_done,
     checklist_tasks_added: checklist_tasks_added,
+    community_chat_added: community_chat_added,
+    community_chat_removed: community_chat_removed,
     direct_message_price_changed: direct_message_price_changed,
     forum_topic_created: forum_topic_created,
     forum_topic_edited: forum_topic_edited,
@@ -6606,6 +7208,11 @@ pub fn poll_media_decoder() -> decode.Decoder(PollMedia) {
     None,
     decode.optional(document_decoder()),
   )
+  use link <- decode.optional_field(
+    "link",
+    None,
+    decode.optional(link_decoder()),
+  )
   use live_photo <- decode.optional_field(
     "live_photo",
     None,
@@ -6640,6 +7247,7 @@ pub fn poll_media_decoder() -> decode.Decoder(PollMedia) {
     animation: animation,
     audio: audio,
     document: document,
+    link: link,
     live_photo: live_photo,
     location: location,
     photo: photo,
@@ -6897,11 +7505,20 @@ pub fn reply_keyboard_remove_decoder() -> decode.Decoder(ReplyKeyboardRemove) {
 }
 
 pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
-  use message_id <- decode.field("message_id", decode.int)
+  use message_id <- decode.optional_field(
+    "message_id",
+    None,
+    decode.optional(decode.int),
+  )
   use chat_id <- decode.optional_field(
     "chat_id",
     None,
     decode.optional(int_or_string_decoder()),
+  )
+  use ephemeral_message_id <- decode.optional_field(
+    "ephemeral_message_id",
+    None,
+    decode.optional(decode.int),
   )
   use allow_sending_without_reply <- decode.optional_field(
     "allow_sending_without_reply",
@@ -6941,6 +7558,7 @@ pub fn reply_parameters_decoder() -> decode.Decoder(ReplyParameters) {
   decode.success(ReplyParameters(
     message_id: message_id,
     chat_id: chat_id,
+    ephemeral_message_id: ephemeral_message_id,
     allow_sending_without_reply: allow_sending_without_reply,
     quote: quote,
     quote_parse_mode: quote_parse_mode,
@@ -6993,6 +7611,593 @@ pub fn revenue_withdrawal_state_succeeded_decoder() -> decode.Decoder(
     date: date,
     url: url,
   ))
+}
+
+pub fn rich_block_anchor_decoder() -> decode.Decoder(RichBlockAnchor) {
+  use type_ <- decode.field("type", decode.string)
+  use name <- decode.field("name", decode.string)
+  decode.success(RichBlockAnchor(type_: type_, name: name))
+}
+
+pub fn rich_block_animation_decoder() -> decode.Decoder(RichBlockAnimation) {
+  use type_ <- decode.field("type", decode.string)
+  use animation <- decode.field("animation", animation_decoder())
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockAnimation(
+    type_: type_,
+    animation: animation,
+    has_spoiler: has_spoiler,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_audio_decoder() -> decode.Decoder(RichBlockAudio) {
+  use type_ <- decode.field("type", decode.string)
+  use audio <- decode.field("audio", audio_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockAudio(type_: type_, audio: audio, caption: caption))
+}
+
+pub fn rich_block_block_quotation_decoder() -> decode.Decoder(
+  RichBlockBlockQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(RichBlockBlockQuotation(
+    type_: type_,
+    blocks: blocks,
+    credit: credit,
+  ))
+}
+
+pub fn rich_block_caption_decoder() -> decode.Decoder(RichBlockCaption) {
+  use text <- decode.field("text", rich_text_decoder())
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(RichBlockCaption(text: text, credit: credit))
+}
+
+pub fn rich_block_collage_decoder() -> decode.Decoder(RichBlockCollage) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockCollage(
+    type_: type_,
+    blocks: blocks,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_details_decoder() -> decode.Decoder(RichBlockDetails) {
+  use type_ <- decode.field("type", decode.string)
+  use summary <- decode.field("summary", rich_text_decoder())
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use is_open <- decode.optional_field(
+    "is_open",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(RichBlockDetails(
+    type_: type_,
+    summary: summary,
+    blocks: blocks,
+    is_open: is_open,
+  ))
+}
+
+pub fn rich_block_divider_decoder() -> decode.Decoder(RichBlockDivider) {
+  use type_ <- decode.field("type", decode.string)
+  decode.success(RichBlockDivider(type_: type_))
+}
+
+pub fn rich_block_footer_decoder() -> decode.Decoder(RichBlockFooter) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichBlockFooter(type_: type_, text: text))
+}
+
+pub fn rich_block_list_decoder() -> decode.Decoder(RichBlockList) {
+  use type_ <- decode.field("type", decode.string)
+  use items <- decode.field(
+    "items",
+    decode.list(rich_block_list_item_decoder()),
+  )
+  decode.success(RichBlockList(type_: type_, items: items))
+}
+
+pub fn rich_block_list_item_decoder() -> decode.Decoder(RichBlockListItem) {
+  use label <- decode.field("label", decode.string)
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use has_checkbox <- decode.optional_field(
+    "has_checkbox",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_checked <- decode.optional_field(
+    "is_checked",
+    None,
+    decode.optional(decode.bool),
+  )
+  use value <- decode.optional_field("value", None, decode.optional(decode.int))
+  use type_ <- decode.optional_field(
+    "type",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(RichBlockListItem(
+    label: label,
+    blocks: blocks,
+    has_checkbox: has_checkbox,
+    is_checked: is_checked,
+    value: value,
+    type_: type_,
+  ))
+}
+
+pub fn rich_block_map_decoder() -> decode.Decoder(RichBlockMap) {
+  use type_ <- decode.field("type", decode.string)
+  use location <- decode.field("location", location_decoder())
+  use zoom <- decode.field("zoom", decode.int)
+  use width <- decode.field("width", decode.int)
+  use height <- decode.field("height", decode.int)
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockMap(
+    type_: type_,
+    location: location,
+    zoom: zoom,
+    width: width,
+    height: height,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_mathematical_expression_decoder() -> decode.Decoder(
+  RichBlockMathematicalExpression,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use expression <- decode.field("expression", decode.string)
+  decode.success(RichBlockMathematicalExpression(
+    type_: type_,
+    expression: expression,
+  ))
+}
+
+pub fn rich_block_paragraph_decoder() -> decode.Decoder(RichBlockParagraph) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichBlockParagraph(type_: type_, text: text))
+}
+
+pub fn rich_block_photo_decoder() -> decode.Decoder(RichBlockPhoto) {
+  use type_ <- decode.field("type", decode.string)
+  use photo <- decode.field("photo", decode.list(photo_size_decoder()))
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockPhoto(
+    type_: type_,
+    photo: photo,
+    has_spoiler: has_spoiler,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_preformatted_decoder() -> decode.Decoder(
+  RichBlockPreformatted,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use language <- decode.optional_field(
+    "language",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(RichBlockPreformatted(
+    type_: type_,
+    text: text,
+    language: language,
+  ))
+}
+
+pub fn rich_block_pull_quotation_decoder() -> decode.Decoder(
+  RichBlockPullQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(RichBlockPullQuotation(
+    type_: type_,
+    text: text,
+    credit: credit,
+  ))
+}
+
+pub fn rich_block_section_heading_decoder() -> decode.Decoder(
+  RichBlockSectionHeading,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use size <- decode.field("size", decode.int)
+  decode.success(RichBlockSectionHeading(type_: type_, text: text, size: size))
+}
+
+pub fn rich_block_slideshow_decoder() -> decode.Decoder(RichBlockSlideshow) {
+  use type_ <- decode.field("type", decode.string)
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockSlideshow(
+    type_: type_,
+    blocks: blocks,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_table_decoder() -> decode.Decoder(RichBlockTable) {
+  use type_ <- decode.field("type", decode.string)
+  use cells <- decode.field(
+    "cells",
+    decode.list(decode.list(rich_block_table_cell_decoder())),
+  )
+  use is_bordered <- decode.optional_field(
+    "is_bordered",
+    None,
+    decode.optional(decode.bool),
+  )
+  use is_striped <- decode.optional_field(
+    "is_striped",
+    None,
+    decode.optional(decode.bool),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(RichBlockTable(
+    type_: type_,
+    cells: cells,
+    is_bordered: is_bordered,
+    is_striped: is_striped,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_table_cell_decoder() -> decode.Decoder(RichBlockTableCell) {
+  use text <- decode.optional_field(
+    "text",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  use is_header <- decode.optional_field(
+    "is_header",
+    None,
+    decode.optional(decode.bool),
+  )
+  use colspan <- decode.optional_field(
+    "colspan",
+    None,
+    decode.optional(decode.int),
+  )
+  use rowspan <- decode.optional_field(
+    "rowspan",
+    None,
+    decode.optional(decode.int),
+  )
+  use align <- decode.field("align", decode.string)
+  use valign <- decode.field("valign", decode.string)
+  decode.success(RichBlockTableCell(
+    text: text,
+    is_header: is_header,
+    colspan: colspan,
+    rowspan: rowspan,
+    align: align,
+    valign: valign,
+  ))
+}
+
+pub fn rich_block_thinking_decoder() -> decode.Decoder(RichBlockThinking) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichBlockThinking(type_: type_, text: text))
+}
+
+pub fn rich_block_video_decoder() -> decode.Decoder(RichBlockVideo) {
+  use type_ <- decode.field("type", decode.string)
+  use video <- decode.field("video", video_decoder())
+  use has_spoiler <- decode.optional_field(
+    "has_spoiler",
+    None,
+    decode.optional(decode.bool),
+  )
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockVideo(
+    type_: type_,
+    video: video,
+    has_spoiler: has_spoiler,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_voice_note_decoder() -> decode.Decoder(RichBlockVoiceNote) {
+  use type_ <- decode.field("type", decode.string)
+  use voice_note <- decode.field("voice_note", voice_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockVoiceNote(
+    type_: type_,
+    voice_note: voice_note,
+    caption: caption,
+  ))
+}
+
+pub fn rich_message_decoder() -> decode.Decoder(RichMessage) {
+  use blocks <- decode.field("blocks", decode.list(rich_block_decoder()))
+  use is_rtl <- decode.optional_field(
+    "is_rtl",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(RichMessage(blocks: blocks, is_rtl: is_rtl))
+}
+
+pub fn rich_text_anchor_decoder() -> decode.Decoder(RichTextAnchor) {
+  use type_ <- decode.field("type", decode.string)
+  use name <- decode.field("name", decode.string)
+  decode.success(RichTextAnchor(type_: type_, name: name))
+}
+
+pub fn rich_text_anchor_link_decoder() -> decode.Decoder(RichTextAnchorLink) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use anchor_name <- decode.field("anchor_name", decode.string)
+  decode.success(RichTextAnchorLink(
+    type_: type_,
+    text: text,
+    anchor_name: anchor_name,
+  ))
+}
+
+pub fn rich_text_bank_card_number_decoder() -> decode.Decoder(
+  RichTextBankCardNumber,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use bank_card_number <- decode.field("bank_card_number", decode.string)
+  decode.success(RichTextBankCardNumber(
+    type_: type_,
+    text: text,
+    bank_card_number: bank_card_number,
+  ))
+}
+
+pub fn rich_text_bold_decoder() -> decode.Decoder(RichTextBold) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextBold(type_: type_, text: text))
+}
+
+pub fn rich_text_bot_command_decoder() -> decode.Decoder(RichTextBotCommand) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use bot_command <- decode.field("bot_command", decode.string)
+  decode.success(RichTextBotCommand(
+    type_: type_,
+    text: text,
+    bot_command: bot_command,
+  ))
+}
+
+pub fn rich_text_cashtag_decoder() -> decode.Decoder(RichTextCashtag) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use cashtag <- decode.field("cashtag", decode.string)
+  decode.success(RichTextCashtag(type_: type_, text: text, cashtag: cashtag))
+}
+
+pub fn rich_text_code_decoder() -> decode.Decoder(RichTextCode) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextCode(type_: type_, text: text))
+}
+
+pub fn rich_text_custom_emoji_decoder() -> decode.Decoder(RichTextCustomEmoji) {
+  use type_ <- decode.field("type", decode.string)
+  use custom_emoji_id <- decode.field("custom_emoji_id", decode.string)
+  use alternative_text <- decode.field("alternative_text", decode.string)
+  decode.success(RichTextCustomEmoji(
+    type_: type_,
+    custom_emoji_id: custom_emoji_id,
+    alternative_text: alternative_text,
+  ))
+}
+
+pub fn rich_text_date_time_decoder() -> decode.Decoder(RichTextDateTime) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use unix_time <- decode.field("unix_time", decode.int)
+  use date_time_format <- decode.field("date_time_format", decode.string)
+  decode.success(RichTextDateTime(
+    type_: type_,
+    text: text,
+    unix_time: unix_time,
+    date_time_format: date_time_format,
+  ))
+}
+
+pub fn rich_text_email_address_decoder() -> decode.Decoder(RichTextEmailAddress) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use email_address <- decode.field("email_address", decode.string)
+  decode.success(RichTextEmailAddress(
+    type_: type_,
+    text: text,
+    email_address: email_address,
+  ))
+}
+
+pub fn rich_text_hashtag_decoder() -> decode.Decoder(RichTextHashtag) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use hashtag <- decode.field("hashtag", decode.string)
+  decode.success(RichTextHashtag(type_: type_, text: text, hashtag: hashtag))
+}
+
+pub fn rich_text_italic_decoder() -> decode.Decoder(RichTextItalic) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextItalic(type_: type_, text: text))
+}
+
+pub fn rich_text_marked_decoder() -> decode.Decoder(RichTextMarked) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextMarked(type_: type_, text: text))
+}
+
+pub fn rich_text_mathematical_expression_decoder() -> decode.Decoder(
+  RichTextMathematicalExpression,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use expression <- decode.field("expression", decode.string)
+  decode.success(RichTextMathematicalExpression(
+    type_: type_,
+    expression: expression,
+  ))
+}
+
+pub fn rich_text_mention_decoder() -> decode.Decoder(RichTextMention) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use username <- decode.field("username", decode.string)
+  decode.success(RichTextMention(type_: type_, text: text, username: username))
+}
+
+pub fn rich_text_phone_number_decoder() -> decode.Decoder(RichTextPhoneNumber) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use phone_number <- decode.field("phone_number", decode.string)
+  decode.success(RichTextPhoneNumber(
+    type_: type_,
+    text: text,
+    phone_number: phone_number,
+  ))
+}
+
+pub fn rich_text_reference_decoder() -> decode.Decoder(RichTextReference) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use name <- decode.field("name", decode.string)
+  decode.success(RichTextReference(type_: type_, text: text, name: name))
+}
+
+pub fn rich_text_reference_link_decoder() -> decode.Decoder(
+  RichTextReferenceLink,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use reference_name <- decode.field("reference_name", decode.string)
+  decode.success(RichTextReferenceLink(
+    type_: type_,
+    text: text,
+    reference_name: reference_name,
+  ))
+}
+
+pub fn rich_text_spoiler_decoder() -> decode.Decoder(RichTextSpoiler) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextSpoiler(type_: type_, text: text))
+}
+
+pub fn rich_text_strikethrough_decoder() -> decode.Decoder(
+  RichTextStrikethrough,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextStrikethrough(type_: type_, text: text))
+}
+
+pub fn rich_text_subscript_decoder() -> decode.Decoder(RichTextSubscript) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextSubscript(type_: type_, text: text))
+}
+
+pub fn rich_text_superscript_decoder() -> decode.Decoder(RichTextSuperscript) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextSuperscript(type_: type_, text: text))
+}
+
+pub fn rich_text_text_mention_decoder() -> decode.Decoder(RichTextTextMention) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use user <- decode.field("user", user_decoder())
+  decode.success(RichTextTextMention(type_: type_, text: text, user: user))
+}
+
+pub fn rich_text_underline_decoder() -> decode.Decoder(RichTextUnderline) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  decode.success(RichTextUnderline(type_: type_, text: text))
+}
+
+pub fn rich_text_url_decoder() -> decode.Decoder(RichTextUrl) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use url <- decode.field("url", decode.string)
+  decode.success(RichTextUrl(type_: type_, text: text, url: url))
 }
 
 pub fn sent_guest_message_decoder() -> decode.Decoder(SentGuestMessage) {
@@ -7985,6 +9190,11 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     None,
     decode.optional(managed_bot_updated_decoder()),
   )
+  use subscription <- decode.optional_field(
+    "subscription",
+    None,
+    decode.optional(bot_subscription_updated_decoder()),
+  )
   decode.success(Update(
     update_id: update_id,
     message: message,
@@ -8012,6 +9222,7 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     chat_boost: chat_boost,
     removed_chat_boost: removed_chat_boost,
     managed_bot: managed_bot,
+    subscription: subscription,
   ))
 }
 
@@ -8089,6 +9300,11 @@ pub fn user_decoder() -> decode.Decoder(User) {
     None,
     decode.optional(decode.bool),
   )
+  use supports_join_request_queries <- decode.optional_field(
+    "supports_join_request_queries",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(User(
     id: id,
     is_bot: is_bot,
@@ -8107,6 +9323,7 @@ pub fn user_decoder() -> decode.Decoder(User) {
     has_topics_enabled: has_topics_enabled,
     allows_users_to_create_topics: allows_users_to_create_topics,
     can_manage_bots: can_manage_bots,
+    supports_join_request_queries: supports_join_request_queries,
   ))
 }
 
@@ -8613,6 +9830,10 @@ pub fn input_poll_option_media_decoder() -> decode.Decoder(InputPollOptionMedia)
       use value <- decode.then(input_media_animation_decoder())
       decode.success(InputMediaAnimationInputPollOptionMedia(value))
     }
+    "link" -> {
+      use value <- decode.then(input_media_link_decoder())
+      decode.success(InputMediaLinkInputPollOptionMedia(value))
+    }
     "live_photo" -> {
       use value <- decode.then(input_media_live_photo_decoder())
       decode.success(InputMediaLivePhotoInputPollOptionMedia(value))
@@ -8653,6 +9874,99 @@ pub fn input_profile_photo_decoder() -> decode.Decoder(InputProfilePhoto) {
       decode.success(InputProfilePhotoAnimatedInputProfilePhoto(value))
     }
     _ -> panic as "Invalid variant for InputProfilePhoto"
+  }
+}
+
+pub fn input_rich_block_decoder() -> decode.Decoder(InputRichBlock) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "paragraph" -> {
+      use value <- decode.then(input_rich_block_paragraph_decoder())
+      decode.success(InputRichBlockParagraphInputRichBlock(value))
+    }
+    "heading" -> {
+      use value <- decode.then(input_rich_block_section_heading_decoder())
+      decode.success(InputRichBlockSectionHeadingInputRichBlock(value))
+    }
+    "pre" -> {
+      use value <- decode.then(input_rich_block_preformatted_decoder())
+      decode.success(InputRichBlockPreformattedInputRichBlock(value))
+    }
+    "footer" -> {
+      use value <- decode.then(input_rich_block_footer_decoder())
+      decode.success(InputRichBlockFooterInputRichBlock(value))
+    }
+    "divider" -> {
+      use value <- decode.then(input_rich_block_divider_decoder())
+      decode.success(InputRichBlockDividerInputRichBlock(value))
+    }
+    "mathematical_expression" -> {
+      use value <- decode.then(
+        input_rich_block_mathematical_expression_decoder(),
+      )
+      decode.success(InputRichBlockMathematicalExpressionInputRichBlock(value))
+    }
+    "anchor" -> {
+      use value <- decode.then(input_rich_block_anchor_decoder())
+      decode.success(InputRichBlockAnchorInputRichBlock(value))
+    }
+    "list" -> {
+      use value <- decode.then(input_rich_block_list_decoder())
+      decode.success(InputRichBlockListInputRichBlock(value))
+    }
+    "blockquote" -> {
+      use value <- decode.then(input_rich_block_block_quotation_decoder())
+      decode.success(InputRichBlockBlockQuotationInputRichBlock(value))
+    }
+    "pullquote" -> {
+      use value <- decode.then(input_rich_block_pull_quotation_decoder())
+      decode.success(InputRichBlockPullQuotationInputRichBlock(value))
+    }
+    "collage" -> {
+      use value <- decode.then(input_rich_block_collage_decoder())
+      decode.success(InputRichBlockCollageInputRichBlock(value))
+    }
+    "slideshow" -> {
+      use value <- decode.then(input_rich_block_slideshow_decoder())
+      decode.success(InputRichBlockSlideshowInputRichBlock(value))
+    }
+    "table" -> {
+      use value <- decode.then(input_rich_block_table_decoder())
+      decode.success(InputRichBlockTableInputRichBlock(value))
+    }
+    "details" -> {
+      use value <- decode.then(input_rich_block_details_decoder())
+      decode.success(InputRichBlockDetailsInputRichBlock(value))
+    }
+    "map" -> {
+      use value <- decode.then(input_rich_block_map_decoder())
+      decode.success(InputRichBlockMapInputRichBlock(value))
+    }
+    "animation" -> {
+      use value <- decode.then(input_rich_block_animation_decoder())
+      decode.success(InputRichBlockAnimationInputRichBlock(value))
+    }
+    "audio" -> {
+      use value <- decode.then(input_rich_block_audio_decoder())
+      decode.success(InputRichBlockAudioInputRichBlock(value))
+    }
+    "photo" -> {
+      use value <- decode.then(input_rich_block_photo_decoder())
+      decode.success(InputRichBlockPhotoInputRichBlock(value))
+    }
+    "video" -> {
+      use value <- decode.then(input_rich_block_video_decoder())
+      decode.success(InputRichBlockVideoInputRichBlock(value))
+    }
+    "voice_note" -> {
+      use value <- decode.then(input_rich_block_voice_note_decoder())
+      decode.success(InputRichBlockVoiceNoteInputRichBlock(value))
+    }
+    "thinking" -> {
+      use value <- decode.then(input_rich_block_thinking_decoder())
+      decode.success(InputRichBlockThinkingInputRichBlock(value))
+    }
+    _ -> panic as "Invalid variant for InputRichBlock"
   }
 }
 
@@ -8844,6 +10158,97 @@ pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
   }
 }
 
+pub fn rich_block_decoder() -> decode.Decoder(RichBlock) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "paragraph" -> {
+      use value <- decode.then(rich_block_paragraph_decoder())
+      decode.success(RichBlockParagraphRichBlock(value))
+    }
+    "heading" -> {
+      use value <- decode.then(rich_block_section_heading_decoder())
+      decode.success(RichBlockSectionHeadingRichBlock(value))
+    }
+    "pre" -> {
+      use value <- decode.then(rich_block_preformatted_decoder())
+      decode.success(RichBlockPreformattedRichBlock(value))
+    }
+    "footer" -> {
+      use value <- decode.then(rich_block_footer_decoder())
+      decode.success(RichBlockFooterRichBlock(value))
+    }
+    "divider" -> {
+      use value <- decode.then(rich_block_divider_decoder())
+      decode.success(RichBlockDividerRichBlock(value))
+    }
+    "mathematical_expression" -> {
+      use value <- decode.then(rich_block_mathematical_expression_decoder())
+      decode.success(RichBlockMathematicalExpressionRichBlock(value))
+    }
+    "anchor" -> {
+      use value <- decode.then(rich_block_anchor_decoder())
+      decode.success(RichBlockAnchorRichBlock(value))
+    }
+    "list" -> {
+      use value <- decode.then(rich_block_list_decoder())
+      decode.success(RichBlockListRichBlock(value))
+    }
+    "blockquote" -> {
+      use value <- decode.then(rich_block_block_quotation_decoder())
+      decode.success(RichBlockBlockQuotationRichBlock(value))
+    }
+    "pullquote" -> {
+      use value <- decode.then(rich_block_pull_quotation_decoder())
+      decode.success(RichBlockPullQuotationRichBlock(value))
+    }
+    "collage" -> {
+      use value <- decode.then(rich_block_collage_decoder())
+      decode.success(RichBlockCollageRichBlock(value))
+    }
+    "slideshow" -> {
+      use value <- decode.then(rich_block_slideshow_decoder())
+      decode.success(RichBlockSlideshowRichBlock(value))
+    }
+    "table" -> {
+      use value <- decode.then(rich_block_table_decoder())
+      decode.success(RichBlockTableRichBlock(value))
+    }
+    "details" -> {
+      use value <- decode.then(rich_block_details_decoder())
+      decode.success(RichBlockDetailsRichBlock(value))
+    }
+    "map" -> {
+      use value <- decode.then(rich_block_map_decoder())
+      decode.success(RichBlockMapRichBlock(value))
+    }
+    "animation" -> {
+      use value <- decode.then(rich_block_animation_decoder())
+      decode.success(RichBlockAnimationRichBlock(value))
+    }
+    "audio" -> {
+      use value <- decode.then(rich_block_audio_decoder())
+      decode.success(RichBlockAudioRichBlock(value))
+    }
+    "photo" -> {
+      use value <- decode.then(rich_block_photo_decoder())
+      decode.success(RichBlockPhotoRichBlock(value))
+    }
+    "video" -> {
+      use value <- decode.then(rich_block_video_decoder())
+      decode.success(RichBlockVideoRichBlock(value))
+    }
+    "voice_note" -> {
+      use value <- decode.then(rich_block_voice_note_decoder())
+      decode.success(RichBlockVoiceNoteRichBlock(value))
+    }
+    "thinking" -> {
+      use value <- decode.then(rich_block_thinking_decoder())
+      decode.success(RichBlockThinkingRichBlock(value))
+    }
+    _ -> panic as "Invalid variant for RichBlock"
+  }
+}
+
 pub fn story_area_type_decoder() -> decode.Decoder(StoryAreaType) {
   use variant <- decode.field("type", decode.string)
   case variant {
@@ -8957,6 +10362,134 @@ pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
       decode.success(InputMediaVenueInputMedia(value))
     }
     _ -> panic as "Invalid variant for InputMedia"
+  }
+}
+
+/// Hand-written: the RichText union is recursive and mixes bare `String` and
+/// `Array of RichText` members with `type`-tagged records, so no discriminated
+/// decoder can be generated. `decode.recursive` breaks the construction cycle
+/// with the generated RichText* record decoders.
+pub fn rich_text_decoder() -> decode.Decoder(RichText) {
+  use <- decode.recursive
+  decode.one_of(
+    {
+      use value <- decode.then(decode.string)
+      decode.success(StringRichText(value))
+    },
+    or: [
+      {
+        use value <- decode.then(decode.list(rich_text_decoder()))
+        decode.success(ListRichText(value))
+      },
+      rich_text_object_decoder(),
+    ],
+  )
+}
+
+fn rich_text_object_decoder() -> decode.Decoder(RichText) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "bold" -> {
+      use value <- decode.then(rich_text_bold_decoder())
+      decode.success(RichTextBoldRichText(value))
+    }
+    "italic" -> {
+      use value <- decode.then(rich_text_italic_decoder())
+      decode.success(RichTextItalicRichText(value))
+    }
+    "underline" -> {
+      use value <- decode.then(rich_text_underline_decoder())
+      decode.success(RichTextUnderlineRichText(value))
+    }
+    "strikethrough" -> {
+      use value <- decode.then(rich_text_strikethrough_decoder())
+      decode.success(RichTextStrikethroughRichText(value))
+    }
+    "spoiler" -> {
+      use value <- decode.then(rich_text_spoiler_decoder())
+      decode.success(RichTextSpoilerRichText(value))
+    }
+    "date_time" -> {
+      use value <- decode.then(rich_text_date_time_decoder())
+      decode.success(RichTextDateTimeRichText(value))
+    }
+    "text_mention" -> {
+      use value <- decode.then(rich_text_text_mention_decoder())
+      decode.success(RichTextTextMentionRichText(value))
+    }
+    "subscript" -> {
+      use value <- decode.then(rich_text_subscript_decoder())
+      decode.success(RichTextSubscriptRichText(value))
+    }
+    "superscript" -> {
+      use value <- decode.then(rich_text_superscript_decoder())
+      decode.success(RichTextSuperscriptRichText(value))
+    }
+    "marked" -> {
+      use value <- decode.then(rich_text_marked_decoder())
+      decode.success(RichTextMarkedRichText(value))
+    }
+    "code" -> {
+      use value <- decode.then(rich_text_code_decoder())
+      decode.success(RichTextCodeRichText(value))
+    }
+    "custom_emoji" -> {
+      use value <- decode.then(rich_text_custom_emoji_decoder())
+      decode.success(RichTextCustomEmojiRichText(value))
+    }
+    "mathematical_expression" -> {
+      use value <- decode.then(rich_text_mathematical_expression_decoder())
+      decode.success(RichTextMathematicalExpressionRichText(value))
+    }
+    "url" -> {
+      use value <- decode.then(rich_text_url_decoder())
+      decode.success(RichTextUrlRichText(value))
+    }
+    "email_address" -> {
+      use value <- decode.then(rich_text_email_address_decoder())
+      decode.success(RichTextEmailAddressRichText(value))
+    }
+    "phone_number" -> {
+      use value <- decode.then(rich_text_phone_number_decoder())
+      decode.success(RichTextPhoneNumberRichText(value))
+    }
+    "bank_card_number" -> {
+      use value <- decode.then(rich_text_bank_card_number_decoder())
+      decode.success(RichTextBankCardNumberRichText(value))
+    }
+    "mention" -> {
+      use value <- decode.then(rich_text_mention_decoder())
+      decode.success(RichTextMentionRichText(value))
+    }
+    "hashtag" -> {
+      use value <- decode.then(rich_text_hashtag_decoder())
+      decode.success(RichTextHashtagRichText(value))
+    }
+    "cashtag" -> {
+      use value <- decode.then(rich_text_cashtag_decoder())
+      decode.success(RichTextCashtagRichText(value))
+    }
+    "bot_command" -> {
+      use value <- decode.then(rich_text_bot_command_decoder())
+      decode.success(RichTextBotCommandRichText(value))
+    }
+    "anchor" -> {
+      use value <- decode.then(rich_text_anchor_decoder())
+      decode.success(RichTextAnchorRichText(value))
+    }
+    "anchor_link" -> {
+      use value <- decode.then(rich_text_anchor_link_decoder())
+      decode.success(RichTextAnchorLinkRichText(value))
+    }
+    "reference" -> {
+      use value <- decode.then(rich_text_reference_decoder())
+      decode.success(RichTextReferenceRichText(value))
+    }
+    "reference_link" -> {
+      use value <- decode.then(rich_text_reference_link_decoder())
+      decode.success(RichTextReferenceLinkRichText(value))
+    }
+    _ -> panic as "Invalid variant for RichText"
   }
 }
 

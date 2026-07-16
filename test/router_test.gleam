@@ -1819,6 +1819,7 @@ pub fn chat_join_request_handler_test() {
         date: 1_234_567_890,
         bio: None,
         invite_link: None,
+        query_id: None,
       ),
       raw: factory.raw_update(message: factory.message(text: "")),
     )

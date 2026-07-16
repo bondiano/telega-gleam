@@ -11,10 +11,10 @@ import telega/error
 import telega/internal/log
 import telega/model/decoder.{update_decoder}
 import telega/model/types.{
-  type Audio, type BusinessConnection, type BusinessMessagesDeleted,
-  type CallbackQuery, type ChatBoostRemoved, type ChatJoinRequest,
-  type ChatMemberUpdated, type ChosenInlineResult, type InlineQuery,
-  type ManagedBotUpdated, type Message, type MessageEntity,
+  type Audio, type BotSubscriptionUpdated, type BusinessConnection,
+  type BusinessMessagesDeleted, type CallbackQuery, type ChatBoostRemoved,
+  type ChatJoinRequest, type ChatMemberUpdated, type ChosenInlineResult,
+  type InlineQuery, type ManagedBotUpdated, type Message, type MessageEntity,
   type MessageReactionCountUpdated, type MessageReactionUpdated,
   type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
   type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
@@ -211,6 +211,13 @@ pub type Update {
     message: Message,
     raw: ModelUpdate,
   )
+  /// User payment subscription state changed (Bot API 10.2).
+  SubscriptionUpdate(
+    from_id: Int,
+    chat_id: Int,
+    subscription: BotSubscriptionUpdated,
+    raw: ModelUpdate,
+  )
 }
 
 pub type Command {
@@ -331,6 +338,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
       let assert Some(guest_message) = raw_update.guest_message
       new_guest_message_update(raw_update, guest_message)
     }
+    _ if raw_update.subscription != None -> {
+      let assert Some(subscription) = raw_update.subscription
+      new_subscription_update(raw_update, subscription)
+    }
     _ if raw_update.message != None -> {
       let assert Some(message) = raw_update.message
       decode_message_update(raw_update, message)
@@ -407,6 +418,7 @@ pub fn raw(update: Update) -> ModelUpdate {
     ShippingQueryUpdate(raw:, ..) -> raw
     ManagedBotUpdate(raw:, ..) -> raw
     GuestMessageUpdate(raw:, ..) -> raw
+    SubscriptionUpdate(raw:, ..) -> raw
   }
 }
 
@@ -543,6 +555,11 @@ pub fn to_string(update: Update) -> String {
       <> int.to_string(message.message_id)
       <> " from "
       <> int.to_string(from_id)
+    SubscriptionUpdate(subscription:, from_id:, ..) ->
+      "subscription "
+      <> subscription.state
+      <> " from "
+      <> int.to_string(from_id)
   }
 }
 
@@ -583,6 +600,7 @@ pub fn type_to_string(update: Update) -> String {
     RemovedChatBoost(..) -> "removed_chat_boost"
     ManagedBotUpdate(..) -> "managed_bot"
     GuestMessageUpdate(..) -> "guest_message"
+    SubscriptionUpdate(..) -> "subscription"
   }
 }
 
@@ -971,6 +989,18 @@ fn new_managed_bot_update(raw: ModelUpdate, managed_bot: ManagedBotUpdated) {
     managed_bot:,
     from_id: managed_bot.user.id,
     chat_id: managed_bot.user.id,
+  )
+}
+
+fn new_subscription_update(
+  raw: ModelUpdate,
+  subscription: BotSubscriptionUpdated,
+) {
+  SubscriptionUpdate(
+    raw:,
+    subscription:,
+    from_id: subscription.user.id,
+    chat_id: subscription.user.id,
   )
 }
 

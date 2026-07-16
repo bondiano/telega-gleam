@@ -32,6 +32,7 @@ fn bot_user(username username) {
     has_topics_enabled: None,
     allows_users_to_create_topics: None,
     can_manage_bots: None,
+    supports_join_request_queries: None,
   )
 }
 
