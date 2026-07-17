@@ -1978,3 +1978,23 @@ pub fn allowed_updates_across_compose_test() {
   |> router.allowed_updates
   |> should.equal(["inline_query", "message"])
 }
+
+pub fn callback_prefix_with_colon_routes_test() {
+  // Regression: a Prefix payload may itself contain the ":" delimiter
+  // (e.g. packed callback data "travel_to:<slug>") — the pattern key must
+  // split only on the FIRST colon.
+  let r =
+    router.new("test")
+    |> router.on_callback(router.Prefix("travel_to:"), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "routed:" <> data))
+    })
+
+  let ctx = make_ctx("initial")
+  let result =
+    router.handle(r, ctx, factory.callback_query_update(data: "travel_to:gate"))
+
+  result
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("routed:travel_to:gate")
+}
