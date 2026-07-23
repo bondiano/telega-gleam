@@ -5,11 +5,13 @@
 import gleam/dynamic/decode
 import gleam/http/response.{type Response}
 import gleam/json
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
 import telega/client.{fetch, new_get_request, new_post_request}
 import telega/error
+import telega/internal/multipart
 import telega/model/decoder
 import telega/model/encoder
 import telega/model/types.{
@@ -360,6 +362,47 @@ pub fn send_photo(
 
   new_post_request(client:, path: "sendPhoto", body: json.to_string(body_json))
   |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Send a photo by uploading raw bytes (`multipart/form-data`), rather than by
+/// `file_id`/URL. Telegram answers with a `Message` whose largest `PhotoSize`
+/// carries the freshly-minted `file_id` — cache it and later sends of the same
+/// image can go back through `send_photo` as a plain JSON call.
+///
+/// The upload rides `client.fetch_multipart`, so it shares the one request
+/// queue and 429-retry path with every other call. Requires a `FetchBitsClient`
+/// (adapters like `telega_httpc` configure one).
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendphoto
+pub fn send_photo_bytes(
+  client client: client.TelegramClient,
+  chat_id chat_id: String,
+  content content: BitArray,
+  filename filename: String,
+  content_type content_type: String,
+  caption caption: Option(String),
+  parse_mode parse_mode: Option(String),
+) -> Result(Message, error.TelegaError) {
+  let parts =
+    [
+      Some(multipart.FieldPart(name: "chat_id", value: chat_id)),
+      option.map(caption, fn(c) {
+        multipart.FieldPart(name: "caption", value: c)
+      }),
+      option.map(parse_mode, fn(m) {
+        multipart.FieldPart(name: "parse_mode", value: m)
+      }),
+      Some(multipart.FilePart(name: "photo", filename:, content_type:, content:)),
+    ]
+    |> list.filter_map(option.to_result(_, Nil))
+
+  client.fetch_multipart(
+    client:,
+    method: "sendPhoto",
+    content_type: multipart.content_type_header(),
+    body: multipart.encode(parts),
+  )
   |> map_response(decoder.message_decoder())
 }
 

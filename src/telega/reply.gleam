@@ -308,6 +308,34 @@ pub fn with_photo(
   )
 }
 
+/// Send a photo to the active chat by uploading raw `bytes`
+/// (`multipart/form-data`) — for art the bot holds in memory / object storage
+/// but has never sent before, so there is no `file_id` yet. The returned
+/// `Message`'s largest `PhotoSize` carries the new `file_id`; cache it and reuse
+/// `with_photo` (a plain JSON send) next time.
+///
+/// If `caption` is `Some`, the client's default parse mode (if configured) is
+/// applied, matching `with_photo`.
+pub fn with_photo_bytes(
+  ctx ctx: Context(session, error, dependencies),
+  bytes bytes: BitArray,
+  filename filename: String,
+  content_type content_type: String,
+  caption caption: Option(String),
+) -> Result(Message, error.TelegaError) {
+  api.send_photo_bytes(
+    ctx.config.api_client,
+    chat_id: ctx.key,
+    content: bytes,
+    filename:,
+    content_type:,
+    caption:,
+    parse_mode: option.then(caption, fn(_) {
+      client.default_parse_mode_string(ctx.config.api_client)
+    }),
+  )
+}
+
 /// Use this method to edit text and game messages.
 /// On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
 ///

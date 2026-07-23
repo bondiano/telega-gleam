@@ -15,6 +15,7 @@
 //// }
 //// ```
 
+import gleam/bit_array
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http.{Get, Post}
@@ -165,6 +166,99 @@ pub fn fetch(
 
     None ->
       send_with_retry(client, method, api_request, client.max_retry_attempts)
+  }
+}
+
+/// Send a `multipart/form-data` POST (a `BitArray` body) to `method`, routed
+/// through the SAME request queue and 429-retry path as JSON calls, using the
+/// configured `FetchBitsClient`. This is how raw file uploads (e.g. sending a
+/// photo by bytes) honor the one-queue rate-limit invariant — there is no
+/// second HTTP client. Errors if no `FetchBitsClient` is configured.
+pub fn fetch_multipart(
+  client client: TelegramClient,
+  method method: String,
+  content_type content_type: String,
+  body body: BitArray,
+) -> Result(Response(String), TelegaError) {
+  use <- fetch_with_telemetry(method)
+  use fetch_bits <- result.try(case client.fetch_bits_client {
+    Some(f) -> Ok(f)
+    None ->
+      Error(error.FetchError(
+        "No FetchBitsClient configured for multipart upload. Use "
+        <> "client.set_fetch_bits_client or an adapter like telega_httpc.",
+      ))
+  })
+
+  use req <- result.try(
+    request.to(build_url(client, method))
+    |> result.map_error(fn(_: Nil) { error.ApiToRequestConvertError }),
+  )
+  let bits_req =
+    req
+    |> request.set_body(body)
+    |> request.set_method(Post)
+    |> request.set_header("content-type", content_type)
+
+  // The upload BODY is binary, but Telegram's RESPONSE is always JSON text, so
+  // decode it back to a `Response(String)` at the boundary — that lets the send
+  // share the exact queue and 429-retry path as every JSON call.
+  let send = fn() { fetch_bits(bits_req) |> stringify_response }
+
+  case client.request_queue {
+    Some(queue) -> request_queue.execute(queue, send)
+    None ->
+      send_bits_with_retry(client, method, send, client.max_retry_attempts)
+  }
+}
+
+fn stringify_response(
+  response: Result(Response(BitArray), TelegaError),
+) -> Result(Response(String), TelegaError) {
+  use response <- result.try(response)
+  bit_array.to_string(response.body)
+  |> result.replace_error(error.FetchError(
+    "upload response body was not valid UTF-8",
+  ))
+  |> result.map(response.set_body(response, _))
+}
+
+fn send_bits_with_retry(
+  client: TelegramClient,
+  method: String,
+  send: fn() -> Result(Response(String), TelegaError),
+  retries: Int,
+) -> Result(Response(String), TelegaError) {
+  let response = send()
+
+  case retries {
+    0 -> response
+    _ ->
+      case response {
+        Ok(response) ->
+          case response.status {
+            429 -> {
+              let retry_delay = retry_delay_from_response(response)
+              emit_api_retry(
+                method,
+                client.max_retry_attempts - retries + 1,
+                retry_delay,
+              )
+              process.sleep(retry_delay)
+              send_bits_with_retry(client, method, send, retries - 1)
+            }
+            _ -> Ok(response)
+          }
+        Error(_) -> {
+          emit_api_retry(
+            method,
+            client.max_retry_attempts - retries + 1,
+            default_retry_delay,
+          )
+          process.sleep(default_retry_delay)
+          send_bits_with_retry(client, method, send, retries - 1)
+        }
+      }
   }
 }
 
