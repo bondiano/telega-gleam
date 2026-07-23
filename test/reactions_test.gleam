@@ -1,6 +1,8 @@
+import gleam/json
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
+import telega/model/encoder
 import telega/model/types
 import telega/reactions
 
@@ -384,4 +386,45 @@ pub fn get_top_reactions_returns_sorted_by_count_test() {
     reactions.ReactionCountInfo(reaction: reactions.heart, count: 10),
     reactions.ReactionCountInfo(reaction: reactions.thumbs_up, count: 5),
   ])
+}
+
+// ============================================
+// deleteMessageReaction / deleteAllMessageReactions payloads
+// ============================================
+
+pub fn delete_message_reaction_encodes_user_actor_test() {
+  types.DeleteMessageReactionParameters(
+    chat_id: types.Int(-1_001_234),
+    message_id: 55,
+    user_id: Some(42),
+    actor_chat_id: None,
+  )
+  |> encoder.encode_delete_message_reaction_parameters
+  |> json.to_string
+  |> should.equal("{\"chat_id\":-1001234,\"message_id\":55,\"user_id\":42}")
+}
+
+pub fn delete_message_reaction_encodes_chat_actor_test() {
+  types.DeleteMessageReactionParameters(
+    chat_id: types.Int(-1_001_234),
+    message_id: 55,
+    user_id: None,
+    actor_chat_id: Some(-1_009_999),
+  )
+  |> encoder.encode_delete_message_reaction_parameters
+  |> json.to_string
+  |> should.equal(
+    "{\"chat_id\":-1001234,\"message_id\":55,\"actor_chat_id\":-1009999}",
+  )
+}
+
+pub fn delete_all_message_reactions_encodes_chat_actor_test() {
+  types.DeleteAllMessageReactionsParameters(
+    chat_id: types.Int(-1_001_234),
+    user_id: None,
+    actor_chat_id: Some(-1_009_999),
+  )
+  |> encoder.encode_delete_all_message_reactions_parameters
+  |> json.to_string
+  |> should.equal("{\"chat_id\":-1001234,\"actor_chat_id\":-1009999}")
 }

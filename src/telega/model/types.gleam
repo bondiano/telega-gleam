@@ -8551,24 +8551,26 @@ pub type AnswerGuestQueryParameters {
 /// Parameters for `deleteMessageReaction` (Bot API 10.0).
 pub type DeleteMessageReactionParameters {
   DeleteMessageReactionParameters(
-    /// Unique identifier for the target chat or username of the target channel
+    /// Unique identifier for the target chat or username of the target supergroup in the format `@username`
     chat_id: IntOrString,
     /// Identifier of the target message
     message_id: Int,
-    /// Identifier of the user who set the reaction
-    user_id: Int,
-    /// The reaction to remove from the message
-    reaction: ReactionType,
+    /// Optional. Identifier of the user whose reaction will be removed, if the reaction was added by a user
+    user_id: Option(Int),
+    /// Optional. Identifier of the chat whose reaction will be removed, if the reaction was added by a chat
+    actor_chat_id: Option(Int),
   )
 }
 
 /// Parameters for `deleteAllMessageReactions` (Bot API 10.0).
 pub type DeleteAllMessageReactionsParameters {
   DeleteAllMessageReactionsParameters(
-    /// Unique identifier for the target chat or username of the target channel
+    /// Unique identifier for the target chat or username of the target supergroup in the format `@username`
     chat_id: IntOrString,
-    /// Identifier of the target message
-    message_id: Int,
+    /// Optional. Identifier of the user whose reactions will be removed, if the reactions were added by a user
+    user_id: Option(Int),
+    /// Optional. Identifier of the chat whose reactions will be removed, if the reactions were added by a chat
+    actor_chat_id: Option(Int),
   )
 }
 

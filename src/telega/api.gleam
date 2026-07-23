@@ -2948,7 +2948,12 @@ pub fn answer_guest_query(
   |> map_response(decoder.sent_guest_message_decoder())
 }
 
-/// Use this method to delete a specific reaction from a message. Returns _True_ on success.
+/// Use this method to remove a reaction from a message in a group or a supergroup chat.
+/// The bot must have the _can_delete_messages_ administrator right in the chat.
+/// Returns _True_ on success.
+///
+/// Pass `user_id` when the reaction was added by a user, or `actor_chat_id` when it
+/// was added on behalf of a chat (channel/anonymous admin).
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deletemessagereaction
 pub fn delete_message_reaction(
@@ -2966,7 +2971,12 @@ pub fn delete_message_reaction(
   |> map_response(decode.bool)
 }
 
-/// Use this method to remove all reactions from a message. Returns _True_ on success.
+/// Use this method to remove up to 10000 recent reactions in a group or a supergroup chat
+/// added by a given user or chat. The bot must have the _can_delete_messages_ administrator
+/// right in the chat. Returns _True_ on success.
+///
+/// Pass `user_id` to remove reactions added by a user, or `actor_chat_id` to remove
+/// reactions added on behalf of a chat.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#deleteallmessagereactions
 pub fn delete_all_message_reactions(

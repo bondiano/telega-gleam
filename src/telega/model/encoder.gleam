@@ -10304,8 +10304,8 @@ pub fn encode_delete_message_reaction_parameters(
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("message_id", json.int(params.message_id)),
-    #("user_id", json.int(params.user_id)),
-    #("reaction", encode_reaction_type(params.reaction)),
+    #("user_id", json.nullable(params.user_id, json.int)),
+    #("actor_chat_id", json.nullable(params.actor_chat_id, json.int)),
   ])
 }
 
@@ -10314,7 +10314,8 @@ pub fn encode_delete_all_message_reactions_parameters(
 ) -> Json {
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
-    #("message_id", json.int(params.message_id)),
+    #("user_id", json.nullable(params.user_id, json.int)),
+    #("actor_chat_id", json.nullable(params.actor_chat_id, json.int)),
   ])
 }
 
