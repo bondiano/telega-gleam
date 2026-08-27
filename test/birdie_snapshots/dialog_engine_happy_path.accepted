@@ -97,6 +97,6 @@ test_name: engine_happy_path_test
 
 7. sendMessage
 {
-  "chat_id": "test_chat:123",
+  "chat_id": 201,
   "text": "saved: Alice/en"
 }

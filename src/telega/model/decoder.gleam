@@ -29,41 +29,45 @@ import telega/model/types.{
   type ChatPermissions, type ChatPhoto, type ChatShared, type Checklist,
   type ChecklistTask, type ChecklistTasksAdded, type ChecklistTasksDone,
   type ChosenInlineResult, type Community, type CommunityChatAdded,
-  type CommunityChatRemoved, type Contact, type CopyTextButton, type Dice,
-  type DirectMessagePriceChanged, type DirectMessagesTopic, type Document,
+  type CommunityChatJoined, type CommunityChatRemoved, type Contact,
+  type CopyTextButton, type Dice, type DirectMessagePriceChanged,
+  type DirectMessagesTopic, type DisabledButton, type Document,
   type EncryptedCredentials, type EncryptedPassportElement,
-  type ExternalReplyInfo, type File, type FileOrString, type ForceReply,
-  type ForumTopic, type ForumTopicClosed, type ForumTopicCreated,
-  type ForumTopicEdited, type ForumTopicReopened, type Game, type GameHighScore,
-  type GeneralForumTopicHidden, type GeneralForumTopicUnhidden, type Gift,
-  type GiftBackground, type GiftInfo, type Gifts, type Giveaway,
-  type GiveawayCompleted, type GiveawayCreated, type GiveawayWinners,
-  type InaccessibleMessage, type InlineKeyboardButton, type InlineKeyboardMarkup,
-  type InlineQuery, type InlineQueryResult, type InlineQueryResultArticle,
-  type InlineQueryResultAudio, type InlineQueryResultCachedAudio,
-  type InlineQueryResultCachedDocument, type InlineQueryResultCachedGif,
-  type InlineQueryResultCachedMpeg4Gif, type InlineQueryResultCachedPhoto,
-  type InlineQueryResultCachedSticker, type InlineQueryResultCachedVideo,
-  type InlineQueryResultCachedVoice, type InlineQueryResultContact,
-  type InlineQueryResultDocument, type InlineQueryResultGame,
-  type InlineQueryResultGif, type InlineQueryResultLocation,
-  type InlineQueryResultMpeg4Gif, type InlineQueryResultPhoto,
-  type InlineQueryResultVenue, type InlineQueryResultVideo,
-  type InlineQueryResultVoice, type InlineQueryResultsButton,
-  type InputChecklist, type InputChecklistTask, type InputContactMessageContent,
-  type InputInvoiceMessageContent, type InputLocationMessageContent,
-  type InputMedia, type InputMediaAnimation, type InputMediaAudio,
-  type InputMediaDocument, type InputMediaLink, type InputMediaLivePhoto,
-  type InputMediaLocation, type InputMediaPhoto, type InputMediaSticker,
-  type InputMediaVenue, type InputMediaVideo, type InputMediaVoiceNote,
-  type InputMessageContent, type InputPaidMedia, type InputPaidMediaLivePhoto,
-  type InputPaidMediaPhoto, type InputPaidMediaVideo, type InputPollMedia,
-  type InputPollOption, type InputPollOptionMedia, type InputProfilePhoto,
+  type EphemeralMessageParameters, type ExternalReplyInfo, type File,
+  type FileOrString, type ForceReply, type ForumTopic, type ForumTopicClosed,
+  type ForumTopicCreated, type ForumTopicEdited, type ForumTopicReopened,
+  type Game, type GameHighScore, type GeneralForumTopicHidden,
+  type GeneralForumTopicUnhidden, type Gift, type GiftBackground, type GiftInfo,
+  type Gifts, type Giveaway, type GiveawayCompleted, type GiveawayCreated,
+  type GiveawayWinners, type InaccessibleMessage, type InlineKeyboardButton,
+  type InlineKeyboardMarkup, type InlineQuery, type InlineQueryResult,
+  type InlineQueryResultArticle, type InlineQueryResultAudio,
+  type InlineQueryResultCachedAudio, type InlineQueryResultCachedDocument,
+  type InlineQueryResultCachedGif, type InlineQueryResultCachedMpeg4Gif,
+  type InlineQueryResultCachedPhoto, type InlineQueryResultCachedSticker,
+  type InlineQueryResultCachedVideo, type InlineQueryResultCachedVoice,
+  type InlineQueryResultContact, type InlineQueryResultDocument,
+  type InlineQueryResultGame, type InlineQueryResultGif,
+  type InlineQueryResultLocation, type InlineQueryResultMpeg4Gif,
+  type InlineQueryResultPhoto, type InlineQueryResultVenue,
+  type InlineQueryResultVideo, type InlineQueryResultVoice,
+  type InlineQueryResultsButton, type InputChecklist, type InputChecklistTask,
+  type InputContactMessageContent, type InputInvoiceMessageContent,
+  type InputLocationMessageContent, type InputMedia, type InputMediaAnimation,
+  type InputMediaAudio, type InputMediaDocument, type InputMediaLink,
+  type InputMediaLivePhoto, type InputMediaLocation, type InputMediaPhoto,
+  type InputMediaSticker, type InputMediaVenue, type InputMediaVideo,
+  type InputMediaVoiceNote, type InputMessageContent, type InputPaidMedia,
+  type InputPaidMediaLivePhoto, type InputPaidMediaPhoto,
+  type InputPaidMediaVideo, type InputPollMedia, type InputPollOption,
+  type InputPollOptionMedia, type InputProfilePhoto,
   type InputProfilePhotoAnimated, type InputProfilePhotoStatic,
   type InputRichBlock, type InputRichBlockAnchor, type InputRichBlockAnimation,
   type InputRichBlockAudio, type InputRichBlockBlockQuotation,
-  type InputRichBlockCollage, type InputRichBlockDetails,
-  type InputRichBlockDivider, type InputRichBlockFooter, type InputRichBlockList,
+  type InputRichBlockButtons, type InputRichBlockCollage,
+  type InputRichBlockDetails, type InputRichBlockDivider,
+  type InputRichBlockDocument, type InputRichBlockExpandableBlockQuotation,
+  type InputRichBlockFooter, type InputRichBlockList,
   type InputRichBlockListItem, type InputRichBlockMap,
   type InputRichBlockMathematicalExpression, type InputRichBlockParagraph,
   type InputRichBlockPhoto, type InputRichBlockPreformatted,
@@ -83,8 +87,9 @@ import telega/model/types.{
   type MaskPosition, type MaybeInaccessibleMessage, type MenuButton,
   type MenuButtonCommands, type MenuButtonDefault, type MenuButtonWebApp,
   type Message, type MessageAutoDeleteTimerChanged, type MessageEntity,
-  type MessageId, type MessageOrigin, type MessageOriginChannel,
-  type MessageOriginChat, type MessageOriginHiddenUser, type MessageOriginUser,
+  type MessageGenerationStopped, type MessageId, type MessageOrigin,
+  type MessageOriginChannel, type MessageOriginChat,
+  type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
   type PaidMedia, type PaidMediaInfo, type PaidMediaLivePhoto,
@@ -106,16 +111,18 @@ import telega/model/types.{
   type RevenueWithdrawalStateFailed, type RevenueWithdrawalStatePending,
   type RevenueWithdrawalStateSucceeded, type RichBlock, type RichBlockAnchor,
   type RichBlockAnimation, type RichBlockAudio, type RichBlockBlockQuotation,
-  type RichBlockCaption, type RichBlockCollage, type RichBlockDetails,
-  type RichBlockDivider, type RichBlockFooter, type RichBlockList,
-  type RichBlockListItem, type RichBlockMap,
+  type RichBlockButtons, type RichBlockCaption, type RichBlockCollage,
+  type RichBlockDetails, type RichBlockDivider, type RichBlockDocument,
+  type RichBlockExpandableBlockQuotation, type RichBlockFooter,
+  type RichBlockList, type RichBlockListItem, type RichBlockMap,
   type RichBlockMathematicalExpression, type RichBlockParagraph,
   type RichBlockPhoto, type RichBlockPreformatted, type RichBlockPullQuotation,
   type RichBlockSectionHeading, type RichBlockSlideshow, type RichBlockTable,
   type RichBlockTableCell, type RichBlockThinking, type RichBlockVideo,
-  type RichBlockVoiceNote, type RichMessage, type RichText, type RichTextAnchor,
-  type RichTextAnchorLink, type RichTextBankCardNumber, type RichTextBold,
-  type RichTextBotCommand, type RichTextCashtag, type RichTextCode,
+  type RichBlockVoiceNote, type RichMessage, type RichMessageButton,
+  type RichText, type RichTextAnchor, type RichTextAnchorLink,
+  type RichTextBankCardNumber, type RichTextBold, type RichTextBotCommand,
+  type RichTextButton, type RichTextCashtag, type RichTextCode,
   type RichTextCustomEmoji, type RichTextDateTime, type RichTextEmailAddress,
   type RichTextHashtag, type RichTextItalic, type RichTextMarked,
   type RichTextMathematicalExpression, type RichTextMention,
@@ -178,10 +185,11 @@ import telega/model/types.{
   ChatMemberRestrictedChatMember, ChatMemberUpdated, ChatOwnerChanged,
   ChatOwnerLeft, ChatPermissions, ChatPhoto, ChatShared, Checklist,
   ChecklistTask, ChecklistTasksAdded, ChecklistTasksDone, ChosenInlineResult,
-  Community, CommunityChatAdded, CommunityChatRemoved, Contact, CopyTextButton,
-  Dice, DirectMessagePriceChanged, DirectMessagesTopic, Document,
-  EncryptedCredentials, EncryptedPassportElement, ExternalReplyInfo, File, FileV,
-  ForceReply, ForumTopic, ForumTopicClosed, ForumTopicCreated, ForumTopicEdited,
+  Community, CommunityChatAdded, CommunityChatJoined, CommunityChatRemoved,
+  Contact, CopyTextButton, Dice, DirectMessagePriceChanged, DirectMessagesTopic,
+  DisabledButton, Document, EncryptedCredentials, EncryptedPassportElement,
+  EphemeralMessageParameters, ExternalReplyInfo, File, FileV, ForceReply,
+  ForumTopic, ForumTopicClosed, ForumTopicCreated, ForumTopicEdited,
   ForumTopicReopened, Game, GameHighScore, GeneralForumTopicHidden,
   GeneralForumTopicUnhidden, Gift, GiftBackground, GiftInfo, Gifts, Giveaway,
   GiveawayCompleted, GiveawayCreated, GiveawayWinners, InaccessibleMessage,
@@ -235,10 +243,13 @@ import telega/model/types.{
   InputRichBlockAnchorInputRichBlock, InputRichBlockAnimation,
   InputRichBlockAnimationInputRichBlock, InputRichBlockAudio,
   InputRichBlockAudioInputRichBlock, InputRichBlockBlockQuotation,
-  InputRichBlockBlockQuotationInputRichBlock, InputRichBlockCollage,
+  InputRichBlockBlockQuotationInputRichBlock, InputRichBlockButtons,
+  InputRichBlockButtonsInputRichBlock, InputRichBlockCollage,
   InputRichBlockCollageInputRichBlock, InputRichBlockDetails,
   InputRichBlockDetailsInputRichBlock, InputRichBlockDivider,
-  InputRichBlockDividerInputRichBlock, InputRichBlockFooter,
+  InputRichBlockDividerInputRichBlock, InputRichBlockDocument,
+  InputRichBlockDocumentInputRichBlock, InputRichBlockExpandableBlockQuotation,
+  InputRichBlockExpandableBlockQuotationInputRichBlock, InputRichBlockFooter,
   InputRichBlockFooterInputRichBlock, InputRichBlockList,
   InputRichBlockListInputRichBlock, InputRichBlockListItem, InputRichBlockMap,
   InputRichBlockMapInputRichBlock, InputRichBlockMathematicalExpression,
@@ -264,9 +275,9 @@ import telega/model/types.{
   LoginUrl, ManagedBotCreated, ManagedBotUpdated, MaskPosition,
   MenuButtonCommands, MenuButtonCommandsMenuButton, MenuButtonDefault,
   MenuButtonDefaultMenuButton, MenuButtonWebApp, MenuButtonWebAppMenuButton,
-  Message, MessageAutoDeleteTimerChanged, MessageEntity, MessageId,
-  MessageMaybeInaccessibleMessage, MessageOriginChannel,
-  MessageOriginChannelMessageOrigin, MessageOriginChat,
+  Message, MessageAutoDeleteTimerChanged, MessageEntity,
+  MessageGenerationStopped, MessageId, MessageMaybeInaccessibleMessage,
+  MessageOriginChannel, MessageOriginChannelMessageOrigin, MessageOriginChat,
   MessageOriginChatMessageOrigin, MessageOriginHiddenUser,
   MessageOriginHiddenUserMessageOrigin, MessageOriginUser,
   MessageOriginUserMessageOrigin, MessageReactionCountUpdated,
@@ -303,10 +314,12 @@ import telega/model/types.{
   RevenueWithdrawalStateSucceededRevenueWithdrawalState, RichBlockAnchor,
   RichBlockAnchorRichBlock, RichBlockAnimation, RichBlockAnimationRichBlock,
   RichBlockAudio, RichBlockAudioRichBlock, RichBlockBlockQuotation,
-  RichBlockBlockQuotationRichBlock, RichBlockCaption, RichBlockCollage,
-  RichBlockCollageRichBlock, RichBlockDetails, RichBlockDetailsRichBlock,
-  RichBlockDivider, RichBlockDividerRichBlock, RichBlockFooter,
-  RichBlockFooterRichBlock, RichBlockList, RichBlockListItem,
+  RichBlockBlockQuotationRichBlock, RichBlockButtons, RichBlockButtonsRichBlock,
+  RichBlockCaption, RichBlockCollage, RichBlockCollageRichBlock,
+  RichBlockDetails, RichBlockDetailsRichBlock, RichBlockDivider,
+  RichBlockDividerRichBlock, RichBlockDocument, RichBlockDocumentRichBlock,
+  RichBlockExpandableBlockQuotation, RichBlockExpandableBlockQuotationRichBlock,
+  RichBlockFooter, RichBlockFooterRichBlock, RichBlockList, RichBlockListItem,
   RichBlockListRichBlock, RichBlockMap, RichBlockMapRichBlock,
   RichBlockMathematicalExpression, RichBlockMathematicalExpressionRichBlock,
   RichBlockParagraph, RichBlockParagraphRichBlock, RichBlockPhoto,
@@ -316,15 +329,15 @@ import telega/model/types.{
   RichBlockSlideshowRichBlock, RichBlockTable, RichBlockTableCell,
   RichBlockTableRichBlock, RichBlockThinking, RichBlockThinkingRichBlock,
   RichBlockVideo, RichBlockVideoRichBlock, RichBlockVoiceNote,
-  RichBlockVoiceNoteRichBlock, RichMessage, RichTextAnchor, RichTextAnchorLink,
-  RichTextAnchorLinkRichText, RichTextAnchorRichText, RichTextBankCardNumber,
-  RichTextBankCardNumberRichText, RichTextBold, RichTextBoldRichText,
-  RichTextBotCommand, RichTextBotCommandRichText, RichTextCashtag,
-  RichTextCashtagRichText, RichTextCode, RichTextCodeRichText,
-  RichTextCustomEmoji, RichTextCustomEmojiRichText, RichTextDateTime,
-  RichTextDateTimeRichText, RichTextEmailAddress, RichTextEmailAddressRichText,
-  RichTextHashtag, RichTextHashtagRichText, RichTextItalic,
-  RichTextItalicRichText, RichTextMarked, RichTextMarkedRichText,
+  RichBlockVoiceNoteRichBlock, RichMessage, RichMessageButton, RichTextAnchor,
+  RichTextAnchorLink, RichTextAnchorLinkRichText, RichTextAnchorRichText,
+  RichTextBankCardNumber, RichTextBankCardNumberRichText, RichTextBold,
+  RichTextBoldRichText, RichTextBotCommand, RichTextBotCommandRichText,
+  RichTextButton, RichTextCashtag, RichTextCashtagRichText, RichTextCode,
+  RichTextCodeRichText, RichTextCustomEmoji, RichTextCustomEmojiRichText,
+  RichTextDateTime, RichTextDateTimeRichText, RichTextEmailAddress,
+  RichTextEmailAddressRichText, RichTextHashtag, RichTextHashtagRichText,
+  RichTextItalic, RichTextItalicRichText, RichTextMarked, RichTextMarkedRichText,
   RichTextMathematicalExpression, RichTextMathematicalExpressionRichText,
   RichTextMention, RichTextMentionRichText, RichTextPhoneNumber,
   RichTextPhoneNumberRichText, RichTextReference, RichTextReferenceLink,
@@ -359,7 +372,7 @@ import telega/model/types.{
   VideoQuality, Voice, WebAppData, WebAppInfo, WebhookInfo, WriteAccessAllowed,
 }
 
-// This file is auto-generated for Bot API 10.2 from the Telegram Bot API spec.
+// This file is auto-generated for Bot API 10.3 from the Telegram Bot API spec.
 // Do not edit above the MANUAL marker — run `task codegen` to regenerate.
 
 pub fn accepted_gift_types_decoder() -> decode.Decoder(AcceptedGiftTypes) {
@@ -1020,6 +1033,10 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.bool),
   )
+  use can_send_welcome_messages <- decode.field(
+    "can_send_welcome_messages",
+    decode.bool,
+  )
   decode.success(ChatAdministratorRights(
     is_anonymous: is_anonymous,
     can_manage_chat: can_manage_chat,
@@ -1038,6 +1055,7 @@ pub fn chat_administrator_rights_decoder() -> decode.Decoder(
     can_manage_topics: can_manage_topics,
     can_manage_direct_messages: can_manage_direct_messages,
     can_manage_tags: can_manage_tags,
+    can_send_welcome_messages: can_send_welcome_messages,
   ))
 }
 
@@ -1564,6 +1582,10 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     None,
     decode.optional(decode.bool),
   )
+  use can_send_welcome_messages <- decode.field(
+    "can_send_welcome_messages",
+    decode.bool,
+  )
   use custom_title <- decode.optional_field(
     "custom_title",
     None,
@@ -1590,6 +1612,7 @@ pub fn chat_member_administrator_decoder() -> decode.Decoder(
     can_manage_topics: can_manage_topics,
     can_manage_direct_messages: can_manage_direct_messages,
     can_manage_tags: can_manage_tags,
+    can_send_welcome_messages: can_send_welcome_messages,
     custom_title: custom_title,
   ))
 }
@@ -2022,6 +2045,11 @@ pub fn community_chat_added_decoder() -> decode.Decoder(CommunityChatAdded) {
   decode.success(CommunityChatAdded(community: community))
 }
 
+pub fn community_chat_joined_decoder() -> decode.Decoder(CommunityChatJoined) {
+  use community <- decode.field("community", community_decoder())
+  decode.success(CommunityChatJoined(community: community))
+}
+
 pub fn community_chat_removed_decoder() -> decode.Decoder(CommunityChatRemoved) {
   decode.success(CommunityChatRemoved)
 }
@@ -2090,6 +2118,10 @@ pub fn direct_messages_topic_decoder() -> decode.Decoder(DirectMessagesTopic) {
     decode.optional(user_decoder()),
   )
   decode.success(DirectMessagesTopic(topic_id: topic_id, user: user))
+}
+
+pub fn disabled_button_decoder() -> decode.Decoder(DisabledButton) {
+  decode.success(DisabledButton)
 }
 
 pub fn document_decoder() -> decode.Decoder(Document) {
@@ -2188,6 +2220,27 @@ pub fn encrypted_passport_element_decoder() -> decode.Decoder(
     selfie: selfie,
     translation: translation,
     hash: hash,
+  ))
+}
+
+pub fn ephemeral_message_parameters_decoder() -> decode.Decoder(
+  EphemeralMessageParameters,
+) {
+  use receiver_user_id <- decode.field("receiver_user_id", decode.int)
+  use callback_query_id <- decode.optional_field(
+    "callback_query_id",
+    None,
+    decode.optional(decode.string),
+  )
+  use replace_callback_query_message <- decode.optional_field(
+    "replace_callback_query_message",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(EphemeralMessageParameters(
+    receiver_user_id: receiver_user_id,
+    callback_query_id: callback_query_id,
+    replace_callback_query_message: replace_callback_query_message,
   ))
 }
 
@@ -2862,6 +2915,11 @@ pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) 
     decode.optional(callback_game_decoder()),
   )
   use pay <- decode.optional_field("pay", None, decode.optional(decode.bool))
+  use disabled <- decode.optional_field(
+    "disabled",
+    None,
+    decode.optional(disabled_button_decoder()),
+  )
   decode.success(InlineKeyboardButton(
     text: text,
     icon_custom_emoji_id: icon_custom_emoji_id,
@@ -2876,6 +2934,7 @@ pub fn inline_keyboard_button_decoder() -> decode.Decoder(InlineKeyboardButton) 
     copy_text: copy_text,
     callback_game: callback_game,
     pay: pay,
+    disabled: disabled,
   ))
 }
 
@@ -2884,7 +2943,15 @@ pub fn inline_keyboard_markup_decoder() -> decode.Decoder(InlineKeyboardMarkup) 
     "inline_keyboard",
     decode.list(decode.list(inline_keyboard_button_decoder())),
   )
-  decode.success(InlineKeyboardMarkup(inline_keyboard: inline_keyboard))
+  use force_reply <- decode.optional_field(
+    "force_reply",
+    None,
+    decode.optional(decode.bool),
+  )
+  decode.success(InlineKeyboardMarkup(
+    inline_keyboard: inline_keyboard,
+    force_reply: force_reply,
+  ))
 }
 
 pub fn inline_query_decoder() -> decode.Decoder(InlineQuery) {
@@ -4893,6 +4960,26 @@ pub fn input_rich_block_block_quotation_decoder() -> decode.Decoder(
   ))
 }
 
+pub fn input_rich_block_buttons_decoder() -> decode.Decoder(
+  InputRichBlockButtons,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use buttons <- decode.field(
+    "buttons",
+    decode.list(rich_message_button_decoder()),
+  )
+  use align <- decode.optional_field(
+    "align",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(InputRichBlockButtons(
+    type_: type_,
+    buttons: buttons,
+    align: align,
+  ))
+}
+
 pub fn input_rich_block_collage_decoder() -> decode.Decoder(
   InputRichBlockCollage,
 ) {
@@ -4934,6 +5021,40 @@ pub fn input_rich_block_divider_decoder() -> decode.Decoder(
 ) {
   use type_ <- decode.field("type", decode.string)
   decode.success(InputRichBlockDivider(type_: type_))
+}
+
+pub fn input_rich_block_document_decoder() -> decode.Decoder(
+  InputRichBlockDocument,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use document <- decode.field("document", input_media_document_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(InputRichBlockDocument(
+    type_: type_,
+    document: document,
+    caption: caption,
+  ))
+}
+
+pub fn input_rich_block_expandable_block_quotation_decoder() -> decode.Decoder(
+  InputRichBlockExpandableBlockQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(InputRichBlockExpandableBlockQuotation(
+    type_: type_,
+    text: text,
+    credit: credit,
+  ))
 }
 
 pub fn input_rich_block_footer_decoder() -> decode.Decoder(InputRichBlockFooter) {
@@ -4983,9 +5104,13 @@ pub fn input_rich_block_list_item_decoder() -> decode.Decoder(
 pub fn input_rich_block_map_decoder() -> decode.Decoder(InputRichBlockMap) {
   use type_ <- decode.field("type", decode.string)
   use location <- decode.field("location", location_decoder())
-  use zoom <- decode.field("zoom", decode.int)
-  use width <- decode.field("width", decode.int)
-  use height <- decode.field("height", decode.int)
+  use zoom <- decode.optional_field("zoom", None, decode.optional(decode.int))
+  use width <- decode.optional_field("width", None, decode.optional(decode.int))
+  use height <- decode.optional_field(
+    "height",
+    None,
+    decode.optional(decode.int),
+  )
   use caption <- decode.optional_field(
     "caption",
     None,
@@ -5115,6 +5240,11 @@ pub fn input_rich_block_table_decoder() -> decode.Decoder(InputRichBlockTable) {
     None,
     decode.optional(decode.bool),
   )
+  use is_compact <- decode.optional_field(
+    "is_compact",
+    None,
+    decode.optional(decode.bool),
+  )
   use caption <- decode.optional_field(
     "caption",
     None,
@@ -5125,6 +5255,7 @@ pub fn input_rich_block_table_decoder() -> decode.Decoder(InputRichBlockTable) {
     cells: cells,
     is_bordered: is_bordered,
     is_striped: is_striped,
+    is_compact: is_compact,
     caption: caption,
   ))
 }
@@ -6217,6 +6348,11 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     None,
     decode.optional(community_chat_added_decoder()),
   )
+  use community_chat_joined <- decode.optional_field(
+    "community_chat_joined",
+    None,
+    decode.optional(community_chat_joined_decoder()),
+  )
   use community_chat_removed <- decode.optional_field(
     "community_chat_removed",
     None,
@@ -6445,6 +6581,7 @@ pub fn message_decoder() -> decode.Decoder(Message) {
     checklist_tasks_done: checklist_tasks_done,
     checklist_tasks_added: checklist_tasks_added,
     community_chat_added: community_chat_added,
+    community_chat_joined: community_chat_joined,
     community_chat_removed: community_chat_removed,
     direct_message_price_changed: direct_message_price_changed,
     forum_topic_created: forum_topic_created,
@@ -6527,6 +6664,23 @@ pub fn message_entity_decoder() -> decode.Decoder(MessageEntity) {
     custom_emoji_id: custom_emoji_id,
     unix_time: unix_time,
     date_time_format: date_time_format,
+  ))
+}
+
+pub fn message_generation_stopped_decoder() -> decode.Decoder(
+  MessageGenerationStopped,
+) {
+  use chat <- decode.field("chat", chat_decoder())
+  use message_thread_id <- decode.optional_field(
+    "message_thread_id",
+    None,
+    decode.optional(decode.int),
+  )
+  use draft_id <- decode.field("draft_id", decode.int)
+  decode.success(MessageGenerationStopped(
+    chat: chat,
+    message_thread_id: message_thread_id,
+    draft_id: draft_id,
   ))
 }
 
@@ -7481,6 +7635,11 @@ pub fn reply_keyboard_markup_decoder() -> decode.Decoder(ReplyKeyboardMarkup) {
     None,
     decode.optional(decode.bool),
   )
+  use force_reply <- decode.optional_field(
+    "force_reply",
+    None,
+    decode.optional(decode.bool),
+  )
   decode.success(ReplyKeyboardMarkup(
     keyboard: keyboard,
     is_persistent: is_persistent,
@@ -7488,6 +7647,7 @@ pub fn reply_keyboard_markup_decoder() -> decode.Decoder(ReplyKeyboardMarkup) {
     one_time_keyboard: one_time_keyboard,
     input_field_placeholder: input_field_placeholder,
     selective: selective,
+    force_reply: force_reply,
   ))
 }
 
@@ -7668,6 +7828,20 @@ pub fn rich_block_block_quotation_decoder() -> decode.Decoder(
   ))
 }
 
+pub fn rich_block_buttons_decoder() -> decode.Decoder(RichBlockButtons) {
+  use type_ <- decode.field("type", decode.string)
+  use buttons <- decode.field(
+    "buttons",
+    decode.list(rich_message_button_decoder()),
+  )
+  use align <- decode.optional_field(
+    "align",
+    None,
+    decode.optional(decode.string),
+  )
+  decode.success(RichBlockButtons(type_: type_, buttons: buttons, align: align))
+}
+
 pub fn rich_block_caption_decoder() -> decode.Decoder(RichBlockCaption) {
   use text <- decode.field("text", rich_text_decoder())
   use credit <- decode.optional_field(
@@ -7713,6 +7887,38 @@ pub fn rich_block_details_decoder() -> decode.Decoder(RichBlockDetails) {
 pub fn rich_block_divider_decoder() -> decode.Decoder(RichBlockDivider) {
   use type_ <- decode.field("type", decode.string)
   decode.success(RichBlockDivider(type_: type_))
+}
+
+pub fn rich_block_document_decoder() -> decode.Decoder(RichBlockDocument) {
+  use type_ <- decode.field("type", decode.string)
+  use document <- decode.field("document", document_decoder())
+  use caption <- decode.optional_field(
+    "caption",
+    None,
+    decode.optional(rich_block_caption_decoder()),
+  )
+  decode.success(RichBlockDocument(
+    type_: type_,
+    document: document,
+    caption: caption,
+  ))
+}
+
+pub fn rich_block_expandable_block_quotation_decoder() -> decode.Decoder(
+  RichBlockExpandableBlockQuotation,
+) {
+  use type_ <- decode.field("type", decode.string)
+  use text <- decode.field("text", rich_text_decoder())
+  use credit <- decode.optional_field(
+    "credit",
+    None,
+    decode.optional(rich_text_decoder()),
+  )
+  decode.success(RichBlockExpandableBlockQuotation(
+    type_: type_,
+    text: text,
+    credit: credit,
+  ))
 }
 
 pub fn rich_block_footer_decoder() -> decode.Decoder(RichBlockFooter) {
@@ -7892,6 +8098,11 @@ pub fn rich_block_table_decoder() -> decode.Decoder(RichBlockTable) {
     None,
     decode.optional(decode.bool),
   )
+  use is_compact <- decode.optional_field(
+    "is_compact",
+    None,
+    decode.optional(decode.bool),
+  )
   use caption <- decode.optional_field(
     "caption",
     None,
@@ -7902,6 +8113,7 @@ pub fn rich_block_table_decoder() -> decode.Decoder(RichBlockTable) {
     cells: cells,
     is_bordered: is_bordered,
     is_striped: is_striped,
+    is_compact: is_compact,
     caption: caption,
   ))
 }
@@ -7991,6 +8203,69 @@ pub fn rich_message_decoder() -> decode.Decoder(RichMessage) {
   decode.success(RichMessage(blocks: blocks, is_rtl: is_rtl))
 }
 
+pub fn rich_message_button_decoder() -> decode.Decoder(RichMessageButton) {
+  use text <- decode.field("text", rich_text_decoder())
+  use style <- decode.optional_field(
+    "style",
+    None,
+    decode.optional(decode.string),
+  )
+  use url <- decode.optional_field("url", None, decode.optional(decode.string))
+  use callback_data <- decode.optional_field(
+    "callback_data",
+    None,
+    decode.optional(decode.string),
+  )
+  use web_app <- decode.optional_field(
+    "web_app",
+    None,
+    decode.optional(web_app_info_decoder()),
+  )
+  use login_url <- decode.optional_field(
+    "login_url",
+    None,
+    decode.optional(login_url_decoder()),
+  )
+  use switch_inline_query <- decode.optional_field(
+    "switch_inline_query",
+    None,
+    decode.optional(decode.string),
+  )
+  use switch_inline_query_current_chat <- decode.optional_field(
+    "switch_inline_query_current_chat",
+    None,
+    decode.optional(decode.string),
+  )
+  use switch_inline_query_chosen_chat <- decode.optional_field(
+    "switch_inline_query_chosen_chat",
+    None,
+    decode.optional(switch_inline_query_chosen_chat_decoder()),
+  )
+  use copy_text <- decode.optional_field(
+    "copy_text",
+    None,
+    decode.optional(copy_text_button_decoder()),
+  )
+  use disabled <- decode.optional_field(
+    "disabled",
+    None,
+    decode.optional(disabled_button_decoder()),
+  )
+  decode.success(RichMessageButton(
+    text: text,
+    style: style,
+    url: url,
+    callback_data: callback_data,
+    web_app: web_app,
+    login_url: login_url,
+    switch_inline_query: switch_inline_query,
+    switch_inline_query_current_chat: switch_inline_query_current_chat,
+    switch_inline_query_chosen_chat: switch_inline_query_chosen_chat,
+    copy_text: copy_text,
+    disabled: disabled,
+  ))
+}
+
 pub fn rich_text_anchor_decoder() -> decode.Decoder(RichTextAnchor) {
   use type_ <- decode.field("type", decode.string)
   use name <- decode.field("name", decode.string)
@@ -8036,6 +8311,12 @@ pub fn rich_text_bot_command_decoder() -> decode.Decoder(RichTextBotCommand) {
     text: text,
     bot_command: bot_command,
   ))
+}
+
+pub fn rich_text_button_decoder() -> decode.Decoder(RichTextButton) {
+  use type_ <- decode.field("type", decode.string)
+  use button <- decode.field("button", rich_message_button_decoder())
+  decode.success(RichTextButton(type_: type_, button: button))
 }
 
 pub fn rich_text_cashtag_decoder() -> decode.Decoder(RichTextCashtag) {
@@ -8999,6 +9280,21 @@ pub fn unique_gift_colors_decoder() -> decode.Decoder(UniqueGiftColors) {
 pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
   use gift <- decode.field("gift", unique_gift_decoder())
   use origin <- decode.field("origin", decode.string)
+  use text <- decode.optional_field(
+    "text",
+    None,
+    decode.optional(decode.string),
+  )
+  use entities <- decode.optional_field(
+    "entities",
+    None,
+    decode.optional(decode.list(message_entity_decoder())),
+  )
+  use is_private <- decode.optional_field(
+    "is_private",
+    None,
+    decode.optional(decode.bool),
+  )
   use last_resale_currency <- decode.optional_field(
     "last_resale_currency",
     None,
@@ -9027,6 +9323,9 @@ pub fn unique_gift_info_decoder() -> decode.Decoder(UniqueGiftInfo) {
   decode.success(UniqueGiftInfo(
     gift: gift,
     origin: origin,
+    text: text,
+    entities: entities,
+    is_private: is_private,
     last_resale_currency: last_resale_currency,
     last_resale_amount: last_resale_amount,
     owned_gift_id: owned_gift_id,
@@ -9195,6 +9494,11 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     None,
     decode.optional(bot_subscription_updated_decoder()),
   )
+  use stopped_message_generation <- decode.optional_field(
+    "stopped_message_generation",
+    None,
+    decode.optional(message_generation_stopped_decoder()),
+  )
   decode.success(Update(
     update_id: update_id,
     message: message,
@@ -9223,6 +9527,7 @@ pub fn update_decoder() -> decode.Decoder(Update) {
     removed_chat_boost: removed_chat_boost,
     managed_bot: managed_bot,
     subscription: subscription,
+    stopped_message_generation: stopped_message_generation,
   ))
 }
 
@@ -9918,6 +10223,12 @@ pub fn input_rich_block_decoder() -> decode.Decoder(InputRichBlock) {
       use value <- decode.then(input_rich_block_block_quotation_decoder())
       decode.success(InputRichBlockBlockQuotationInputRichBlock(value))
     }
+    "expandable_blockquote" -> {
+      use value <- decode.then(
+        input_rich_block_expandable_block_quotation_decoder(),
+      )
+      decode.success(InputRichBlockExpandableBlockQuotationInputRichBlock(value))
+    }
     "pullquote" -> {
       use value <- decode.then(input_rich_block_pull_quotation_decoder())
       decode.success(InputRichBlockPullQuotationInputRichBlock(value))
@@ -9942,6 +10253,10 @@ pub fn input_rich_block_decoder() -> decode.Decoder(InputRichBlock) {
       use value <- decode.then(input_rich_block_map_decoder())
       decode.success(InputRichBlockMapInputRichBlock(value))
     }
+    "buttons" -> {
+      use value <- decode.then(input_rich_block_buttons_decoder())
+      decode.success(InputRichBlockButtonsInputRichBlock(value))
+    }
     "animation" -> {
       use value <- decode.then(input_rich_block_animation_decoder())
       decode.success(InputRichBlockAnimationInputRichBlock(value))
@@ -9949,6 +10264,10 @@ pub fn input_rich_block_decoder() -> decode.Decoder(InputRichBlock) {
     "audio" -> {
       use value <- decode.then(input_rich_block_audio_decoder())
       decode.success(InputRichBlockAudioInputRichBlock(value))
+    }
+    "document" -> {
+      use value <- decode.then(input_rich_block_document_decoder())
+      decode.success(InputRichBlockDocumentInputRichBlock(value))
     }
     "photo" -> {
       use value <- decode.then(input_rich_block_photo_decoder())
@@ -10197,6 +10516,10 @@ pub fn rich_block_decoder() -> decode.Decoder(RichBlock) {
       use value <- decode.then(rich_block_block_quotation_decoder())
       decode.success(RichBlockBlockQuotationRichBlock(value))
     }
+    "expandable_blockquote" -> {
+      use value <- decode.then(rich_block_expandable_block_quotation_decoder())
+      decode.success(RichBlockExpandableBlockQuotationRichBlock(value))
+    }
     "pullquote" -> {
       use value <- decode.then(rich_block_pull_quotation_decoder())
       decode.success(RichBlockPullQuotationRichBlock(value))
@@ -10221,6 +10544,10 @@ pub fn rich_block_decoder() -> decode.Decoder(RichBlock) {
       use value <- decode.then(rich_block_map_decoder())
       decode.success(RichBlockMapRichBlock(value))
     }
+    "buttons" -> {
+      use value <- decode.then(rich_block_buttons_decoder())
+      decode.success(RichBlockButtonsRichBlock(value))
+    }
     "animation" -> {
       use value <- decode.then(rich_block_animation_decoder())
       decode.success(RichBlockAnimationRichBlock(value))
@@ -10228,6 +10555,10 @@ pub fn rich_block_decoder() -> decode.Decoder(RichBlock) {
     "audio" -> {
       use value <- decode.then(rich_block_audio_decoder())
       decode.success(RichBlockAudioRichBlock(value))
+    }
+    "document" -> {
+      use value <- decode.then(rich_block_document_decoder())
+      decode.success(RichBlockDocumentRichBlock(value))
     }
     "photo" -> {
       use value <- decode.then(rich_block_photo_decoder())

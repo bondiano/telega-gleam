@@ -5,6 +5,7 @@ import gleeunit/should
 
 import telega/model/decoder
 import telega/model/types
+import telega/update
 
 pub fn main() {
   gleeunit.main()
@@ -140,4 +141,44 @@ pub fn rich_message_decoder_test() {
   let assert [types.RichBlockParagraphRichBlock(paragraph)] =
     rich_message.blocks
   paragraph.text |> should.equal(types.StringRichText("plain"))
+}
+
+// Bot API 10.3: a user stopping the generation of a message draft arrives as a
+// top-level `stopped_message_generation` update.
+pub fn message_generation_stopped_update_decoder_test() {
+  let body =
+    "{
+      \"update_id\": 42,
+      \"stopped_message_generation\": {
+        \"chat\": {\"id\": 100, \"type\": \"private\"},
+        \"draft_id\": 7
+      }
+    }"
+
+  let assert Ok(raw) = json.parse(body, decoder.update_decoder())
+  let assert Some(stopped) = raw.stopped_message_generation
+  stopped.draft_id |> should.equal(7)
+  stopped.chat.id |> should.equal(100)
+  stopped.message_thread_id |> should.equal(None)
+
+  let assert update.MessageGenerationStoppedUpdate(chat_id:, from_id:, ..) =
+    update.raw_to_update(raw)
+  chat_id |> should.equal(100)
+  from_id |> should.equal(-1)
+}
+
+// Bot API 10.3: inline buttons can be disabled, and both markups can force a
+// reply from the user.
+pub fn disabled_inline_button_decoder_test() {
+  let body =
+    "{
+      \"inline_keyboard\": [[{\"text\": \"Sold out\", \"disabled\": {}}]],
+      \"force_reply\": true
+    }"
+
+  let assert Ok(markup) =
+    json.parse(body, decoder.inline_keyboard_markup_decoder())
+  markup.force_reply |> should.equal(Some(True))
+  let assert [[button]] = markup.inline_keyboard
+  button.disabled |> should.equal(Some(types.DisabledButton))
 }

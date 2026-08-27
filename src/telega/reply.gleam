@@ -1,5 +1,51 @@
 //// `reply` provides a convenient way to send messages to the active chat.
 //// It uses the `Context` object to access the chat ID and other necessary information.
+////
+//// ## Ephemeral messages (Bot API 10.3)
+////
+//// In a group chat a message can be addressed to a single user — nobody else
+//// sees it. `with_ephemeral_text` and `with_ephemeral_markup` aim at the user
+//// of the current update, wiring `callback_query_id` in when that update is a
+//// callback query, so the message appears under the pressed button:
+////
+//// ```gleam
+//// let assert Ok(_) = reply.with_ephemeral_text(ctx, "Booked — only you see this")
+//// ```
+////
+//// `with_ephemeral` takes explicit parameters instead, built with
+//// `ephemeral_parameters` or `types.new_ephemeral_message_parameters`:
+////
+//// ```gleam
+//// reply.with_ephemeral(
+////   ctx:,
+////   text: "Shown in place of the original message",
+////   parameters: types.EphemeralMessageParameters(
+////     ..reply.ephemeral_parameters(ctx),
+////     replace_callback_query_message: Some(True),
+////   ),
+//// )
+//// ```
+////
+//// Every `send*` parameter record carries the same optional
+//// `ephemeral_message_parameters` field, so photos, videos, stickers and the
+//// rest can be ephemeral too:
+////
+//// ```gleam
+//// api.send_photo(
+////   client,
+////   parameters: types.SendPhotoParameters(
+////     ..parameters,
+////     ephemeral_message_parameters: Some(reply.ephemeral_parameters(ctx)),
+////   ),
+//// )
+//// ```
+////
+//// The sent `Message` carries an `ephemeral_message_id`; pass it to
+//// `api.edit_ephemeral_message_*` / `api.delete_ephemeral_message` to change or
+//// remove the message later. Under `handle_bot_with_reply` the first eligible
+//// send of an update is answered through the webhook response itself and comes
+//// back as a stub `Message` without that id — wrap such a call in
+//// `webhook_reply.without_claim` when you need the real one.
 
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -12,13 +58,15 @@ import telega/error
 import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
-  type FileOrString, type ForwardMessageParameters, type InputMedia,
-  type InputPaidMedia, type Message, type SendDiceParameters,
-  type SendMessageReplyMarkupParameters, EditMessageTextParameters, LabeledPrice,
+  type EphemeralMessageParameters, type FileOrString,
+  type ForwardMessageParameters, type InputMedia, type InputPaidMedia,
+  type Message, type SendDiceParameters, type SendMessageReplyMarkupParameters,
+  EditMessageTextParameters, EphemeralMessageParameters, LabeledPrice,
   SendDiceParameters, SendInvoiceParameters, SendMediaGroupParameters,
   SendMessageParameters, SendPaidMediaParameters, SendPhotoParameters,
-  SendPollParameters, SendStickerParameters, Str,
+  SendPollParameters, SendStickerParameters,
 }
+import telega/update
 
 /// Use this method to send text messages.
 ///
@@ -34,7 +82,7 @@ pub fn with_text(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       business_connection_id: None,
       message_thread_id: None,
       parse_mode: client.default_parse_mode_string(ctx.config.api_client),
@@ -46,6 +94,7 @@ pub fn with_text(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -65,7 +114,7 @@ pub fn with_markup(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       reply_markup: Some(reply_markup),
       business_connection_id: None,
       message_thread_id: None,
@@ -77,6 +126,7 @@ pub fn with_markup(
       reply_parameters: None,
       message_effect_id: None,
       allow_paid_broadcast: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -102,7 +152,7 @@ pub fn with_formatted(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       business_connection_id: None,
       message_thread_id: None,
@@ -114,6 +164,7 @@ pub fn with_formatted(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -135,7 +186,7 @@ pub fn with_html(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text: html,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       parse_mode: Some("HTML"),
       business_connection_id: None,
       message_thread_id: None,
@@ -147,6 +198,7 @@ pub fn with_html(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -167,7 +219,7 @@ pub fn with_markdown(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text: markdown,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       parse_mode: Some("Markdown"),
       business_connection_id: None,
       message_thread_id: None,
@@ -179,6 +231,7 @@ pub fn with_markdown(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -199,7 +252,7 @@ pub fn with_markdown_v2(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text: markdown,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       parse_mode: Some("MarkdownV2"),
       business_connection_id: None,
       message_thread_id: None,
@@ -211,6 +264,7 @@ pub fn with_markdown_v2(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -229,7 +283,7 @@ pub fn with_formatted_markup(
     ctx.config.api_client,
     parameters: SendMessageParameters(
       text:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       reply_markup: Some(reply_markup),
       business_connection_id: None,
@@ -241,6 +295,7 @@ pub fn with_formatted_markup(
       message_effect_id: None,
       allow_paid_broadcast: None,
       reply_parameters: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -256,7 +311,7 @@ pub fn with_dice(
     parameters
     |> option.lazy_unwrap(fn() {
       SendDiceParameters(
-        chat_id: Str(ctx.key),
+        chat_id: types.Int(ctx.update.chat_id),
         message_thread_id: None,
         emoji: None,
         disable_notification: None,
@@ -287,7 +342,7 @@ pub fn with_photo(
   api.send_photo(
     ctx.config.api_client,
     parameters: SendPhotoParameters(
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       photo:,
       caption:,
       parse_mode: option.then(caption, fn(_) {
@@ -304,6 +359,7 @@ pub fn with_photo(
       message_effect_id: None,
       reply_parameters: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -373,7 +429,7 @@ pub fn edit_text_formatted(
       text:,
       message_id: Some(message_id),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
-      chat_id: Some(Str(ctx.key)),
+      chat_id: Some(types.Int(ctx.update.chat_id)),
       reply_markup: None,
       entities: None,
       link_preview_options: None,
@@ -392,6 +448,110 @@ pub fn forward(
   parameters parameters: ForwardMessageParameters,
 ) -> Result(Message, error.TelegaError) {
   api.forward_message(ctx.config.api_client, parameters)
+}
+
+/// Ephemeral parameters aimed at the user of the current update (Bot API 10.3).
+///
+/// When the update is a callback query, its id is wired in, so Telegram can
+/// attach the ephemeral message to the pressed button. Adjust the result with
+/// a record update to show the message in place of the original one:
+///
+/// ```gleam
+/// types.EphemeralMessageParameters(
+///   ..reply.ephemeral_parameters(ctx),
+///   replace_callback_query_message: Some(True),
+/// )
+/// ```
+pub fn ephemeral_parameters(
+  ctx ctx: Context(session, error, dependencies),
+) -> EphemeralMessageParameters {
+  let parameters =
+    types.new_ephemeral_message_parameters(receiver_user_id: ctx.update.from_id)
+
+  case ctx.update {
+    update.CallbackQueryUpdate(query:, ..) ->
+      EphemeralMessageParameters(
+        ..parameters,
+        callback_query_id: Some(query.id),
+      )
+    _ -> parameters
+  }
+}
+
+/// Use this method to send a text message that only one user of the chat sees
+/// (Bot API 10.3). Ephemeral messages work in group chats only; in private
+/// chats use `with_text`.
+///
+/// The message is aimed at the user of the current update — see
+/// `ephemeral_parameters` for finer control, and pass the result to
+/// `with_ephemeral`.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_ephemeral_text(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Message, error.TelegaError) {
+  with_ephemeral(ctx:, text:, parameters: ephemeral_parameters(ctx))
+}
+
+/// Use this method to send an ephemeral text message with explicit
+/// `EphemeralMessageParameters` (Bot API 10.3).
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_ephemeral(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+  parameters ephemeral_message_parameters: EphemeralMessageParameters,
+) -> Result(Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: SendMessageParameters(
+      text:,
+      chat_id: types.Int(ctx.update.chat_id),
+      ephemeral_message_parameters: Some(ephemeral_message_parameters),
+      business_connection_id: None,
+      message_thread_id: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+/// Use this method to send an ephemeral text message with keyboard markup
+/// (Bot API 10.3).
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmessage
+pub fn with_ephemeral_markup(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+  markup reply_markup: SendMessageReplyMarkupParameters,
+) -> Result(Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: SendMessageParameters(
+      text:,
+      chat_id: types.Int(ctx.update.chat_id),
+      reply_markup: Some(reply_markup),
+      ephemeral_message_parameters: Some(ephemeral_parameters(ctx)),
+      business_connection_id: None,
+      message_thread_id: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      entities: None,
+      link_preview_options: None,
+      disable_notification: None,
+      protect_content: None,
+      message_effect_id: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+    ),
+  )
 }
 
 /// Use this method to send answers to callback queries sent from inline keyboards.
@@ -439,7 +599,7 @@ pub fn with_poll(
     parameters: SendPollParameters(
       question:,
       options:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,
@@ -497,7 +657,7 @@ pub fn with_invoice(
         let #(label, amount) = price
         LabeledPrice(label:, amount:)
       }),
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,
@@ -536,7 +696,7 @@ pub fn with_sticker(
     ctx.config.api_client,
     parameters: SendStickerParameters(
       sticker:,
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       message_thread_id: None,
       disable_notification: None,
       protect_content: None,
@@ -546,6 +706,7 @@ pub fn with_sticker(
       message_effect_id: None,
       emoji: None,
       reply_markup: None,
+      ephemeral_message_parameters: None,
     ),
   )
 }
@@ -578,7 +739,7 @@ pub fn with_media_group(
   api.send_media_group(
     ctx.config.api_client,
     parameters: SendMediaGroupParameters(
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       media:,
       business_connection_id: None,
       message_thread_id: None,
@@ -616,7 +777,7 @@ pub fn with_paid_media(
   api.send_paid_media(
     ctx.config.api_client,
     parameters: SendPaidMediaParameters(
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       star_count:,
       media:,
       business_connection_id: None,

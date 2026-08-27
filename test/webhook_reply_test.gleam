@@ -47,6 +47,7 @@ fn send_message_params(
     message_effect_id: None,
     reply_parameters: None,
     reply_markup: None,
+    ephemeral_message_parameters: None,
   )
 }
 

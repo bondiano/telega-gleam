@@ -46,9 +46,10 @@ import telega/model/types.{
   type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
   type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
   type EditStoryParameters, type EditUserStarSubscriptionParameters,
-  type ExportChatInviteLinkParameters, type File, type ForumTopic,
-  type ForwardMessageParameters, type ForwardMessagesParameters,
-  type GameHighScore, type GetBusinessAccountGiftsParameters,
+  type EphemeralMessageParameters, type ExportChatInviteLinkParameters,
+  type File, type ForumTopic, type ForwardMessageParameters,
+  type ForwardMessagesParameters, type GameHighScore,
+  type GetBusinessAccountGiftsParameters,
   type GetBusinessAccountStarBalanceParameters,
   type GetBusinessConnectionParameters, type GetChatAdministratorsParameters,
   type GetChatGiftsParameters, type GetChatMemberCountParameters,
@@ -384,6 +385,59 @@ pub fn send_photo_bytes(
   caption caption: Option(String),
   parse_mode parse_mode: Option(String),
 ) -> Result(Message, error.TelegaError) {
+  do_send_photo_bytes(
+    client:,
+    chat_id:,
+    content:,
+    filename:,
+    content_type:,
+    caption:,
+    parse_mode:,
+    ephemeral: None,
+  )
+}
+
+/// Send a photo by uploading raw bytes as an ephemeral message — a group-chat
+/// message only `ephemeral.receiver_user_id` sees (Bot API 10.3).
+///
+/// The byte-upload sibling of `send_photo` with
+/// `ephemeral_message_parameters` set; build the parameters with
+/// `types.new_ephemeral_message_parameters` or `reply.ephemeral_parameters`.
+/// Everything else matches `send_photo_bytes`.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendphoto
+pub fn send_ephemeral_photo_bytes(
+  client client: client.TelegramClient,
+  chat_id chat_id: String,
+  content content: BitArray,
+  filename filename: String,
+  content_type content_type: String,
+  caption caption: Option(String),
+  parse_mode parse_mode: Option(String),
+  ephemeral ephemeral: EphemeralMessageParameters,
+) -> Result(Message, error.TelegaError) {
+  do_send_photo_bytes(
+    client:,
+    chat_id:,
+    content:,
+    filename:,
+    content_type:,
+    caption:,
+    parse_mode:,
+    ephemeral: Some(ephemeral),
+  )
+}
+
+fn do_send_photo_bytes(
+  client client: client.TelegramClient,
+  chat_id chat_id: String,
+  content content: BitArray,
+  filename filename: String,
+  content_type content_type: String,
+  caption caption: Option(String),
+  parse_mode parse_mode: Option(String),
+  ephemeral ephemeral: Option(EphemeralMessageParameters),
+) -> Result(Message, error.TelegaError) {
   let parts =
     [
       Some(multipart.FieldPart(name: "chat_id", value: chat_id)),
@@ -392,6 +446,15 @@ pub fn send_photo_bytes(
       }),
       option.map(parse_mode, fn(m) {
         multipart.FieldPart(name: "parse_mode", value: m)
+      }),
+      // Nested objects travel as JSON-serialized form fields.
+      option.map(ephemeral, fn(parameters) {
+        multipart.FieldPart(
+          name: "ephemeral_message_parameters",
+          value: json.to_string(encoder.encode_ephemeral_message_parameters(
+            parameters,
+          )),
+        )
       }),
       Some(multipart.FilePart(name: "photo", filename:, content_type:, content:)),
     ]

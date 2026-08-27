@@ -1408,10 +1408,12 @@ pub fn wait_choice(
         callback_game: None,
         pay: None,
         copy_text: None,
+        disabled: None,
       )
     })
 
-  let keyboard = types.InlineKeyboardMarkup(inline_keyboard: [buttons])
+  let keyboard =
+    types.InlineKeyboardMarkup(inline_keyboard: [buttons], force_reply: None)
 
   // Send message with keyboard
   let send_params =
@@ -1431,6 +1433,7 @@ pub fn wait_choice(
       reply_markup: Some(types.SendMessageReplyInlineKeyboardMarkupParameters(
         keyboard,
       )),
+      ephemeral_message_parameters: None,
     )
 
   let _ = api.send_message(ctx.config.api_client, send_params)

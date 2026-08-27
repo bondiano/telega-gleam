@@ -266,6 +266,7 @@ pub fn send_text(
         allow_paid_broadcast: None,
         reply_parameters: None,
         reply_markup: None,
+        ephemeral_message_parameters: None,
       ),
     )
   })

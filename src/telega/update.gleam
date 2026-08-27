@@ -15,10 +15,10 @@ import telega/model/types.{
   type BusinessMessagesDeleted, type CallbackQuery, type ChatBoostRemoved,
   type ChatJoinRequest, type ChatMemberUpdated, type ChosenInlineResult,
   type InlineQuery, type ManagedBotUpdated, type Message, type MessageEntity,
-  type MessageReactionCountUpdated, type MessageReactionUpdated,
-  type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
-  type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
-  type Video, type Voice, type WebAppData,
+  type MessageGenerationStopped, type MessageReactionCountUpdated,
+  type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
+  type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
+  type Update as ModelUpdate, type Video, type Voice, type WebAppData,
   InaccessibleMessageMaybeInaccessibleMessage, MessageMaybeInaccessibleMessage,
 }
 
@@ -218,6 +218,15 @@ pub type Update {
     subscription: BotSubscriptionUpdated,
     raw: ModelUpdate,
   )
+  /// A user stopped the generation of a message draft sent with
+  /// `sendMessageDraft`/`sendRichMessageDraft` (Bot API 10.3). The draft carries
+  /// no user context, so `from_id` is `-1`.
+  MessageGenerationStoppedUpdate(
+    from_id: Int,
+    chat_id: Int,
+    stopped_message_generation: MessageGenerationStopped,
+    raw: ModelUpdate,
+  )
 }
 
 pub type Command {
@@ -342,6 +351,14 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
       let assert Some(subscription) = raw_update.subscription
       new_subscription_update(raw_update, subscription)
     }
+    _ if raw_update.stopped_message_generation != None -> {
+      let assert Some(stopped_message_generation) =
+        raw_update.stopped_message_generation
+      new_message_generation_stopped_update(
+        raw_update,
+        stopped_message_generation,
+      )
+    }
     _ if raw_update.message != None -> {
       let assert Some(message) = raw_update.message
       decode_message_update(raw_update, message)
@@ -419,6 +436,7 @@ pub fn raw(update: Update) -> ModelUpdate {
     ManagedBotUpdate(raw:, ..) -> raw
     GuestMessageUpdate(raw:, ..) -> raw
     SubscriptionUpdate(raw:, ..) -> raw
+    MessageGenerationStoppedUpdate(raw:, ..) -> raw
   }
 }
 
@@ -560,6 +578,11 @@ pub fn to_string(update: Update) -> String {
       <> subscription.state
       <> " from "
       <> int.to_string(from_id)
+    MessageGenerationStoppedUpdate(stopped_message_generation:, ..) ->
+      "message generation stopped for draft "
+      <> int.to_string(stopped_message_generation.draft_id)
+      <> " in chat "
+      <> int.to_string(stopped_message_generation.chat.id)
   }
 }
 
@@ -601,6 +624,7 @@ pub fn type_to_string(update: Update) -> String {
     ManagedBotUpdate(..) -> "managed_bot"
     GuestMessageUpdate(..) -> "guest_message"
     SubscriptionUpdate(..) -> "subscription"
+    MessageGenerationStoppedUpdate(..) -> "stopped_message_generation"
   }
 }
 
@@ -1001,6 +1025,19 @@ fn new_subscription_update(
     subscription:,
     from_id: subscription.user.id,
     chat_id: subscription.user.id,
+  )
+}
+
+fn new_message_generation_stopped_update(
+  raw: ModelUpdate,
+  stopped_message_generation: MessageGenerationStopped,
+) {
+  // The update carries only the chat the draft was generated in.
+  MessageGenerationStoppedUpdate(
+    raw:,
+    stopped_message_generation:,
+    from_id: -1,
+    chat_id: stopped_message_generation.chat.id,
   )
 }
 

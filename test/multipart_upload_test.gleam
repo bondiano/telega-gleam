@@ -15,6 +15,7 @@ import telega/api
 import telega/client
 import telega/error
 import telega/internal/multipart
+import telega/model/types
 
 const message_with_photo = "{\"ok\":true,\"result\":{\"message_id\":7,\"date\":0,\"chat\":{\"id\":123,\"type\":\"private\"},\"photo\":[{\"file_id\":\"MINTED_FILE_ID\",\"file_unique_id\":\"u1\",\"width\":90,\"height\":90}]}}"
 
@@ -76,6 +77,49 @@ pub fn send_photo_bytes_uploads_and_decodes_file_id_test() {
   string.ends_with(req.path, "/sendPhoto") |> should.be_true
   request.get_header(req, "content-type")
   |> should.equal(Ok(multipart.content_type_header()))
+}
+
+/// Bot API 10.3: the byte-upload sibling of an ephemeral `sendPhoto` carries
+/// the nested parameters as a JSON-serialized form field.
+pub fn send_ephemeral_photo_bytes_carries_parameters_test() {
+  let captured = process.new_subject()
+  let bits_client = fn(req: request.Request(BitArray)) {
+    process.send(captured, req)
+    Ok(response.Response(
+      status: 200,
+      headers: [],
+      body: bit_array.from_string(message_with_photo),
+    ))
+  }
+  let client =
+    client.new(token: "T", fetch_client: json_should_not_be_used)
+    |> client.set_fetch_bits_client(bits_client)
+
+  let assert Ok(_) =
+    api.send_ephemeral_photo_bytes(
+      client,
+      chat_id: "-100500",
+      content: <<1, 2, 3, 4>>,
+      filename: "cat.png",
+      content_type: "image/png",
+      caption: None,
+      parse_mode: None,
+      ephemeral: types.EphemeralMessageParameters(
+        ..types.new_ephemeral_message_parameters(receiver_user_id: 777),
+        callback_query_id: Some("q1"),
+      ),
+    )
+
+  let assert Ok(req) = process.receive(captured, 100)
+  let assert Ok(text) = bit_array.to_string(req.body)
+  string.ends_with(req.path, "/sendPhoto") |> should.be_true
+  string.contains(text, "name=\"ephemeral_message_parameters\"")
+  |> should.be_true
+  string.contains(
+    text,
+    "{\"receiver_user_id\":777,\"callback_query_id\":\"q1\"}",
+  )
+  |> should.be_true
 }
 
 fn json_should_not_be_used(

@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/json
 import gleam/option.{Some}
 import gleam/string
@@ -129,11 +130,13 @@ pub fn with_paid_media_targets_context_chat_test() {
   ])
   |> should.be_ok()
 
+  // The chat id is the numeric id of the update's chat, not the composite
+  // `chat_id:from_id` session key.
   let call =
     mock.assert_called_with_body(
       from: calls,
       path_contains: "sendPaidMedia",
-      body_contains: "\"chat_id\":\"" <> ctx.key <> "\"",
+      body_contains: "\"chat_id\":" <> int.to_string(ctx.update.chat_id),
     )
 
   call.request.body

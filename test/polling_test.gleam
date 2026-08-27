@@ -39,6 +39,7 @@ fn create_test_update(id: Int) -> Update {
     managed_bot: None,
     guest_message: None,
     subscription: None,
+    stopped_message_generation: None,
   )
 }
 

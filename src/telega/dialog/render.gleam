@@ -214,6 +214,7 @@ fn send_window(
       message_effect_id: None,
       allow_paid_broadcast: None,
       reply_parameters: None,
+      ephemeral_message_parameters: None,
     ),
   )
   |> result.map(fn(message) { message.message_id })
@@ -282,6 +283,7 @@ fn send_media_window(
           allow_paid_broadcast: None,
           message_effect_id: None,
           reply_parameters: None,
+          ephemeral_message_parameters: None,
         ),
       )
     dialog_types.VideoMedia(media:, has_spoiler:) ->
@@ -310,6 +312,7 @@ fn send_media_window(
           allow_paid_broadcast: None,
           message_effect_id: None,
           reply_parameters: None,
+          ephemeral_message_parameters: None,
         ),
       )
     dialog_types.AnimationMedia(media:) ->
@@ -335,6 +338,7 @@ fn send_media_window(
           allow_paid_broadcast: None,
           message_effect_id: None,
           reply_parameters: None,
+          ephemeral_message_parameters: None,
         ),
       )
     dialog_types.DocumentMedia(media:) ->
@@ -356,6 +360,7 @@ fn send_media_window(
           allow_paid_broadcast: None,
           message_effect_id: None,
           reply_parameters: None,
+          ephemeral_message_parameters: None,
         ),
       )
   }
@@ -501,7 +506,7 @@ pub fn build_markup(
           })
         }),
       )
-      Ok(Some(InlineKeyboardMarkup(inline_keyboard: rows)))
+      Ok(Some(InlineKeyboardMarkup(inline_keyboard: rows, force_reply: None)))
     }
   }
 }

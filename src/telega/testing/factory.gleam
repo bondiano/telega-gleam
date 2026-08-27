@@ -222,6 +222,7 @@ pub fn message_with(
     poll_option_added: None,
     poll_option_deleted: None,
     community_chat_added: None,
+    community_chat_joined: None,
     community_chat_removed: None,
     ephemeral_message_id: None,
     receiver_user: None,
@@ -267,6 +268,7 @@ pub fn raw_update_with(
     managed_bot: None,
     guest_message: None,
     subscription: None,
+    stopped_message_generation: None,
   )
 }
 

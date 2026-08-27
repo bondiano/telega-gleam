@@ -25,7 +25,7 @@ import gleam/option.{None}
 
 import telega/api
 import telega/bot.{type Context}
-import telega/model/types.{SendChatActionParameters, Str}
+import telega/model/types.{SendChatActionParameters}
 
 /// Chat action to broadcast, mirrors [`ChatAction`](https://core.telegram.org/bots/api#sendchataction).
 pub type Action {
@@ -74,7 +74,7 @@ pub fn with_action_every(
   let client = ctx.config.api_client
   let parameters =
     SendChatActionParameters(
-      chat_id: Str(ctx.key),
+      chat_id: types.Int(ctx.update.chat_id),
       business_connection_id: None,
       message_thread_id: None,
       action: to_model_action(action),

@@ -604,3 +604,40 @@ pub fn builder_vs_manual_equivalence_test() {
 
   should.equal(keyboard.to_markup(builder_kb), keyboard.to_markup(manual_kb))
 }
+
+// Bot API 10.3: disabled buttons and force-reply markups.
+pub fn disabled_inline_button_test() {
+  let sold_out = keyboard.inline_disabled_button("Sold out")
+  let assert Ok(buy) =
+    keyboard.inline_button(
+      "Buy",
+      keyboard.pack_callback(keyboard.string_callback_data("buy"), "1"),
+    )
+
+  sold_out.disabled |> should.equal(Some(types.DisabledButton))
+  sold_out.callback_data |> should.equal(None)
+  keyboard.inline_disable(buy)
+  |> should.equal(
+    types.InlineKeyboardButton(..buy, disabled: Some(types.DisabledButton)),
+  )
+}
+
+pub fn forced_reply_markups_test() {
+  let inline =
+    keyboard.new_inline([
+      [keyboard.inline_url_button("Visit", "https://example.com")],
+    ])
+    |> keyboard.inline_forced_reply()
+
+  let assert SendMessageReplyInlineKeyboardMarkupParameters(inline_markup) =
+    keyboard.to_inline_markup(inline)
+  inline_markup.force_reply |> should.equal(Some(True))
+
+  let reply =
+    keyboard.new([[keyboard.button("Yes")]])
+    |> keyboard.forced_reply()
+
+  let assert SendMessageReplyReplyKeyboardMarkupParameters(reply_markup) =
+    keyboard.to_markup(reply)
+  reply_markup.force_reply |> should.equal(Some(True))
+}

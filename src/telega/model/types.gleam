@@ -5,7 +5,7 @@
 
 import gleam/option.{type Option, None}
 
-// This file is auto-generated for Bot API 10.2 from the Telegram Bot API spec.
+// This file is auto-generated for Bot API 10.3 from the Telegram Bot API spec.
 // Do not edit above the MANUAL marker — run `task codegen` to regenerate.
 
 pub type BackgroundFill {
@@ -133,14 +133,19 @@ pub type InputRichBlock {
   InputRichBlockAnchorInputRichBlock(InputRichBlockAnchor)
   InputRichBlockListInputRichBlock(InputRichBlockList)
   InputRichBlockBlockQuotationInputRichBlock(InputRichBlockBlockQuotation)
+  InputRichBlockExpandableBlockQuotationInputRichBlock(
+    InputRichBlockExpandableBlockQuotation,
+  )
   InputRichBlockPullQuotationInputRichBlock(InputRichBlockPullQuotation)
   InputRichBlockCollageInputRichBlock(InputRichBlockCollage)
   InputRichBlockSlideshowInputRichBlock(InputRichBlockSlideshow)
   InputRichBlockTableInputRichBlock(InputRichBlockTable)
   InputRichBlockDetailsInputRichBlock(InputRichBlockDetails)
   InputRichBlockMapInputRichBlock(InputRichBlockMap)
+  InputRichBlockButtonsInputRichBlock(InputRichBlockButtons)
   InputRichBlockAnimationInputRichBlock(InputRichBlockAnimation)
   InputRichBlockAudioInputRichBlock(InputRichBlockAudio)
+  InputRichBlockDocumentInputRichBlock(InputRichBlockDocument)
   InputRichBlockPhotoInputRichBlock(InputRichBlockPhoto)
   InputRichBlockVideoInputRichBlock(InputRichBlockVideo)
   InputRichBlockVoiceNoteInputRichBlock(InputRichBlockVoiceNote)
@@ -234,14 +239,17 @@ pub type RichBlock {
   RichBlockAnchorRichBlock(RichBlockAnchor)
   RichBlockListRichBlock(RichBlockList)
   RichBlockBlockQuotationRichBlock(RichBlockBlockQuotation)
+  RichBlockExpandableBlockQuotationRichBlock(RichBlockExpandableBlockQuotation)
   RichBlockPullQuotationRichBlock(RichBlockPullQuotation)
   RichBlockCollageRichBlock(RichBlockCollage)
   RichBlockSlideshowRichBlock(RichBlockSlideshow)
   RichBlockTableRichBlock(RichBlockTable)
   RichBlockDetailsRichBlock(RichBlockDetails)
   RichBlockMapRichBlock(RichBlockMap)
+  RichBlockButtonsRichBlock(RichBlockButtons)
   RichBlockAnimationRichBlock(RichBlockAnimation)
   RichBlockAudioRichBlock(RichBlockAudio)
+  RichBlockDocumentRichBlock(RichBlockDocument)
   RichBlockPhotoRichBlock(RichBlockPhoto)
   RichBlockVideoRichBlock(RichBlockVideo)
   RichBlockVoiceNoteRichBlock(RichBlockVoiceNote)
@@ -272,6 +280,7 @@ pub type RichText {
   RichTextHashtagRichText(RichTextHashtag)
   RichTextCashtagRichText(RichTextCashtag)
   RichTextBotCommandRichText(RichTextBotCommand)
+  RichTextButtonRichText(RichTextButton)
   RichTextAnchorRichText(RichTextAnchor)
   RichTextAnchorLinkRichText(RichTextAnchorLink)
   RichTextReferenceRichText(RichTextReference)
@@ -790,8 +799,10 @@ pub type ChatAdministratorRights {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
-    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted, defaults to the value of can_pin_messages.
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only
     can_manage_tags: Option(Bool),
+    /// True, if the administrator can manage chat welcome messages or directly send them in the case of bots
+    can_send_welcome_messages: Bool,
   )
 }
 
@@ -1096,8 +1107,10 @@ pub type ChatMemberAdministrator {
     can_manage_topics: Option(Bool),
     /// Optional. True, if the administrator can manage direct messages of the channel and decline suggested posts; for channels only
     can_manage_direct_messages: Option(Bool),
-    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only. If omitted, defaults to the value of can_pin_messages.
+    /// Optional. True, if the administrator can edit the tags of regular members; for groups and supergroups only
     can_manage_tags: Option(Bool),
+    /// True, if the administrator can manage chat welcome messages or directly send them in the case of bots
+    can_send_welcome_messages: Bool,
     /// Optional. Custom title for this user
     custom_title: Option(String),
   )
@@ -1389,15 +1402,23 @@ pub type Community {
   )
 }
 
-/// **Official reference:** Describes a service message about a chat being added to a community.
+/// **Official reference:** Describes a service message about a chat or a bot being added to a community.
 pub type CommunityChatAdded {
   CommunityChatAdded(
-    /// The new community to which the chat belongs
+    /// The new community to which the chat or the bot belongs
     community: Community,
   )
 }
 
-/// **Official reference:** Describes a service message about a chat being removed from a community. Currently holds no information.
+/// **Official reference:** Describes a service message about a chat being joined by a user from a community.
+pub type CommunityChatJoined {
+  CommunityChatJoined(
+    /// The community from which the chat was joined
+    community: Community,
+  )
+}
+
+/// **Official reference:** Describes a service message about a chat or a bot being removed from a community. Currently holds no information.
 pub type CommunityChatRemoved {
   CommunityChatRemoved
 }
@@ -1456,6 +1477,11 @@ pub type DirectMessagesTopic {
   )
 }
 
+/// **Official reference:** This object represents a disabled button which does nothing. Currently holds no information.
+pub type DisabledButton {
+  DisabledButton
+}
+
 /// **Official reference:** This object represents a general file (as opposed to photos, voice messages and audio files).
 pub type Document {
   Document(
@@ -1509,6 +1535,17 @@ pub type EncryptedPassportElement {
     translation: Option(List(PassportFile)),
     /// Base64-encoded element hash for using in PassportElementErrorUnspecified
     hash: String,
+  )
+}
+
+pub type EphemeralMessageParameters {
+  EphemeralMessageParameters(
+    /// Identifier of the user who will receive the message. It is not guaranteed that the user will receive the message, especially if they are offline. See here for more details.
+    receiver_user_id: Int,
+    /// Optional. Identifier of the callback query which triggered the message, if any
+    callback_query_id: Option(String),
+    /// Optional. Pass True if the ephemeral message must be shown in place of the original message. Must be False for callback queries from ephemeral messages, which must be edited using regular editEphemeralMessage... methods.
+    replace_callback_query_message: Option(Bool),
   )
 }
 
@@ -1587,7 +1624,7 @@ pub type File {
 /// **Official reference:** Upon receiving a message with this object, Telegram clients will display a reply interface to the user (act as if the user has selected the bot's message and tapped 'Reply'). This can be extremely useful if you want to create user-friendly step-by-step interfaces without having to sacrifice privacy mode. Not supported in channels and for messages sent on behalf of a user account.
 pub type ForceReply {
   ForceReply(
-    /// Shows reply interface to the user, as if they manually selected the bot's message and tapped 'Reply'
+    /// Shows reply interface to the user, as if they had manually selected the bot's message and tapped 'Reply'
     force_reply: Bool,
     /// Optional. The placeholder to be shown in the input field when the reply is active; 1-64 characters
     input_field_placeholder: Option(String),
@@ -1867,7 +1904,7 @@ pub type InlineKeyboardButton {
     callback_data: Option(String),
     /// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to send an arbitrary message on behalf of the user using the method answerWebAppQuery. Available only in private chats between a user and the bot. Not supported for messages sent on behalf of a business account.
     web_app: Option(WebAppInfo),
-    /// Optional. An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget.
+    /// Optional. An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget. Not supported for ephemeral messages.
     login_url: Option(LoginUrl),
     /// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Not supported for messages sent in channel direct messages chats and on behalf of a business account.
     switch_inline_query: Option(String),
@@ -1881,6 +1918,8 @@ pub type InlineKeyboardButton {
     callback_game: Option(CallbackGame),
     /// Optional. Specify True, to send a Pay button. Substrings "⭐" and "XTR" in the buttons's text will be replaced with a Telegram Star icon. NOTE: This type of button must always be the first button in the first row and can only be used in invoice messages.
     pay: Option(Bool),
+    /// Optional. If set, then the button is disabled and does nothing
+    disabled: Option(DisabledButton),
   )
 }
 
@@ -1889,6 +1928,8 @@ pub type InlineKeyboardMarkup {
   InlineKeyboardMarkup(
     /// Array of button rows, each represented by an Array of InlineKeyboardButton objects
     inline_keyboard: List(List(InlineKeyboardButton)),
+    /// Optional. Pass True if the reply interface must be shown to the user, as if they had manually selected the bot's message and tapped 'Reply'. The value of the field can't be changed when the inline keyboard is edited.
+    force_reply: Option(Bool),
   )
 }
 
@@ -2952,6 +2993,18 @@ pub type InputRichBlockBlockQuotation {
   )
 }
 
+/// **Official reference:** A block containing a list of buttons that are shown in one row, corresponding to the custom HTML tag <tg-button-row>.
+pub type InputRichBlockButtons {
+  InputRichBlockButtons(
+    /// Type of the block, always "buttons"
+    type_: String,
+    /// List of 1-8 buttons to send
+    buttons: List(RichMessageButton),
+    /// Optional. Horizontal alignment of the buttons. Currently, must be one of "left", "center", or "right".
+    align: Option(String),
+  )
+}
+
 /// **Official reference:** A collage, corresponding to the custom HTML tag <tg-collage>.
 pub type InputRichBlockCollage {
   InputRichBlockCollage(
@@ -2983,6 +3036,30 @@ pub type InputRichBlockDivider {
   InputRichBlockDivider(
     /// Type of the block, always "divider"
     type_: String,
+  )
+}
+
+/// **Official reference:** A block with a general file, corresponding to the custom HTML tag <tg-document>.
+pub type InputRichBlockDocument {
+  InputRichBlockDocument(
+    /// Type of the block, always "document"
+    type_: String,
+    /// The document. Caption is ignored.
+    document: InputMediaDocument,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block quotation, corresponding to the HTML tag <blockquote> with custom attribute "expandable".
+pub type InputRichBlockExpandableBlockQuotation {
+  InputRichBlockExpandableBlockQuotation(
+    /// Type of the block, always "expandable_blockquote"
+    type_: String,
+    /// Content of the block
+    text: RichText,
+    /// Optional. Credit of the block
+    credit: Option(RichText),
   )
 }
 
@@ -3029,12 +3106,12 @@ pub type InputRichBlockMap {
     type_: String,
     /// Location of the center of the map
     location: Location,
-    /// Map zoom level; 0-24
-    zoom: Int,
-    /// Map width; 0-10000
-    width: Int,
-    /// Map height; 0-10000
-    height: Int,
+    /// Optional. Map zoom level; 0-24
+    zoom: Option(Int),
+    /// Optional. Map width; 0-10000
+    width: Option(Int),
+    /// Optional. Map height; 0-10000
+    height: Option(Int),
     /// Optional. Caption of the block
     caption: Option(RichBlockCaption),
   )
@@ -3131,6 +3208,8 @@ pub type InputRichBlockTable {
     is_bordered: Option(Bool),
     /// Optional. Pass True if the table is striped
     is_striped: Option(Bool),
+    /// Optional. Pass True if table cells must have smaller indents
+    is_compact: Option(Bool),
     /// Optional. Caption of the table
     caption: Option(RichText),
   )
@@ -3179,7 +3258,7 @@ pub type InputRichMessage {
     html: Option(String),
     /// Optional. Content of the rich message to send described using Markdown formatting. See rich message formatting options for more details. Use media field to specify the media used in the message.
     markdown: Option(String),
-    /// Optional. List of media that are specified in the markdown or html fields using tg://photo?id=, tg://video?id=, and tg://audio?id= links
+    /// Optional. List of media that are specified in the markdown or html fields using tg://photo?id=, tg://video?id=, tg://document?id=, and tg://audio?id= links
     media: Option(List(InputRichMessageMedia)),
     /// Optional. Pass True if the rich message must be shown right-to-left
     is_rtl: Option(Bool),
@@ -3191,7 +3270,7 @@ pub type InputRichMessage {
 /// **Official reference:** Represents the content of a rich message to be sent as the result of an inline query.
 pub type InputRichMessageContent {
   InputRichMessageContent(
-    /// The message to be sent
+    /// The message to be sent. Only previously uploaded files may be used in the message.
     rich_message: InputRichMessage,
   )
 }
@@ -3199,7 +3278,7 @@ pub type InputRichMessageContent {
 /// **Official reference:** Describes a media element embedded in an outgoing rich message.
 pub type InputRichMessageMedia {
   InputRichMessageMedia(
-    /// Unique identifier of the media used in a tg://photo?id=, tg://video?id=, or tg://audio?id= link. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed.
+    /// Unique identifier of the media used in a tg://photo?id=, tg://video?id=, tg://document?id=, or tg://audio?id= link. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed.
     id: String,
     /// The media to be sent. Everything except the media itself and its properties is ignored.
     media: InputMediaAnimation,
@@ -3482,14 +3561,14 @@ pub type LocationAddress {
   )
 }
 
-/// **Official reference:** This object represents a parameter of the inline keyboard button used to automatically authorize a user. Serves as a great replacement for the Telegram Login Widget when the user is coming from Telegram. All the user needs to do is tap/click a button and confirm that they want to log in: Telegram apps support these buttons as of version 5.7.
+/// **Official reference:** This object represents a parameter of the inline keyboard button used to automatically authorize a user. It serves as a great replacement for the Telegram Login Widget when the user is coming from Telegram. All the user needs to do is tap/click a button and confirm that they want to log in:
 pub type LoginUrl {
   LoginUrl(
     /// An HTTPS URL to be opened with user authorization data added to the query string when the button is pressed. If the user refuses to provide authorization data, the original URL without information about the user will be opened. The data added is the same as described in Receiving authorization data. NOTE: You must always check the hash of the received data to verify the authentication and the integrity of the data as described in Checking authorization.
     url: String,
     /// Optional. New text of the button in forwarded messages
     forward_text: Option(String),
-    /// Optional. Username of a bot, which will be used for user authorization. See Setting up a bot for more details. If not specified, the current bot's username will be assumed. The url's domain must be the same as the domain linked with the bot. See Linking your domain to the bot for more details.
+    /// Optional. Username of a bot, which will be used for user authorization; not supported in RichMessageButton. See Setting up a bot for more details. If not specified, the current bot's username will be assumed. The url's domain must be the same as the domain linked with the bot. See Linking your domain to the bot for more details.
     bot_username: Option(String),
     /// Optional. Pass True to request the permission for your bot to send messages to the user
     request_write_access: Option(Bool),
@@ -3731,7 +3810,7 @@ pub type Message {
     write_access_allowed: Option(WriteAccessAllowed),
     /// Optional. Telegram Passport data
     passport_data: Option(PassportData),
-    /// Optional. Service message. A user in the chat triggered another user's proximity alert while sharing Live Location.
+    /// Optional. Service message: a user in the chat triggered another user's proximity alert while sharing Live Location
     proximity_alert_triggered: Option(ProximityAlertTriggered),
     /// Optional. Service message: user boosted the chat
     boost_added: Option(ChatBoostAdded),
@@ -3741,9 +3820,11 @@ pub type Message {
     checklist_tasks_done: Option(ChecklistTasksDone),
     /// Optional. Service message: tasks were added to a checklist
     checklist_tasks_added: Option(ChecklistTasksAdded),
-    /// Optional. Service message: chat added to a Community
+    /// Optional. Service message: chat or bot added to a Community
     community_chat_added: Option(CommunityChatAdded),
-    /// Optional. Service message: chat removed from a Community
+    /// Optional. Service message: chat was joined by a user from a Community
+    community_chat_joined: Option(CommunityChatJoined),
+    /// Optional. Service message: chat or bot removed from a Community
     community_chat_removed: Option(CommunityChatRemoved),
     /// Optional. Service message: the price for paid messages in the corresponding direct messages chat of a channel has changed
     direct_message_price_changed: Option(DirectMessagePriceChanged),
@@ -3829,6 +3910,18 @@ pub type MessageEntity {
     unix_time: Option(Int),
     /// Optional. For "date_time" only, the string that defines the formatting of the date and time. See date-time entity formatting for more details.
     date_time_format: Option(String),
+  )
+}
+
+/// **Official reference:** This object describes an update about a user stopping message generation.
+pub type MessageGenerationStopped {
+  MessageGenerationStopped(
+    /// Chat in which the message is generated
+    chat: Chat,
+    /// Optional. Unique identifier of the message thread in which the message is generated
+    message_thread_id: Option(Int),
+    /// Unique identifier of the message draft which was stopped
+    draft_id: Int,
   )
 }
 
@@ -4513,6 +4606,8 @@ pub type ReplyKeyboardMarkup {
     input_field_placeholder: Option(String),
     /// Optional. Use this parameter if you want to show the keyboard to specific users only. Targets: 1) users that are @mentioned in the text of the Message object; 2) if the bot's message is a reply to a message in the same chat and forum topic, sender of the original message. Example: A user requests to change the bot's language, bot replies to the request with a keyboard to select the new language. Other users in the group don't see the keyboard.
     selective: Option(Bool),
+    /// Optional. Pass True if the reply interface must be shown to the user, as if they had manually selected the bot's message and tapped 'Reply'
+    force_reply: Option(Bool),
   )
 }
 
@@ -4638,6 +4733,18 @@ pub type RichBlockBlockQuotation {
   )
 }
 
+/// **Official reference:** A block containing a list of buttons that are shown in one row, corresponding to the custom HTML tag <tg-button-row>.
+pub type RichBlockButtons {
+  RichBlockButtons(
+    /// Type of the block, always "buttons"
+    type_: String,
+    /// The buttons
+    buttons: List(RichMessageButton),
+    /// Optional. Horizontal alignment of the buttons. Currently, must be one of "left", "center", or "right".
+    align: Option(String),
+  )
+}
+
 /// **Official reference:** Caption of a rich formatted block.
 pub type RichBlockCaption {
   RichBlockCaption(
@@ -4679,6 +4786,30 @@ pub type RichBlockDivider {
   RichBlockDivider(
     /// Type of the block, always "divider"
     type_: String,
+  )
+}
+
+/// **Official reference:** A block with a general file, corresponding to the custom HTML tag <tg-document>.
+pub type RichBlockDocument {
+  RichBlockDocument(
+    /// Type of the block, always "document"
+    type_: String,
+    /// The document
+    document: Document,
+    /// Optional. Caption of the block
+    caption: Option(RichBlockCaption),
+  )
+}
+
+/// **Official reference:** A block quotation, corresponding to the HTML tag <blockquote> with custom attribute "expandable".
+pub type RichBlockExpandableBlockQuotation {
+  RichBlockExpandableBlockQuotation(
+    /// Type of the block, always "expandable_blockquote"
+    type_: String,
+    /// Content of the block
+    text: RichText,
+    /// Optional. Credit of the block
+    credit: Option(RichText),
   )
 }
 
@@ -4727,7 +4858,7 @@ pub type RichBlockMap {
     type_: String,
     /// Location of the center of the map
     location: Location,
-    /// Map zoom level; 13-20
+    /// Map zoom level
     zoom: Int,
     /// Expected width of the map
     width: Int,
@@ -4831,6 +4962,8 @@ pub type RichBlockTable {
     is_bordered: Option(Bool),
     /// Optional. True, if the table is striped
     is_striped: Option(Bool),
+    /// Optional. True, if table cells have smaller indents
+    is_compact: Option(Bool),
     /// Optional. Caption of the table
     caption: Option(RichText),
   )
@@ -4900,6 +5033,34 @@ pub type RichMessage {
   )
 }
 
+/// **Official reference:** This object represents a button in a RichMessage. Exactly one of the fields other than text and style must be used to specify the type of the button.
+pub type RichMessageButton {
+  RichMessageButton(
+    /// Text of the button. May contain only plain text, RichTextCustomEmoji and RichTextDateTime entities.
+    text: RichText,
+    /// Optional. Style of the button. Must be one of "danger", "success", "primary", or "link" (the button is shown as a regular link without borders). Apps may use theme-specific colors for the button background and text based on the style. The style "link" is allowed only for callback buttons.
+    style: Option(String),
+    /// Optional. HTTP or tg:// URL to be opened when the button is pressed. Links tg://user?id=<user_id> can be used to mention a user by their identifier without using a username, if this is allowed by their privacy settings.
+    url: Option(String),
+    /// Optional. Data to be sent in a callback query to the bot when the button is pressed, 1-64 bytes
+    callback_data: Option(String),
+    /// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to send an arbitrary message on behalf of the user using the method answerWebAppQuery. Available only in private chats between a user and the bot. Not supported for messages sent on behalf of a business account.
+    web_app: Option(WebAppInfo),
+    /// Optional. An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget. Not supported for ephemeral messages.
+    login_url: Option(LoginUrl),
+    /// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Not supported for messages sent in channel direct messages chats and on behalf of a business account.
+    switch_inline_query: Option(String),
+    /// Optional. If set, pressing the button will insert the bot's username and the specified inline query in the current chat's input field. May be empty, in which case only the bot's username will be inserted. Not supported in channels and for messages sent in channel direct messages chats and on behalf of a business account.
+    switch_inline_query_current_chat: Option(String),
+    /// Optional. If set, pressing the button will prompt the user to select one of their chats of the specified type, open that chat and insert the bot's username and the specified inline query in the input field. Not supported for messages sent in channel direct messages chats and on behalf of a business account.
+    switch_inline_query_chosen_chat: Option(SwitchInlineQueryChosenChat),
+    /// Optional. A button that copies the specified text to the clipboard
+    copy_text: Option(CopyTextButton),
+    /// Optional. If set, then the button is disabled and does nothing
+    disabled: Option(DisabledButton),
+  )
+}
+
 /// **Official reference:** An anchor.
 pub type RichTextAnchor {
   RichTextAnchor(
@@ -4953,6 +5114,16 @@ pub type RichTextBotCommand {
     text: RichText,
     /// The bot command
     bot_command: String,
+  )
+}
+
+/// **Official reference:** A button.
+pub type RichTextButton {
+  RichTextButton(
+    /// Type of the rich text, always "button"
+    type_: String,
+    /// The button
+    button: RichMessageButton,
   )
 }
 
@@ -5755,6 +5926,12 @@ pub type UniqueGiftInfo {
     gift: UniqueGift,
     /// Origin of the gift. Currently, either "upgrade" for gifts upgraded from regular gifts, "transfer" for gifts transferred from other users or channels, "resale" for gifts bought from other users, "gifted_upgrade" for upgrades purchased after the gift was sent, or "offer" for gifts bought or sold through gift purchase offers.
     origin: String,
+    /// Optional. Text of the message that was added to the gift
+    text: Option(String),
+    /// Optional. Special entities that appear in the text
+    entities: Option(List(MessageEntity)),
+    /// Optional. True, if the sender and gift text are shown only to the gift receiver; otherwise, everyone will be able to see them
+    is_private: Option(Bool),
     /// Optional. For gifts bought from other users, the currency in which the payment for the gift was done. Currently, one of "XTR" for Telegram Stars or "TON" for TON grams.
     last_resale_currency: Option(String),
     /// Optional. For gifts bought from other users, the price paid for the gift in either Telegram Stars or nanograms
@@ -5851,6 +6028,8 @@ pub type Update {
     managed_bot: Option(ManagedBotUpdated),
     /// Optional. User payment subscription has changed
     subscription: Option(BotSubscriptionUpdated),
+    /// Optional. A user asked the bot to stop the generation of a message
+    stopped_message_generation: Option(MessageGenerationStopped),
   )
 }
 
@@ -6027,7 +6206,7 @@ pub type VideoChatStarted {
   VideoChatStarted
 }
 
-/// **Official reference:** This object represents a video message (available in Telegram apps as of v.4.0).
+/// **Official reference:** This object represents a video message.
 pub type VideoNote {
   VideoNote(
     /// Identifier for this file, which can be used to download or reuse the file
@@ -6414,6 +6593,9 @@ pub type SendMessageParameters {
     reply_parameters: Option(ReplyParameters),
     /// Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove a reply keyboard or to force a reply from the user. Not supported for messages sent on behalf of a business account
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6479,6 +6661,9 @@ pub type SendPhotoParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6519,6 +6704,9 @@ pub type SendAudioParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6555,6 +6743,9 @@ pub type SendDocumentParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6605,6 +6796,9 @@ pub type SendVideoParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6649,6 +6843,9 @@ pub type SendAnimationParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6683,6 +6880,9 @@ pub type SendVoiceParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6715,6 +6915,9 @@ pub type SendVideoNoteParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6775,6 +6978,9 @@ pub type SendLocationParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6815,6 +7021,9 @@ pub type SendVenueParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -6847,6 +7056,9 @@ pub type SendContactParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -7091,6 +7303,9 @@ pub type SendStickerParameters {
     reply_parameters: Option(ReplyParameters),
     /// Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -7364,6 +7579,8 @@ pub type PromoteChatMemberParameters {
     can_pin_messages: Option(Bool),
     /// Pass True if the user is allowed to create, rename, close, and reopen forum topics; for supergroups only
     can_manage_topics: Option(Bool),
+    /// Pass True if the administrator can send welcome messages to new chat members (Bot API 10.3)
+    can_send_welcome_messages: Option(Bool),
   )
 }
 
@@ -7914,6 +8131,10 @@ pub type SendMessageDraftParameters {
     parse_mode: Option(String),
     /// Optional. A JSON-serialized list of special entities that appear in message text
     entities: Option(List(MessageEntity)),
+    /// Optional. Pass True if the user can stop the message generation (Bot API 10.3)
+    can_stop: Option(Bool),
+    /// Optional. Pass True if the draft must be kept when the message generation is stopped (Bot API 10.3)
+    keep_on_stop: Option(Bool),
   )
 }
 
@@ -8611,6 +8832,9 @@ pub type SendLivePhotoParameters {
     reply_parameters: Option(ReplyParameters),
     /// Optional. Reply markup
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -8643,6 +8867,9 @@ pub type SendRichMessageParameters {
     reply_parameters: Option(ReplyParameters),
     /// Optional. Additional interface options
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Optional. A JSON-serialized object containing the parameters of the
+    /// ephemeral message to send; for group chats only (Bot API 10.3)
+    ephemeral_message_parameters: Option(EphemeralMessageParameters),
   )
 }
 
@@ -8657,6 +8884,10 @@ pub type SendRichMessageDraftParameters {
     draft_id: Int,
     /// A JSON-serialized object describing the rich message draft
     rich_message: InputRichMessage,
+    /// Optional. Pass True if the user can stop the message generation (Bot API 10.3)
+    can_stop: Option(Bool),
+    /// Optional. Pass True if the draft must be kept when the message generation is stopped (Bot API 10.3)
+    keep_on_stop: Option(Bool),
   )
 }
 
@@ -8681,8 +8912,12 @@ pub type EditEphemeralMessageTextParameters {
     receiver_user_id: Int,
     /// Identifier of the ephemeral message to edit
     ephemeral_message_id: Int,
-    /// New text of the message, 1-4096 characters after entities parsing
-    text: String,
+    /// Optional. New text of the message, 1-4096 characters after entities parsing.
+    /// Required if `rich_message` is not specified (Bot API 10.3)
+    text: Option(String),
+    /// Optional. A JSON-serialized object describing the new rich message content.
+    /// Required if `text` is not specified (Bot API 10.3)
+    rich_message: Option(InputRichMessage),
     /// Optional. Mode for parsing entities in the message text
     parse_mode: Option(String),
     /// Optional. A JSON-serialized list of special entities that appear in message text
@@ -8709,6 +8944,8 @@ pub type EditEphemeralMessageCaptionParameters {
     parse_mode: Option(String),
     /// Optional. A JSON-serialized list of special entities that appear in the caption
     caption_entities: Option(List(MessageEntity)),
+    /// Optional. Pass True, if the caption must be shown above the message media (Bot API 10.3)
+    show_caption_above_media: Option(Bool),
     /// Optional. A JSON-serialized object for an inline keyboard
     reply_markup: Option(InlineKeyboardMarkup),
   )
@@ -8849,6 +9086,33 @@ pub type GetUserPersonalChatMessagesParameters {
     user_id: Int,
     /// Identifiers of the messages to retrieve from the user's personal chat (1-100)
     message_ids: List(Int),
+  )
+}
+
+// Bot API 10.3 ---------------------------------------------------------------
+
+/// Address an ephemeral message — a group-chat message that only one user
+/// sees — at `receiver_user_id` (Bot API 10.3).
+///
+/// Pass the result as the `ephemeral_message_parameters` of any `send*`
+/// method. To attach the message to a pressed button, set `callback_query_id`;
+/// to show it in place of the original message, also set
+/// `replace_callback_query_message`:
+///
+/// ```gleam
+/// types.EphemeralMessageParameters(
+///   ..types.new_ephemeral_message_parameters(receiver_user_id: user_id),
+///   callback_query_id: Some(query.id),
+///   replace_callback_query_message: Some(True),
+/// )
+/// ```
+pub fn new_ephemeral_message_parameters(
+  receiver_user_id receiver_user_id: Int,
+) -> EphemeralMessageParameters {
+  EphemeralMessageParameters(
+    receiver_user_id:,
+    callback_query_id: None,
+    replace_callback_query_message: None,
   )
 }
 

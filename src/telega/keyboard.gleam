@@ -189,6 +189,19 @@
 //// }
 //// ```
 ////
+//// ### Disabled Buttons and Forced Replies (Bot API 10.3)
+//// ```gleam
+//// // A button that is shown but does nothing when pressed
+//// let keyboard = keyboard.new_inline([[
+////   keyboard.inline_disabled_button("Sold out"),
+////   keyboard.inline_disable(buy_button),
+//// ]])
+////
+//// // Force the user to reply to the message the keyboard is attached to
+//// let keyboard = keyboard.new_inline([[button]]) |> keyboard.inline_forced_reply()
+//// let reply_keyboard = keyboard.new([[keyboard.button("Yes")]]) |> keyboard.forced_reply()
+//// ```
+////
 //// ### Error Handling Best Practices
 //// ```gleam
 //// // Always handle Result types properly
@@ -225,10 +238,11 @@ import telega/bot.{
 
 import telega/model/types.{
   type ChatAdministratorRights, type InlineKeyboardButton, type KeyboardButton,
-  type SendMessageReplyMarkupParameters, CopyTextButton, InlineKeyboardButton,
-  InlineKeyboardMarkup, KeyboardButton, KeyboardButtonPollType,
-  KeyboardButtonRequestChat, KeyboardButtonRequestUsers, ReplyKeyboardMarkup,
-  ReplyKeyboardRemove, SendMessageReplyInlineKeyboardMarkupParameters,
+  type SendMessageReplyMarkupParameters, CopyTextButton, DisabledButton,
+  InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton,
+  KeyboardButtonPollType, KeyboardButtonRequestChat, KeyboardButtonRequestUsers,
+  ReplyKeyboardMarkup, ReplyKeyboardRemove,
+  SendMessageReplyInlineKeyboardMarkupParameters,
   SendMessageReplyRemoveKeyboardMarkupParameters,
   SendMessageReplyReplyKeyboardMarkupParameters, WebAppInfo,
 }
@@ -243,6 +257,7 @@ pub opaque type Keyboard {
     one_time_keyboard: Option(Bool),
     input_field_placeholder: Option(String),
     selective: Option(Bool),
+    force_reply: Option(Bool),
   )
 }
 
@@ -263,6 +278,7 @@ pub fn new(buttons: List(List(KeyboardButton))) -> Keyboard {
     one_time_keyboard: None,
     input_field_placeholder: None,
     selective: None,
+    force_reply: None,
   )
 }
 
@@ -296,6 +312,7 @@ pub fn to_markup(keyboard: Keyboard) -> SendMessageReplyMarkupParameters {
     selective: keyboard.selective,
     input_field_placeholder: keyboard.input_field_placeholder,
     is_persistent: keyboard.is_persistent,
+    force_reply: keyboard.force_reply,
   ))
 }
 
@@ -323,6 +340,12 @@ pub fn placeholder(keyboard: Keyboard, text: String) -> Keyboard {
 /// Use this parameter if you want to show the keyboard to specific users only.
 pub fn selected(keyboard: Keyboard) -> Keyboard {
   Keyboard(..keyboard, selective: Some(True))
+}
+
+/// Force the user to reply to the message the keyboard is attached to
+/// (Bot API 10.3).
+pub fn forced_reply(keyboard: Keyboard) -> Keyboard {
+  Keyboard(..keyboard, force_reply: Some(True))
 }
 
 // Helper functions for easier keyboard creation
@@ -565,6 +588,7 @@ pub fn inline_to_markup(
 ) -> SendMessageReplyMarkupParameters {
   SendMessageReplyInlineKeyboardMarkupParameters(InlineKeyboardMarkup(
     inline_keyboard: keyboard.buttons,
+    force_reply: keyboard.force_reply,
   ))
 }
 
@@ -704,7 +728,10 @@ pub opaque type InlineKeyboardBuilder {
 // Inline keyboard ------------------------------------------------------------------------------------
 
 pub opaque type InlineKeyboard {
-  InlineKeyboard(buttons: List(List(InlineKeyboardButton)))
+  InlineKeyboard(
+    buttons: List(List(InlineKeyboardButton)),
+    force_reply: Option(Bool),
+  )
 }
 
 /// Create a new inline keyboard from a list of button rows.
@@ -722,7 +749,13 @@ pub opaque type InlineKeyboard {
 /// ])
 /// ```
 pub fn new_inline(buttons: List(List(InlineKeyboardButton))) -> InlineKeyboard {
-  InlineKeyboard(buttons)
+  InlineKeyboard(buttons:, force_reply: None)
+}
+
+/// Force the user to reply to the message the inline keyboard is attached to
+/// (Bot API 10.3).
+pub fn inline_forced_reply(keyboard: InlineKeyboard) -> InlineKeyboard {
+  InlineKeyboard(..keyboard, force_reply: Some(True))
 }
 
 /// Build a reply markup for `Message` from an inline keyboard
@@ -731,6 +764,7 @@ pub fn to_inline_markup(
 ) -> SendMessageReplyMarkupParameters {
   SendMessageReplyInlineKeyboardMarkupParameters(InlineKeyboardMarkup(
     inline_keyboard: keyboard.buttons,
+    force_reply: keyboard.force_reply,
   ))
 }
 
@@ -755,6 +789,7 @@ pub fn inline_button(
         web_app: None,
         callback_game: None,
         copy_text: None,
+        disabled: None,
       ))
     Error(msg) -> Error(msg)
   }
@@ -781,6 +816,7 @@ pub fn inline_raw_callback_button(
     web_app: None,
     callback_game: None,
     copy_text: None,
+    disabled: None,
   )
 }
 
@@ -803,6 +839,7 @@ pub fn inline_url_button(
     web_app: None,
     callback_game: None,
     copy_text: None,
+    disabled: None,
   )
 }
 
@@ -825,6 +862,7 @@ pub fn inline_web_app_button(
     switch_inline_query_chosen_chat: None,
     callback_game: None,
     copy_text: None,
+    disabled: None,
   )
 }
 
@@ -847,6 +885,7 @@ pub fn inline_switch_query_button(
     web_app: None,
     callback_game: None,
     copy_text: None,
+    disabled: None,
   )
 }
 
@@ -869,7 +908,40 @@ pub fn inline_switch_query_current_chat_button(
     web_app: None,
     callback_game: None,
     copy_text: None,
+    disabled: None,
   )
+}
+
+/// Create a disabled inline button (Bot API 10.3). The button is shown, but
+/// pressing it does nothing and no callback query is sent.
+///
+/// ## Example
+/// ```gleam
+/// keyboard.new_inline([[keyboard.inline_disabled_button("Sold out")]])
+/// ```
+pub fn inline_disabled_button(text text: String) -> InlineKeyboardButton {
+  InlineKeyboardButton(
+    text:,
+    icon_custom_emoji_id: None,
+    style: None,
+    disabled: Some(DisabledButton),
+    callback_data: None,
+    url: None,
+    login_url: None,
+    pay: None,
+    switch_inline_query: None,
+    switch_inline_query_current_chat: None,
+    switch_inline_query_chosen_chat: None,
+    web_app: None,
+    callback_game: None,
+    copy_text: None,
+  )
+}
+
+/// Disable an existing inline button (Bot API 10.3). The button keeps its text
+/// and loses its action.
+pub fn inline_disable(button: InlineKeyboardButton) -> InlineKeyboardButton {
+  InlineKeyboardButton(..button, disabled: Some(DisabledButton))
 }
 
 /// Create an inline copy text button
@@ -882,6 +954,7 @@ pub fn inline_copy_text_button(
     icon_custom_emoji_id: None,
     style: None,
     copy_text: Some(CopyTextButton(text: copy_text)),
+    disabled: None,
     callback_data: None,
     url: None,
     login_url: None,

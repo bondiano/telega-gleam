@@ -78,7 +78,7 @@ fn admin_body() -> String {
     "can_be_edited", "is_anonymous", "can_manage_chat", "can_delete_messages",
     "can_manage_video_chats", "can_restrict_members", "can_promote_members",
     "can_change_info", "can_invite_users", "can_post_stories",
-    "can_edit_stories", "can_delete_stories",
+    "can_edit_stories", "can_delete_stories", "can_send_welcome_messages",
   ]
   let fields = [
     #("status", json.string("administrator")),

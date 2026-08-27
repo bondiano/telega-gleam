@@ -539,6 +539,7 @@ fn get_message_id(update: Update) -> Option(Int) {
     update.ManagedBotUpdate(..) -> None
     update.GuestMessageUpdate(message:, ..) -> Some(message.message_id)
     update.SubscriptionUpdate(..) -> None
+    update.MessageGenerationStoppedUpdate(..) -> None
   }
 }
 
