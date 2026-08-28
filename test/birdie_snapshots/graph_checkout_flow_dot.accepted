@@ -1,0 +1,40 @@
+---
+version: 2.0.1
+title: graph:checkout_flow:dot
+file: ./test/telega/graph_test.gleam
+test_name: flow_graph_dot_snapshot_test
+---
+digraph "checkout" {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=10];
+
+  "__entry" [label="checkout", shape=circle, style=filled, fillcolor="#d9e8ff"];
+  "branch_a" [label="branch_a"];
+  "branch_b" [label="branch_b"];
+  "check" [label="check"];
+  "fan" [label="fan"];
+  "fast" [label="fast"];
+  "finish" [label="finish"];
+  "join" [label="join"];
+  "notify" [label="notify", style="rounded,dashed", color="#999999"];
+  "slow" [label="slow"];
+  "start" [label="start"];
+  "__cancel" [label="cancel", shape=doublecircle, style=filled, fillcolor="#f2f2f2"];
+  "__complete" [label="complete", shape=doublecircle, style=filled, fillcolor="#f2f2f2"];
+  "__entry" -> "start" [label="start"];
+  "branch_a" -> "join" [label="join"];
+  "branch_b" -> "join" [label="join"];
+  "check" -> "fast" [label="if #1"];
+  "check" -> "slow" [label="else"];
+  "fan" -> "branch_a" [label="parallel"];
+  "fan" -> "branch_b" [label="parallel"];
+  "fast" -> "fan" [label="next"];
+  "finish" -> "__cancel" [label="cancel"];
+  "finish" -> "__complete" [label="complete"];
+  "join" -> "finish" [label="next"];
+  "join" -> "notify" [label="next"];
+  "slow" -> "fan" [label="next"];
+  "start" -> "check" [label="next"];
+}
+

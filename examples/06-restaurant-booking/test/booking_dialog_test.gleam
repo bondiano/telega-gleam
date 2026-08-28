@@ -20,6 +20,7 @@ import telega/bot as telega_bot
 import telega/dialog/types
 import telega/dialog/widget
 import telega/testing/context
+import telega/testing/graph
 import telega/testing/render
 import telega_i18n
 
@@ -296,4 +297,28 @@ pub fn address_street_frame_ru_snapshot_test() {
   let state = booking.AddressState(city: "Спрингфилд", street: "")
   render.window_frame(booking.render_address_street(state, ctx))
   |> birdie.snap(title: "booking:address:street_frame_ru")
+}
+
+/// The whole navigation map of the dialog — every window, button, widget
+/// target and the address sub-dialog's enter/return — exported without
+/// running the bot. A changed navigation path shows up as a snapshot diff.
+///
+/// The samples matter: `date` only leaves for `time` on a text its validator
+/// accepts. Probing runs those handlers for real — hence the test context and
+/// the test database, which `run_with_db` cleans up afterwards. That is also
+/// why `confirm` loops back on "book" instead of finishing: the booking
+/// insert needs a registered user, and the graph shows what the handler
+/// actually did rather than what it would do in production.
+pub fn booking_dialog_graph_snapshot_test() {
+  use db <- run_with_db
+  use ctx <- with_locale("en", db)
+
+  graph.of_dialog_probing(
+    dialog: booking.create_booking_dialog(db),
+    ctx:,
+    states: [filled_state()],
+    texts: ["2024-12-25", "Springfield"],
+  )
+  |> graph.to_mermaid
+  |> birdie.snap(title: "booking:dialog:graph")
 }

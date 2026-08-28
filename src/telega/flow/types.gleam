@@ -234,6 +234,23 @@ pub type FlowAction(step_type) {
   EnterSubflow(subflow_name: String, data: Dict(String, String))
 }
 
+/// Where a declared transition points. Declarations are documentation, not
+/// behaviour: the engine never reads them (see `builder.declare_next`).
+pub type DeclaredTarget {
+  /// Another step of the same flow.
+  ToStep(String)
+  /// The step finishes the flow (`action.complete`).
+  ToComplete
+  /// The step cancels the flow (`action.cancel`).
+  ToCancel
+}
+
+/// A transition a flow author declared for documentation and visualization.
+/// `targets` lists everything the step's handler may pick.
+pub type DeclaredTransition {
+  DeclaredTransition(from: String, targets: List(DeclaredTarget))
+}
+
 /// Built flow ready for execution
 pub type Flow(step_type, session, error, dependencies) {
   Flow(
@@ -257,6 +274,9 @@ pub type Flow(step_type, session, error, dependencies) {
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
     subflows: List(SubflowConfig(step_type, session, error, dependencies)),
+    // Handler-driven transitions the author declared for documentation and
+    // visualization. Never read by the engine.
+    declared_transitions: List(DeclaredTransition),
     // Flow lifecycle hooks
     on_flow_enter: Option(FlowEnterHook(session, error, dependencies)),
     on_flow_leave: Option(FlowLeaveHook(session, error, dependencies)),

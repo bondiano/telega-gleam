@@ -1,0 +1,40 @@
+---
+version: 2.0.1
+title: booking:dialog:graph
+file: ./test/booking_dialog_test.gleam
+test_name: booking_dialog_graph_snapshot_test
+---
+flowchart LR
+  n0(["booking"])
+  n1["confirm"]
+  n2[/"date"/]
+  n3["guests"]
+  n4["photo"]
+  n5["prefs"]
+  n6["time"]
+  n9(["back"])
+  subgraph g0["delivery_address"]
+    n7[/"city"/]
+    n8[/"street"/]
+  end
+  n0 -->|"start"| n2
+  n1 -.->|"back"| n9
+  n1 -->|"book, delivery_address result"| n1
+  n1 -->|"address ▸ delivery_address"| n7
+  n1 -->|"photo"| n4
+  n2 -->|"text"| n2
+  n2 -->|"text"| n6
+  n7 -.->|"back"| n9
+  n7 -->|"text"| n8
+  n8 -.->|"back"| n9
+  n8 -->|"text ▸ return"| n1
+  n3 -.->|"back"| n9
+  n3 -->|"n:pick"| n5
+  n4 -.->|"back"| n9
+  n5 -.->|"back"| n9
+  n5 -->|"extras:done"| n1
+  n5 -->|"widget:extras, widget:zone"| n5
+  n6 -.->|"back"| n9
+  n6 -->|"slot:pick"| n3
+  n6 -->|"widget:slot"| n6
+

@@ -5,14 +5,16 @@ import gleam/dynamic.{type Dynamic}
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
+import logging
 import telega/bot.{type Context}
 import telega/flow/types.{
-  type ConditionalTransition, type Flow, type FlowEnterHook, type FlowExitHook,
-  type FlowLeaveHook, type FlowStorage, type InlineStep, type ParallelConfig,
-  type StepConfig, type StepEnterHook, type StepHandler, type StepLeaveHook,
-  type StepMiddleware, type StepResult, type SubflowConfig,
-  ConditionalTransition, Flow, InlineStep, ParallelConfig, StepConfig,
-  SubflowConfig,
+  type ConditionalTransition, type DeclaredTarget, type DeclaredTransition,
+  type Flow, type FlowEnterHook, type FlowExitHook, type FlowLeaveHook,
+  type FlowStorage, type InlineStep, type ParallelConfig, type StepConfig,
+  type StepEnterHook, type StepHandler, type StepLeaveHook, type StepMiddleware,
+  type StepResult, type SubflowConfig, ConditionalTransition, DeclaredTransition,
+  Flow, InlineStep, ParallelConfig, StepConfig, SubflowConfig, ToCancel,
+  ToComplete, ToStep,
 }
 
 pub opaque type FlowBuilder(step_type, session, error, dependencies) {
@@ -39,6 +41,7 @@ pub opaque type FlowBuilder(step_type, session, error, dependencies) {
     conditionals: List(ConditionalTransition(step_type)),
     parallel_configs: List(ParallelConfig(step_type)),
     subflows: List(SubflowConfig(step_type, session, error, dependencies)),
+    declared_transitions: List(DeclaredTransition),
     on_flow_enter: Option(FlowEnterHook(session, error, dependencies)),
     on_flow_leave: Option(FlowLeaveHook(session, error, dependencies)),
     on_flow_exit: Option(FlowExitHook(session, error, dependencies)),
@@ -66,6 +69,7 @@ pub fn new(
     conditionals: [],
     parallel_configs: [],
     subflows: [],
+    declared_transitions: [],
     on_flow_enter: None,
     on_flow_leave: None,
     on_flow_exit: None,
@@ -92,6 +96,7 @@ pub fn new_with_default_converters(
     conditionals: [],
     parallel_configs: [],
     subflows: [],
+    declared_transitions: [],
     on_flow_enter: None,
     on_flow_leave: None,
     on_flow_exit: None,
@@ -199,6 +204,119 @@ pub fn add_multi_conditional(
     ..builder,
     conditionals: list.append(builder.conditionals, [conditional]),
   )
+}
+
+/// Declare the step a handler moves to next. **Documentation only** — the
+/// engine never reads declarations, and a handler stays free to go elsewhere.
+///
+/// A flow's real transitions are returned by its step handlers (`action.next`,
+/// `action.complete`, …), and handlers are effectful, so they can never be
+/// inspected the way a dialog's pure windows can. Declaring the transition
+/// fills that gap: `telega/testing/graph` draws declared edges, and the
+/// declaration documents the step right where it is registered.
+///
+/// ```gleam
+/// |> builder.add_step(AskName, ask_name)
+/// |> builder.declare_next(from: AskName, to: AskEmail)
+/// ```
+///
+/// `build` logs a warning for a declaration pointing at a step that was never
+/// added; `declaration_errors` returns the same list for a test to assert on.
+pub fn declare_next(
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  from from: step_type,
+  to to: step_type,
+) -> FlowBuilder(step_type, session, error, dependencies) {
+  declare(builder, from, [ToStep(builder.step_to_string(to))])
+}
+
+/// Declare the steps a handler chooses between — documentation only, see
+/// `declare_next`.
+///
+/// ```gleam
+/// |> builder.declare_choice(from: Review, to: [Publish, Edit])
+/// ```
+pub fn declare_choice(
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  from from: step_type,
+  to to: List(step_type),
+) -> FlowBuilder(step_type, session, error, dependencies) {
+  declare(
+    builder,
+    from,
+    list.map(to, fn(step) { ToStep(builder.step_to_string(step)) }),
+  )
+}
+
+/// Declare that a step finishes the flow — documentation only, see
+/// `declare_next`.
+pub fn declare_complete(
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  from from: step_type,
+) -> FlowBuilder(step_type, session, error, dependencies) {
+  declare(builder, from, [ToComplete])
+}
+
+/// Declare that a step cancels the flow — documentation only, see
+/// `declare_next`.
+pub fn declare_cancel(
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  from from: step_type,
+) -> FlowBuilder(step_type, session, error, dependencies) {
+  declare(builder, from, [ToCancel])
+}
+
+fn declare(
+  builder: FlowBuilder(step_type, session, error, dependencies),
+  from: step_type,
+  targets: List(DeclaredTarget),
+) -> FlowBuilder(step_type, session, error, dependencies) {
+  let from_step = builder.step_to_string(from)
+  FlowBuilder(
+    ..builder,
+    declared_transitions: list.append(builder.declared_transitions, [
+      DeclaredTransition(from: from_step, targets:),
+    ]),
+  )
+}
+
+/// Declarations pointing at a step the flow doesn't have — one message per
+/// dangling reference, empty for a consistent flow. Assert on it in a test to
+/// keep declarations honest across renames:
+///
+/// ```gleam
+/// builder.declaration_errors(my_flow()) |> should.equal([])
+/// ```
+pub fn declaration_errors(
+  flow: Flow(step_type, session, error, dependencies),
+) -> List(String) {
+  list.flat_map(flow.declared_transitions, fn(declared) {
+    let missing_source = case dict.has_key(flow.steps, declared.from) {
+      True -> []
+      False -> [
+        "declared transition from unknown step '" <> declared.from <> "'",
+      ]
+    }
+    let missing_targets =
+      list.filter_map(declared.targets, fn(target) {
+        case target {
+          ToStep(step) ->
+            case dict.has_key(flow.steps, step) {
+              True -> Error(Nil)
+              False ->
+                Ok(
+                  "declared transition '"
+                  <> declared.from
+                  <> "' -> unknown step '"
+                  <> step
+                  <> "'",
+                )
+            }
+          ToComplete | ToCancel -> Error(Nil)
+        }
+      })
+    list.append(missing_source, missing_targets)
+  })
 }
 
 /// Add parallel step execution (simplified API).
@@ -426,25 +544,31 @@ pub fn build(
   builder: FlowBuilder(step_type, session, error, dependencies),
   initial initial_step: step_type,
 ) -> Flow(step_type, session, error, dependencies) {
-  Flow(
-    initial_step:,
-    name: builder.flow_name,
-    steps: builder.steps,
-    step_to_string: builder.step_to_string,
-    string_to_step: builder.string_to_step,
-    storage: builder.storage,
-    on_complete: builder.on_complete,
-    on_error: builder.on_error,
-    global_middlewares: builder.global_middlewares,
-    conditionals: builder.conditionals,
-    parallel_configs: builder.parallel_configs,
-    subflows: builder.subflows,
-    on_flow_enter: builder.on_flow_enter,
-    on_flow_leave: builder.on_flow_leave,
-    on_flow_exit: builder.on_flow_exit,
-    ttl_ms: builder.ttl_ms,
-    on_timeout: builder.on_timeout,
-  )
+  let flow =
+    Flow(
+      initial_step:,
+      name: builder.flow_name,
+      steps: builder.steps,
+      step_to_string: builder.step_to_string,
+      string_to_step: builder.string_to_step,
+      storage: builder.storage,
+      on_complete: builder.on_complete,
+      on_error: builder.on_error,
+      global_middlewares: builder.global_middlewares,
+      conditionals: builder.conditionals,
+      parallel_configs: builder.parallel_configs,
+      subflows: builder.subflows,
+      declared_transitions: builder.declared_transitions,
+      on_flow_enter: builder.on_flow_enter,
+      on_flow_leave: builder.on_flow_leave,
+      on_flow_exit: builder.on_flow_exit,
+      ttl_ms: builder.ttl_ms,
+      on_timeout: builder.on_timeout,
+    )
+  list.each(declaration_errors(flow), fn(message) {
+    logging.log(logging.Warning, "[flow:" <> flow.name <> "] " <> message)
+  })
+  flow
 }
 
 fn inline_step_to_string(step: InlineStep) -> String {

@@ -187,6 +187,43 @@ builder.add_multi_conditional(
 )
 ```
 
+### Declaring Transitions (for documentation and graphs)
+
+`action.next` and friends are decided *inside* a handler, so nothing outside
+the handler can know where a step goes — not a reader of the code, and not the
+graph exporter. `declare_next` writes that down next to the step:
+
+```gleam
+builder.new("checkout", storage, step_to_string, string_to_step)
+|> builder.add_step(AskName, ask_name)
+|> builder.declare_next(from: AskName, to: AskEmail)
+|> builder.add_step(Review, review)
+|> builder.declare_choice(from: Review, to: [Publish, Edit])
+|> builder.add_step(Publish, publish)
+|> builder.declare_complete(from: Publish)
+|> builder.declare_cancel(from: Publish)
+```
+
+Declarations are **documentation only** — the engine never reads them and a
+handler stays free to go elsewhere. What they buy:
+
+- `telega/testing/graph.of_flow` draws them, turning the flow skeleton into a
+  complete map (see [testing.md](./testing.md) § Graph Export). Steps with no
+  declaration stay dashed, so an incomplete flow is visible at a glance.
+- They are checked against the registered steps: `build` logs a warning for a
+  declaration pointing at a step that was never added, and
+  `builder.declaration_errors(flow)` returns the same list, so a test keeps
+  them honest after a rename:
+
+```gleam
+pub fn declarations_are_consistent_test() {
+  builder.declaration_errors(checkout_flow()) |> should.equal([])
+}
+```
+
+`add_conditional`, `parallel` and `add_subflow` already describe themselves —
+no declaration needed for those.
+
 ### Waiting for Input
 
 ```gleam
@@ -1218,7 +1255,7 @@ fn string_to_step(s) {
 | `telega/flow/instance` | Instance CRUD, accessors, data operations, serialization |
 | `telega/flow/action` | Navigation helpers (`next`, `back`, `goto`, `complete`, `cancel`, `wait`, `wait_with_timeout`) |
 | `telega/flow/storage` | Storage utilities (ETS, noop, `generate_id`) |
-| `telega/flow/builder` | Flow construction (`new`, `add_step`, `build`, hooks, middleware, conditionals) |
+| `telega/flow/builder` | Flow construction (`new`, `add_step`, `build`, hooks, middleware, conditionals, `declare_next` / `declare_choice` / `declare_complete` / `declare_cancel`, `declaration_errors`) |
 | `telega/flow/engine` | Core execution engine (internal) |
 | `telega/flow/handler` | Built-in step handlers (`text_step`, `message_step`, context-aware `text_step_with` / `message_step_with`, resume handlers) |
 | `telega/flow/registry` | Flow registry and router integration (`new_registry`, `register`, `apply_to_router`) |

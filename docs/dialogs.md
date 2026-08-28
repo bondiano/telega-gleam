@@ -508,8 +508,16 @@ mock.get_calls(calls)
 `mock.stateful_client`/`mock.routed_client` (400 "message is not modified",
 "message to edit not found", …) and snapshot the recovery.
 
+**Level 0 — the whole map.** Before any of that,
+`telega/testing/graph.of_dialog(dialog:, ctx:)` walks the dialog and exports
+every window and transition as Graphviz DOT or Mermaid — buttons, widget
+navigation, sub-dialog enter/return included. It reads the same pure
+`render`/`on_action` functions the tests do, so it needs no network, and its
+output is deterministic enough to snapshot as a navigation regression test.
+See [testing.md](./testing.md) § Graph Export.
+
 `test/telega/dialog_test.gleam`, `dialog_widget_test.gleam`,
-`dialog_sub_test.gleam` in the repository and
+`dialog_sub_test.gleam`, `graph_test.gleam` in the repository and
 `examples/06-restaurant-booking/test/booking_dialog_test.gleam` are working
 references for all of the above.
 

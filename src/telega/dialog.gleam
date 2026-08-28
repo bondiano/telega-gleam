@@ -814,6 +814,15 @@ fn namespace_window(
   )
 }
 
+/// The dialog's own state encoder. `telega/testing/graph` uses it to probe
+/// windows with sample states written in the user's own state type.
+@internal
+pub fn state_encoder(
+  dialog: Dialog(state, session, error, dependencies),
+) -> fn(state) -> String {
+  dialog.encode_state
+}
+
 /// Access the compiled form of a dialog for engine-level tests.
 @internal
 pub fn compiled(

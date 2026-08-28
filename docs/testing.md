@@ -12,6 +12,7 @@ Telega provides a built-in testing toolkit under `telega/testing/` for writing i
 | `telega/testing/factory` | Deterministic test data factories (users, chats, messages, updates) |
 | `telega/testing/context` | Test config and context builders |
 | `telega/testing/render` | Pure canonicalizers for snapshot testing (API-call transcripts, keyboard grids) |
+| `telega/testing/graph` | Navigation graph of a dialog or flow, exported as Graphviz DOT or Mermaid |
 
 ## Quick Start
 
@@ -437,6 +438,97 @@ pub fn menu_keyboard_test() {
   `examples/06-restaurant-booking/test/booking_dialog_test.gleam`.
 - CI: `gleam test` fails on unaccepted snapshots, so a snapshot diff can't slip through unreviewed.
 
+## Graph Export
+
+`telega/testing/graph` turns a dialog or a flow into a navigation graph and
+renders it as Graphviz DOT or Mermaid — the whole set of windows and the
+transitions between them, without running the bot:
+
+```gleam
+import gleam/io
+import telega/testing/context
+import telega/testing/graph
+
+pub fn main() {
+  graph.of_dialog(dialog: booking_dialog(), ctx: context.context(session: Nil))
+  |> graph.to_dot
+  |> io.println
+}
+```
+
+```sh
+gleam run -m my_bot/graph > booking.dot && dot -Tsvg booking.dot -o booking.svg
+```
+
+### Dialogs are probed
+
+A window's `render` is pure and its handlers are pure functions of the state,
+so the exporter can just run them: it renders every window, presses every
+button it finds and records where the returned `DialogAction` points.
+
+- Widget buttons are routed to the widget's `on_event` exactly the way the
+  engine routes them, so `select`/`radio` navigation shows up too.
+- Sub-dialogs are entered through the sub's own `init`/`result`, so their
+  windows are probed with real sub state, and a sub's `Done` is drawn back to
+  the window that started it (its `on_sub_result` is probed as well).
+- `Back` targets depend on history, so they point at a single `back` node and
+  are drawn dashed.
+
+Probing sees one state at a time, and a text window that validates its input
+only ever draws the re-render for a sample it rejects. Pass states and texts
+your handlers accept:
+
+```gleam
+graph.of_dialog_probing(
+  dialog: booking_dialog(),
+  ctx: context.context(session: Nil),
+  states: [Booking(..empty, table: Some("t1"))],
+  texts: ["Ivan", ""],
+)
+```
+
+Probing **runs your handlers**. Windows are pure by contract, but a handler
+that writes to a database or calls the API on its way to a `Done` will do
+exactly that while the graph is built. Give it a test context — the mock
+client and the test database — never a production one.
+
+### Flows are declarative
+
+A flow's transitions are returned by its step handlers (`Next`, `GoTo`,
+`Complete`), and handlers are effectful — they send messages — so they are
+never called. `graph.of_flow` draws what the builder knows: steps, conditional
+branches (`if #1` / `else`), parallel fan-out and join, subflows (as a cluster
+with its own `return` node), and every transition the author declared:
+
+```gleam
+|> builder.add_step(AskName, ask_name)
+|> builder.declare_next(from: AskName, to: AskEmail)
+|> builder.declare_complete(from: Publish)
+```
+
+Declarations are documentation, not behaviour — the engine ignores them (see
+[conversation-flows.md](./conversation-flows.md) § Declaring Transitions), and
+`builder.declaration_errors(flow)` keeps them from drifting after a rename.
+A step with no declared outgoing edge is marked `OpaqueNode` and drawn dashed:
+the honest signal that its navigation is only visible in the handler.
+
+### Snapshot the graph
+
+Both renderers produce deterministic strings (nodes and edges are sorted), so
+the graph snapshots like any other frame — a changed navigation path shows up
+as a diff in review:
+
+```gleam
+pub fn booking_graph_test() {
+  graph.of_dialog(dialog: booking_dialog(), ctx: context.context(session: Nil))
+  |> graph.to_mermaid
+  |> birdie.snap(title: "booking:dialog:graph")
+}
+```
+
+Mermaid output renders inline in GitHub and in `docs/` pages without a local
+Graphviz; DOT gives better layout control for large dialogs.
+
 ## Database-Dependent Tests
 
 For tests that need a database (e.g., flow persistence), use a helper pattern:
@@ -477,4 +569,5 @@ pub fn my_db_test() {
 | Custom client in conversation DSL | `conversation.run_with_mock(...)` or `conversation.run_with_client(...)` |
 | Session state | Check `ctx.session` from `handler.test_handler()` result |
 | Full visible output (text + keyboards + call sequence) | `telega/testing/render` + birdie snapshots |
+| Whole navigation map of a dialog or flow | `telega/testing/graph` + `to_dot` / `to_mermaid` |
 | Injected services (`dependencies`) | `context.context_with_dependencies()`, `conversation.run_with_dependencies()`, `handler.with_test_bot_with_dependencies()` |

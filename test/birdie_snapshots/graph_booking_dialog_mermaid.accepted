@@ -1,0 +1,28 @@
+---
+version: 2.0.1
+title: graph:booking_dialog:mermaid
+file: ./test/telega/graph_test.gleam
+test_name: dialog_graph_mermaid_snapshot_test
+---
+flowchart LR
+  n0(["booking"])
+  n1["confirm"]
+  n2["menu"]
+  n5(["back"])
+  n6(["done"])
+  n7>"https://example.com/terms"]
+  subgraph g0["address"]
+    n3["check"]
+    n4[/"city"/]
+  end
+  n0 -->|"start"| n2
+  n3 -.->|"back"| n5
+  n3 -->|"ok ▸ return"| n2
+  n4 -.->|"back"| n5
+  n4 -->|"pick, text"| n3
+  n1 -->|"book"| n6
+  n1 -->|"Terms"| n7
+  n2 -->|"addr ▸ address"| n4
+  n2 -->|"address result, next"| n1
+  n2 -->|"widget:guests"| n2
+

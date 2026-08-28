@@ -1,0 +1,36 @@
+---
+version: 2.0.1
+title: graph:booking_dialog:dot
+file: ./test/telega/graph_test.gleam
+test_name: dialog_graph_dot_snapshot_test
+---
+digraph "booking" {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=10];
+
+  "__entry" [label="booking", shape=circle, style=filled, fillcolor="#d9e8ff"];
+  "confirm" [label="confirm"];
+  "menu" [label="menu"];
+  "__back" [label="back", shape=doublecircle, style=filled, fillcolor="#f2f2f2"];
+  "__done" [label="done", shape=doublecircle, style=filled, fillcolor="#f2f2f2"];
+  "__url:https://example.com/terms" [label="https://example.com/terms", shape=note, color="#999999"];
+  subgraph "cluster_address" {
+    label="address";
+    style=dashed;
+    color="#999999";
+    "address.check" [label="check"];
+    "address.city" [label="city", style="rounded,filled", fillcolor="#eef6ec"];
+  }
+  "__entry" -> "menu" [label="start"];
+  "address.check" -> "__back" [label="back", style=dashed, color="#999999"];
+  "address.check" -> "menu" [label="ok ▸ return", color="#555555"];
+  "address.city" -> "__back" [label="back", style=dashed, color="#999999"];
+  "address.city" -> "address.check" [label="pick, text", color="#555555"];
+  "confirm" -> "__done" [label="book", color="#555555"];
+  "confirm" -> "__url:https://example.com/terms" [label="Terms"];
+  "menu" -> "address.city" [label="addr ▸ address"];
+  "menu" -> "confirm" [label="address result, next", color="#555555"];
+  "menu" -> "menu" [label="widget:guests", color="#555555"];
+}
+
