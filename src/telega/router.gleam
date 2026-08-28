@@ -282,6 +282,7 @@ import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/result
 import gleam/string
 import telega/bot.{type Context}
@@ -599,12 +600,7 @@ pub fn on_callback(
 ) -> Router(session, error, dependencies) {
   case router {
     Router(callbacks:, ..) -> {
-      let key = case pattern {
-        Exact(s) -> s
-        Prefix(s) -> "prefix:" <> s
-        Contains(s) -> "contains:" <> s
-        Suffix(s) -> "suffix:" <> s
-      }
+      let key = callback_key(pattern)
       // Wrap the typed handler
       let wrapped_handler = fn(ctx, upd) {
         case upd {
@@ -1579,21 +1575,16 @@ fn can_handle_update(
 
         update.CallbackQueryUpdate(query:, ..) ->
           case query.data {
-            Some(data) -> {
-              // Check exact match first
-              dict.has_key(callbacks, data)
-              // Check pattern matches
+            // The same two steps `find_callback_by_data` takes, through the
+            // same helpers — a second copy of the key decoder is how this
+            // predicate drifted out of step with the router it answers for.
+            Some(data) ->
+              dict.has_key(callbacks, callback_key(Exact(data)))
               || dict.to_list(callbacks)
               |> list.any(fn(entry) {
                 let #(key, _) = entry
-                case string.split(key, ":") {
-                  ["prefix", prefix] -> string.starts_with(data, prefix)
-                  ["contains", substr] -> string.contains(data, substr)
-                  ["suffix", suffix] -> string.ends_with(data, suffix)
-                  _ -> key == data
-                }
+                matches_callback_pattern(key, data)
               })
-            }
             None -> False
           }
 
@@ -1948,22 +1939,39 @@ fn find_callback_by_data(
   data: String,
 ) -> Option(Handler(session, error, dependencies)) {
   // Try exact match first
-  case dict.get(callbacks, data) {
+  case dict.get(callbacks, callback_key(Exact(data))) {
     Ok(handler) -> Some(handler)
     Error(_) -> find_callback_by_pattern(callbacks, data)
   }
 }
 
-/// Find callback handler by pattern matching
+/// Find callback handler by pattern matching. The MOST SPECIFIC matching
+/// pattern wins, not whichever one the callback map happens to yield first:
+/// routes live in a `Dict`, and its iteration order is sorted for a small
+/// Erlang map but hash-derived past 32 keys — so "first match" is not a
+/// property a bot can rely on. Specificity is the length of the pattern's
+/// payload, which makes the catch-all `Prefix("")` a flow registry installs
+/// for auto-resume (`flow/registry.apply_to_router`) the LAST resort it is
+/// meant to be, behind every route the bot registered itself. Equal-length
+/// patterns are broken by key order so the choice stays deterministic.
 fn find_callback_by_pattern(
   callbacks: Dict(String, Handler(session, error, dependencies)),
   data: String,
 ) -> Option(Handler(session, error, dependencies)) {
   dict.to_list(callbacks)
-  |> list.find(fn(entry) {
+  |> list.filter(fn(entry) {
     let #(key, _) = entry
     matches_callback_pattern(key, data)
   })
+  |> list.sort(fn(a, b) {
+    let #(key_a, _) = a
+    let #(key_b, _) = b
+    case int.compare(pattern_specificity(key_b), pattern_specificity(key_a)) {
+      order.Eq -> string.compare(key_a, key_b)
+      ordering -> ordering
+    }
+  })
+  |> list.first
   |> result.map(fn(entry) {
     let #(_, handler) = entry
     handler
@@ -1971,9 +1979,39 @@ fn find_callback_by_pattern(
   |> option.from_result
 }
 
+/// How specific a callback pattern key is: the length of its payload, so
+/// `Prefix("raid_pick:")` outranks `Prefix("")`. A key with no recognised tag
+/// cannot match anything, so its rank never gets consulted.
+fn pattern_specificity(key: String) -> Int {
+  case string.split_once(key, ":") {
+    Ok(#("prefix", payload))
+    | Ok(#("contains", payload))
+    | Ok(#("suffix", payload)) -> string.length(payload)
+    _ -> 0
+  }
+}
+
+/// The `Dict` key a callback pattern is stored under. Every kind carries its
+/// own tag, `Exact` included: stored under its raw payload instead, an exact
+/// route whose payload happens to look like a tagged pattern would collide
+/// with the real thing — `Exact("prefix:foo")` and `Prefix("foo")` shared a
+/// key, one silently overwrote the other, and the survivor then answered
+/// payloads it was never registered for. With a tag of its own the two
+/// namespaces cannot meet, and a payload that repeats a tag
+/// (`Exact("exact:foo")`) is still distinct from the route it imitates.
+fn callback_key(pattern: Pattern) -> String {
+  case pattern {
+    Exact(value) -> "exact:" <> value
+    Prefix(value) -> "prefix:" <> value
+    Contains(value) -> "contains:" <> value
+    Suffix(value) -> "suffix:" <> value
+  }
+}
+
 /// Check if a callback pattern key matches the data. The pattern payload
 /// may itself contain ":" (e.g. `Prefix("travel_to:")`), so split only on
-/// the first delimiter.
+/// the first delimiter. An `exact:` key never matches here — it is resolved
+/// by the direct lookup in `find_callback_by_data` before patterns are tried.
 fn matches_callback_pattern(key: String, data: String) -> Bool {
   case string.split_once(key, ":") {
     Ok(#("prefix", prefix)) -> string.starts_with(data, prefix)
@@ -2025,85 +2063,130 @@ fn find_matching_route(
   routes: List(Route(session, error, dependencies)),
   update: Update,
 ) -> Option(Handler(session, error, dependencies)) {
-  case routes {
+  case list.filter(routes, route_matches(_, update)) {
     [] -> None
-    [route, ..rest] ->
-      case route_matches(route, update) {
-        True -> {
-          let handler = case route, update {
-            TextPatternRoute(handler:, ..), update.TextUpdate(text:, ..) -> fn(
-              ctx,
-              _,
-            ) {
-              handler(ctx, text)
+    [first, ..rest] -> Some(handler_for_route(pick_route(first, rest), update))
+  }
+}
+
+/// Which of the matching routes actually runs. Routes are PREPENDED, so the
+/// list runs newest-first and the first match wins — with one exception: among
+/// matching text PATTERNS the most specific one wins, so the `on_any_text`
+/// catch-all a flow registry installs for auto-resume
+/// (`flow/registry.apply_to_router`) cannot shadow the `on_text` routes a bot
+/// registered before it. Every other route kind keeps its position, so a
+/// filtered or custom route still outranks a text pattern the way it always
+/// did.
+fn pick_route(
+  first: Route(session, error, dependencies),
+  rest: List(Route(session, error, dependencies)),
+) -> Route(session, error, dependencies) {
+  case first {
+    TextPatternRoute(..) ->
+      list.fold(rest, first, fn(best, candidate) {
+        case best, candidate {
+          TextPatternRoute(pattern: chosen, ..),
+            TextPatternRoute(pattern: offered, ..)
+          ->
+            case
+              text_pattern_specificity(offered)
+              > text_pattern_specificity(chosen)
+            {
+              True -> candidate
+              False -> best
             }
-            PhotoRoute(handler:), update.PhotoUpdate(photos:, ..) -> fn(ctx, _) {
-              handler(ctx, photos)
-            }
-            VideoRoute(handler:), update.VideoUpdate(video:, ..) -> fn(ctx, _) {
-              handler(ctx, video)
-            }
-            VoiceRoute(handler:), update.VoiceUpdate(voice:, ..) -> fn(ctx, _) {
-              handler(ctx, voice)
-            }
-            AudioRoute(handler:), update.AudioUpdate(audio:, ..) -> fn(ctx, _) {
-              handler(ctx, audio)
-            }
-            MediaGroupRoute(handler:),
-              update.MediaGroupUpdate(media_group_id:, messages:, ..)
-            -> fn(ctx, _) { handler(ctx, media_group_id, messages) }
-            InlineQueryRoute(handler:),
-              update.InlineQueryUpdate(inline_query:, ..)
-            -> fn(ctx, _) { handler(ctx, inline_query) }
-            ChosenInlineResultRoute(handler:),
-              update.ChosenInlineResultUpdate(chosen_inline_result:, ..)
-            -> fn(ctx, _) { handler(ctx, chosen_inline_result) }
-            ShippingQueryRoute(handler:),
-              update.ShippingQueryUpdate(shipping_query:, ..)
-            -> fn(ctx, _) { handler(ctx, shipping_query) }
-            PreCheckoutQueryRoute(handler:),
-              update.PreCheckoutQueryUpdate(pre_checkout_query:, ..)
-            -> fn(ctx, _) { handler(ctx, pre_checkout_query) }
-            PollRoute(handler:), update.PollUpdate(poll:, ..) -> fn(ctx, _) {
-              handler(ctx, poll)
-            }
-            PollAnswerRoute(handler:), update.PollAnswerUpdate(poll_answer:, ..)
-            -> fn(ctx, _) { handler(ctx, poll_answer) }
-            MessageReactionRoute(handler:),
-              update.MessageReactionUpdate(message_reaction_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
-            MessageReactionEmojiRoute(handler:, ..),
-              update.MessageReactionUpdate(message_reaction_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
-            MessageReactionPaidRoute(handler:),
-              update.MessageReactionUpdate(message_reaction_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
-            MessageReactionAddedRoute(handler:),
-              update.MessageReactionUpdate(message_reaction_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
-            MessageReactionRemovedRoute(handler:),
-              update.MessageReactionUpdate(message_reaction_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
-            MessageReactionCountRoute(handler:),
-              update.MessageReactionCountUpdate(
-                message_reaction_count_updated:,
-                ..,
-              )
-            -> fn(ctx, _) { handler(ctx, message_reaction_count_updated) }
-            ChatMemberUpdatedRoute(handler:),
-              update.ChatMemberUpdate(chat_member_updated:, ..)
-            -> fn(ctx, _) { handler(ctx, chat_member_updated) }
-            ChatJoinRequestRoute(handler:),
-              update.ChatJoinRequestUpdate(chat_join_request:, ..)
-            -> fn(ctx, _) { handler(ctx, chat_join_request) }
-            CustomRoute(handler:, ..), _ -> handler
-            FilteredRoute(handler:, ..), _ -> handler
-            _, _ -> fn(ctx, _) { Ok(ctx) }
-          }
-          Some(handler)
+          _, _ -> best
         }
-        False -> find_matching_route(rest, update)
-      }
+      })
+    _ -> first
+  }
+}
+
+/// How specific a text pattern is — the same rule `pattern_specificity` applies
+/// to encoded callback keys: the length of the payload it constrains, with an
+/// exact match stricter than a prefix of equal length. `Prefix("")` scores 0,
+/// which is what makes it a last resort.
+fn text_pattern_specificity(pattern: Pattern) -> Int {
+  case pattern {
+    Exact(value) -> string.length(value) + 1
+    Prefix(value) | Contains(value) | Suffix(value) -> string.length(value)
+  }
+}
+
+fn handler_for_route(
+  route: Route(session, error, dependencies),
+  update: Update,
+) -> Handler(session, error, dependencies) {
+  case route, update {
+    TextPatternRoute(handler:, ..), update.TextUpdate(text:, ..) -> fn(ctx, _) {
+      handler(ctx, text)
+    }
+    PhotoRoute(handler:), update.PhotoUpdate(photos:, ..) -> fn(ctx, _) {
+      handler(ctx, photos)
+    }
+    VideoRoute(handler:), update.VideoUpdate(video:, ..) -> fn(ctx, _) {
+      handler(ctx, video)
+    }
+    VoiceRoute(handler:), update.VoiceUpdate(voice:, ..) -> fn(ctx, _) {
+      handler(ctx, voice)
+    }
+    AudioRoute(handler:), update.AudioUpdate(audio:, ..) -> fn(ctx, _) {
+      handler(ctx, audio)
+    }
+    MediaGroupRoute(handler:),
+      update.MediaGroupUpdate(media_group_id:, messages:, ..)
+    -> fn(ctx, _) { handler(ctx, media_group_id, messages) }
+    InlineQueryRoute(handler:), update.InlineQueryUpdate(inline_query:, ..) -> fn(
+      ctx,
+      _,
+    ) {
+      handler(ctx, inline_query)
+    }
+    ChosenInlineResultRoute(handler:),
+      update.ChosenInlineResultUpdate(chosen_inline_result:, ..)
+    -> fn(ctx, _) { handler(ctx, chosen_inline_result) }
+    ShippingQueryRoute(handler:),
+      update.ShippingQueryUpdate(shipping_query:, ..)
+    -> fn(ctx, _) { handler(ctx, shipping_query) }
+    PreCheckoutQueryRoute(handler:),
+      update.PreCheckoutQueryUpdate(pre_checkout_query:, ..)
+    -> fn(ctx, _) { handler(ctx, pre_checkout_query) }
+    PollRoute(handler:), update.PollUpdate(poll:, ..) -> fn(ctx, _) {
+      handler(ctx, poll)
+    }
+    PollAnswerRoute(handler:), update.PollAnswerUpdate(poll_answer:, ..) -> fn(
+      ctx,
+      _,
+    ) {
+      handler(ctx, poll_answer)
+    }
+    MessageReactionRoute(handler:),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+    MessageReactionEmojiRoute(handler:, ..),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+    MessageReactionPaidRoute(handler:),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+    MessageReactionAddedRoute(handler:),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+    MessageReactionRemovedRoute(handler:),
+      update.MessageReactionUpdate(message_reaction_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_updated) }
+    MessageReactionCountRoute(handler:),
+      update.MessageReactionCountUpdate(message_reaction_count_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, message_reaction_count_updated) }
+    ChatMemberUpdatedRoute(handler:),
+      update.ChatMemberUpdate(chat_member_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, chat_member_updated) }
+    ChatJoinRequestRoute(handler:),
+      update.ChatJoinRequestUpdate(chat_join_request:, ..)
+    -> fn(ctx, _) { handler(ctx, chat_join_request) }
+    CustomRoute(handler:, ..), _ -> handler
+    FilteredRoute(handler:, ..), _ -> handler
+    _, _ -> fn(ctx, _) { Ok(ctx) }
   }
 }
 

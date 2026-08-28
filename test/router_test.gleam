@@ -1998,3 +1998,128 @@ pub fn callback_prefix_with_colon_routes_test() {
   |> fn(c: Context(String, TelegaError, Nil)) { c.session }
   |> should.equal("routed:travel_to:gate")
 }
+
+pub fn specific_callback_prefix_beats_catch_all_test() {
+  // Regression: a flow registry installs a `Prefix("")` catch-all for
+  // auto-resume (`registry.apply_to_router`). That key matches EVERY payload,
+  // so a bot with its own callback routes must still reach them — the most
+  // specific prefix has to win, whatever order the callback map iterates in.
+  let r =
+    router.new("test")
+    |> router.on_callback(router.Prefix("raid_pick:"), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "specific:" <> data))
+    })
+    |> router.on_callback(router.Prefix(""), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "catch_all:" <> data))
+    })
+
+  let ctx = make_ctx("initial")
+  router.handle(
+    r,
+    ctx,
+    factory.callback_query_update(data: "raid_pick:ironpelts-grief"),
+  )
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("specific:raid_pick:ironpelts-grief")
+}
+
+pub fn specific_text_pattern_beats_catch_all_test() {
+  // Same hazard as the callback catch-all, on the text side: a flow registry
+  // installs `on_any_text` (= `on_text(Prefix(""))`) for auto-resume, and
+  // routes are PREPENDED, so the catch-all registered last sits at the head of
+  // the list and would shadow every text route the bot registered itself.
+  let r =
+    router.new("test")
+    |> router.on_text(router.Prefix("order "), fn(ctx, text) {
+      Ok(Context(..ctx, session: "specific:" <> text))
+    })
+    |> router.on_any_text(fn(ctx, text) {
+      Ok(Context(..ctx, session: "catch_all:" <> text))
+    })
+
+  let ctx = make_ctx("initial")
+  router.handle(r, ctx, factory.text_update(text: "order 42"))
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("specific:order 42")
+}
+
+pub fn flow_catch_all_shadows_a_bots_photo_route_test() {
+  // Documents a REMAINING sharp edge, not a fixed one. Photo/video/voice/audio
+  // /location/command routes carry no pattern, so there is no specificity to
+  // rank them by: two `on_photo` registrations are indistinguishable and the
+  // newest wins. `flow/registry.apply_to_router` registers its auto-resume
+  // catch-alls last, so it takes those input types over from the bot.
+  let r =
+    router.new("test")
+    |> router.on_photo(fn(ctx, _photos) {
+      Ok(Context(..ctx, session: "bot_photo"))
+    })
+    |> router.on_photo(fn(ctx, _photos) {
+      Ok(Context(..ctx, session: "flow_auto_resume"))
+    })
+
+  let ctx = make_ctx("initial")
+  router.handle(r, ctx, factory.photo_update())
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("flow_auto_resume")
+}
+
+pub fn exact_callback_payload_that_looks_like_a_pattern_test() {
+  // Regression: callback routes share one Dict, and an `Exact` route used to be
+  // stored under its raw payload. `Exact("prefix:foo")` therefore produced the
+  // same key as `Prefix("foo")` — one silently overwrote the other, and the
+  // survivor answered payloads it was never registered for.
+  let r =
+    router.new("test")
+    |> router.on_callback(router.Exact("prefix:foo"), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "exact:" <> data))
+    })
+    |> router.on_callback(router.Prefix("foo"), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "prefix:" <> data))
+    })
+
+  // Both routes survived registration and each answers only its own payload.
+  router.handle(
+    r,
+    make_ctx("initial"),
+    factory.callback_query_update(data: "prefix:foo"),
+  )
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("exact:prefix:foo")
+
+  router.handle(
+    r,
+    make_ctx("initial"),
+    factory.callback_query_update(data: "foobar"),
+  )
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("prefix:foobar")
+}
+
+pub fn composed_router_handles_callback_prefix_with_colon_test() {
+  // Regression: `can_handle_update` decoded the pattern key with its own copy
+  // of the logic, splitting on EVERY ":" — so `Prefix("travel_to:")` yielded
+  // three parts, matched nothing, and a COMPOSED router reported it could not
+  // handle the press. Dispatch then skipped past the router that owned it.
+  let owner =
+    router.new("owner")
+    |> router.on_callback(router.Prefix("travel_to:"), fn(ctx, _id, data) {
+      Ok(Context(..ctx, session: "routed:" <> data))
+    })
+
+  let composed = router.compose(router.new("other"), owner)
+
+  router.handle(
+    composed,
+    make_ctx("initial"),
+    factory.callback_query_update(data: "travel_to:gate"),
+  )
+  |> should.be_ok
+  |> fn(c: Context(String, TelegaError, Nil)) { c.session }
+  |> should.equal("routed:travel_to:gate")
+}

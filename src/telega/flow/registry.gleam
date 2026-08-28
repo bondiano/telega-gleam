@@ -219,7 +219,26 @@ pub fn call_flow(
   }
 }
 
-/// Apply all registered flows to a router
+/// Apply all registered flows to a router.
+///
+/// Besides each flow's own trigger route this installs the auto-resume
+/// catch-alls: any text, any callback payload, and photo, video, voice, audio,
+/// location and command updates. Two things follow, and both matter for a bot
+/// that has routes of its own — apply the registry LAST, after those routes.
+///
+///   * **Patterns are ranked, so the catch-alls lose.** `on_text(Prefix("x"))`
+///     and `on_callback(Prefix("x:"))` are more specific than the `Prefix("")`
+///     the registry adds, and the router picks the most specific match — the
+///     bot's route still runs.
+///   * **Typed input routes are TAKEN OVER.** A photo, video, voice, audio,
+///     location or plain command carries no pattern to rank, so the registry's
+///     handler wins over one the bot registered for the same input type, and
+///     when no flow is waiting the update is dropped rather than passed on.
+///     A bot that needs its own `on_photo` alongside flows should start those
+///     flows from a command or callback trigger and handle the media itself.
+///
+/// Commands registered with `on_command` are exempt: they dispatch by exact
+/// name, so only an UNREGISTERED command reaches the flow's command resume.
 pub fn apply_to_router(
   router: router.Router(session, error, dependencies),
   registry: FlowRegistry(session, error, dependencies),

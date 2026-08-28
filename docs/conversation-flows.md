@@ -130,6 +130,8 @@ let router =
 
 `apply_to_router` automatically sets up resume handlers for all input types (text, callbacks, photos, video, voice, audio, location, commands) — you don't need to wire them manually.
 
+**Apply the registry last**, after the routes your bot registers itself. Text and callback patterns are ranked by specificity, so `on_text(Prefix("order "))` and `on_callback(Prefix("raid:"))` still win over the `Prefix("")` catch-alls the registry adds. Typed inputs are different: a photo, video, voice, audio, location or plain command carries no pattern to rank, so the registry takes that input type over — when no flow is waiting the update is dropped rather than handed to your own `on_photo`. If your bot needs its own media routes alongside flows, trigger the flows from commands or callbacks and handle the media yourself. Commands added with `on_command` are exempt: they dispatch by exact name, and only an *unregistered* command reaches the flow's command resume.
+
 ## Navigation
 
 ### Basic Transitions
