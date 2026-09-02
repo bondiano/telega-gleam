@@ -1302,3 +1302,65 @@ pub fn window_can_handle_a_photo_test() {
   let assert Ok(Some(inst)) = storage.load(driver.flow_id(chat_id, "avatar"))
   instance.get_data(inst, "__dialog_state") |> should.equal(Some("FILE_A"))
 }
+
+// M13 — a window edited after typing ends up above the user's message --------
+
+fn naming_dialog(storage, mode: types.ShowMode) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "naming",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window_with_input(
+      id: "ask",
+      render: fn(state, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Name? (" <> state <> ")")
+            |> format.to_formatted(),
+          buttons: [],
+          media: None,
+        )
+      },
+      on_action: fn(state, _event, _ctx) { Ok(types.Stay(state)) },
+      on_text: fn(_state, text, _ctx) { Ok(types.Stay(text)) },
+    )
+    |> dialog.with_show_mode(mode)
+    |> dialog.initial("ask")
+    |> dialog.build()
+  dialog_engine.compile(dialog.compiled(built))
+}
+
+pub fn edit_live_keeps_editing_after_text_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let flow = naming_dialog(storage, types.EditLive)
+  let #(client, calls) = driver.media_mock_client()
+  let chat_id = 250
+
+  driver.start_dialog(flow, client, chat_id, command: "/naming")
+  driver.send_text(flow, client, storage, chat_id, "naming", "Alice")
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:show_mode:edit_live")
+}
+
+pub fn resend_on_user_message_moves_the_window_down_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let flow = naming_dialog(storage, types.ResendOnUserMessage)
+  let #(client, calls) = driver.media_mock_client()
+  let chat_id = 251
+
+  driver.start_dialog(flow, client, chat_id, command: "/naming")
+  // The user typed, so the edited window would sit above their message:
+  // the old one is taken down and the window resent below it.
+  driver.send_text(flow, client, storage, chat_id, "naming", "Alice")
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:show_mode:resend_on_user_message")
+}

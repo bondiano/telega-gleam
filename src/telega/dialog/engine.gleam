@@ -100,6 +100,7 @@ pub type CompiledDialog(session, error, dependencies) {
     storage: flow_types.FlowStorage(error),
     ttl_ms: Option(Int),
     labels: fn(Context(session, error, dependencies)) -> Labels,
+    show_mode: types.ShowMode,
   )
 }
 
@@ -803,6 +804,7 @@ fn render_window(
       dialog_id: dialog.id,
       window_id: window.id,
       window: rendered,
+      resend: should_resend(dialog, ctx),
     )
   {
     Ok(#(message_id, kind)) -> {
@@ -815,6 +817,25 @@ fn render_window(
       |> Ok
     }
     Error(render_error) -> Error(render_error)
+  }
+}
+
+/// Whether this render should replace the live message rather than edit it.
+///
+/// An edit after the user typed something leaves the window scrolled above
+/// their message; a press leaves it exactly where they are looking.
+fn should_resend(
+  dialog: CompiledDialog(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
+) -> Bool {
+  case dialog.show_mode {
+    types.EditLive -> False
+    types.AlwaysResend -> True
+    types.ResendOnUserMessage ->
+      case ctx.update {
+        update.CallbackQueryUpdate(..) -> False
+        _ -> True
+      }
   }
 }
 

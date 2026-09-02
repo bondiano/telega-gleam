@@ -70,6 +70,23 @@ pub type DialogAction(state) {
   StartSub(sub_id: String, args: Dict(String, String), state: state)
 }
 
+/// When the dialog replaces its live message instead of editing it.
+///
+/// Editing is right for a button press: the message the user pressed is the
+/// last thing in the chat. It is wrong after the user *typed* something — the
+/// edited window is then scrolled above their own message, where they will not
+/// see it.
+pub type ShowMode {
+  /// Always edit the live message. The default, and what every version before
+  /// this one did.
+  EditLive
+  /// Edit after a button press; delete and resend after the user sent a
+  /// message, so the window lands below it.
+  ResendOnUserMessage
+  /// Always delete the live message and send a fresh one.
+  AlwaysResend
+}
+
 /// A parsed button press delivered to `on_action`.
 pub type ActionEvent {
   ActionEvent(action_id: String, arg: Option(String))

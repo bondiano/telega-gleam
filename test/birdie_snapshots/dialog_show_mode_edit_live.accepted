@@ -1,0 +1,18 @@
+---
+version: 2.0.1
+title: dialog:show_mode:edit_live
+---
+1. sendMessage
+{
+  "chat_id": 250,
+  "parse_mode": "HTML",
+  "text": "Name? ()"
+}
+
+2. editMessageText
+{
+  "chat_id": 250,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "text": "Name? (Alice)"
+}

@@ -99,6 +99,7 @@ pub fn render_window(
   dialog_id dialog_id: String,
   window_id window_id: String,
   window window: dialog_types.RenderedWindow,
+  resend resend: Bool,
 ) -> Result(#(Int, MessageKind), RenderError) {
   use markup <- result.try(build_markup(dialog_id, window_id, window.buttons))
   let #(text, parse_mode) = format.render(window.text)
@@ -111,6 +112,17 @@ pub fn render_window(
   let send_media = fn(media) {
     send_media_window(ctx, chat_id, media, text, parse_mode, markup)
     |> result.map(fn(id) { #(id, MediaMessage) })
+  }
+
+  // Replacing the live message instead of editing it: take the old one down
+  // first (best effort — a message older than 48 hours cannot be deleted) and
+  // fall through to the fresh-send arms.
+  let message = case resend, message {
+    True, Some(#(message_id, _)) -> {
+      delete_best_effort(ctx, chat_id, message_id)
+      None
+    }
+    _, message -> message
   }
 
   case message, window.media {

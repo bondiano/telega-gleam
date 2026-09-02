@@ -456,6 +456,12 @@ filter:
   out of webhook-reply claiming (`webhook_reply.without_claim`) — the engine
   needs the real message id to edit the live message later, and a claimed
   `sendMessage` would yield a fake stub id.
+- `dialog.with_show_mode(builder, mode)` decides when the dialog **replaces**
+  its live message instead of editing it. `EditLive` (the default) always
+  edits, which is right for button presses. A dialog with text-input windows
+  wants `ResendOnUserMessage`: after the user types, an edited window is
+  scrolled *above* their own message and easy to miss, so the window is
+  deleted and resent below it. `AlwaysResend` never edits.
 - `dialog.on_message(builder, window:, handler:)` accepts a photo, video,
   voice note, audio or location sent while `window` is open, classified as a
   `MessageInput` (the raw update stays on `ctx.update`). Without it those

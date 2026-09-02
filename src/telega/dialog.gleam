@@ -182,6 +182,7 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
     storage: flow_types.FlowStorage(error),
     ttl_ms: Option(Int),
     labels: fn(Context(session, error, dependencies)) -> Labels,
+    show_mode: types.ShowMode,
   )
 }
 
@@ -214,6 +215,7 @@ pub fn new(
     storage:,
     ttl_ms: None,
     labels: fn(_ctx) { types.default_labels() },
+    show_mode: types.EditLive,
   )
 }
 
@@ -422,6 +424,23 @@ pub fn on_message(
   ])
 }
 
+/// Choose when the dialog replaces its live message instead of editing it.
+///
+/// The default (`EditLive`) always edits, which is right for button presses.
+/// A dialog with text-input windows wants `ResendOnUserMessage`: after the
+/// user types, an edited window is scrolled *above* their message and easy to
+/// miss, so the window is resent below it instead.
+///
+/// ```gleam
+/// |> dialog.with_show_mode(types.ResendOnUserMessage)
+/// ```
+pub fn with_show_mode(
+  builder builder: DialogBuilder(state, session, error, dependencies),
+  mode mode: types.ShowMode,
+) -> DialogBuilder(state, session, error, dependencies) {
+  DialogBuilder(..builder, show_mode: mode)
+}
+
 /// Set the window the dialog opens with.
 pub fn initial(
   builder builder: DialogBuilder(state, session, error, dependencies),
@@ -537,6 +556,7 @@ pub fn build(
       storage: builder.storage,
       ttl_ms: builder.ttl_ms,
       labels: builder.labels,
+      show_mode: builder.show_mode,
     ),
     encode_state: encode,
     decode_or_initial: decode,
