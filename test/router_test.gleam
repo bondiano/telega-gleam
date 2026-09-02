@@ -2217,3 +2217,64 @@ pub fn scoped_router_does_not_swallow_other_routers_updates_test() {
     router.handle(composed, make_ctx("initial"), command_update("ping"))
   ctx.session |> should.equal("open")
 }
+
+// M8 — command parsing and matching ------------------------------------------
+
+fn command_update_from_text(text: String) -> update.Update {
+  let entity =
+    types.MessageEntity(
+      type_: "bot_command",
+      offset: 0,
+      length: 6,
+      url: None,
+      user: None,
+      language: None,
+      custom_emoji_id: None,
+      unix_time: None,
+      date_time_format: None,
+    )
+  let message =
+    types.Message(
+      ..factory.message(text: "/start"),
+      text: Some(text),
+      entities: Some([entity]),
+    )
+  update.raw_to_update(factory.raw_update(message:))
+}
+
+pub fn command_ends_at_any_whitespace_test() {
+  // Telegram's `bot_command` entity ends at the first whitespace of any kind,
+  // so a newline after the command is a separator, not part of its name.
+  case command_update_from_text("/start\nfoo bar") {
+    update.CommandUpdate(command: cmd, ..) -> {
+      cmd.command |> should.equal("start")
+      cmd.payload |> should.equal(Some("foo bar"))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn bare_command_still_has_an_empty_payload_test() {
+  case command_update_from_text("/start") {
+    update.CommandUpdate(command: cmd, ..) -> {
+      cmd.command |> should.equal("start")
+      cmd.payload |> should.equal(Some(""))
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn command_matching_ignores_case_test() {
+  let handler = fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
+    Ok(Context(..ctx, session: "matched"))
+  }
+  let r =
+    router.new("test")
+    |> router.on_command("start", handler)
+
+  // A user typing `/Start` means the command BotFather registered lowercase.
+  router.handle(r, make_ctx("initial"), command_update_from_text("/Start"))
+  |> should.be_ok()
+  |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
+  |> should.equal("matched")
+}

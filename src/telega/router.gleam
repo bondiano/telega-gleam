@@ -623,11 +623,17 @@ pub fn on_command_with_description(
 }
 
 /// Strip a single leading slash so command keys are stored consistently.
+/// Key a command for the lookup table: no leading slash, lower case.
+///
+/// BotFather only accepts lowercase command names, but a user (or a phone
+/// keyboard's autocapitalise) can still send `/Start` — matching it
+/// case-sensitively would drop the command on the floor.
 fn normalize_command(command: String) -> String {
   case string.starts_with(command, "/") {
     True -> string.drop_start(command, 1)
     False -> command
   }
+  |> string.lowercase
 }
 
 /// Add a text handler with pattern
@@ -2011,12 +2017,20 @@ fn find_handler_in_router(
 /// `/help@yourbot` in a group addresses this bot, so the `@suffix` is dropped
 /// when it names us. Both the lookup and `can_handle_update` go through here —
 /// a second copy is how the two drifted apart.
+/// The key a received command is looked up by: `@botname` stripped when it
+/// addresses this bot, then normalized the same way registration normalizes.
+/// Telegram usernames are case-insensitive too, so the suffix is compared in
+/// lower case.
 fn command_lookup_key(bot_username: Option(String), command: String) -> String {
   case bot_username, string.split_once(command, "@") {
-    Some(username), Ok(#(command_text, suffix))
-      if username == suffix && username != ""
-    -> command_text
-    _, _ -> command
+    Some(username), Ok(#(command_text, suffix)) ->
+      case
+        username != "" && string.lowercase(username) == string.lowercase(suffix)
+      {
+        True -> normalize_command(command_text)
+        False -> normalize_command(command)
+      }
+    _, _ -> normalize_command(command)
   }
 }
 

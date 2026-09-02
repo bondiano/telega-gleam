@@ -53,7 +53,10 @@ router
 ```
 
 Command handlers receive a parsed `update.Command` with the command name and any
-arguments. The leading slash is optional — `"start"` and `"/start"` are equivalent.
+arguments. The leading slash is optional — `"start"` and `"/start"` are
+equivalent — and matching is case-insensitive, so `/Start` reaches
+`on_command("start", ...)`. The command name ends at the first whitespace of
+any kind: `/start\nref=42` is the command `start` with the payload `ref=42`.
 
 To make a command show up in the Telegram command menu, register it with a
 description (see [Command & update auto-sync](#command--update-auto-sync)):
@@ -172,7 +175,14 @@ Available predicates include message-type filters (`is_text`, `is_command`,
 `has_photo`, `has_video`, `has_media`, `is_media_group`, `is_callback_query`),
 text-content filters (`text_equals`, `text_starts_with`, `text_contains`,
 `command_equals`), and user/chat filters (`from_user`, `from_users`, `in_chat`,
-`from_chats`, `is_private_chat`, `is_group_chat`, `callback_data_starts_with`).
+`from_chats`, `is_private_chat`, `is_group_chat`, `chat_type`,
+`callback_data_starts_with`).
+
+`from_user` / `from_users` match on the update's sender whatever its kind.
+`is_private_chat` / `is_group_chat` / `chat_type` read the chat's own `type_`
+via `update.chat`, so an update that happens in no chat at all — an inline
+query, a poll answer — matches none of them, rather than being classified by
+the sign of its stand-in `chat_id`.
 Combine them with `and`/`and2`, `or`/`or2`, and `not`, or build your own with
 `filter`.
 

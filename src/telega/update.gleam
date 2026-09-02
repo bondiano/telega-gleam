@@ -917,17 +917,25 @@ fn is_command_update(text: String, raw_update: ModelUpdate) -> Bool {
 }
 
 fn extract_command(text: String) -> Command {
-  case string.split(text, " ") {
-    [command, ..payload] ->
-      Command(
-        text:,
-        command: string.drop_start(command, 1),
-        payload: payload
-          |> string.join(" ")
-          |> Some,
-      )
-    [] -> Command(text:, command: "", payload: None)
+  // Telegram's `bot_command` entity ends at the first whitespace of any kind.
+  // Splitting on " " alone made "/start\nfoo" the command "start\nfoo".
+  let #(command, payload) = split_at_whitespace(string.drop_start(text, 1), "")
+  Command(text:, command:, payload: Some(payload))
+}
+
+fn split_at_whitespace(rest: String, command: String) -> #(String, String) {
+  case string.pop_grapheme(rest) {
+    Error(Nil) -> #(command, "")
+    Ok(#(grapheme, tail)) ->
+      case is_whitespace(grapheme) {
+        True -> #(command, tail)
+        False -> split_at_whitespace(tail, command <> grapheme)
+      }
   }
+}
+
+fn is_whitespace(grapheme: String) -> Bool {
+  grapheme == " " || grapheme == "\n" || grapheme == "\t" || grapheme == "\r"
 }
 
 fn new_edited_business_message_update(
