@@ -13,7 +13,7 @@ __Statistics:__
 • Messages: `5678`
 
 ||Secret data||
-[Details & more](https://example\.com?a\=1&b\=2)
+[Details & more](https://example.com?a=1&b=2)
 ```gleam
 let x = 42
 ```

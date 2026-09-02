@@ -273,6 +273,29 @@ pub fn escape_markdown(text: String) -> String {
   |> string.replace("`", "\\`")
 }
 
+/// Escape the contents of a `code` or `pre` entity.
+///
+/// Telegram unescapes only `` ` `` and `\` inside those, so escaping the full
+/// set would leave literal backslashes in the code; escaping nothing (what
+/// this used to do) lets a backtick close the span and the rest of the
+/// message be read as the *user's* formatting.
+pub fn escape_markdown_code(text: String) -> String {
+  text
+  |> string.replace("\\", "\\\\")
+  |> string.replace("`", "\\`")
+}
+
+/// Escape a URL for the `(...)` part of a MarkdownV2 link or custom emoji.
+///
+/// Only `)` and `\` are special there. Running the full escape over a URL
+/// backslash-escaped `-`, `.`, `=` and friends, which Telegram then leaves in
+/// the link verbatim.
+pub fn escape_markdown_url(url: String) -> String {
+  url
+  |> string.replace("\\", "\\\\")
+  |> string.replace(")", "\\)")
+}
+
 /// Escape special characters for MarkdownV2
 pub fn escape_markdown_v2(text: String) -> String {
   text
@@ -336,9 +359,10 @@ fn segment_to_markdown(segment: Segment) -> String {
     Plain(text) -> escape_markdown(text)
     Bold(text) -> "*" <> escape_markdown(text) <> "*"
     Italic(text) -> "_" <> escape_markdown(text) <> "_"
-    Code(text) -> "`" <> text <> "`"
-    Pre(code, _) -> "```\n" <> code <> "\n```"
-    Link(text, url) -> "[" <> escape_markdown(text) <> "](" <> url <> ")"
+    Code(text) -> "`" <> escape_markdown_code(text) <> "`"
+    Pre(code, _) -> "```\n" <> escape_markdown_code(code) <> "\n```"
+    Link(text, url) ->
+      "[" <> escape_markdown(text) <> "](" <> escape_markdown_url(url) <> ")"
     // Markdown doesn't support all formats
     Underline(text) | Strikethrough(text) | Spoiler(text) ->
       escape_markdown(text)
@@ -359,13 +383,15 @@ fn segment_to_markdown_v2(segment: Segment) -> String {
     Underline(text) -> "__" <> escape_markdown_v2(text) <> "__"
     Strikethrough(text) -> "~" <> escape_markdown_v2(text) <> "~"
     Spoiler(text) -> "||" <> escape_markdown_v2(text) <> "||"
-    Code(text) -> "`" <> text <> "`"
-    Pre(code, None) -> "```\n" <> code <> "\n```"
-    Pre(code, Some(lang)) -> "```" <> lang <> "\n" <> code <> "\n```"
+    Code(text) -> "`" <> escape_markdown_code(text) <> "`"
+    Pre(code, None) -> "```\n" <> escape_markdown_code(code) <> "\n```"
+    Pre(code, Some(lang)) ->
+      "```" <> lang <> "\n" <> escape_markdown_code(code) <> "\n```"
     Link(text, url) ->
-      "[" <> escape_markdown_v2(text) <> "](" <> escape_markdown_v2(url) <> ")"
+      "[" <> escape_markdown_v2(text) <> "](" <> escape_markdown_url(url) <> ")"
     Mention(username) -> "@" <> escape_markdown_v2(username)
-    CustomEmoji(emoji, id) -> "![" <> emoji <> "](tg://emoji?id=" <> id <> ")"
+    CustomEmoji(emoji, id) ->
+      "![" <> escape_markdown_v2(emoji) <> "](tg://emoji?id=" <> id <> ")"
     Nested(segments) ->
       segments
       |> list.map(segment_to_markdown_v2)

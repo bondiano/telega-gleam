@@ -290,3 +290,42 @@ pub fn mixed_formats_html_test() {
   result
   |> should.equal("<b>Bold</b> <i>Italic</i> <code>Code</code>")
 }
+
+// M12 — MarkdownV2 escaping inside code spans and link URLs -----------------
+
+pub fn markdown_v2_escapes_code_spans_test() {
+  // A backtick in the code text closes the span; a backslash escapes the next
+  // character. Both must be escaped, or Telegram answers 400 — or worse,
+  // renders the rest of the message as the user's formatting.
+  format.build()
+  |> format.with_mode(format.MarkdownV2)
+  |> format.code_text("a ` b \\ c")
+  |> format.to_markdown_v2()
+  |> should.equal("`a \\` b \\\\ c`")
+}
+
+pub fn markdown_v2_escapes_pre_blocks_test() {
+  format.build()
+  |> format.with_mode(format.MarkdownV2)
+  |> format.pre_text("let s = \"``` \\\"", None)
+  |> format.to_markdown_v2()
+  |> should.equal("```\nlet s = \"\\`\\`\\` \\\\\"\n```")
+}
+
+pub fn markdown_v2_escapes_only_paren_and_backslash_in_urls_test() {
+  // Inside the `(...)` of a link Telegram unescapes only `)` and `\`. Escaping
+  // the full set left literal backslashes in the URL.
+  format.build()
+  |> format.with_mode(format.MarkdownV2)
+  |> format.link_text("docs", "https://example.com/a_b-c.d?x=1&y=(2)")
+  |> format.to_markdown_v2()
+  |> should.equal("[docs](https://example.com/a_b-c.d?x=1&y=(2\\))")
+}
+
+pub fn markdown_escapes_code_spans_test() {
+  format.build()
+  |> format.with_mode(format.Markdown)
+  |> format.code_text("a ` b \\ c")
+  |> format.to_markdown()
+  |> should.equal("`a \\` b \\\\ c`")
+}
