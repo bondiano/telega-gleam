@@ -1111,34 +1111,13 @@ pub fn command_equals(cmd: String) -> Filter {
 /// Filter by user ID
 pub fn from_user(user_id: Int) -> Filter {
   filter("from_user:" <> string.inspect(user_id), fn(update) {
-    case update {
-      update.TextUpdate(from_id:, ..) -> from_id == user_id
-      update.CommandUpdate(from_id:, ..) -> from_id == user_id
-      update.CallbackQueryUpdate(from_id:, ..) -> from_id == user_id
-      update.PhotoUpdate(from_id:, ..) -> from_id == user_id
-      update.VideoUpdate(from_id:, ..) -> from_id == user_id
-      update.VoiceUpdate(from_id:, ..) -> from_id == user_id
-      update.AudioUpdate(from_id:, ..) -> from_id == user_id
-      _ -> False
-    }
+    update.from_id == user_id
   })
 }
 
 /// Filter by multiple user IDs
 pub fn from_users(user_ids: List(Int)) -> Filter {
-  filter("from_users", fn(update) {
-    case update {
-      update.TextUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      update.CommandUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      update.CallbackQueryUpdate(from_id:, ..) ->
-        list.contains(user_ids, from_id)
-      update.PhotoUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      update.VideoUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      update.VoiceUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      update.AudioUpdate(from_id:, ..) -> list.contains(user_ids, from_id)
-      _ -> False
-    }
-  })
+  filter("from_users", fn(update) { list.contains(user_ids, update.from_id) })
 }
 
 /// Filter by chat ID
@@ -1162,16 +1141,40 @@ pub fn from_chats(chat_ids: List(Int)) -> Filter {
   filter("from_chats", fn(update) { list.contains(chat_ids, update.chat_id) })
 }
 
-/// Filter for private chats
-/// https://core.telegram.org/api/bots%2Fids#user-ids
+/// Filter for private chats.
+///
+/// Reads the chat's own `type_`, not the sign of `chat_id`: an update that
+/// happens in no chat at all (an inline query, a poll answer) is not a private
+/// chat, however its stand-in `chat_id` is keyed.
 pub fn is_private_chat() -> Filter {
-  filter("is_private_chat", fn(update) { update.chat_id > 0 })
+  filter("is_private_chat", fn(upd) {
+    case update.chat(upd) {
+      Some(chat) -> chat.type_ == "private"
+      None -> False
+    }
+  })
 }
 
-/// Filter for group chats
-/// https://core.telegram.org/api/bots%2Fids#supergroup-channel-ids
+/// Filter for group and supergroup chats. Channels are neither — use
+/// `chat_type` for those.
 pub fn is_group_chat() -> Filter {
-  filter("is_group_chat", fn(update) { update.chat_id < 0 })
+  filter("is_group_chat", fn(upd) {
+    case update.chat(upd) {
+      Some(chat) -> chat.type_ == "group" || chat.type_ == "supergroup"
+      None -> False
+    }
+  })
+}
+
+/// Filter on the chat's `type_` verbatim: "private", "group", "supergroup" or
+/// "channel". Updates that happen in no chat never match.
+pub fn chat_type(type_: String) -> Filter {
+  filter("chat_type:" <> type_, fn(upd) {
+    case update.chat(upd) {
+      Some(chat) -> chat.type_ == type_
+      None -> False
+    }
+  })
 }
 
 /// Filter for photo messages

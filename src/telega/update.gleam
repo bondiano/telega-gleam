@@ -12,14 +12,14 @@ import telega/internal/log
 import telega/model/decoder.{update_decoder}
 import telega/model/types.{
   type Audio, type BotSubscriptionUpdated, type BusinessConnection,
-  type BusinessMessagesDeleted, type CallbackQuery, type ChatBoostRemoved,
-  type ChatBoostUpdated, type ChatJoinRequest, type ChatMemberUpdated,
-  type ChosenInlineResult, type InlineQuery, type ManagedBotUpdated,
-  type Message, type MessageEntity, type MessageGenerationStopped,
-  type MessageReactionCountUpdated, type MessageReactionUpdated,
-  type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
-  type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
-  type Video, type Voice, type WebAppData,
+  type BusinessMessagesDeleted, type CallbackQuery, type Chat,
+  type ChatBoostRemoved, type ChatBoostUpdated, type ChatJoinRequest,
+  type ChatMemberUpdated, type ChosenInlineResult, type InlineQuery,
+  type ManagedBotUpdated, type Message, type MessageEntity,
+  type MessageGenerationStopped, type MessageReactionCountUpdated,
+  type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
+  type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
+  type Update as ModelUpdate, type Video, type Voice, type WebAppData,
   InaccessibleMessageMaybeInaccessibleMessage, MessageMaybeInaccessibleMessage,
 }
 
@@ -464,6 +464,75 @@ pub fn raw(update: Update) -> ModelUpdate {
     SubscriptionUpdate(raw:, ..) -> raw
     MessageGenerationStoppedUpdate(raw:, ..) -> raw
     UnknownUpdate(raw:, ..) -> raw
+  }
+}
+
+/// The chat an update happened in, when it happened in one.
+///
+/// `None` for updates that carry no chat at all — inline queries, chosen
+/// inline results, polls, poll answers, shipping and pre-checkout queries,
+/// business connections, and updates this version cannot interpret. Those
+/// still have a `chat_id` (it is what the session key is built from), but it
+/// is a stand-in, not a chat: filtering on its sign is how an inline query
+/// ends up looking like a private chat.
+pub fn chat(update: Update) -> Option(Chat) {
+  case update {
+    TextUpdate(message:, ..)
+    | CommandUpdate(message:, ..)
+    | MessageUpdate(message:, ..)
+    | PhotoUpdate(message:, ..)
+    | VideoUpdate(message:, ..)
+    | AudioUpdate(message:, ..)
+    | VoiceUpdate(message:, ..)
+    | WebAppUpdate(message:, ..)
+    | EditedMessageUpdate(message:, ..)
+    | BusinessMessageUpdate(message:, ..)
+    | EditedBusinessMessageUpdate(message:, ..)
+    | GuestMessageUpdate(message:, ..) -> Some(message.chat)
+
+    ChannelPostUpdate(post:, ..) | EditedChannelPostUpdate(post:, ..) ->
+      Some(post.chat)
+
+    MediaGroupUpdate(messages:, ..) ->
+      case messages {
+        [message, ..] -> Some(message.chat)
+        [] -> None
+      }
+
+    CallbackQueryUpdate(query:, ..) ->
+      case query.message {
+        Some(MessageMaybeInaccessibleMessage(message)) -> Some(message.chat)
+        Some(InaccessibleMessageMaybeInaccessibleMessage(message)) ->
+          Some(message.chat)
+        None -> None
+      }
+
+    DeletedBusinessMessageUpdate(business_messages_deleted:, ..) ->
+      Some(business_messages_deleted.chat)
+    MessageReactionUpdate(message_reaction_updated:, ..) ->
+      Some(message_reaction_updated.chat)
+    MessageReactionCountUpdate(message_reaction_count_updated:, ..) ->
+      Some(message_reaction_count_updated.chat)
+    MyChatMemberUpdate(chat_member_updated:, ..)
+    | ChatMemberUpdate(chat_member_updated:, ..) ->
+      Some(chat_member_updated.chat)
+    ChatJoinRequestUpdate(chat_join_request:, ..) ->
+      Some(chat_join_request.chat)
+    ChatBoostUpdate(chat_boost:, ..) -> Some(chat_boost.chat)
+    RemovedChatBoost(removed_chat_boost:, ..) -> Some(removed_chat_boost.chat)
+
+    BusinessConnectionUpdate(..)
+    | ChosenInlineResultUpdate(..)
+    | InlineQueryUpdate(..)
+    | PaidMediaPurchaseUpdate(..)
+    | PollAnswerUpdate(..)
+    | PollUpdate(..)
+    | PreCheckoutQueryUpdate(..)
+    | ShippingQueryUpdate(..)
+    | ManagedBotUpdate(..)
+    | SubscriptionUpdate(..)
+    | MessageGenerationStoppedUpdate(..)
+    | UnknownUpdate(..) -> None
   }
 }
 

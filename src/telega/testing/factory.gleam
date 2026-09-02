@@ -636,3 +636,33 @@ pub fn callback_query_update_with(
     )
   update.CallbackQueryUpdate(query:, from_id:, chat_id:, raw:)
 }
+
+/// Creates a typed `InlineQueryUpdate`. Inline queries happen in no chat, so
+/// `chat_id` mirrors the sender the way `update` keys them.
+pub fn inline_query_update(query query: String) -> update.Update {
+  inline_query_update_with(query:, from_id: default_user_id)
+}
+
+/// Creates a typed `InlineQueryUpdate` with a custom sender.
+pub fn inline_query_update_with(
+  query query: String,
+  from_id from_id: Int,
+) -> update.Update {
+  let from = user_with(id: from_id, first_name: "TestUser")
+  let inline_query =
+    types.InlineQuery(
+      id: "test_inline_query",
+      from:,
+      query:,
+      offset: "",
+      chat_type: None,
+      location: None,
+    )
+  let raw =
+    types.Update(
+      ..raw_update(message: message(text: "")),
+      message: None,
+      inline_query: Some(inline_query),
+    )
+  update.InlineQueryUpdate(inline_query:, from_id:, chat_id: from_id, raw:)
+}
