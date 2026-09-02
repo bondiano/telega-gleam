@@ -482,11 +482,12 @@ fn do_send_photo_bytes(
 pub fn send_audio(
   client client: client.TelegramClient,
   parameters parameters: SendAudioParameters,
-) -> Result(Response(String), error.TelegaError) {
+) -> Result(Message, error.TelegaError) {
   let body_json = encoder.encode_send_audio_parameters(parameters)
 
   new_post_request(client:, path: "sendAudio", body: json.to_string(body_json))
   |> fetch(client)
+  |> map_response(decoder.message_decoder())
 }
 
 /// Use this method to send general files. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned. Bots can currently send files of any type of up to 50 MB in size, this limit may be changed in the future.
@@ -965,7 +966,7 @@ pub fn gift_premium(
 
   new_post_request(
     client:,
-    path: "giftPremium",
+    path: "giftPremiumSubscription",
     body: json.to_string(body_json),
   )
   |> fetch(client)
@@ -1629,7 +1630,7 @@ pub fn revoke_chat_invite_link(
 pub fn approve_chat_join_request(
   client client: client.TelegramClient,
   parameters parameters: ApproveChatJoinRequestParameters,
-) -> Result(Response(String), error.TelegaError) {
+) -> Result(Bool, error.TelegaError) {
   let body_json =
     encoder.encode_approve_chat_join_request_parameters(parameters)
 
@@ -1639,6 +1640,7 @@ pub fn approve_chat_join_request(
     body: json.to_string(body_json),
   )
   |> fetch(client)
+  |> map_response(decode.bool)
 }
 
 /// Use this method to decline a chat join request. The bot must be an administrator in the chat for this to work and must have the `can_invite_users` administrator right. Returns `True` on success.
