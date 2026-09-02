@@ -247,3 +247,31 @@ pub fn h1_poller_waits_for_capacity_before_fetching_more_test() {
 
   fetches_while_busy |> should.equal(1)
 }
+
+// L1 — the poller must report the status it actually has ---------------------
+
+pub fn poller_status_reflects_the_worker_test() {
+  let bot_subject =
+    start_bot(name: "l1_status", router: fn(ctx, _update) { Ok(ctx) })
+  let #(client, _calls) = polling_client([])
+
+  let assert Ok(poller) =
+    polling.start_polling(
+      client:,
+      bot: bot_subject,
+      timeout: 0,
+      limit: 10,
+      allowed_updates: [],
+      poll_interval: 50,
+    )
+
+  process.sleep(200)
+  // `status` used to be a snapshot taken at construction, so `get_status`
+  // always answered `Starting` and `is_running` always `False`.
+  polling.get_status(poller) |> should.equal(polling.Running)
+  polling.is_running(poller) |> should.be_true
+
+  polling.stop(poller)
+  process.sleep(200)
+  polling.is_running(poller) |> should.be_false
+}

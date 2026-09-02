@@ -1,3 +1,4 @@
+import gleam/bit_array
 import gleam/int
 import gleam/json.{type Json}
 import gleam/list
@@ -62,4 +63,32 @@ pub fn json_object_filter_nulls(entries: List(#(String, Json))) -> Json {
     value != null
   })
   |> json.object
+}
+
+/// Compare two secrets without giving away where they first differ.
+///
+/// `==` on binaries stops at the first differing byte, so the response time
+/// reveals how long a shared prefix is and a token can be guessed one byte at
+/// a time. This walks both to the end whatever it finds. Lengths are compared
+/// up front — the length is not the secret.
+pub fn constant_time_compare(left: String, right: String) -> Bool {
+  let left = bit_array.from_string(left)
+  let right = bit_array.from_string(right)
+
+  case bit_array.byte_size(left) == bit_array.byte_size(right) {
+    False -> False
+    True -> accumulate_difference(left, right, 0) == 0
+  }
+}
+
+fn accumulate_difference(left: BitArray, right: BitArray, acc: Int) -> Int {
+  case left, right {
+    <<l:8, left_rest:bits>>, <<r:8, right_rest:bits>> ->
+      accumulate_difference(
+        left_rest,
+        right_rest,
+        int.bitwise_or(acc, int.bitwise_exclusive_or(l, r)),
+      )
+    _, _ -> acc
+  }
 }

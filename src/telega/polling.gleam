@@ -95,13 +95,13 @@ type PollingConfig {
   )
 }
 
-/// Opaque type representing a running poller instance
+/// Opaque type representing a running poller instance.
+///
+/// The status is not stored here — it lives in the worker, and asking the
+/// `Poller` record for it (as this used to) only ever returned the value
+/// captured at construction.
 pub opaque type Poller {
-  Poller(
-    worker: Subject(PollingMessage),
-    config: PollingConfig,
-    status: PollerStatus,
-  )
+  Poller(worker: Subject(PollingMessage), config: PollingConfig)
 }
 
 /// Status of the poller
@@ -133,14 +133,20 @@ fn create_config(
   )
 }
 
-/// Messages for the polling worker actor
-pub type PollingMessage {
+/// Messages for the polling worker actor.
+///
+/// Opaque: the constructors are the worker's own protocol (`SetSelf` and
+/// `InjectUpdates` in particular are internal plumbing). Drive a poller with
+/// `stop`, `stop_worker` and `get_status` instead.
+pub opaque type PollingMessage {
   StartPolling(offset: Option(Int))
   StopPolling
   PollNext(offset: Int)
   InjectUpdates(updates: List(Update), offset: Int)
   SetSelf(subject: Subject(PollingMessage))
   HandleError(error: TelegaError, offset: Int)
+  /// Ask the worker whether it is still fetching.
+  GetStatus(reply_with: Subject(PollerStatus))
   /// One dispatched update has settled (handled, failed, or its chat instance
   /// died), freeing an in-flight slot. Produced from the bot's answers.
   UpdateSettled
@@ -349,6 +355,16 @@ fn handle_polling_message(
 
     StopPolling -> {
       actor.continue(PollingState(..state, is_running: False))
+    }
+
+    GetStatus(reply_with) -> {
+      let status = case state.is_running, state.webhook_deleted {
+        True, True -> Running
+        True, False -> Starting
+        False, _ -> Stopped
+      }
+      process.send(reply_with, status)
+      actor.continue(state)
     }
 
     PollNext(offset) -> {
@@ -669,7 +685,7 @@ fn start_polling_internal(
 
   process.send(worker, StartPolling(offset))
 
-  Ok(Poller(worker: worker, config: config, status: Starting))
+  Ok(Poller(worker: worker, config: config))
 }
 
 /// Start polling with the given client and bot subject.
@@ -764,9 +780,29 @@ pub fn stop(poller: Poller) -> Nil {
   process.send(poller.worker, StopPolling)
 }
 
-/// Get the current status of the poller
+/// Get the current status of the poller, as the worker itself sees it.
+///
+/// A worker that is gone — stopped, or ended by a fatal error — reports
+/// `Stopped`; the error behind a fatal stop is delivered to the `on_stop`
+/// callback, not through the status.
 pub fn get_status(poller: Poller) -> PollerStatus {
-  poller.status
+  case process.subject_owner(poller.worker) {
+    Error(Nil) -> Stopped
+    Ok(pid) -> {
+      let monitor = process.monitor(pid)
+      let reply = process.new_subject()
+      process.send(poller.worker, GetStatus(reply))
+
+      let selector =
+        process.new_selector()
+        |> process.select(reply)
+        |> process.select_specific_monitor(monitor, fn(_down) { Stopped })
+
+      let status = process.selector_receive(from: selector, within: 1000)
+      process.demonitor_process(monitor)
+      result.unwrap(status, Stopped)
+    }
+  }
 }
 
 /// Get the polling configuration metadata
@@ -781,7 +817,7 @@ pub fn get_config_info(poller: Poller) -> #(Int, Int, List(String), Int) {
 
 /// Check if poller is running
 pub fn is_running(poller: Poller) -> Bool {
-  case poller.status {
+  case get_status(poller) {
     Running -> True
     _ -> False
   }

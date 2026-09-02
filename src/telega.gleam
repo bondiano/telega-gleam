@@ -136,7 +136,17 @@ pub fn is_secret_token_valid(
   telega: Telega(session, error, dependencies),
   token: String,
 ) {
-  telega.config.secret_token == token
+  constant_time_compare(telega.config.secret_token, token)
+}
+
+/// Compare two secrets without giving away where they first differ.
+///
+/// `==` on binaries stops at the first differing byte, so the response time
+/// reveals how long a shared prefix is and the secret can be guessed one byte
+/// at a time. Use this in your own webhook adapter for any value an attacker
+/// gets to retry.
+pub fn constant_time_compare(left: String, right: String) -> Bool {
+  utils.constant_time_compare(left, right)
 }
 
 /// Helper to get the config for API requests.
