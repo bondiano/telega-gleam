@@ -49,9 +49,18 @@
 ////
 //// ## Error handling
 ////
-//// The polling worker uses exponential backoff for transient errors (network issues,
-//// rate limits, server errors). Critical errors (invalid token, bot deleted, or
-//// 10+ consecutive failures) stop polling and invoke the optional `on_stop` callback.
+//// The worker retries forever with exponential backoff capped at one minute,
+//// so an outage of any length — a network partition, a Telegram incident, a
+//// webhook that is still registered (`409`) — is survived rather than turned
+//// into a stopped bot.
+////
+//// Only errors that cannot resolve themselves stop polling: `401` (invalid
+//// token) and `404` (bot deleted). Those invoke the optional `on_stop`
+//// callback.
+////
+//// `deleteWebhook` is called by the worker itself, lazily and with the same
+//// backoff, instead of in its `init` — a failing call there would have made
+//// the restart fail too, and taken the supervision tree down with it.
 
 import gleam/erlang/process.{type Subject}
 import gleam/int
@@ -156,6 +165,9 @@ type PollingState {
     paused: Option(Int),
     // Bumped on every pause so a stale `CapacityTimeout` is ignored.
     pause_epoch: Int,
+    // `False` until `deleteWebhook` has succeeded. Polling and webhooks are
+    // mutually exclusive, so the worker keeps trying before it fetches.
+    webhook_deleted: Bool,
   )
 }
 
@@ -182,6 +194,7 @@ fn init_state(
     in_flight: 0,
     paused: None,
     pause_epoch: 0,
+    webhook_deleted: False,
   )
 }
 
@@ -246,11 +259,6 @@ pub fn supervised(
         poll_interval,
         on_stop,
       )
-    use _ <- result.try(
-      api.delete_webhook(config.client)
-      |> result.map_error(fn(err) { actor.InitFailed(error.to_string(err)) }),
-    )
-
     use started <- result.try(
       actor.new_with_initialiser(worker_init_timeout, fn(self) {
         let ack = process.new_subject()
@@ -290,18 +298,53 @@ fn handle_polling_message(
     }
 
     StartPolling(offset) -> {
-      let new_state = PollingState(..state, offset:, is_running: True)
+      let state = PollingState(..state, offset:, is_running: True)
 
-      case state.self {
-        Some(self) -> {
-          process.send(self, PollNext(option.unwrap(offset, 0)))
+      case state.webhook_deleted {
+        True -> {
+          send_self(state, PollNext(option.unwrap(offset, 0)))
+          actor.continue(PollingState(..state, consecutive_errors: 0))
         }
-        None -> {
-          log.error("No self reference available for polling")
-        }
+        False ->
+          case api.delete_webhook(state.config.client) {
+            Ok(_) -> {
+              let state =
+                PollingState(
+                  ..state,
+                  webhook_deleted: True,
+                  consecutive_errors: 0,
+                )
+              send_self(state, PollNext(option.unwrap(offset, 0)))
+              actor.continue(state)
+            }
+            Error(err) -> {
+              // Retrying here, rather than failing `init`, is what keeps a
+              // restart from cascading into the supervisor.
+              let attempts = state.consecutive_errors + 1
+              log.warning(
+                "Failed to delete the webhook before polling (attempt "
+                <> int.to_string(attempts)
+                <> "): "
+                <> error.to_string(err)
+                <> " - retrying",
+              )
+              case state.self {
+                Some(self) -> {
+                  process.send_after(
+                    self,
+                    retry_delay(attempt: attempts),
+                    StartPolling(offset),
+                  )
+                  Nil
+                }
+                None -> Nil
+              }
+              actor.continue(
+                PollingState(..state, consecutive_errors: attempts),
+              )
+            }
+          }
       }
-
-      actor.continue(new_state)
     }
 
     StopPolling -> {
@@ -365,38 +408,7 @@ fn handle_polling_message(
     HandleError(error, offset) -> {
       let new_consecutive_errors = state.consecutive_errors + 1
 
-      // Error handling strategy:
-      // - Critical errors (auth, not found, etc.) stop polling immediately
-      // - Network/temporary errors retry with exponential backoff
-      // - After 10 consecutive errors of any type, stop polling
-      let should_stop = case error {
-        // API errors with specific codes that indicate critical issues
-        error.TelegramApiError(401, _) -> True
-        // Unauthorized - invalid token
-        error.TelegramApiError(404, _) -> True
-
-        // Not found - bot deleted
-        // Too many consecutive errors of any type
-        _ if new_consecutive_errors >= 10 -> True
-
-        // Network and temporary errors are recoverable
-        error.FetchError(_) -> False
-        error.TelegramApiError(429, _) -> False
-        // Rate limit
-        error.TelegramApiError(500, _) -> False
-        // Server error
-        error.TelegramApiError(502, _) -> False
-        // Bad gateway
-        error.TelegramApiError(503, _) -> False
-        // Service unavailable
-        error.JsonDecodeError(_) -> False
-
-        // Might be temporary API issue
-        // Other errors are considered critical
-        _ -> True
-      }
-
-      case should_stop {
+      case stops_polling(error) {
         True -> {
           log.error(
             "Critical polling error (consecutive: "
@@ -446,32 +458,69 @@ fn handle_polling_message(
             }
           }
 
-          // Exponential backoff for retries
-          let delay = case new_consecutive_errors {
-            n if n <= 3 -> 1000
-            // 1 second for first 3 errors
-            n if n <= 6 -> 5000
-            // 5 seconds for next 3 errors
-            _ -> 10_000
-            // 10 seconds for remaining errors
+          let delay = retry_delay(attempt: new_consecutive_errors)
+
+          // A 409 means someone else is holding the update stream — most often
+          // a webhook that is still registered. Go back through the lazy
+          // `deleteWebhook` step instead of hammering `getUpdates`.
+          let #(retry_message, webhook_deleted) = case error {
+            error.TelegramApiError(409, _) -> #(
+              StartPolling(Some(offset)),
+              False,
+            )
+            _ -> #(PollNext(offset), state.webhook_deleted)
           }
 
           case state.self {
             Some(self) -> {
-              process.send_after(self, delay, PollNext(offset))
+              process.send_after(self, delay, retry_message)
               Nil
             }
             None -> Nil
           }
 
           actor.continue(
-            PollingState(..state, consecutive_errors: new_consecutive_errors),
+            PollingState(
+              ..state,
+              consecutive_errors: new_consecutive_errors,
+              webhook_deleted:,
+            ),
           )
         }
       }
     }
   }
 }
+
+/// Whether an error ends polling instead of being retried.
+///
+/// Only errors that cannot resolve on their own qualify, because a stopped
+/// worker is a bot that never comes back: a minute without network used to be
+/// enough to end polling for good.
+@internal
+pub fn stops_polling(error: TelegaError) -> Bool {
+  case error {
+    // Unauthorized — the token will not become valid by itself
+    error.TelegramApiError(401, _) -> True
+    // Not found — the bot was deleted
+    error.TelegramApiError(404, _) -> True
+    // Everything else — network errors, 409 Conflict, rate limits, 5xx,
+    // undecodable payloads, unknown 4xx — is retried.
+    _ -> False
+  }
+}
+
+/// Exponential backoff for retries: 1s, 2s, 4s … capped at `max_backoff_ms`.
+///
+/// The sequence never ends — a transient failure that lasts an hour costs an
+/// hour of retries, not a dead poller.
+@internal
+pub fn retry_delay(attempt attempt: Int) -> Int {
+  let steps = int.clamp(attempt - 1, min: 0, max: 6)
+  int.min(max_backoff_ms, int.bitwise_shift_left(1000, steps))
+}
+
+const max_backoff_ms = 60_000
 
 /// Stop fetching until dispatched updates settle. Schedules a one-shot backstop
 /// so a handler that never answers cannot silence the poller for good.
@@ -609,8 +658,6 @@ fn start_polling_internal(
   config: PollingConfig,
   offset: Option(Int),
 ) -> Result(Poller, TelegaError) {
-  use _ <- result.try(api.delete_webhook(config.client))
-
   use worker <- result.try(
     start_polling_worker(config)
     |> result.map_error(fn(err) {
