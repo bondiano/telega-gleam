@@ -126,3 +126,30 @@ pub fn c1_failing_persist_answers_the_caller_test() {
   dispatch(started.data, factory.text_update(text: "hi"), 2000)
   |> should.equal(Ok(False))
 }
+
+// C2 — a stopped chat instance must not poison the registry -----------------
+
+pub fn c2_stopped_chat_instance_is_unregistered_test() {
+  let #(bot_subject, reg) =
+    start_bot(
+      name: "c2_registry",
+      router: fn(ctx, update) {
+        case update {
+          update_module.TextUpdate(text: "fail", ..) -> Error(Err("boom"))
+          _ -> Ok(ctx)
+        }
+      },
+      catch_handler: fn(_ctx, e) { Error(e) },
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "fail"), 2000)
+  |> should.equal(Ok(False))
+
+  process.sleep(100)
+  registry.get(reg, key: default_key)
+  |> should.equal(None)
+
+  // The user must still be served after their instance was torn down.
+  dispatch(bot_subject, factory.text_update(text: "ok"), 2000)
+  |> should.equal(Ok(True))
+}

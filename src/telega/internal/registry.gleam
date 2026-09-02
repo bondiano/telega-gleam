@@ -35,6 +35,26 @@ pub fn unregister(registry: Registry(message), key key: String) -> Bool {
   ets_delete(registry.table, key)
 }
 
+/// Remove `key`, but only while it still points at `pid`.
+///
+/// Used when a chat instance dies: by the time the owner notices, a supervisor
+/// restart may already have re-registered a *live* instance under the same key,
+/// and that fresh registration must survive the cleanup.
+pub fn unregister_owned_by(
+  registry: Registry(message),
+  key key: String,
+  pid pid: process.Pid,
+) -> Bool {
+  case get(registry, key:) {
+    option.Some(subject) ->
+      case process.subject_owner(subject) {
+        Ok(owner) if owner == pid -> ets_delete(registry.table, key)
+        _ -> False
+      }
+    option.None -> False
+  }
+}
+
 pub fn get(
   registry: Registry(message),
   key key: String,

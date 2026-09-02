@@ -443,7 +443,8 @@ fn settle_in_flight(
 /// A chat instance exited — through a crash, or through its own `actor.stop`.
 ///
 /// Whatever it was still handling will never be answered by anyone else, so the
-/// bot answers for it.
+/// bot answers for it, and drops the instance from the registry unless a
+/// restarted one has already claimed the key.
 fn handle_instance_down(
   bot: Bot(session, error, dependencies),
   down: process.Down,
@@ -454,6 +455,7 @@ fn handle_instance_down(
         Error(Nil) -> actor.continue(bot)
         Ok(watch) -> {
           list.each(watch.pending, process.send(_, False))
+          registry.unregister_owned_by(bot.registry, key: watch.key, pid:)
           telemetry.execute(
             ["telega", "chat_instance", "down"],
             [#("unanswered", list.length(watch.pending))],
@@ -574,6 +576,9 @@ type ChatInstance(session, error, dependencies) {
     bot_info: User,
     // Subject of the owning `Bot` actor, notified when an update completes.
     bot_subject: BotSubject,
+    // The registry this instance registered itself in, so it can deregister
+    // when it stops for good.
+    registry: Registry(ChatInstanceMessage(session, error, dependencies)),
   )
 }
 
@@ -612,6 +617,7 @@ pub fn start_chat_instance(
         router_handler: args.router_handler,
         bot_info: args.bot_info,
         bot_subject: args.bot_subject,
+        registry: args.registry,
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
@@ -743,13 +749,17 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
 /// Give up on this chat instance.
 ///
 /// The update in flight is answered (`False`) before stopping: the caller is
-/// blocked on that reply and nothing else would ever send it.
+/// blocked on that reply and nothing else would ever send it. The registry
+/// entry goes too — the instance stops *normally*, so its `Transient`
+/// supervisor will not restart it, and a stale entry would silently swallow
+/// every later update for this chat.
 fn stop_chat_instance(
   chat: ChatInstance(session, error, dependencies),
   reply_with: Subject(Bool),
   reason: String,
 ) {
   ack(chat, reply_with, False)
+  registry.unregister(chat.registry, key: chat.key)
   telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
     #("reason", telemetry.StringValue(reason)),
