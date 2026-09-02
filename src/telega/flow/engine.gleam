@@ -727,8 +727,13 @@ fn process_action(
     }
 
     EnterSubflow(subflow_name, data) -> {
+      // An inline subflow is registered as "<parent>::<name>", so accept the
+      // short name the docs (and every caller) naturally reach for.
+      let qualified = flow.name <> "::" <> subflow_name
       case
-        list.find(flow.subflows, fn(config) { config.flow.name == subflow_name })
+        list.find(flow.subflows, fn(config) {
+          config.flow.name == subflow_name || config.flow.name == qualified
+        })
       {
         Ok(subflow_config) -> {
           let return_step = flow.step_to_string(subflow_config.return_step)

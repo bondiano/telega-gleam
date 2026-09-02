@@ -696,6 +696,10 @@ fn some_handler(ctx, inst) {
 }
 ```
 
+The name is the one you registered: a flow added with `add_subflow` goes by its
+own `builder.new` name, and an inline subflow by the `name:` you gave
+`with_inline_subflow` (internally `"<parent>::<name>"` — both spellings work).
+
 ## Flow Composition
 
 The `telega/flow/compose` module lets you combine multiple flows into larger workflows.

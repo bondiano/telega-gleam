@@ -24,7 +24,34 @@ pub type SessionSettings(session, error) {
 }
 ```
 
-If `get_session` returns an `Error`, Telega logs a warning and falls back to `default_session()` instead of crashing. This keeps the bot running during transient storage failures.
+If `get_session` returns an `Error`, the chat instance **refuses to start**: the
+update is answered as unhandled and the next one gets a fresh attempt. Falling
+back to `default_session()` would let the first handler persist that default
+over the user's real, still-stored data. `default_session()` is used only for
+`Ok(None)` — a user who genuinely has no session yet.
+
+A stored value that will not *decode* is a different case: the bridge in
+`telega/storage` treats it as absent so the bot keeps working, but reports it
+first with an error log and a `telega.storage.decode_error` telemetry event.
+The next persist overwrites it, which is usually what a schema change wants.
+
+## What the key identifies
+
+The key is `"{chat_id}:{from_id}"`, and a few update kinds map onto it in ways
+worth knowing before you store anything sensitive per key:
+
+- **Anonymous group admins** post as the chat itself, so `from_id` is the
+  group's id and every anonymous admin of that group shares one session.
+- **Callback queries on inline-mode messages** have no chat, so they are keyed
+  `"{from_id}:{from_id}"` — a *different* session from the same user's private
+  chat with the bot.
+- **Chat-wide updates with no user** (`message_reaction_count`, a deleted
+  business message, a removed chat boost) are keyed `"{chat_id}:{chat_id}"`.
+- **Updates with no user or chat at all** (`poll`, a stopped message-draft
+  generation) use `-1` for both, so they all share one session.
+
+If per-user isolation matters for one of these, key your own storage on
+something you derive from the update rather than on `ctx.key`.
 
 ## Unified Storage Interface
 

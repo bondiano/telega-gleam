@@ -3330,3 +3330,40 @@ pub fn text_handler_only_resumes_its_own_flow_test() {
 
   process.receive(events, 100) |> should.equal(Ok("l1_mine:hi"))
 }
+
+pub fn enter_subflow_accepts_an_inline_subflow_short_name_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("l1_inline", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      // The docs say `enter_subflow(ctx, inst, "address", ...)`, but the
+      // inline subflow is registered as "l1_inline::address" — the bare name
+      // used to find nothing and the step silently did nothing.
+      action.enter_subflow(ctx, inst, "address", dict.new())
+    })
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(events, "returned")
+      action.complete(ctx, inst)
+    })
+    |> builder.with_inline_subflow(
+      name: "address",
+      trigger: Middle,
+      return_to: End,
+      initial: "street",
+      steps: [
+        #("street", fn(ctx, inst) {
+          process.send(events, "street")
+          action.complete(ctx, inst)
+        }),
+      ],
+    )
+    |> builder.build(initial: Start)
+
+  let ctx =
+    flow_ctx(740, 840, factory.text_update_with(text: "", from_id: 740, chat_id: 840))
+  let assert Ok(_) = engine.start_or_resume(flow, ctx, 740, 840, dict.new())
+
+  process.receive(events, 200) |> should.equal(Ok("street"))
+}
