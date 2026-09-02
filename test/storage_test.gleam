@@ -1,6 +1,6 @@
 import gleam/dict
-import gleam/erlang/process
 import gleam/dynamic/decode
+import gleam/erlang/process
 import gleam/json
 import gleam/list
 import gleam/option.{None, Some}

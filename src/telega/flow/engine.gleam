@@ -682,6 +682,10 @@ fn process_action(
       let updated_instance =
         FlowInstance(
           ..instance,
+          // The step has already seen (and decided about) whatever resumed it.
+          // Leaving the result behind would replay it the next time this step
+          // runs directly — a repeated start command re-showing "invalid".
+          step_data: dict.delete(instance.step_data, wait_result_key),
           wait_token: Some(token),
           wait_timeout_at: None,
           updated_at: utils.current_time_ms(),
@@ -702,6 +706,7 @@ fn process_action(
       let updated_instance =
         FlowInstance(
           ..instance,
+          step_data: dict.delete(instance.step_data, wait_result_key),
           wait_token: Some(token),
           wait_timeout_at: Some(wait_timeout_at),
           updated_at: utils.current_time_ms(),
@@ -1216,6 +1221,10 @@ fn process_subflow_action(
       let updated_instance =
         FlowInstance(
           ..instance,
+          // The step has already seen (and decided about) whatever resumed it.
+          // Leaving the result behind would replay it the next time this step
+          // runs directly — a repeated start command re-showing "invalid".
+          step_data: dict.delete(instance.step_data, wait_result_key),
           wait_token: Some(token),
           wait_timeout_at: None,
           updated_at: utils.current_time_ms(),
@@ -1236,6 +1245,7 @@ fn process_subflow_action(
       let updated_instance =
         FlowInstance(
           ..instance,
+          step_data: dict.delete(instance.step_data, wait_result_key),
           wait_token: Some(token),
           wait_timeout_at: Some(wait_timeout_at),
           updated_at: utils.current_time_ms(),

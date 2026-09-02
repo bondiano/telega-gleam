@@ -3186,3 +3186,56 @@ pub fn cancel_command_runs_the_exit_hook_test() {
   process.receive(events, 100) |> should.equal(Ok("exit:m5_cmd"))
   let assert Ok(None) = ets.load(storage.generate_id(712, 812, "m5_cmd"))
 }
+
+// ============================================================================
+// M7 — a consumed wait result must not be replayed
+// ============================================================================
+
+pub fn stale_wait_result_is_not_replayed_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  // The classic validation loop: reject bad input, ask again.
+  let flow =
+    builder.new("m7_validate", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.TextInput(text) ->
+          case text == "ok" {
+            True -> action.complete(ctx, inst)
+            False -> {
+              process.send(events, "invalid:" <> text)
+              action.wait(ctx, inst)
+            }
+          }
+        _ -> {
+          process.send(events, "prompt")
+          action.wait(ctx, inst)
+        }
+      }
+    })
+    |> builder.build(initial: Start)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("go"), flow)
+  let r = registry.apply_to_router(router.new("m7"), reg)
+
+  let ctx =
+    flow_ctx(
+      720,
+      820,
+      factory.text_update_with(text: "", from_id: 720, chat_id: 820),
+    )
+  let assert Ok(_) = engine.start_or_resume(flow, ctx, 720, 820, dict.new())
+  process.receive(events, 100) |> should.equal(Ok("prompt"))
+
+  let bad = factory.text_update_with(text: "nope", from_id: 720, chat_id: 820)
+  let assert Ok(_) = router.handle(r, flow_ctx(720, 820, bad), bad)
+  process.receive(events, 100) |> should.equal(Ok("invalid:nope"))
+
+  // Running the step again (a repeated start command) must re-prompt, not
+  // re-process the input it already rejected.
+  let assert Ok(_) = engine.start_or_resume(flow, ctx, 720, 820, dict.new())
+  process.receive(events, 100) |> should.equal(Ok("prompt"))
+}

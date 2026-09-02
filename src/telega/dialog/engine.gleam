@@ -938,14 +938,14 @@ fn remove_data(
   set_data(inst, dict.delete(inst.state.data, key))
 }
 
-/// Park the step waiting for the next event, clearing the consumed wait
-/// result so a later direct `execute_step` (e.g. a repeated start command)
-/// sees `Pending` and re-renders instead of re-processing a stale event.
+/// Park the step waiting for the next event. The flow engine drops the
+/// consumed wait result when it persists the wait, so a later direct
+/// `execute_step` (a repeated start command) re-renders rather than
+/// re-processing the event this window already handled.
 fn wait(
   ctx: Context(session, error, dependencies),
   inst: flow_types.FlowInstance,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
-  let inst = instance.clear_wait_result(inst)
   Ok(#(ctx, flow_types.Wait, inst))
 }
 
