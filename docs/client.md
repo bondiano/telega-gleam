@@ -103,8 +103,8 @@ helpers, not by rewriting request bodies.
 
 ## Retries and rate limits
 
-Without a request queue, the client retries failed calls up to
-`set_max_retry_attempts` times (default 3):
+The client retries failed calls up to `set_max_retry_attempts` times
+(default 3), whether or not a request queue is configured:
 
 - **429 Too Many Requests** — the client reads `parameters.retry_after`
   (seconds) from the response body and sleeps exactly that long before
@@ -116,7 +116,12 @@ actual delay in `retry_after` (milliseconds).
 
 For proactive rate limiting (staying under the limits instead of reacting to
 429s), enable the request queue with `client.set_request_queue` — see the
-docs in `telega/client`.
+docs in `telega/client`. The queue decides *when* a call may run; the call
+itself runs in its own process, so queued calls are concurrent up to
+`overall_limit` and a slow call never stalls the others. A call that still
+fails after the client's own retries is re-queued up to `max_retries` times
+with an exponential backoff (`retry_delay`, doubling each attempt, capped at
+30 seconds).
 
 ## Keeping a chat action alive (`telega/chat_action`)
 

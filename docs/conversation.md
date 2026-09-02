@@ -147,9 +147,17 @@ use ctx, photo_update <- wait_for(
 Each wait function accepts these common parameters:
 
 - **`ctx`**: The current context
-- **`or`**: Optional handler for other types of updates (use `Some(handler)` to specify one)
+- **`or`**: Optional handler for updates the wait did not ask for (use `Some(handler)` to specify one)
 - **`timeout`**: Optional timeout in milliseconds (use `Some(ms)` to set a timeout)
 - **`continue`**: A function to handle the expected update
+
+The `or` handler covers both kinds of mismatch: an update of the wrong type
+(a photo while waiting for text), and an update of the right type that fails
+the wait's own filter — a different command than `wait_command` asked for, text
+that no `wait_hears` pattern matches, callback data the `wait_callback_query`
+regexp rejects, an update rejected by `wait_for`/`wait_filtered`. After `or`
+runs the conversation keeps waiting, so the user can try again; without an `or`
+handler the update is simply ignored and reported as unhandled.
 
 ## Examples
 
