@@ -52,6 +52,7 @@ pub fn bot_start_test() {
       chat_factory:,
       chat_idle_timeout: None,
       chat_init_timeout: 5000,
+      media_group_timeout: option.None,
       name: None,
     )
 
@@ -85,6 +86,7 @@ pub fn bot_handle_update_test() {
       chat_factory:,
       chat_idle_timeout: None,
       chat_init_timeout: 5000,
+      media_group_timeout: option.None,
       name: None,
     )
 
@@ -193,6 +195,7 @@ pub fn get_session_error_fallback_test() {
       chat_factory:,
       chat_idle_timeout: None,
       chat_init_timeout: 5000,
+      media_group_timeout: option.None,
       name: None,
     )
 

@@ -77,6 +77,7 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     /// How long (ms) a chat instance may sit idle before it is stopped.
     /// `None` (the default) keeps every instance alive for the bot's lifetime.
     chat_idle_timeout: Option(Int),
+    media_group_timeout: Option(Int),
     // --- Lifecycle parameters ---
     on_start: Option(
       fn(Telega(session, error, dependencies)) -> Result(Nil, error.TelegaError),
@@ -169,6 +170,7 @@ fn default_builder(
     chat_restart_tolerance_period: None,
     chat_init_timeout: None,
     chat_idle_timeout: None,
+    media_group_timeout: None,
     on_start: None,
     on_shutdown: None,
     drain_timeout: None,
@@ -351,6 +353,7 @@ pub fn with_dependencies(
     chat_restart_tolerance_period: builder.chat_restart_tolerance_period,
     chat_init_timeout: builder.chat_init_timeout,
     chat_idle_timeout: builder.chat_idle_timeout,
+    media_group_timeout: builder.media_group_timeout,
     on_shutdown: builder.on_shutdown,
     drain_timeout: builder.drain_timeout,
     handle_signals: builder.handle_signals,
@@ -525,6 +528,33 @@ pub fn with_chat_idle_timeout(
   timeout timeout: Int,
 ) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, chat_idle_timeout: Some(timeout))
+}
+
+/// Gather the messages of an album into a single `MediaGroupUpdate`.
+///
+/// Telegram delivers an album as separate messages that share a
+/// `media_group_id`, so without this setting they arrive one by one on
+/// `on_photo` / `on_video` / `on_audio` and `router.on_media_group` never
+/// fires. With it, a chat instance holds them back until `timeout`
+/// milliseconds pass without another message of the same album (1000 is a
+/// good starting point) and then routes them together.
+///
+/// The individual messages are *not* delivered as well — a bot that turns this
+/// on handles albums in `on_media_group` and single media in `on_photo` and
+/// friends. Messages that arrive while a `wait_*` conversation is pending are
+/// left alone, since the waiting handler expects them one at a time.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// |> telega.with_media_group_timeout(1000)
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_media_group_timeout(
+  builder: TelegaBuilder(session, error, dependencies),
+  timeout timeout: Int,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, media_group_timeout: Some(timeout))
 }
 
 /// Set a hook to run once the bot has fully started.
@@ -748,6 +778,7 @@ pub fn init(
         chat_factory: chat_factory_ref,
         chat_idle_timeout: builder.chat_idle_timeout,
         chat_init_timeout: chat_init_timeout(builder),
+        media_group_timeout: builder.media_group_timeout,
         name: Some(bot_name),
       )
     })
@@ -839,6 +870,7 @@ pub fn init_for_polling(
         chat_factory: chat_factory_ref,
         chat_idle_timeout: builder.chat_idle_timeout,
         chat_init_timeout: chat_init_timeout(builder),
+        media_group_timeout: builder.media_group_timeout,
         name: Some(bot_name),
       )
     })

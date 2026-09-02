@@ -75,14 +75,14 @@ import telega/internal/registry.{type Registry}
 import telega/client
 import telega/error
 import telega/model/types.{
-  type Audio, type ChatMemberUpdated, type Message, type PhotoSize, type User,
-  type Video, type Voice, type WebAppData,
+  type Audio, type ChatMemberUpdated, type Message, type PhotoSize,
+  type Update as RawUpdate, type User, type Video, type Voice, type WebAppData,
 }
 import telega/telemetry
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
-  CommandUpdate, MessageUpdate, TextUpdate, VideoUpdate, VoiceUpdate,
-  WebAppUpdate,
+  CommandUpdate, MediaGroupUpdate, MessageUpdate, PhotoUpdate, TextUpdate,
+  VideoUpdate, VoiceUpdate, WebAppUpdate,
 }
 import telega/webhook_reply.{type Envelope}
 
@@ -129,6 +129,8 @@ pub opaque type Bot(session, error, dependencies) {
     chat_idle_timeout: Option(Int),
     // Init timeout (ms) handed to every chat instance.
     chat_init_timeout: Int,
+    // Album debounce (ms) handed to every chat instance.
+    media_group_timeout: Option(Int),
   )
 }
 
@@ -162,6 +164,9 @@ pub type ChatInstanceArgs(session, error, dependencies) {
     // How long (ms) the instance's initialiser — which loads the session from
     // storage — may take before the start is considered failed.
     init_timeout: Int,
+    // Debounce (ms) for gathering the separate messages of an album into one
+    // `MediaGroupUpdate`. `None` delivers them one by one.
+    media_group_timeout: Option(Int),
   )
 }
 
@@ -258,6 +263,7 @@ pub fn start(
   ),
   chat_idle_timeout chat_idle_timeout: Option(Int),
   chat_init_timeout chat_init_timeout: Int,
+  media_group_timeout media_group_timeout: Option(Int),
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
   let builder =
@@ -288,6 +294,7 @@ pub fn start(
         instances: dict.new(),
         chat_idle_timeout:,
         chat_init_timeout:,
+        media_group_timeout:,
       )
       |> actor.initialised
       |> actor.selecting(selector)
@@ -612,6 +619,7 @@ fn handle_update_bot_message(
           bot_subject: bot.self,
           idle_timeout: bot.chat_idle_timeout,
           init_timeout: bot.chat_init_timeout,
+          media_group_timeout: bot.media_group_timeout,
         )
       // No need to register here — start_chat_instance self-registers
       fsup.start_child(bot.chat_factory, args)
@@ -647,6 +655,8 @@ pub opaque type ChatInstanceMessage(session, error, dependencies) {
   CancelContinuationChatInstanceMessage
   /// Self-sent tick that checks how long this instance has been idle.
   IdleCheckChatInstanceMessage
+  /// Self-sent once an album has stopped growing: route what was gathered.
+  FlushMediaGroupChatInstanceMessage(media_group_id: String, epoch: Int)
   /// Sent by the bot once it has deregistered this instance: stop for good.
   ShutdownChatInstanceMessage
 }
@@ -680,6 +690,22 @@ type ChatInstance(session, error, dependencies) {
     idle_timeout: Option(Int),
     // When this instance last received a message of its own.
     last_activity: Timestamp,
+    // Album debounce (ms). `None` — no aggregation.
+    media_group_timeout: Option(Int),
+    // Albums still being gathered, keyed by `media_group_id`.
+    media_groups: Dict(String, MediaGroupBuffer),
+  )
+}
+
+/// The messages of one album gathered so far, newest first.
+type MediaGroupBuffer {
+  MediaGroupBuffer(
+    from_id: Int,
+    chat_id: Int,
+    messages: List(Message),
+    raw: RawUpdate,
+    // Bumped by every added message so an earlier flush timer is ignored.
+    epoch: Int,
   )
 }
 
@@ -724,6 +750,8 @@ pub fn start_chat_instance(
         registry: args.registry,
         idle_timeout: args.idle_timeout,
         last_activity: timestamp.system_time(),
+        media_group_timeout: args.media_group_timeout,
+        media_groups: dict.new(),
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
@@ -743,13 +771,20 @@ fn loop_chat_instance(
   case message {
     HandleNewChatInstanceMessage(update:, reply_with:, envelope:) -> {
       let chat = touch(chat)
-      do_handle_new_chat_instance_message(
-        context: new_context_with_envelope(chat:, update:, envelope:),
-        chat:,
-        update:,
-        reply_with:,
-      )
+      case media_group_part(chat, update) {
+        Some(#(media_group_id, message)) ->
+          buffer_media_group(chat, media_group_id, message, update, reply_with)
+        None ->
+          do_handle_new_chat_instance_message(
+            context: new_context_with_envelope(chat:, update:, envelope:),
+            chat:,
+            update:,
+            reply_with:,
+          )
+      }
     }
+    FlushMediaGroupChatInstanceMessage(media_group_id:, epoch:) ->
+      flush_media_group(chat, media_group_id, epoch)
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
       ChatInstance(
         ..touch(chat),
@@ -822,6 +857,10 @@ fn idle_for(chat: ChatInstance(session, error, dependencies)) -> Int {
 /// to it. It asks the bot, which owns both the registry and the dispatch, and
 /// stops only when the bot answers with `ShutdownChatInstanceMessage`.
 fn handle_idle_check(chat: ChatInstance(session, error, dependencies)) {
+  use <- bool.guard(when: !dict.is_empty(chat.media_groups), return: {
+    schedule_idle_check(chat.self, chat.idle_timeout)
+    actor.continue(chat)
+  })
   case chat.idle_timeout {
     None -> actor.continue(chat)
     Some(timeout) -> {
@@ -845,11 +884,151 @@ fn handle_idle_check(chat: ChatInstance(session, error, dependencies)) {
   }
 }
 
+/// The album this update belongs to, when albums are being gathered at all.
+///
+/// Telegram sends an album as separate messages sharing one `media_group_id`;
+/// aggregation is opt-in (`telega.with_media_group_timeout`) because without it
+/// each message keeps arriving on its own `on_photo`/`on_video` route.
+fn media_group_part(
+  chat: ChatInstance(session, error, dependencies),
+  update: Update,
+) -> Option(#(String, Message)) {
+  use <- bool.guard(when: chat.media_group_timeout == None, return: None)
+  // An album that arrives mid-conversation is left alone: the waiting handler
+  // is expecting the individual messages.
+  use <- bool.guard(when: chat.continuation != None, return: None)
+
+  let message = case update {
+    PhotoUpdate(message:, ..)
+    | VideoUpdate(message:, ..)
+    | AudioUpdate(message:, ..)
+    | VoiceUpdate(message:, ..)
+    | MessageUpdate(message:, ..) -> Some(message)
+    _ -> None
+  }
+
+  case message {
+    Some(message) ->
+      case message.media_group_id {
+        Some(id) -> Some(#(id, message))
+        None -> None
+      }
+    None -> None
+  }
+}
+
+/// Hold on to one message of an album and (re)arm its flush timer.
+///
+/// The caller is answered right away: the update has been taken care of, and
+/// making a webhook request wait out the debounce would be worse than useless.
+fn buffer_media_group(
+  chat: ChatInstance(session, error, dependencies),
+  media_group_id: String,
+  message: Message,
+  source: Update,
+  reply_with: Subject(Bool),
+) -> actor.Next(
+  ChatInstance(session, error, dependencies),
+  ChatInstanceMessage(session, error, dependencies),
+) {
+  ack(chat, reply_with, True)
+
+  let buffer = case dict.get(chat.media_groups, media_group_id) {
+    Ok(existing) ->
+      MediaGroupBuffer(
+        ..existing,
+        messages: [message, ..existing.messages],
+        epoch: existing.epoch + 1,
+      )
+    Error(Nil) ->
+      MediaGroupBuffer(
+        from_id: source.from_id,
+        chat_id: source.chat_id,
+        messages: [message],
+        raw: update.raw(source),
+        epoch: 0,
+      )
+  }
+
+  case chat.media_group_timeout {
+    Some(timeout) -> {
+      process.send_after(
+        chat.self,
+        timeout,
+        FlushMediaGroupChatInstanceMessage(media_group_id:, epoch: buffer.epoch),
+      )
+      Nil
+    }
+    None -> Nil
+  }
+
+  ChatInstance(
+    ..chat,
+    media_groups: dict.insert(chat.media_groups, media_group_id, buffer),
+  )
+  |> actor.continue
+}
+
+/// Route what was gathered as a single `MediaGroupUpdate`.
+///
+/// Each buffered message was already answered when it arrived, so this path
+/// does not answer again — it only routes.
+fn flush_media_group(
+  chat: ChatInstance(session, error, dependencies),
+  media_group_id: String,
+  epoch: Int,
+) -> actor.Next(
+  ChatInstance(session, error, dependencies),
+  ChatInstanceMessage(session, error, dependencies),
+) {
+  case dict.get(chat.media_groups, media_group_id) {
+    // A later message reset the timer, or the album was already flushed.
+    Error(Nil) -> actor.continue(chat)
+    Ok(buffer) ->
+      case buffer.epoch == epoch {
+        False -> actor.continue(chat)
+        True -> {
+          let chat =
+            ChatInstance(
+              ..chat,
+              media_groups: dict.delete(chat.media_groups, media_group_id),
+            )
+          let update =
+            MediaGroupUpdate(
+              from_id: buffer.from_id,
+              chat_id: buffer.chat_id,
+              media_group_id:,
+              messages: list.reverse(buffer.messages),
+              raw: buffer.raw,
+            )
+          do_handle_update(
+            context: new_context(chat:, update:),
+            chat:,
+            update:,
+            ack_with: fn(_settled) { Nil },
+          )
+        }
+      }
+  }
+}
+
 fn do_handle_new_chat_instance_message(
   context context: Context(session, error, dependencies),
   chat chat: ChatInstance(session, error, dependencies),
   update update,
   reply_with reply_with,
+) {
+  do_handle_update(context:, chat:, update:, ack_with: ack(chat, reply_with, _))
+}
+
+/// The routing path, with the way this update is answered left to the caller:
+/// an album's messages are answered as they are buffered, so the aggregated
+/// update they turn into must not answer for them a second time.
+fn do_handle_update(
+  context context: Context(session, error, dependencies),
+  chat chat: ChatInstance(session, error, dependencies),
+  update update,
+  ack_with ack_with: fn(Bool) -> Nil,
 ) {
   case chat.continuation {
     // There is a continuation, handle the update with it
@@ -859,18 +1038,18 @@ fn do_handle_new_chat_instance_message(
           case timestamp.compare(ttl, timestamp.system_time()) {
             // When ttl is expired, handle update without continuation
             order.Lt ->
-              do_handle_new_chat_instance_message(
+              do_handle_update(
                 context:,
                 chat: ChatInstance(..chat, continuation: None),
                 update:,
-                reply_with:,
+                ack_with:,
               )
             _ ->
               do_handle_continuation(
                 context:,
                 continuation:,
                 update:,
-                reply_with:,
+                ack_with:,
                 chat:,
               )
           }
@@ -880,7 +1059,7 @@ fn do_handle_new_chat_instance_message(
             context:,
             continuation:,
             update:,
-            reply_with:,
+            ack_with:,
             chat:,
           )
       }
@@ -895,18 +1074,18 @@ fn do_handle_new_chat_instance_message(
         Ok(Context(session: new_session, ..)) -> {
           case chat.session_settings.persist_session(chat.key, new_session) {
             Ok(persisted_session) -> {
-              ack(chat, reply_with, True)
+              ack_with(True)
               actor.continue(ChatInstance(..chat, session: persisted_session))
             }
             Error(e) -> {
               case chat.catch_handler(context, e) {
                 Ok(_) -> {
-                  ack(chat, reply_with, False)
+                  ack_with(False)
                   actor.continue(chat)
                 }
                 Error(e) -> {
                   log.error_d("Error in session persistence: ", e)
-                  stop_chat_instance(chat, reply_with, "session_persist_failed")
+                  stop_chat_instance(chat, ack_with, "session_persist_failed")
                 }
               }
             }
@@ -915,12 +1094,12 @@ fn do_handle_new_chat_instance_message(
         Error(e) -> {
           case chat.catch_handler(context, e) {
             Ok(_) -> {
-              ack(chat, reply_with, False)
+              ack_with(False)
               actor.continue(chat)
             }
             Error(e) -> {
               log.error_d("Error in catch handler: ", e)
-              stop_chat_instance(chat, reply_with, "catch_handler_failed")
+              stop_chat_instance(chat, ack_with, "catch_handler_failed")
             }
           }
         }
@@ -945,10 +1124,10 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
 /// every later update for this chat.
 fn stop_chat_instance(
   chat: ChatInstance(session, error, dependencies),
-  reply_with: Subject(Bool),
+  ack_with: fn(Bool) -> Nil,
   reason: String,
 ) {
-  ack(chat, reply_with, False)
+  ack_with(False)
   registry.unregister(chat.registry, key: chat.key)
   telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
@@ -972,7 +1151,7 @@ fn do_handle_continuation(
   context context: Context(session, error, dependencies),
   continuation continuation: Continuation(session, error, dependencies),
   update update: Update,
-  reply_with reply_with: Subject(Bool),
+  ack_with ack_with: fn(Bool) -> Nil,
   chat chat: ChatInstance(session, error, dependencies),
 ) {
   case
@@ -982,7 +1161,7 @@ fn do_handle_continuation(
       // Persist the new session after continuation completes
       case chat.session_settings.persist_session(chat.key, new_session) {
         Ok(persisted_session) -> {
-          ack(chat, reply_with, True)
+          ack_with(True)
           actor.continue(
             ChatInstance(..chat, session: persisted_session, continuation: None),
           )
@@ -990,7 +1169,7 @@ fn do_handle_continuation(
         Error(e) -> {
           case chat.catch_handler(context, e) {
             Ok(_) -> {
-              ack(chat, reply_with, False)
+              ack_with(False)
               actor.continue(chat)
             }
             Error(e) -> {
@@ -998,7 +1177,7 @@ fn do_handle_continuation(
                 "Error in session persistence after continuation: ",
                 e,
               )
-              stop_chat_instance(chat, reply_with, "session_persist_failed")
+              stop_chat_instance(chat, ack_with, "session_persist_failed")
             }
           }
         }
@@ -1007,12 +1186,12 @@ fn do_handle_continuation(
     Some(Error(e)) -> {
       case chat.catch_handler(context, e) {
         Ok(_) -> {
-          ack(chat, reply_with, False)
+          ack_with(False)
           actor.continue(chat)
         }
         Error(e) -> {
           log.error_d("Error in catch handler: ", e)
-          stop_chat_instance(chat, reply_with, "catch_handler_failed")
+          stop_chat_instance(chat, ack_with, "catch_handler_failed")
         }
       }
     }
@@ -1025,7 +1204,7 @@ fn do_handle_continuation(
                 chat.session_settings.persist_session(chat.key, new_session)
               {
                 Ok(persisted_session) -> {
-                  ack(chat, reply_with, True)
+                  ack_with(True)
                   actor.continue(
                     ChatInstance(..chat, session: persisted_session),
                   )
@@ -1033,7 +1212,7 @@ fn do_handle_continuation(
                 Error(e) -> {
                   case chat.catch_handler(context, e) {
                     Ok(_) -> {
-                      ack(chat, reply_with, False)
+                      ack_with(False)
                       actor.continue(chat)
                     }
                     Error(e) -> {
@@ -1043,7 +1222,7 @@ fn do_handle_continuation(
                       )
                       stop_chat_instance(
                         chat,
-                        reply_with,
+                        ack_with,
                         "session_persist_failed",
                       )
                     }
@@ -1054,22 +1233,22 @@ fn do_handle_continuation(
             Some(Error(e)) -> {
               case chat.catch_handler(context, e) {
                 Ok(_) -> {
-                  ack(chat, reply_with, False)
+                  ack_with(False)
                   actor.continue(chat)
                 }
                 Error(e) -> {
                   log.error_d("Error in catch else handler: ", e)
-                  stop_chat_instance(chat, reply_with, "catch_handler_failed")
+                  stop_chat_instance(chat, ack_with, "catch_handler_failed")
                 }
               }
             }
             None -> {
-              ack(chat, reply_with, False)
+              ack_with(False)
               actor.continue(chat)
             }
           }
         None -> {
-          ack(chat, reply_with, False)
+          ack_with(False)
           actor.continue(chat)
         }
       }

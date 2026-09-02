@@ -338,6 +338,7 @@ pub fn run_with_client_with_dependencies(
       chat_factory: chat_factory_started.data,
       chat_idle_timeout: None,
       chat_init_timeout: 5000,
+      media_group_timeout: option.None,
       name: None,
     )
 

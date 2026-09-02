@@ -101,6 +101,21 @@ router
 |> router.on_media_group(handle_album)      // media group id + List(Message)
 ```
 
+Telegram delivers an album as separate messages sharing a `media_group_id`, so
+`on_media_group` only fires when the bot asks for them to be gathered:
+
+```gleam
+telega.new_for_polling(api_client:)
+|> telega.with_router(router)
+// hold an album's messages until 1s passes without another one
+|> telega.with_media_group_timeout(1000)
+```
+
+Without it, each message of an album arrives on its own `on_photo` / `on_video`
+/ `on_audio` route. With it, they arrive together on `on_media_group` and not
+individually. Messages that arrive while a `wait_*` conversation is pending are
+never gathered — the waiting handler expects them one at a time.
+
 ## Specialized routes
 
 Dedicated handlers exist for the rest of the Telegram update types:
