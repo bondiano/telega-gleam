@@ -430,6 +430,16 @@ a press on the other flow's keyboard is not swallowed by the dialog. Plain
 hand-written flows can opt into the same behavior with
 `flow_registry.with_callback_filter`.
 
+Two more rules apply whenever several flows are waiting, with or without a
+filter:
+
+- A step that asked for `action.wait_callback` is **only** resumed by a
+  callback query. A text message goes to a flow that is waiting for text
+  (`action.wait`), never to the one waiting for a button press.
+- When more than one flow accepts the update, the one whose instance was
+  updated **most recently** wins — the flow the user is actually in the middle
+  of. Ties break on the flow name, so the choice never depends on hash order.
+
 ## Errors and Robustness
 
 - **User handler errors** (an `Error(e)` from `on_action`/`on_text`/…) are

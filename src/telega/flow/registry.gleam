@@ -3,8 +3,9 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/float
+import gleam/int
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import telega/bot.{type Context}
 import telega/flow/engine
@@ -401,49 +402,92 @@ fn run_timeout_and_cleanup(
   }
 }
 
+/// Every waiting instance this user has, newest first.
+///
+/// `dict.values` yields hash order, which would make the winner between two
+/// waiting flows depend on their names. Ordering by `updated_at` instead means
+/// the flow the user interacted with last gets the update, with the flow name
+/// as a deterministic tie-break.
+fn waiting_instances(
+  registry: FlowRegistry(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
+) -> List(#(Flow(Dynamic, session, error, dependencies), FlowInstance)) {
+  let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
+
+  registry.flow_map
+  |> dict.to_list
+  |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
+  |> list.filter_map(fn(entry) {
+    let flow = entry.1
+    let flow_id = storage.generate_id(user_id, chat_id, flow.name)
+    case flow.storage.load(flow_id) {
+      Ok(Some(inst)) if inst.wait_token != None -> Ok(#(flow, inst))
+      _ -> Error(Nil)
+    }
+  })
+  |> list.sort(fn(a, b) { int.compare({ b.1 }.updated_at, { a.1 }.updated_at) })
+}
+
+/// Hand the incoming update to the first waiting flow that accepts it.
+///
+/// A flow whose wait has already expired is cleaned up and skipped rather than
+/// swallowing the update, so a second waiting flow still gets its turn.
+fn resume_waiting(
+  registry: FlowRegistry(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
+  accepts accepts: fn(Flow(Dynamic, session, error, dependencies), FlowInstance) ->
+    Bool,
+  data data: fn() -> Dict(String, String),
+) -> Result(Context(session, error, dependencies), error) {
+  case do_resume_waiting(waiting_instances(registry, ctx), ctx, accepts, data) {
+    Some(result) -> result
+    None -> Ok(ctx)
+  }
+}
+
+fn do_resume_waiting(
+  candidates: List(#(Flow(Dynamic, session, error, dependencies), FlowInstance)),
+  ctx: Context(session, error, dependencies),
+  accepts: fn(Flow(Dynamic, session, error, dependencies), FlowInstance) -> Bool,
+  data: fn() -> Dict(String, String),
+) -> Option(Result(Context(session, error, dependencies), error)) {
+  case candidates {
+    [] -> None
+    [#(flow, inst), ..rest] ->
+      case accepts(flow, inst) {
+        False -> do_resume_waiting(rest, ctx, accepts, data)
+        True ->
+          case run_timeout_and_cleanup(flow, ctx, inst) {
+            #(True, _) -> do_resume_waiting(rest, ctx, accepts, data)
+            #(False, _) ->
+              Some(engine.resume_with_instance(flow, ctx, inst, Some(data())))
+          }
+      }
+  }
+}
+
+/// A step that asked for a button press is not satisfied by a message.
+fn accepts_message(
+  _flow: Flow(Dynamic, session, error, dependencies),
+  inst: FlowInstance,
+) -> Bool {
+  case inst.wait_token {
+    Some(token) -> engine.wait_token_accepts_message(token)
+    None -> False
+  }
+}
+
 fn auto_resume_handler(
   registry: FlowRegistry(session, error, dependencies),
 ) -> fn(Context(session, error, dependencies), String) ->
   Result(Context(session, error, dependencies), error) {
   fn(ctx: Context(session, error, dependencies), text: String) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
-
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let data =
-                      dict.from_list([
-                        #("user_input", text),
-                        #(
-                          instance.wait_result_key,
-                          instance.encode_text_wait_result(text),
-                        ),
-                      ])
-
-                    engine.resume_with_instance(flow, ctx, inst, Some(data))
-                    |> Some
-                  }
-                }
-              }
-              _ -> None
-            }
-          }
-        }
-      })
-
-    case result {
-      Some(res) -> res
-      None -> Ok(ctx)
-    }
+    resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+      dict.from_list([
+        #("user_input", text),
+        #(instance.wait_result_key, instance.encode_text_wait_result(text)),
+      ])
+    })
   }
 }
 
@@ -456,53 +500,25 @@ fn auto_resume_callback_handler(
     _callback_id: String,
     data: String,
   ) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
+    let accepts = fn(flow: Flow(Dynamic, session, error, dependencies), _inst) {
+      case dict.get(registry.callback_filters, flow.name) {
+        Ok(filter) -> filter(data)
+        Error(_) -> True
+      }
+    }
 
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let accepts = case dict.get(registry.callback_filters, flow.name) {
-              Ok(filter) -> filter(data)
-              Error(_) -> True
-            }
-            case accepts {
-              False -> None
-              True -> {
-                let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-                case flow.storage.load(flow_id) {
-                  Ok(Some(inst)) if inst.wait_token != None -> {
-                    case run_timeout_and_cleanup(flow, ctx, inst) {
-                      #(True, _) -> None
-                      #(False, _) -> {
-                        let wait_result_value =
-                          instance.encode_callback_wait_result(data)
-                        let callback_data =
-                          dict.from_list([
-                            #("callback_data", data),
-                            #(instance.wait_result_key, wait_result_value),
-                          ])
-                        engine.resume_with_instance(
-                          flow,
-                          ctx,
-                          inst,
-                          Some(callback_data),
-                        )
-                        |> Some
-                      }
-                    }
-                  }
-                  _ -> None
-                }
-              }
-            }
-          }
-        }
+    let resumed =
+      do_resume_waiting(waiting_instances(registry, ctx), ctx, accepts, fn() {
+        dict.from_list([
+          #("callback_data", data),
+          #(
+            instance.wait_result_key,
+            instance.encode_callback_wait_result(data),
+          ),
+        ])
       })
 
-    case result {
+    case resumed {
       Some(res) -> res
       None ->
         case
@@ -522,42 +538,17 @@ fn auto_resume_photo_handler(
 ) -> fn(Context(session, error, dependencies), List(model_types.PhotoSize)) ->
   Result(Context(session, error, dependencies), error) {
   fn(ctx, photos: List(model_types.PhotoSize)) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
-    let file_ids = list.map(photos, fn(p: model_types.PhotoSize) { p.file_id })
-    let file_ids_str = string.join(file_ids, ",")
+    let file_ids_str =
+      photos
+      |> list.map(fn(p: model_types.PhotoSize) { p.file_id })
+      |> string.join(",")
 
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let data =
-                      dict.from_list([
-                        #(instance.wait_result_key, "photo:" <> file_ids_str),
-                        #("__photos", file_ids_str),
-                      ])
-                    engine.resume_with_instance(flow, ctx, inst, Some(data))
-                    |> Some
-                  }
-                }
-              }
-              _ -> None
-            }
-          }
-        }
-      })
-
-    case result {
-      Some(res) -> res
-      None -> Ok(ctx)
-    }
+    resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+      dict.from_list([
+        #(instance.wait_result_key, "photo:" <> file_ids_str),
+        #("__photo_file_ids", file_ids_str),
+      ])
+    })
   }
 }
 
@@ -566,40 +557,12 @@ fn auto_resume_video_handler(
 ) -> fn(Context(session, error, dependencies), model_types.Video) ->
   Result(Context(session, error, dependencies), error) {
   fn(ctx, video: model_types.Video) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
-
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let data =
-                      dict.from_list([
-                        #(instance.wait_result_key, "video:" <> video.file_id),
-                        #("__video_file_id", video.file_id),
-                      ])
-                    engine.resume_with_instance(flow, ctx, inst, Some(data))
-                    |> Some
-                  }
-                }
-              }
-              _ -> None
-            }
-          }
-        }
-      })
-
-    case result {
-      Some(res) -> res
-      None -> Ok(ctx)
-    }
+    resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+      dict.from_list([
+        #(instance.wait_result_key, "video:" <> video.file_id),
+        #("__video_file_id", video.file_id),
+      ])
+    })
   }
 }
 
@@ -608,40 +571,12 @@ fn auto_resume_voice_handler(
 ) -> fn(Context(session, error, dependencies), model_types.Voice) ->
   Result(Context(session, error, dependencies), error) {
   fn(ctx, voice: model_types.Voice) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
-
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let data =
-                      dict.from_list([
-                        #(instance.wait_result_key, "voice:" <> voice.file_id),
-                        #("__voice_file_id", voice.file_id),
-                      ])
-                    engine.resume_with_instance(flow, ctx, inst, Some(data))
-                    |> Some
-                  }
-                }
-              }
-              _ -> None
-            }
-          }
-        }
-      })
-
-    case result {
-      Some(res) -> res
-      None -> Ok(ctx)
-    }
+    resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+      dict.from_list([
+        #(instance.wait_result_key, "voice:" <> voice.file_id),
+        #("__voice_file_id", voice.file_id),
+      ])
+    })
   }
 }
 
@@ -650,40 +585,12 @@ fn auto_resume_audio_handler(
 ) -> fn(Context(session, error, dependencies), model_types.Audio) ->
   Result(Context(session, error, dependencies), error) {
   fn(ctx, audio: model_types.Audio) {
-    let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-    let flows = dict.values(registry.flow_map)
-
-    let result =
-      list.fold(flows, None, fn(acc, flow) {
-        case acc {
-          Some(_) -> acc
-          None -> {
-            let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-            case flow.storage.load(flow_id) {
-              Ok(Some(inst)) if inst.wait_token != None -> {
-                case run_timeout_and_cleanup(flow, ctx, inst) {
-                  #(True, _) -> None
-                  #(False, _) -> {
-                    let data =
-                      dict.from_list([
-                        #(instance.wait_result_key, "audio:" <> audio.file_id),
-                        #("__audio_file_id", audio.file_id),
-                      ])
-                    engine.resume_with_instance(flow, ctx, inst, Some(data))
-                    |> Some
-                  }
-                }
-              }
-              _ -> None
-            }
-          }
-        }
-      })
-
-    case result {
-      Some(res) -> res
-      None -> Ok(ctx)
-    }
+    resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+      dict.from_list([
+        #(instance.wait_result_key, "audio:" <> audio.file_id),
+        #("__audio_file_id", audio.file_id),
+      ])
+    })
   }
 }
 
@@ -696,52 +603,19 @@ fn auto_resume_location_handler(
       update.MessageUpdate(message:, ..) ->
         case message.location {
           Some(location) -> {
-            let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-            let flows = dict.values(registry.flow_map)
             let lat_str = float.to_string(location.latitude)
             let lng_str = float.to_string(location.longitude)
 
-            let result =
-              list.fold(flows, None, fn(acc, flow) {
-                case acc {
-                  Some(_) -> acc
-                  None -> {
-                    let flow_id =
-                      storage.generate_id(user_id, chat_id, flow.name)
-                    case flow.storage.load(flow_id) {
-                      Ok(Some(inst)) if inst.wait_token != None -> {
-                        case run_timeout_and_cleanup(flow, ctx, inst) {
-                          #(True, _) -> None
-                          #(False, _) -> {
-                            let data =
-                              dict.from_list([
-                                #(
-                                  instance.wait_result_key,
-                                  "location:" <> lat_str <> "," <> lng_str,
-                                ),
-                                #("__location_lat", lat_str),
-                                #("__location_lng", lng_str),
-                              ])
-                            engine.resume_with_instance(
-                              flow,
-                              ctx,
-                              inst,
-                              Some(data),
-                            )
-                            |> Some
-                          }
-                        }
-                      }
-                      _ -> None
-                    }
-                  }
-                }
-              })
-
-            case result {
-              Some(res) -> res
-              None -> Ok(ctx)
-            }
+            resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+              dict.from_list([
+                #(
+                  instance.wait_result_key,
+                  "location:" <> lat_str <> "," <> lng_str,
+                ),
+                #("__location_lat", lat_str),
+                #("__location_lng", lng_str),
+              ])
+            })
           }
           None -> Ok(ctx)
         }
@@ -757,45 +631,18 @@ fn auto_resume_command_handler(
   fn(ctx, upd) {
     case upd {
       update.CommandUpdate(command:, ..) -> {
-        let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
-        let flows = dict.values(registry.flow_map)
         let payload = option.unwrap(command.payload, "")
 
-        let result =
-          list.fold(flows, None, fn(acc, flow) {
-            case acc {
-              Some(_) -> acc
-              None -> {
-                let flow_id = storage.generate_id(user_id, chat_id, flow.name)
-                case flow.storage.load(flow_id) {
-                  Ok(Some(inst)) if inst.wait_token != None -> {
-                    case run_timeout_and_cleanup(flow, ctx, inst) {
-                      #(True, _) -> None
-                      #(False, _) -> {
-                        let data =
-                          dict.from_list([
-                            #(
-                              instance.wait_result_key,
-                              "command:" <> command.command <> ":" <> payload,
-                            ),
-                            #("command", command.command),
-                            #("command_payload", payload),
-                          ])
-                        engine.resume_with_instance(flow, ctx, inst, Some(data))
-                        |> Some
-                      }
-                    }
-                  }
-                  _ -> None
-                }
-              }
-            }
-          })
-
-        case result {
-          Some(res) -> res
-          None -> Ok(ctx)
-        }
+        resume_waiting(registry, ctx, accepts: accepts_message, data: fn() {
+          dict.from_list([
+            #(
+              instance.wait_result_key,
+              "command:" <> command.command <> ":" <> payload,
+            ),
+            #("command", command.command),
+            #("command_payload", payload),
+          ])
+        })
       }
       _ -> Ok(ctx)
     }

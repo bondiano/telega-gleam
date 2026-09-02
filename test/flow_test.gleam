@@ -16,6 +16,7 @@ import telega/flow/instance
 import telega/flow/registry
 import telega/flow/storage
 import telega/flow/types
+import telega/router
 import telega/testing/context
 import telega/testing/factory
 import telega/testing/mock
@@ -2964,4 +2965,120 @@ pub fn noop_storage_operations_test() {
   let assert Ok(None) = noop.load("noop_test")
   let assert Ok(Nil) = noop.delete("noop_test")
   let assert Ok([]) = noop.list_by_user(1, 2)
+}
+
+// ============================================================================
+// M4 — a waiting flow only resumes on what it actually asked for
+// ============================================================================
+
+/// A flow whose only step waits for a button press and reports whatever
+/// resumed it.
+fn callback_waiting_flow(name: String, ets, events) {
+  builder.new(name, ets, test_step_to_string, string_to_test_step)
+  |> builder.add_step(Start, fn(ctx, inst) {
+    case instance.get_wait_result(inst) {
+      types.Pending -> action.wait_callback(ctx, inst)
+      result -> {
+        process.send(events, name <> ":" <> string_inspect_wait(result))
+        action.complete(ctx, inst)
+      }
+    }
+  })
+  |> builder.build(initial: Start)
+}
+
+fn string_inspect_wait(result: types.WaitResult) -> String {
+  case result {
+    types.TextInput(text) -> "text:" <> text
+    types.DataCallback(data) -> "callback:" <> data
+    _ -> "other"
+  }
+}
+
+fn flow_ctx(from_id: Int, chat_id: Int, upd) {
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id:, chat_id:),
+    )
+  bot.Context(..ctx, config: context.config_with_client(client), update: upd)
+}
+
+pub fn wait_callback_is_not_resumed_by_text_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+  let flow = callback_waiting_flow("m4_cb", ets, events)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("go"), flow)
+  let r = registry.apply_to_router(router.new("m4"), reg)
+
+  let start_ctx = flow_ctx(700, 800, factory.command_update(command: "go"))
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      start_ctx,
+      user_id: 700,
+      chat_id: 800,
+      initial_data: dict.new(),
+    )
+
+  // A plain text message must not satisfy a step that asked for a callback.
+  let text = factory.text_update_with(text: "hello", from_id: 700, chat_id: 800)
+  let assert Ok(_) = router.handle(r, flow_ctx(700, 800, text), text)
+  process.receive(events, 100) |> should.equal(Error(Nil))
+
+  // The instance is still waiting, and the button press does resume it.
+  let cb =
+    factory.callback_query_update_with(data: "yes", from_id: 700, chat_id: 800)
+  let assert Ok(_) = router.handle(r, flow_ctx(700, 800, cb), cb)
+  process.receive(events, 100) |> should.equal(Ok("m4_cb:callback:yes"))
+}
+
+pub fn newest_waiting_flow_wins_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let text_flow = fn(name) {
+    builder.new(name, ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_wait_result(inst) {
+        types.Pending -> action.wait(ctx, inst)
+        result -> {
+          process.send(events, name <> ":" <> string_inspect_wait(result))
+          action.complete(ctx, inst)
+        }
+      }
+    })
+    |> builder.build(initial: Start)
+  }
+
+  let older = text_flow("m4_older")
+  let newer = text_flow("m4_newer")
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("a"), older)
+    |> registry.register(types.OnCommand("b"), newer)
+  let r = registry.apply_to_router(router.new("m4"), reg)
+
+  let ctx = flow_ctx(701, 801, factory.command_update(command: "a"))
+  let assert Ok(_) = engine.start_or_resume(older, ctx, 701, 801, dict.new())
+  // `updated_at` is a millisecond clock — make sure the two differ.
+  process.sleep(5)
+  let assert Ok(_) = engine.start_or_resume(newer, ctx, 701, 801, dict.new())
+
+  // Both flows are waiting for text. The one the user started last gets it,
+  // rather than whichever the flow map's hash order happened to yield.
+  let text = factory.text_update_with(text: "hi", from_id: 701, chat_id: 801)
+  let assert Ok(_) = router.handle(r, flow_ctx(701, 801, text), text)
+  process.receive(events, 100) |> should.equal(Ok("m4_newer:text:hi"))
+
+  // That one completed; the older flow is still waiting and takes the next.
+  let text2 =
+    factory.text_update_with(text: "again", from_id: 701, chat_id: 801)
+  let assert Ok(_) = router.handle(r, flow_ctx(701, 801, text2), text2)
+  process.receive(events, 100) |> should.equal(Ok("m4_older:text:again"))
 }

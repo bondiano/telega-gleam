@@ -337,10 +337,31 @@ pub fn apply_middlewares(
   }
 }
 
-/// Generate a unique wait token
+/// Prefix marking a `wait_token` that only a callback query may resume.
+const callback_wait_prefix = "cb:"
+
+/// Generate a unique wait token.
+///
+/// The token also records *what* the step asked for: a `WaitCallback` token is
+/// prefixed, so a text message cannot satisfy a step that is waiting for a
+/// button press. A token without a prefix accepts anything — that is both what
+/// a plain `Wait` writes and what instances persisted by older versions look
+/// like.
 @internal
 pub fn generate_wait_token(instance: FlowInstance) -> String {
   instance.id <> ":" <> int.to_string(utils.current_time_ms())
+}
+
+@internal
+pub fn generate_callback_wait_token(instance: FlowInstance) -> String {
+  callback_wait_prefix <> generate_wait_token(instance)
+}
+
+/// Whether a step holding this `wait_token` may be resumed by a message
+/// (text, command, photo, location, …).
+@internal
+pub fn wait_token_accepts_message(token: String) -> Bool {
+  !string.starts_with(token, callback_wait_prefix)
 }
 
 /// Process action with leave hook support
@@ -640,7 +661,10 @@ fn process_action(
     }
 
     Wait | WaitCallback -> {
-      let token = generate_wait_token(instance)
+      let token = case action {
+        WaitCallback -> generate_callback_wait_token(instance)
+        _ -> generate_wait_token(instance)
+      }
       let updated_instance =
         FlowInstance(
           ..instance,
@@ -656,7 +680,10 @@ fn process_action(
     }
 
     WaitWithTimeout(timeout_ms) | WaitCallbackWithTimeout(timeout_ms) -> {
-      let token = generate_wait_token(instance)
+      let token = case action {
+        WaitCallbackWithTimeout(_) -> generate_callback_wait_token(instance)
+        _ -> generate_wait_token(instance)
+      }
       let wait_timeout_at = utils.current_time_ms() + timeout_ms
       let updated_instance =
         FlowInstance(
@@ -1165,7 +1192,10 @@ fn process_subflow_action(
     }
 
     Wait | WaitCallback -> {
-      let token = generate_wait_token(instance)
+      let token = case action {
+        WaitCallback -> generate_callback_wait_token(instance)
+        _ -> generate_wait_token(instance)
+      }
       let updated_instance =
         FlowInstance(
           ..instance,
@@ -1181,7 +1211,10 @@ fn process_subflow_action(
     }
 
     WaitWithTimeout(timeout_ms) | WaitCallbackWithTimeout(timeout_ms) -> {
-      let token = generate_wait_token(instance)
+      let token = case action {
+        WaitCallbackWithTimeout(_) -> generate_callback_wait_token(instance)
+        _ -> generate_wait_token(instance)
+      }
       let wait_timeout_at = utils.current_time_ms() + timeout_ms
       let updated_instance =
         FlowInstance(
