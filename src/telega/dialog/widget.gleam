@@ -21,6 +21,9 @@
 ////   `multiselect_values`.
 //// - `paged_select` — `select` and `pager` combined: items are sliced by the
 ////   widget itself.
+//// - `counter` — a number nudged with −/+ within `min`…`max`; read with
+////   `counter_value`.
+//// - `calendar` — a month grid bounded by a date range, with month paging.
 ////
 //// Reading widget state from window handlers (`on_action`, `on_text`,
 //// `on_done`) and renders goes through `dialog.widget_store`:
@@ -41,9 +44,11 @@ import gleam/dynamic/decode
 import gleam/int
 import gleam/json
 import gleam/list
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/result
 import gleam/string
+import gleam/time/calendar
 
 import telega/bot.{type Context}
 import telega/dialog/types.{
@@ -514,3 +519,298 @@ fn pdict_get(key: String) -> Dynamic
 
 @external(erlang, "erlang", "erase")
 fn pdict_erase(key: String) -> Dynamic
+
+// Counter -------------------------------------------------------------------------
+
+const counter_key = "count"
+
+/// A number the user nudges with `labels.decrement` / `labels.increment`,
+/// clamped to `min`…`max`. The value lives in the widget store; read it with
+/// `counter_value`, passing the same `initial`.
+///
+/// ```gleam
+/// |> dialog.window_with_widgets(id: "guests", render:, on_action:, widgets: [
+///   widget.counter(id: "n", min: 1, max: 12, step: 1, initial: 2),
+/// ])
+///
+/// // in the render or a handler:
+/// let guests =
+///   dialog.widget_store(ctx, window_id: "guests", widget_id: "n")
+///   |> widget.counter_value(default: 2)
+/// ```
+pub fn counter(
+  id id: String,
+  min min: Int,
+  max max: Int,
+  step step: Int,
+  initial initial: Int,
+) -> KeyboardWidget(state, session, error, dependencies) {
+  KeyboardWidget(
+    id:,
+    render: fn(wctx: WidgetCtx(state, session, error, dependencies)) {
+      let value = counter_value(wctx.store, default: initial)
+      [
+        [
+          types.ActionButton(wctx.labels.decrement, action(id, "dec")),
+          // The value itself is a button because Telegram has no other way to
+          // put text in a keyboard row; pressing it does nothing.
+          types.ActionButton(int.to_string(value), action(id, "noop")),
+          types.ActionButton(wctx.labels.increment, action(id, "inc")),
+        ],
+      ]
+    },
+    on_event: fn(wctx, cmd, _arg) {
+      let value = counter_value(wctx.store, default: initial)
+      let next = case cmd {
+        "dec" -> value - step
+        "inc" -> value + step
+        _ -> value
+      }
+      let clamped = int.clamp(next, min:, max:)
+      Ok(
+        types.StoreUpdated(types.store_set(
+          wctx.store,
+          counter_key,
+          int.to_string(clamped),
+        )),
+      )
+    },
+    goto_targets: [],
+    static_actions: [action(id, "dec"), action(id, "inc"), action(id, "noop")],
+  )
+}
+
+/// The number in a `counter` store, or `default` before the first press.
+pub fn counter_value(store store: WidgetStore, default default: Int) -> Int {
+  types.store_get(store, counter_key)
+  |> option.then(fn(raw) { option.from_result(int.parse(raw)) })
+  |> option.unwrap(default)
+}
+
+// Calendar ------------------------------------------------------------------------
+
+const calendar_view_key = "view"
+
+/// A month grid of days with `‹`/`›` month navigation, bounded by `from`…`to`.
+///
+/// Pressing a day calls `on_picked` with that date and emits whatever action
+/// it returns — usually a `Goto` or a `Stay` that stores the date in your own
+/// state. The displayed month lives in the widget store, so paging around does
+/// not touch the dialog state.
+///
+/// ```gleam
+/// widget.calendar(
+///   id: "date",
+///   from: calendar.Date(2026, calendar.September, 1),
+///   to: calendar.Date(2026, calendar.December, 31),
+///   on_picked: fn(state, date, _ctx) { Ok(types.Goto("time", with_date(state, date))) },
+/// )
+/// ```
+pub fn calendar(
+  id id: String,
+  from from: calendar.Date,
+  to to: calendar.Date,
+  on_picked on_picked: fn(
+    state,
+    calendar.Date,
+    Context(session, error, dependencies),
+  ) -> Result(DialogAction(state), error),
+) -> KeyboardWidget(state, session, error, dependencies) {
+  KeyboardWidget(
+    id:,
+    render: fn(wctx: WidgetCtx(state, session, error, dependencies)) {
+      let #(year, month) = viewed_month(wctx.store, from)
+      let header = [
+        types.ActionButton(wctx.labels.prev, action(id, "prev")),
+        types.ActionButton(
+          calendar.month_to_string(month) <> " " <> int.to_string(year),
+          action(id, "noop"),
+        ),
+        types.ActionButton(wctx.labels.next, action(id, "next")),
+      ]
+      let weekdays =
+        list.map(wctx.labels.weekdays, types.ActionButton(_, action(id, "noop")))
+
+      [header, weekdays, ..day_rows(id, year, month, from, to)]
+    },
+    on_event: fn(wctx, cmd, arg) {
+      let #(year, month) = viewed_month(wctx.store, from)
+      case cmd, arg {
+        "prev", _ -> Ok(shift_month(wctx.store, year, month, -1, from, to))
+        "next", _ -> Ok(shift_month(wctx.store, year, month, 1, from, to))
+        // Only a date the grid currently offers is accepted — callback data
+        // can be forged or come from an outdated message.
+        "day", Some(raw) ->
+          case parse_date(raw) {
+            Ok(date) ->
+              case date_within(date, from, to) {
+                True ->
+                  on_picked(wctx.state, date, wctx.ctx)
+                  |> result.map(types.Emit)
+                False -> Ok(types.StoreUpdated(wctx.store))
+              }
+            Error(Nil) -> Ok(types.StoreUpdated(wctx.store))
+          }
+        _, _ -> Ok(types.StoreUpdated(wctx.store))
+      }
+    },
+    goto_targets: [],
+    static_actions: [
+      action(id, "prev"),
+      action(id, "next"),
+      action(id, "noop"),
+      action(id, "day"),
+    ],
+  )
+}
+
+/// The month currently on screen: what the store remembers, or the month
+/// `from` falls in.
+fn viewed_month(
+  store: WidgetStore,
+  from: calendar.Date,
+) -> #(Int, calendar.Month) {
+  case types.store_get(store, calendar_view_key) {
+    Some(raw) ->
+      case string.split(raw, "-") {
+        [year, month] ->
+          case int.parse(year), int.parse(month) {
+            Ok(year), Ok(month) ->
+              case calendar.month_from_int(month) {
+                Ok(month) -> #(year, month)
+                Error(Nil) -> #(from.year, from.month)
+              }
+            _, _ -> #(from.year, from.month)
+          }
+        _ -> #(from.year, from.month)
+      }
+    None -> #(from.year, from.month)
+  }
+}
+
+fn shift_month(
+  store: WidgetStore,
+  year: Int,
+  month: calendar.Month,
+  by: Int,
+  from: calendar.Date,
+  to: calendar.Date,
+) -> WidgetResult(state) {
+  let index = year * 12 + calendar.month_to_int(month) - 1 + by
+  let first = from.year * 12 + calendar.month_to_int(from.month) - 1
+  let last = to.year * 12 + calendar.month_to_int(to.month) - 1
+  let index = int.clamp(index, min: first, max: last)
+
+  types.StoreUpdated(types.store_set(
+    store,
+    calendar_view_key,
+    int.to_string(index / 12) <> "-" <> int.to_string(index % 12 + 1),
+  ))
+}
+
+/// Weeks of the month as button rows, Monday first, padded so the 1st sits
+/// under its weekday. Days outside `from`…`to` render as blanks.
+fn day_rows(
+  widget_id: String,
+  year: Int,
+  month: calendar.Month,
+  from: calendar.Date,
+  to: calendar.Date,
+) -> List(List(DialogButton)) {
+  let blank = types.ActionButton(" ", action(widget_id, "noop"))
+  let leading = list.repeat(blank, weekday_index(year, month, 1))
+  let days =
+    // `int.range`'s `to` is exclusive, so count down past 1 to include it.
+    int.range(
+      from: days_in_month(year, month),
+      to: 0,
+      with: [],
+      run: fn(acc, day) { [day, ..acc] },
+    )
+    |> list.map(fn(day) {
+      let date = calendar.Date(year:, month:, day:)
+      case date_within(date, from, to) {
+        True ->
+          types.ActionArgButton(
+            int.to_string(day),
+            action(widget_id, "day"),
+            format_date(date),
+          )
+        False -> blank
+      }
+    })
+  list.append(leading, days)
+  |> list.sized_chunk(into: 7)
+}
+
+fn date_within(
+  date: calendar.Date,
+  from: calendar.Date,
+  to: calendar.Date,
+) -> Bool {
+  calendar.naive_date_compare(date, from) != order.Lt
+  && calendar.naive_date_compare(date, to) != order.Gt
+}
+
+fn days_in_month(year: Int, month: calendar.Month) -> Int {
+  case month {
+    calendar.January
+    | calendar.March
+    | calendar.May
+    | calendar.July
+    | calendar.August
+    | calendar.October
+    | calendar.December -> 31
+    calendar.April | calendar.June | calendar.September | calendar.November ->
+      30
+    calendar.February ->
+      case calendar.is_leap_year(year) {
+        True -> 29
+        False -> 28
+      }
+  }
+}
+
+/// Zeller's congruence, shifted so Monday is 0 — the column a date sits in.
+fn weekday_index(year: Int, month: calendar.Month, day: Int) -> Int {
+  let month_number = calendar.month_to_int(month)
+  // January and February count as months 13 and 14 of the previous year.
+  let #(y, m) = case month_number < 3 {
+    True -> #(year - 1, month_number + 12)
+    False -> #(year, month_number)
+  }
+  let k = y % 100
+  let j = y / 100
+  let h = { day + { 13 * { m + 1 } } / 5 + k + k / 4 + j / 4 + 5 * j } % 7
+  // Zeller: 0 = Saturday. Monday first means Monday must land on 0.
+  { h + 5 } % 7
+}
+
+fn format_date(date: calendar.Date) -> String {
+  int.to_string(date.year)
+  <> "-"
+  <> pad2(calendar.month_to_int(date.month))
+  <> "-"
+  <> pad2(date.day)
+}
+
+fn pad2(value: Int) -> String {
+  int.to_string(value) |> string.pad_start(to: 2, with: "0")
+}
+
+fn parse_date(raw: String) -> Result(calendar.Date, Nil) {
+  case string.split(raw, "-") {
+    [year, month, day] -> {
+      use year <- result.try(int.parse(year))
+      use month <- result.try(int.parse(month))
+      use day <- result.try(int.parse(day))
+      use month <- result.try(calendar.month_from_int(month))
+      let date = calendar.Date(year:, month:, day:)
+      case calendar.is_valid_date(date) {
+        True -> Ok(date)
+        False -> Error(Nil)
+      }
+    }
+    _ -> Error(Nil)
+  }
+}

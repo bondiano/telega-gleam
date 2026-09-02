@@ -251,6 +251,11 @@ pub type Labels {
     checkbox_on: String,
     checkbox_off: String,
     done: String,
+    /// `counter` widget's decrement and increment buttons.
+    decrement: String,
+    increment: String,
+    /// `calendar` widget's weekday header, Monday first.
+    weekdays: List(String),
     /// `answer_callback_query` text shown when the user presses a button on
     /// an outdated dialog message.
     stale: String,
@@ -267,6 +272,9 @@ pub fn default_labels() -> Labels {
     checkbox_on: "☑ ",
     checkbox_off: "☐ ",
     done: "✓",
+    decrement: "−",
+    increment: "+",
+    weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
     stale: "⏳",
   )
 }

@@ -6,8 +6,10 @@
 //// `dialog.widget_store` stash.
 
 import birdie
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/time/calendar
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -628,4 +630,120 @@ pub fn reset_stores_drops_earlier_seeds_test() {
   dialog.widget_store(ctx, window_id: "w", widget_id: "r")
   |> widget.radio_value
   |> should.equal(None)
+}
+
+// Counter and calendar -------------------------------------------------------
+
+fn counter_widget() {
+  widget.counter(id: "n", min: 1, max: 4, step: 1, initial: 2)
+}
+
+pub fn counter_clamps_at_both_ends_test() {
+  let w = counter_widget()
+
+  // Starts at `initial`, not at zero.
+  widget.counter_value(types.new_store(), default: 2) |> should.equal(2)
+
+  let assert Ok(types.StoreUpdated(store)) =
+    w.on_event(widget_ctx(types.new_store()), "dec", None)
+  widget.counter_value(store, default: 2) |> should.equal(1)
+
+  // Already at `min`: another press is a no-op, not a 0.
+  let assert Ok(types.StoreUpdated(store)) =
+    w.on_event(widget_ctx(store), "dec", None)
+  widget.counter_value(store, default: 2) |> should.equal(1)
+
+  let store =
+    list.fold(["inc", "inc", "inc", "inc", "inc"], store, fn(store, cmd) {
+      let assert Ok(types.StoreUpdated(next)) =
+        w.on_event(widget_ctx(store), cmd, None)
+      next
+    })
+  widget.counter_value(store, default: 2) |> should.equal(4)
+}
+
+pub fn counter_renders_the_current_value_test() {
+  let assert Ok(types.StoreUpdated(store)) =
+    counter_widget().on_event(widget_ctx(types.new_store()), "inc", None)
+
+  counter_widget().render(widget_ctx(store))
+  |> should.equal([
+    [
+      types.ActionButton("−", "w:n:dec"),
+      types.ActionButton("3", "w:n:noop"),
+      types.ActionButton("+", "w:n:inc"),
+    ],
+  ])
+}
+
+fn calendar_widget() {
+  widget.calendar(
+    id: "d",
+    from: calendar.Date(2026, calendar.September, 1),
+    to: calendar.Date(2026, calendar.October, 15),
+    on_picked: fn(_state, date, _ctx) {
+      Ok(types.Stay(
+        int.to_string(date.year)
+        <> "-"
+        <> int.to_string(calendar.month_to_int(date.month))
+        <> "-"
+        <> int.to_string(date.day),
+      ))
+    },
+  )
+}
+
+pub fn calendar_aligns_the_first_day_to_its_weekday_test() {
+  let rows = calendar_widget().render(widget_ctx(types.new_store()))
+
+  // 1 September 2026 is a Tuesday, so the first week starts with one blank.
+  let assert [_header, weekdays, first_week, ..] = rows
+  list.length(weekdays) |> should.equal(7)
+  let assert [blank, first, ..] = first_week
+  blank |> should.equal(types.ActionButton(" ", "w:d:noop"))
+  first |> should.equal(types.ActionArgButton("1", "w:d:day", "2026-09-01"))
+}
+
+pub fn calendar_blanks_days_outside_the_range_test() {
+  // Page to October, where the 16th onwards is past `to`.
+  let assert Ok(types.StoreUpdated(store)) =
+    calendar_widget().on_event(widget_ctx(types.new_store()), "next", None)
+
+  let rendered =
+    calendar_widget().render(widget_ctx(store))
+    |> list.flatten
+
+  list.contains(rendered, types.ActionArgButton("15", "w:d:day", "2026-10-15"))
+  |> should.be_true
+  list.any(rendered, fn(button) {
+    case button {
+      types.ActionArgButton(arg:, ..) -> arg == "2026-10-16"
+      _ -> False
+    }
+  })
+  |> should.be_false
+}
+
+pub fn calendar_month_paging_stays_within_the_range_test() {
+  let w = calendar_widget()
+  // `from` is in September: paging back must not leave the range.
+  let assert Ok(types.StoreUpdated(store)) =
+    w.on_event(widget_ctx(types.new_store()), "prev", None)
+  let assert [_, _, first_week, ..] = w.render(widget_ctx(store))
+  let assert [_blank, first, ..] = first_week
+  first |> should.equal(types.ActionArgButton("1", "w:d:day", "2026-09-01"))
+}
+
+pub fn calendar_rejects_a_forged_date_test() {
+  let w = calendar_widget()
+
+  // Outside the range, and not a date at all: both leave the state alone.
+  let assert Ok(types.StoreUpdated(_)) =
+    w.on_event(widget_ctx(types.new_store()), "day", Some("2027-01-01"))
+  let assert Ok(types.StoreUpdated(_)) =
+    w.on_event(widget_ctx(types.new_store()), "day", Some("not-a-date"))
+
+  let assert Ok(types.Emit(action)) =
+    w.on_event(widget_ctx(types.new_store()), "day", Some("2026-09-10"))
+  action |> should.equal(types.Stay("2026-9-10"))
 }

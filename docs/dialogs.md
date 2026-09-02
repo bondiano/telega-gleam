@@ -268,6 +268,8 @@ Built-ins:
 | `radio(id:, items:, default:)` | single choice, `●`/`○` marks | `widget.radio_value` |
 | `multiselect(id:, items:, min:, max:, done:)` | checkboxes; the done button shows only within `min`/`max` and emits `Goto(done, state)` | `widget.multiselect_values` |
 | `paged_select(id:, items:, page_size:, columns:, on_selected:)` | select + pager in one | `widget.current_page` |
+| `counter(id:, min:, max:, step:, initial:)` | `−  3  +` row, clamped to the range | `widget.counter_value(default:)` |
+| `calendar(id:, from:, to:, on_picked:)` | month grid with `‹`/`›` paging; days outside the range are blanks | — (`on_picked` gets the `calendar.Date`) |
 
 `SelectItem(id:, label:)` ids travel in callback data — keep them short (the
 64-byte limit is validated on every render).
