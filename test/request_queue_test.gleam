@@ -7,6 +7,7 @@ import gleeunit/should
 
 import telega/error
 import telega/internal/request_queue as queue
+import telega/internal/utils
 
 pub fn main() {
   gleeunit.main()
@@ -196,4 +197,87 @@ fn collect_results(
       }
     }
   }
+}
+
+// C5 — the queue must not run HTTP inside its own actor ---------------------
+
+fn wait_for_all(
+  subject: process.Subject(Int),
+  count: Int,
+  timeout: Int,
+) -> Int {
+  case count {
+    0 -> 0
+    _ ->
+      case process.receive(subject, timeout) {
+        Ok(_) -> wait_for_all(subject, count - 1, timeout)
+        Error(_) -> count
+      }
+  }
+}
+
+pub fn concurrent_requests_are_not_serialized_test() {
+  let assert Ok(q) = queue.start(queue.default_config())
+
+  let done = process.new_subject()
+  list.each([1, 2, 3], fn(n) {
+    process.spawn_unlinked(fn() {
+      let _ =
+        queue.execute(q, fn() {
+          process.sleep(300)
+          Ok(response.Response(status: 200, headers: [], body: "ok"))
+        })
+      process.send(done, n)
+    })
+  })
+
+  let started_at = utils.current_time_ms()
+  wait_for_all(done, 3, 3000) |> should.equal(0)
+  let elapsed = utils.current_time_ms() - started_at
+
+  queue.shutdown(q)
+
+  // Serialized inside the actor this takes ~900ms; concurrently, ~300ms.
+  { elapsed < 700 } |> should.be_true
+}
+
+pub fn queue_stays_responsive_while_a_request_runs_test() {
+  let assert Ok(q) = queue.start(queue.default_config())
+
+  process.spawn_unlinked(fn() {
+    let _ =
+      queue.execute(q, fn() {
+        process.sleep(500)
+        Ok(response.Response(status: 200, headers: [], body: "slow"))
+      })
+    Nil
+  })
+
+  process.sleep(100)
+  let started_at = utils.current_time_ms()
+  let _ = queue.total_length(q)
+  let elapsed = utils.current_time_ms() - started_at
+
+  queue.shutdown(q)
+
+  { elapsed < 200 } |> should.be_true
+}
+
+pub fn execute_on_a_dead_queue_returns_an_error_test() {
+  let assert Ok(q) = queue.start(queue.default_config())
+  queue.shutdown(q)
+  process.sleep(50)
+
+  let reply = process.new_subject()
+  process.spawn_unlinked(fn() {
+    process.send(
+      reply,
+      queue.execute(q, fn() {
+        Ok(response.Response(status: 200, headers: [], body: "never"))
+      }),
+    )
+  })
+
+  let assert Ok(result) = process.receive(reply, 2000)
+  result |> should.be_error
 }

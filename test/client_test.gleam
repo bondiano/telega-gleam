@@ -2,6 +2,7 @@ import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
 import gleam/option.{None, Some}
+import gleam/otp/actor
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -349,4 +350,58 @@ pub fn no_default_parse_mode_test() {
   let assert [call] = mock.get_calls(from: calls)
   string.contains(call.request.body, "parse_mode")
   |> should.be_false()
+}
+
+// ---------------------------------------------------------------------------
+// C5 — the request queue must share the 429 retry path
+// ---------------------------------------------------------------------------
+
+type CounterMessage {
+  NextCount(reply: process.Subject(Int))
+}
+
+/// A call counter that works from any process, unlike a bare `Subject`
+/// mailbox — queued requests run in their own process.
+fn start_counter() -> process.Subject(CounterMessage) {
+  let assert Ok(started) =
+    actor.new(0)
+    |> actor.on_message(fn(count, message) {
+      let NextCount(reply:) = message
+      process.send(reply, count + 1)
+      actor.continue(count + 1)
+    })
+    |> actor.start
+  started.data
+}
+
+pub fn queued_request_retries_on_429_test() {
+  let counter = start_counter()
+
+  let rate_limited_then_success_client = fn(_req: request.Request(String)) {
+    case process.call(counter, 1000, NextCount) {
+      1 ->
+        Ok(response.Response(
+          status: 429,
+          headers: [],
+          body: "{\"ok\": false, \"error_code\": 429, \"parameters\": {\"retry_after\": 0}}",
+        ))
+      _ ->
+        Ok(response.Response(status: 200, headers: [], body: "{\"ok\": true}"))
+    }
+  }
+
+  let assert Ok(tg_client) =
+    client.new(
+      token: "test-token",
+      fetch_client: rate_limited_then_success_client,
+    )
+    |> client.set_max_retry_attempts(3)
+    |> client.set_request_queue(client.default_request_queue_config())
+
+  let request = client.new_get_request(tg_client, "getMe", None)
+
+  let assert Ok(response) = client.fetch(request, tg_client)
+  response.status |> should.equal(200)
+
+  client.shutdown(tg_client)
 }

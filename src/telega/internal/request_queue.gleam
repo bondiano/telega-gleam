@@ -1,5 +1,13 @@
+//// Rate-limited request queue.
+////
+//// The queue actor decides *when* a request may run; it never runs one itself.
+//// Each admitted request gets its own process, so a slow HTTP call cannot block
+//// the actor's mailbox, cannot serialise the other requests, and cannot make
+//// `overall_limit` unreachable. Workers are monitored, so a crashed one frees
+//// its concurrency slot instead of leaking it.
+
 import gleam/dict.{type Dict}
-import gleam/erlang/process.{type Subject}
+import gleam/erlang/process.{type Pid, type Subject}
 import gleam/http/response.{type Response}
 import gleam/int
 import gleam/list
@@ -38,7 +46,7 @@ pub type QueueConfig {
     overall_rate: Option(Int),
     /// Overall concurrent request limit
     overall_limit: Option(Int),
-    /// Default retry delay in milliseconds
+    /// Base retry delay in milliseconds; each further attempt doubles it
     retry_delay: Int,
     /// Maximum retries
     max_retries: Int,
@@ -54,6 +62,18 @@ pub fn default_config() -> QueueConfig {
     retry_delay: 1000,
     max_retries: 3,
   )
+}
+
+/// How often the queue re-checks its rule windows. Exactly one such timer is
+/// alive at a time — admitting a request nudges the queue directly instead of
+/// arming another one.
+const tick_interval = 100
+
+/// Upper bound on the exponential retry backoff.
+const max_retry_delay = 30_000
+
+fn queue_unavailable() -> TelegaError {
+  error.FetchError("Request queue is not available")
 }
 
 /// A queued request
@@ -72,12 +92,27 @@ type QueuedRequest {
   )
 }
 
+/// A request currently being executed by its own worker process.
+type InFlight {
+  InFlight(
+    rule_id: String,
+    worker: Pid,
+    monitor: process.Monitor,
+    reply_to: Subject(Result(Response(String), TelegaError)),
+  )
+}
+
 type Message {
   Execute(request: QueuedRequest)
+  /// Admit whatever the rules allow right now. Does not arm a timer.
   ProcessQueue
-  RequestCompleted(id: String, rule_id: String)
-  RequestFailed(request: QueuedRequest, error: TelegaError, should_retry: Bool)
+  /// Timer-driven variant of `ProcessQueue`; the only message that re-arms the
+  /// timer, which keeps exactly one tick chain alive.
+  Tick
+  RequestCompleted(id: String)
+  RequestFailed(request: QueuedRequest, error: TelegaError)
   RetryRequest(request: QueuedRequest)
+  WorkerDown(down: process.Down)
   GetTotalLength(reply_to: Subject(Int))
   IsOverheated(reply_to: Subject(Bool))
   Shutdown
@@ -104,9 +139,8 @@ type State {
     overall_count: Int,
     /// Overall window start
     overall_window_start: Int,
-    /// Currently processing requests
-    in_flight: Dict(String, String),
-    // request_id -> rule_id
+    /// Requests being executed right now, by request ID
+    in_flight: Dict(String, InFlight),
     /// Self reference
     self: Subject(Message),
   )
@@ -135,9 +169,15 @@ pub fn start(config: QueueConfig) -> Result(RequestQueue, actor.StartError) {
           self: self,
         )
 
-      process.send_after(self, 100, ProcessQueue)
+      process.send_after(self, tick_interval, Tick)
+
+      let selector =
+        process.new_selector()
+        |> process.select(self)
+        |> process.select_monitors(WorkerDown)
 
       actor.initialised(initial_state)
+      |> actor.selecting(selector)
       |> actor.returning(self)
       |> Ok
     })
@@ -149,27 +189,45 @@ pub fn start(config: QueueConfig) -> Result(RequestQueue, actor.StartError) {
   Ok(RequestQueue(started.data))
 }
 
-/// Execute a request with specified rule
+/// Execute a request with specified rule.
+///
+/// Blocks until the request finishes. The queue actor is monitored, so a queue
+/// that is gone (or dies mid-request) surfaces as an error rather than leaving
+/// the caller waiting forever.
 pub fn execute_with_rule(
   queue: RequestQueue,
   request_id: String,
   rule_id: String,
   execute: fn() -> Result(Response(String), TelegaError),
 ) -> Result(Response(String), TelegaError) {
-  let reply_subject = process.new_subject()
+  case process.subject_owner(queue.actor) {
+    Error(Nil) -> Error(queue_unavailable())
+    Ok(queue_pid) -> {
+      let reply_subject = process.new_subject()
+      let monitor = process.monitor(queue_pid)
+      let selector =
+        process.new_selector()
+        |> process.select(reply_subject)
+        |> process.select_specific_monitor(monitor, fn(_down) {
+          Error(queue_unavailable())
+        })
 
-  let request =
-    QueuedRequest(
-      id: request_id,
-      rule_id: rule_id,
-      execute: execute,
-      reply_to: reply_subject,
-      retry_count: 0,
-    )
+      process.send(
+        queue.actor,
+        Execute(QueuedRequest(
+          id: request_id,
+          rule_id: rule_id,
+          execute: execute,
+          reply_to: reply_subject,
+          retry_count: 0,
+        )),
+      )
 
-  process.send(queue.actor, Execute(request))
-
-  process.receive_forever(reply_subject)
+      let result = process.selector_receive_forever(selector)
+      process.demonitor_process(monitor)
+      result
+    }
+  }
 }
 
 /// Execute a request with default rule
@@ -219,51 +277,74 @@ fn handle_message(
       actor.continue(new_state)
     }
 
-    ProcessQueue -> {
+    ProcessQueue -> actor.continue(process_all_queues(state))
+
+    Tick -> {
       let new_state = process_all_queues(state)
 
-      process.send_after(state.self, 100, ProcessQueue)
+      process.send_after(state.self, tick_interval, Tick)
       actor.continue(new_state)
     }
 
-    RequestCompleted(id, _rule_id) -> {
-      let new_in_flight = dict.delete(state.in_flight, id)
-      let new_state = State(..state, in_flight: new_in_flight)
+    RequestCompleted(id) -> {
+      let new_state = release_slot(state, id)
 
       process.send(new_state.self, ProcessQueue)
       actor.continue(new_state)
     }
 
-    RequestFailed(request, error, should_retry) -> {
-      let new_in_flight = dict.delete(state.in_flight, request.id)
-      let mut_state = State(..state, in_flight: new_in_flight)
+    RequestFailed(request, error) -> {
+      let new_state = release_slot(state, request.id)
 
-      case should_retry {
+      case request.retry_count < state.config.max_retries {
         True -> {
-          // Schedule retry after delay
           let retry_request =
             QueuedRequest(..request, retry_count: request.retry_count + 1)
           process.send_after(
             state.self,
-            state.config.retry_delay,
+            retry_delay_for(state.config.retry_delay, request.retry_count),
             RetryRequest(retry_request),
           )
-          actor.continue(mut_state)
+          actor.continue(new_state)
         }
         False -> {
-          // Send error to caller
           process.send(request.reply_to, Error(error))
-          actor.continue(mut_state)
+          process.send(new_state.self, ProcessQueue)
+          actor.continue(new_state)
         }
       }
     }
 
     RetryRequest(request) -> {
-      // Add request back to queue for retry
       let new_state = add_to_queue(state, request)
       process.send(new_state.self, ProcessQueue)
       actor.continue(new_state)
     }
+
+    // A worker died without reporting back (its `execute` crashed). Free the
+    // slot it holds and fail its caller — nothing else would answer it.
+    WorkerDown(process.ProcessDown(pid:, ..)) -> {
+      let orphans =
+        dict.filter(state.in_flight, fn(_id, in_flight) {
+          in_flight.worker == pid
+        })
+
+      dict.each(orphans, fn(_id, in_flight) {
+        process.send(
+          in_flight.reply_to,
+          Error(error.FetchError("Request worker exited unexpectedly")),
+        )
+      })
+
+      let new_state =
+        State(
+          ..state,
+          in_flight: dict.drop(state.in_flight, dict.keys(orphans)),
+        )
+      process.send(new_state.self, ProcessQueue)
+      actor.continue(new_state)
+    }
+    WorkerDown(process.PortDown(..)) -> actor.continue(state)
 
     GetTotalLength(reply_to) -> {
       let total =
@@ -288,6 +369,22 @@ fn handle_message(
     Shutdown -> {
       actor.stop()
     }
+  }
+}
+
+/// Exponential backoff: `base`, `2 × base`, `4 × base`, … capped so a long
+/// outage cannot park a request for minutes.
+fn retry_delay_for(base: Int, attempt: Int) -> Int {
+  int.min(base * int.bitwise_shift_left(1, attempt), max_retry_delay)
+}
+
+fn release_slot(state: State, id: String) -> State {
+  case dict.get(state.in_flight, id) {
+    Ok(in_flight) -> {
+      process.demonitor_process(in_flight.monitor)
+      State(..state, in_flight: dict.delete(state.in_flight, id))
+    }
+    Error(Nil) -> state
   }
 }
 
@@ -347,45 +444,58 @@ fn process_all_queues(state: State) -> State {
     })
 
   list.fold(sorted_rules, state, fn(state, rule_entry) {
-    let #(rule_id, rule_state) = rule_entry
-    process_rule_queue(state, rule_id, rule_state, now)
+    let #(rule_id, _) = rule_entry
+    process_rule_queue(state, rule_id, now)
   })
 }
 
-fn process_rule_queue(
-  state: State,
-  rule_id: String,
-  rule_state: RuleState,
-  now: Int,
-) -> State {
-  case rule_state.queue {
-    [] -> state
-    [request, ..rest] -> {
-      case can_process(state, rule_state, now) {
-        True -> {
-          execute_request(request, state.self, state.config.max_retries)
+/// Admit as many of a rule's queued requests as its budget allows, not just one
+/// per tick.
+fn process_rule_queue(state: State, rule_id: String, now: Int) -> State {
+  case dict.get(state.rule_states, rule_id) {
+    Error(Nil) -> state
+    Ok(rule_state) ->
+      case rule_state.queue {
+        [] -> state
+        [request, ..rest] ->
+          case can_process(state, rule_state, now) {
+            False -> state
+            True -> {
+              let worker = execute_request(request, state.self)
 
-          emit_queue_depth(rule_state.rule, list.length(rest))
-          let new_rule_state =
-            RuleState(
-              ..rule_state,
-              queue: rest,
-              window_count: rule_state.window_count + 1,
-            )
-          let new_rule_states =
-            dict.insert(state.rule_states, rule_id, new_rule_state)
-          let new_in_flight = dict.insert(state.in_flight, request.id, rule_id)
+              emit_queue_depth(rule_state.rule, list.length(rest))
+              let new_rule_state =
+                RuleState(
+                  ..rule_state,
+                  queue: rest,
+                  window_count: rule_state.window_count + 1,
+                )
+              let in_flight =
+                dict.insert(
+                  state.in_flight,
+                  request.id,
+                  InFlight(
+                    rule_id:,
+                    worker:,
+                    monitor: process.monitor(worker),
+                    reply_to: request.reply_to,
+                  ),
+                )
 
-          State(
-            ..state,
-            rule_states: new_rule_states,
-            in_flight: new_in_flight,
-            overall_count: state.overall_count + 1,
-          )
-        }
-        False -> state
+              State(
+                ..state,
+                rule_states: dict.insert(
+                  state.rule_states,
+                  rule_id,
+                  new_rule_state,
+                ),
+                in_flight:,
+                overall_count: state.overall_count + 1,
+              )
+              |> process_rule_queue(rule_id, now)
+            }
+          }
       }
-    }
   }
 }
 
@@ -422,32 +532,17 @@ fn reset_windows(state: State, now: Int) -> State {
   State(..state, rule_states: new_rule_states)
 }
 
-fn execute_request(
-  request: QueuedRequest,
-  self: Subject(Message),
-  max_retries: Int,
-) {
-  let result = request.execute()
-
-  case result {
-    Ok(value) -> {
-      process.send(self, RequestCompleted(request.id, request.rule_id))
-      process.send(request.reply_to, Ok(value))
-    }
-    Error(error) -> {
-      let should_retry = request.retry_count < max_retries
-
-      case should_retry {
-        True -> {
-          process.send(self, RequestFailed(request, error, True))
-        }
-        False -> {
-          process.send(self, RequestCompleted(request.id, request.rule_id))
-          process.send(request.reply_to, Error(error))
-        }
+/// Run the request in its own process. The actor stays free to admit further
+/// requests (up to `overall_limit`) and to answer status queries while this one
+/// is in flight.
+fn execute_request(request: QueuedRequest, self: Subject(Message)) -> Pid {
+  process.spawn_unlinked(fn() {
+    case request.execute() {
+      Ok(value) -> {
+        process.send(request.reply_to, Ok(value))
+        process.send(self, RequestCompleted(request.id))
       }
+      Error(error) -> process.send(self, RequestFailed(request, error))
     }
-  }
-
-  Nil
+  })
 }

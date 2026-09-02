@@ -160,12 +160,14 @@ pub fn fetch(
 
   let method = api_request.method
   use api_request <- result.try(api_to_request(api_request))
+  // The queued path runs the *same* send-with-retry as the direct one, so a 429
+  // honours `parameters.retry_after` whether or not a queue is configured.
+  let send = fn() {
+    send_with_retry(client, method, api_request, client.max_retry_attempts)
+  }
   case client.request_queue {
-    Some(queue) ->
-      request_queue.execute(queue, fn() { send_request(client, api_request) })
-
-    None ->
-      send_with_retry(client, method, api_request, client.max_retry_attempts)
+    Some(queue) -> request_queue.execute(queue, send)
+    None -> send()
   }
 }
 
@@ -205,10 +207,12 @@ pub fn fetch_multipart(
   // share the exact queue and 429-retry path as every JSON call.
   let send = fn() { fetch_bits(bits_req) |> stringify_response }
 
+  let send_with_retries = fn() {
+    send_bits_with_retry(client, method, send, client.max_retry_attempts)
+  }
   case client.request_queue {
-    Some(queue) -> request_queue.execute(queue, send)
-    None ->
-      send_bits_with_retry(client, method, send, client.max_retry_attempts)
+    Some(queue) -> request_queue.execute(queue, send_with_retries)
+    None -> send_with_retries()
   }
 }
 
@@ -497,22 +501,14 @@ pub fn fetch_with_rule(
   use api_request <- result.try(api_to_request(api_request))
   let request_id = utils.random_string(32)
 
+  let send = fn() {
+    send_with_retry(client, method, api_request, client.max_retry_attempts)
+  }
   case client.request_queue {
     Some(queue) ->
-      request_queue.execute_with_rule(queue, request_id, rule_id, fn() {
-        send_request(client, api_request)
-      })
-
-    None ->
-      send_with_retry(client, method, api_request, client.max_retry_attempts)
+      request_queue.execute_with_rule(queue, request_id, rule_id, send)
+    None -> send()
   }
-}
-
-fn send_request(
-  client: TelegramClient,
-  api_request: Request(String),
-) -> Result(Response(String), TelegaError) {
-  client.fetch_client(api_request)
 }
 
 /// Wraps a request execution in `telega.api_call` start/stop/exception events.
