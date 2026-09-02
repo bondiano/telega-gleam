@@ -720,19 +720,23 @@ pub fn start_chat_instance(
   args: ChatInstanceArgs(session, error, dependencies),
 ) -> actor.StartResult(ChatInstanceSubject(session, error, dependencies)) {
   actor.new_with_initialiser(args.init_timeout, fn(subject) {
-    let session = case args.session_settings.get_session(args.key) {
-      Ok(Some(session)) -> session
-      Ok(None) -> args.session_settings.default_session()
+    // A read that *failed* is not the same as "this user has no session yet":
+    // starting on a default here would let the first handler persist it over
+    // the real, still-stored data. Fail the start instead — the update is
+    // answered `False` and the next one gets a fresh attempt.
+    use session <- result.try(case args.session_settings.get_session(args.key) {
+      Ok(Some(session)) -> Ok(session)
+      Ok(None) -> Ok(args.session_settings.default_session())
       Error(error) -> {
-        log.warning(
+        let reason =
           "Failed to get session for key "
           <> args.key
-          <> ", falling back to default: "
-          <> string.inspect(error),
-        )
-        args.session_settings.default_session()
+          <> ": "
+          <> string.inspect(error)
+        log.error(reason)
+        Error(reason)
       }
-    }
+    })
 
     let chat_instance =
       ChatInstance(
@@ -1324,7 +1328,9 @@ pub type SessionSettings(session, error) {
     persist_session: fn(String, session) -> Result(session, error),
     // Calls on initialization of the chat instance to get the session.
     // Returns `None` if no session is found.
-    // On error, logs a warning and falls back to `default_session()`.
+    // On error the chat instance refuses to start: the update is answered
+    // `False` rather than handled on a default session that would then be
+    // persisted over the still-stored real one.
     get_session: fn(String) -> Result(Option(session), error),
     // Calls on initialization of the chat instance if no session is found.
     default_session: fn() -> session,

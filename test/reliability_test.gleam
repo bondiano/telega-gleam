@@ -659,3 +659,41 @@ pub fn failed_spawn_keeps_the_bot_and_the_factory_alive_test() {
   dispatch(bot_subject, factory.text_update(text: "hi"), 3000)
   |> should.equal(Ok(True))
 }
+
+// M1 — a session that could not be read must not be replaced by the default ---
+
+pub fn m1_unreadable_session_is_not_overwritten_test() {
+  let persisted = process.new_subject()
+  let session_settings =
+    bot.SessionSettings(
+      persist_session: fn(_key, session) {
+        process.send(persisted, session)
+        Ok(session)
+      },
+      get_session: fn(_key) { Error(Err("storage down")) },
+      default_session: fn() { Sess(0) },
+    )
+
+  let #(bot_subject, reg) =
+    start_bot_with_sessions(
+      name: "m1_unreadable_session",
+      router: fn(ctx, _update) { bot.next_session(ctx, Sess(99)) },
+      catch_handler: context.catch_handler(),
+      idle_timeout: None,
+      session_settings:,
+    )
+
+  // Nothing could handle the update, and the caller is told so.
+  dispatch(bot_subject, factory.text_update(text: "hi"), 3000)
+  |> should.equal(Ok(False))
+
+  // The handler never ran, so the user's real session was never overwritten
+  // with a fresh default.
+  process.receive(persisted, 200)
+  |> should.equal(Error(Nil))
+
+  // No half-started instance is left behind in the registry.
+  process.sleep(100)
+  registry.get(reg, key: default_key)
+  |> should.equal(None)
+}
