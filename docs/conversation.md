@@ -160,7 +160,21 @@ the wait's own filter — a different command than `wait_command` asked for, tex
 that no `wait_hears` pattern matches, callback data the `wait_callback_query`
 regexp rejects, an update rejected by `wait_for`/`wait_filtered`. After `or`
 runs the conversation keeps waiting, so the user can try again; without an `or`
-handler the update is simply ignored and reported as unhandled.
+handler the update is ignored and reported as unhandled.
+
+**Commands are the exception.** A command the conversation did not ask for
+(and that no `or` handler claimed) is passed to the **router**, so `/cancel`,
+`/start` and the rest keep working while a `wait_*` is armed — otherwise a
+user who changes their mind mid-conversation has no way out. The conversation
+stays armed afterwards; a command handler that means to end it calls
+`bot.cancel_conversation_in(ctx)`:
+
+```gleam
+router.on_command(r, "cancel", fn(ctx, _cmd) {
+  bot.cancel_conversation_in(ctx)
+  reply.with_text(ctx, "Cancelled.")
+})
+```
 
 ## Examples
 

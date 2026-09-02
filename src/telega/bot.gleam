@@ -334,6 +334,18 @@ pub fn cancel_conversation_for(
   actor.send(bot_subject, CancelConversationBotMessage(key: key))
 }
 
+/// Drop this chat's pending `wait_*` continuation from inside a handler.
+///
+/// The companion to commands reaching the router while a conversation waits:
+/// this is how a `/cancel` route ends the conversation it interrupted. The
+/// chat instance and its session are untouched — only the suspended handler is
+/// forgotten, so the next update routes normally.
+pub fn cancel_conversation_in(
+  ctx ctx: Context(session, error, dependencies),
+) -> Nil {
+  actor.send(ctx.chat_subject, CancelContinuationChatInstanceMessage)
+}
+
 fn bot_loop(
   bot: Bot(session, error, dependencies),
   message: BotMessage,
@@ -1246,16 +1258,70 @@ fn do_handle_continuation(
                 }
               }
             }
-            None -> {
-              ack_with(False)
-              actor.continue(chat)
-            }
+            None -> unmatched_while_waiting(context:, update:, chat:, ack_with:)
           }
-        None -> {
-          ack_with(False)
-          actor.continue(chat)
-        }
+        None -> unmatched_while_waiting(context:, update:, chat:, ack_with:)
       }
+    }
+  }
+}
+
+/// Nothing in the pending conversation wanted this update.
+///
+/// A command still belongs to the router: swallowing it would leave `/cancel`
+/// (and every other registered command) dead for as long as a `wait_*` is
+/// armed, which is exactly how a user gets stuck in a conversation. The
+/// continuation stays armed — a command handler that means to end it calls
+/// `cancel_conversation_in`.
+///
+/// Anything else is the conversation's business and keeps waiting.
+fn unmatched_while_waiting(
+  context context: Context(session, error, dependencies),
+  update update: Update,
+  chat chat: ChatInstance(session, error, dependencies),
+  ack_with ack_with: fn(Bool) -> Nil,
+) {
+  case update {
+    CommandUpdate(..) ->
+      case
+        telemetry.span(
+          event: ["telega", "update"],
+          metadata: update_telemetry_metadata(update),
+          run: fn() { chat.router_handler(context, update) },
+        )
+      {
+        Ok(Context(session: new_session, ..)) ->
+          case chat.session_settings.persist_session(chat.key, new_session) {
+            Ok(persisted_session) -> {
+              ack_with(True)
+              actor.continue(ChatInstance(..chat, session: persisted_session))
+            }
+            Error(e) -> handle_handler_error(chat, context, e, ack_with)
+          }
+        Error(e) -> handle_handler_error(chat, context, e, ack_with)
+      }
+    _ -> {
+      ack_with(False)
+      actor.continue(chat)
+    }
+  }
+}
+
+/// Give the bot's catch handler a chance; stop the instance if that fails too.
+fn handle_handler_error(
+  chat: ChatInstance(session, error, dependencies),
+  context: Context(session, error, dependencies),
+  error: error,
+  ack_with: fn(Bool) -> Nil,
+) {
+  case chat.catch_handler(context, error) {
+    Ok(_) -> {
+      ack_with(False)
+      actor.continue(chat)
+    }
+    Error(e) -> {
+      log.error_d("Error in catch handler: ", e)
+      stop_chat_instance(chat, ack_with, "catch_handler_failed")
     }
   }
 }

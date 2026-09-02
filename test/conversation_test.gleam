@@ -379,3 +379,87 @@ pub fn wait_choice_sends_prompt_text_test() {
   )
   Nil
 }
+
+// M9 — a command must not be swallowed by a bare `wait_*` --------------------
+
+pub fn command_reaches_the_router_during_a_bare_wait_test() {
+  let seen = process.new_subject()
+
+  let handlers = [
+    bot.HandleCommand("setname", fn(ctx, _command) {
+      bot.wait_handler(
+        ctx:,
+        handler: bot.HandleText(fn(ctx, name) {
+          process.send(seen, "name:" <> name)
+          Ok(ctx)
+        }),
+        // No `or:` handler at all — the case the audit calls out.
+        handle_else: None,
+        timeout: None,
+      )
+    }),
+    bot.HandleCommand("cancel", fn(ctx, _command) {
+      process.send(seen, "cancelled")
+      bot.cancel_conversation_in(ctx)
+      Ok(ctx)
+    }),
+  ]
+
+  let session_settings =
+    context.session_settings(default: fn() { TestSession(name: "") })
+  let bot_subject =
+    build_test_bot(handlers_to_router_handler(handlers), session_settings)
+
+  bot.handle_update(bot_subject, factory.command_update(command: "setname"))
+  |> should.be_true
+
+  // `/cancel` is a registered command: it belongs to the router, not to the
+  // floor.
+  bot.handle_update(bot_subject, factory.command_update(command: "cancel"))
+  |> should.be_true
+  process.receive(seen, 200) |> should.equal(Ok("cancelled"))
+
+  // And the conversation really is over — the next text is not the name.
+  bot.handle_update(bot_subject, factory.text_update(text: "John"))
+  process.receive(seen, 200) |> should.equal(Error(Nil))
+}
+
+pub fn non_command_updates_still_wait_test() {
+  let seen = process.new_subject()
+
+  let handlers = [
+    bot.HandleCommand("setname", fn(ctx, _command) {
+      bot.wait_handler(
+        ctx:,
+        handler: bot.HandleText(fn(ctx, name) {
+          process.send(seen, "name:" <> name)
+          Ok(ctx)
+        }),
+        handle_else: None,
+        timeout: None,
+      )
+    }),
+    bot.HandleAll(fn(ctx, _upd) {
+      process.send(seen, "router_fallback")
+      Ok(ctx)
+    }),
+  ]
+
+  let session_settings =
+    context.session_settings(default: fn() { TestSession(name: "") })
+  let bot_subject =
+    build_test_bot(handlers_to_router_handler(handlers), session_settings)
+
+  bot.handle_update(bot_subject, factory.command_update(command: "setname"))
+  |> should.be_true
+
+  // A photo does not match `HandleText`, and it is not a command: the wait
+  // stays armed and the router (whose `HandleAll` would have claimed it) is
+  // not consulted.
+  bot.handle_update(bot_subject, factory.photo_update())
+  process.receive(seen, 200) |> should.equal(Error(Nil))
+
+  // The text the conversation was actually waiting for still lands.
+  bot.handle_update(bot_subject, factory.text_update(text: "John"))
+  process.receive(seen, 500) |> should.equal(Ok("name:John"))
+}
