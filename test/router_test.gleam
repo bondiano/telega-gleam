@@ -2278,3 +2278,56 @@ pub fn command_matching_ignores_case_test() {
   |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
   |> should.equal("matched")
 }
+
+pub fn my_chat_member_route_test() {
+  let handler = fn(
+    ctx: Context(String, TelegaError, Nil),
+    _updated: types.ChatMemberUpdated,
+  ) {
+    Ok(Context(..ctx, session: "my_chat_member"))
+  }
+
+  let r =
+    router.new("test")
+    |> router.on_my_chat_member_updated(handler)
+
+  // The bot's own membership changing (blocked, added to a group, promoted)
+  // is a distinct update kind from `chat_member`, and had no route of its own.
+  let upd =
+    update.MyChatMemberUpdate(
+      from_id: 1,
+      chat_id: 2,
+      chat_member_updated: my_chat_member_updated(),
+      raw: factory.raw_update(message: factory.message(text: "")),
+    )
+
+  router.handle(r, make_ctx("initial"), upd)
+  |> should.be_ok()
+  |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
+  |> should.equal("my_chat_member")
+
+  router.allowed_updates(r) |> should.equal(["my_chat_member"])
+}
+
+fn my_chat_member_updated() -> types.ChatMemberUpdated {
+  types.ChatMemberUpdated(
+    chat: factory.chat_with(id: 2, type_: "group"),
+    from: factory.user_with(id: 1, first_name: "U"),
+    date: 0,
+    old_chat_member: types.ChatMemberMemberChatMember(types.ChatMemberMember(
+      status: "member",
+      tag: None,
+      user: factory.bot_user(),
+      until_date: None,
+    )),
+    new_chat_member: types.ChatMemberMemberChatMember(types.ChatMemberMember(
+      status: "member",
+      tag: None,
+      user: factory.bot_user(),
+      until_date: None,
+    )),
+    invite_link: None,
+    via_join_request: None,
+    via_chat_folder_invite_link: None,
+  )
+}

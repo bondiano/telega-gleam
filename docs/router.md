@@ -128,7 +128,9 @@ Dedicated handlers exist for the rest of the Telegram update types:
 - **Polls** — `on_poll`, `on_poll_answer`
 - **Reactions** — `on_reaction`, `on_reaction_emoji`, `on_reaction_emojis`,
   `on_paid_reaction`, `on_reaction_added`, `on_reaction_removed`, `on_reaction_count`
-- **Chat events** — `on_chat_member_updated`, `on_chat_join_request`
+- **Chat events** — `on_chat_member_updated` (another member's status changed),
+  `on_my_chat_member_updated` (the *bot's own* status changed: blocked,
+  unblocked, added to a group, promoted), `on_chat_join_request`
 
 ```gleam
 router
@@ -468,6 +470,7 @@ Route → update type mapping:
 | reaction handlers | `message_reaction` |
 | `on_reaction_count` | `message_reaction_count` |
 | `on_chat_member_updated` | `chat_member` |
+| `on_my_chat_member_updated` | `my_chat_member` |
 | `on_chat_join_request` | `chat_join_request` |
 
 `router.allowed_updates(router)` returns the derived list directly.

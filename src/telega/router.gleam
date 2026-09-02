@@ -479,6 +479,12 @@ pub type Route(session, error, dependencies) {
   ChatMemberUpdatedRoute(
     handler: ChatMemberUpdatedHandler(session, error, dependencies),
   )
+  /// The *bot's own* membership changed — it was blocked, unblocked, added to
+  /// a group, or promoted. A different Telegram update kind from
+  /// `chat_member`, and `allowed_updates` lists them separately.
+  MyChatMemberUpdatedRoute(
+    handler: ChatMemberUpdatedHandler(session, error, dependencies),
+  )
   ChatJoinRequestRoute(
     handler: ChatJoinRequestHandler(session, error, dependencies),
   )
@@ -969,6 +975,22 @@ pub fn on_chat_member_updated(
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChatMemberUpdatedRoute(handler:), ..routes])
+    ComposedRouter(..) as composed -> composed
+  }
+}
+
+/// Add handler for changes to the *bot's own* membership: a user blocking or
+/// unblocking it, the bot being added to or removed from a group, or its admin
+/// rights changing. Telegram sends these as `my_chat_member`, separately from
+/// the `chat_member` updates `on_chat_member_updated` handles.
+pub fn on_my_chat_member_updated(
+  router: Router(session, error, dependencies),
+  handler: ChatMemberUpdatedHandler(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
+  case router {
+    Router(routes:, ..) ->
+      Router(..router, routes: [MyChatMemberUpdatedRoute(handler:), ..routes])
     ComposedRouter(..) as composed -> composed
   }
 }
@@ -1646,6 +1668,7 @@ fn route_update_type(route: Route(session, error, dependencies)) -> String {
     | MessageReactionRemovedRoute(..) -> "message_reaction"
     MessageReactionCountRoute(..) -> "message_reaction_count"
     ChatMemberUpdatedRoute(..) -> "chat_member"
+    MyChatMemberUpdatedRoute(..) -> "my_chat_member"
     ChatJoinRequestRoute(..) -> "chat_join_request"
     // Wildcards are handled before this function is reached.
     CustomRoute(..) | FilteredRoute(..) -> "message"
@@ -1910,6 +1933,13 @@ pub fn scope(
             MessageReactionCountRoute(handler: fn(ctx, message_reaction_count) {
               case predicate(ctx.update) {
                 True -> handler(ctx, message_reaction_count)
+                False -> Ok(ctx)
+              }
+            })
+          MyChatMemberUpdatedRoute(handler:) ->
+            MyChatMemberUpdatedRoute(handler: fn(ctx, chat_member_updated) {
+              case predicate(ctx.update) {
+                True -> handler(ctx, chat_member_updated)
                 False -> Ok(ctx)
               }
             })
@@ -2316,6 +2346,9 @@ fn handler_for_route(
     ChatMemberUpdatedRoute(handler:),
       update.ChatMemberUpdate(chat_member_updated:, ..)
     -> fn(ctx, _) { handler(ctx, chat_member_updated) }
+    MyChatMemberUpdatedRoute(handler:),
+      update.MyChatMemberUpdate(chat_member_updated:, ..)
+    -> fn(ctx, _) { handler(ctx, chat_member_updated) }
     ChatJoinRequestRoute(handler:),
       update.ChatJoinRequestUpdate(chat_join_request:, ..)
     -> fn(ctx, _) { handler(ctx, chat_join_request) }
@@ -2359,6 +2392,7 @@ fn route_matches(
     -> has_removed_reactions(message_reaction_updated)
     MessageReactionCountRoute(..), update.MessageReactionCountUpdate(..) -> True
     ChatMemberUpdatedRoute(..), update.ChatMemberUpdate(..) -> True
+    MyChatMemberUpdatedRoute(..), update.MyChatMemberUpdate(..) -> True
     ChatJoinRequestRoute(..), update.ChatJoinRequestUpdate(..) -> True
     CustomRoute(matcher:, ..), _ -> matcher(update)
     FilteredRoute(filter:, ..), _ -> evaluate_filter(filter, update)
