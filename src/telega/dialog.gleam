@@ -915,7 +915,18 @@ pub fn restart(
       chat_id,
       engine.flow_name_prefix <> dialog_id,
     )
-  let _ = flow_registry.cancel_flow_instance(registry, flow_id: instance_id)
+  // The ctx-aware variant runs the flow's exit hook, which takes the old
+  // message's keyboard down before the fresh one is sent.
+  let ctx = case
+    flow_registry.cancel_flow_instance_for(
+      registry:,
+      ctx:,
+      flow_id: instance_id,
+    )
+  {
+    Ok(#(ctx, _)) -> ctx
+    Error(_) -> ctx
+  }
   start(ctx, registry, dialog_id)
 }
 

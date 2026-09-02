@@ -1117,7 +1117,7 @@ let reg =
   |> registry.register_cancel_command("/cancel")
 ```
 
-When the user sends `/cancel`, all their active flow instances are deleted and `on_flow_exit` hooks are called.
+When the user sends `/cancel`, all their active flow instances are deleted and `on_flow_exit` hooks are called (an attached dialog uses that hook to take its live keyboard down).
 
 For a custom cancel message:
 
@@ -1180,7 +1180,7 @@ An instance is expired if:
 
 9. **Set TTL for production flows.** Flows without TTL accumulate in storage forever. Use `builder.with_ttl` to set a reasonable lifetime (e.g., 10–30 minutes for form-like flows). For long-running workflows, use per-wait timeouts instead.
 
-10. **Use programmatic cancellation for admin tools.** `registry.cancel_user_flows` and `registry.cancel_flow_instance` work without `Context` — ideal for admin webhooks, cron jobs, and graceful shutdown.
+10. **Use programmatic cancellation for admin tools.** `registry.cancel_user_flows` and `registry.cancel_flow_instance` work without `Context` — ideal for admin webhooks, cron jobs, and graceful shutdown. Because they have no `Context`, they cannot run `on_flow_exit`; from inside a handler use `registry.cancel_user_flows_for` / `registry.cancel_flow_instance_for`, which do.
 
 ## Complete Example
 

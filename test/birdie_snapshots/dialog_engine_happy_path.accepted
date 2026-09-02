@@ -1,8 +1,6 @@
 ---
 version: 2.0.1
 title: dialog:engine:happy_path
-file: ./test/telega/dialog_test.gleam
-test_name: engine_happy_path_test
 ---
 1. sendMessage
 {
@@ -89,14 +87,14 @@ test_name: engine_happy_path_test
   "show_alert": false
 }
 
-6. editMessageReplyMarkup
-{
-  "chat_id": 201,
-  "message_id": 1
-}
-
-7. sendMessage
+6. sendMessage
 {
   "chat_id": 201,
   "text": "saved: Alice/en"
+}
+
+7. editMessageReplyMarkup
+{
+  "chat_id": 201,
+  "message_id": 1
 }

@@ -311,6 +311,23 @@ fn delete_instance(
   }
 }
 
+/// End a flow instance for good.
+///
+/// Every exit — `Complete`, `Cancel`, `Exit`, a TTL timeout, `/cancel` — goes
+/// through here so they cannot drift apart. The instance is deleted **before**
+/// the exit hook runs: a hook that fails must not resurrect a finished flow,
+/// or the side effects of the finishing step would be repeated on the next
+/// event.
+@internal
+pub fn finish_instance(
+  flow: Flow(step_type, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
+  instance: FlowInstance,
+) -> Result(Context(session, error, dependencies), error) {
+  delete_instance(flow, instance.id)
+  run_flow_exit_hook(flow.on_flow_exit, ctx, instance)
+}
+
 /// Extract user and chat IDs from context
 @internal
 pub fn extract_ids_from_context(
@@ -651,11 +668,8 @@ fn process_action(
 
     Cancel -> {
       emit_flow_event("cancel", instance, [#("count", 1)])
-      case run_flow_exit_hook(flow.on_flow_exit, ctx, instance) {
-        Ok(final_ctx) -> {
-          delete_instance(flow, instance.id)
-          Ok(final_ctx)
-        }
+      case finish_instance(flow, ctx, instance) {
+        Ok(final_ctx) -> Ok(final_ctx)
         Error(err) -> handle_error(flow, ctx, instance, Some(err))
       }
     }
@@ -700,8 +714,11 @@ fn process_action(
     }
 
     Exit(_) -> {
-      delete_instance(flow, instance.id)
-      Ok(ctx)
+      emit_flow_event("exit", instance, [#("count", 1)])
+      case finish_instance(flow, ctx, instance) {
+        Ok(final_ctx) -> Ok(final_ctx)
+        Error(err) -> handle_error(flow, ctx, instance, Some(err))
+      }
     }
 
     EnterSubflow(subflow_name, data) -> {

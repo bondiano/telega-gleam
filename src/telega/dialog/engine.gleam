@@ -149,6 +149,25 @@ pub fn compile(
       result
     })
 
+  // Every exit runs through here — Done, `/cancel`, `restart`, a TTL timeout —
+  // so a finished dialog never leaves a live keyboard behind on the message.
+  let builder =
+    flow_builder.set_on_flow_exit(builder, fn(ctx, inst) {
+      case message_id(inst) {
+        Some(message_id) -> {
+          let _ =
+            render.remove_keyboard(
+              ctx,
+              chat_id: ctx.update.chat_id,
+              message_id:,
+            )
+          Nil
+        }
+        None -> Nil
+      }
+      Ok(ctx)
+    })
+
   let builder =
     flow_builder.on_error(builder, fn(ctx, inst, maybe_error) {
       log_dialog_error(dialog, inst, maybe_error)
@@ -452,14 +471,8 @@ fn finish_dialog(
   state: String,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   let inst = save_state(inst, state)
-  case message_id(inst) {
-    Some(message_id) -> {
-      let _ =
-        render.remove_keyboard(ctx, chat_id: ctx.update.chat_id, message_id:)
-      Nil
-    }
-    None -> Nil
-  }
+  // The keyboard comes down in the flow's exit hook, shared with every other
+  // way this dialog can end.
   Ok(#(ctx, flow_types.Complete(inst.state.data), inst))
 }
 

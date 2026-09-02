@@ -3082,3 +3082,107 @@ pub fn newest_waiting_flow_wins_test() {
   let assert Ok(_) = router.handle(r, flow_ctx(701, 801, text2), text2)
   process.receive(events, 100) |> should.equal(Ok("m4_older:text:again"))
 }
+
+// ============================================================================
+// M5 — every way a flow ends runs the exit hook, and ends it for good
+// ============================================================================
+
+fn exiting_flow(name: String, ets, events, exit_result) {
+  builder.new(name, ets, test_step_to_string, string_to_test_step)
+  |> builder.add_step(Start, fn(ctx, inst) {
+    case instance.get_data(inst, "how") {
+      Some("cancel") -> action.cancel(ctx, inst)
+      Some("exit") -> action.exit(ctx, inst, result: None)
+      _ -> action.wait(ctx, inst)
+    }
+  })
+  |> builder.set_on_flow_exit(fn(ctx, _inst) {
+    process.send(events, "exit:" <> name)
+    exit_result(ctx)
+  })
+  |> builder.build(initial: Start)
+}
+
+pub fn cancel_deletes_the_instance_even_when_the_exit_hook_fails_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+  let flow =
+    exiting_flow("m5_cancel", ets, events, fn(_ctx) {
+      Error(error.RouterError("exit hook exploded"))
+    })
+
+  let ctx =
+    flow_ctx(
+      710,
+      810,
+      factory.text_update_with(text: "", from_id: 710, chat_id: 810),
+    )
+  let _ =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 710,
+      chat_id: 810,
+      initial_data: dict.from_list([#("how", "cancel")]),
+    )
+
+  process.receive(events, 100) |> should.equal(Ok("exit:m5_cancel"))
+  // A failing hook must not resurrect a cancelled flow.
+  let assert Ok(None) = ets.load(storage.generate_id(710, 810, "m5_cancel"))
+}
+
+pub fn exit_runs_the_exit_hook_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+  let flow = exiting_flow("m5_exit", ets, events, fn(ctx) { Ok(ctx) })
+
+  let ctx =
+    flow_ctx(
+      711,
+      811,
+      factory.text_update_with(text: "", from_id: 711, chat_id: 811),
+    )
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 711,
+      chat_id: 811,
+      initial_data: dict.from_list([#("how", "exit")]),
+    )
+
+  process.receive(events, 100) |> should.equal(Ok("exit:m5_exit"))
+  let assert Ok(None) = ets.load(storage.generate_id(711, 811, "m5_exit"))
+}
+
+pub fn cancel_command_runs_the_exit_hook_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+  let flow = exiting_flow("m5_cmd", ets, events, fn(ctx) { Ok(ctx) })
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("go"), flow)
+    |> registry.register_cancel_command("cancel")
+  let r = registry.apply_to_router(router.new("m5"), reg)
+
+  let ctx =
+    flow_ctx(
+      712,
+      812,
+      factory.text_update_with(text: "", from_id: 712, chat_id: 812),
+    )
+  let assert Ok(_) = engine.start_or_resume(flow, ctx, 712, 812, dict.new())
+
+  let cancel =
+    factory.command_update_with(
+      command: "cancel",
+      payload: None,
+      from_id: 712,
+      chat_id: 812,
+    )
+  let assert Ok(_) = router.handle(r, flow_ctx(712, 812, cancel), cancel)
+
+  process.receive(events, 100) |> should.equal(Ok("exit:m5_cmd"))
+  let assert Ok(None) = ets.load(storage.generate_id(712, 812, "m5_cmd"))
+}

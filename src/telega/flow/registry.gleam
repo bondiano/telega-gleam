@@ -162,7 +162,11 @@ pub fn register_cancel_command_with(
   )
 }
 
-/// Cancel all flows for a user in a chat
+/// Cancel all flows for a user in a chat, **without** running their
+/// `on_flow_exit` hooks — those take a `Context` this variant has none of.
+///
+/// Use it from admin tooling, cron jobs and shutdown paths. From a handler
+/// prefer `cancel_user_flows_for`, which does run the hooks.
 pub fn cancel_user_flows(
   registry: FlowRegistry(session, error, dependencies),
   user_id user_id: Int,
@@ -184,7 +188,39 @@ pub fn cancel_user_flows(
   })
 }
 
-/// Cancel a specific flow instance by ID
+/// Cancel every flow the context's user has running in this chat, running
+/// each flow's `on_flow_exit` hook — this is what `/cancel` uses, and what a
+/// dialog relies on to take its live keyboard down.
+///
+/// Returns the cancelled instance ids. A hook that fails is reported through
+/// the flow's own error handling; the instance is deleted either way.
+pub fn cancel_user_flows_for(
+  registry registry: FlowRegistry(session, error, dependencies),
+  ctx ctx: Context(session, error, dependencies),
+  user_id user_id: Int,
+  chat_id chat_id: Int,
+) -> Result(#(Context(session, error, dependencies), List(String)), error) {
+  let flows = dict.values(registry.flow_map)
+  list.try_fold(flows, #(ctx, []), fn(acc, flow) {
+    let #(ctx, cancelled) = acc
+    let flow_id = storage.generate_id(user_id, chat_id, flow.name)
+    case flow.storage.load(flow_id) {
+      Ok(Some(inst)) ->
+        case engine.finish_instance(flow, ctx, inst) {
+          Ok(ctx) -> Ok(#(ctx, [flow_id, ..cancelled]))
+          // The instance is already gone; a failing exit hook must not stop
+          // the remaining flows from being cancelled too.
+          Error(_) -> Ok(#(ctx, [flow_id, ..cancelled]))
+        }
+      Ok(None) -> Ok(acc)
+      Error(err) -> Error(err)
+    }
+  })
+}
+
+/// Cancel a specific flow instance by ID, **without** running its
+/// `on_flow_exit` hook. See `cancel_flow_instance_for` for the hook-running
+/// variant.
 pub fn cancel_flow_instance(
   registry: FlowRegistry(session, error, dependencies),
   flow_id flow_id: String,
@@ -205,6 +241,31 @@ pub fn cancel_flow_instance(
       }
     })
   Ok(found)
+}
+
+/// Cancel a specific flow instance by ID, running its `on_flow_exit` hook.
+pub fn cancel_flow_instance_for(
+  registry registry: FlowRegistry(session, error, dependencies),
+  ctx ctx: Context(session, error, dependencies),
+  flow_id flow_id: String,
+) -> Result(#(Context(session, error, dependencies), Bool), error) {
+  let flows = dict.values(registry.flow_map)
+  Ok(
+    list.fold(flows, #(ctx, False), fn(acc, flow) {
+      case acc {
+        #(_, True) -> acc
+        #(ctx, False) ->
+          case flow.storage.load(flow_id) {
+            Ok(Some(inst)) ->
+              case engine.finish_instance(flow, ctx, inst) {
+                Ok(ctx) -> #(ctx, True)
+                Error(_) -> #(ctx, True)
+              }
+            _ -> acc
+          }
+      }
+    }),
+  )
 }
 
 /// Call a registered flow from any handler
@@ -255,13 +316,14 @@ pub fn apply_to_router(
       let #(command, on_cancel) = cancel_entry
       router.on_command(r, command, fn(ctx, _cmd) {
         case
-          cancel_user_flows(
-            registry,
+          cancel_user_flows_for(
+            registry:,
+            ctx:,
             user_id: ctx.update.from_id,
             chat_id: ctx.update.chat_id,
           )
         {
-          Ok(cancelled) -> on_cancel(ctx, cancelled)
+          Ok(#(ctx, cancelled)) -> on_cancel(ctx, cancelled)
           Error(_) -> Ok(ctx)
         }
       })

@@ -765,6 +765,49 @@ pub fn callback_filter_routes_press_to_its_dialog_test() {
   alpha.state.current_step |> should.equal("second")
 }
 
+/// M5 — `/cancel` must take the live keyboard down, not just delete the
+/// instance and leave the buttons clickable.
+pub fn cancel_command_removes_the_live_keyboard_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let registry =
+    flow_registry.new_registry()
+    |> dialog.attach_on_command(
+      command: "alpha",
+      dialog: two_window_dialog("alpha", storage),
+    )
+    |> flow_registry.register_cancel_command("cancel")
+  let r = flow_registry.apply_to_router(router.new("dialogs"), registry)
+  let #(client, calls) = dialog_mock_client()
+  let chat_id = 214
+
+  route_update(
+    r,
+    client,
+    factory.command_update_with(
+      command: "alpha",
+      payload: None,
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+  route_update(
+    r,
+    client,
+    factory.command_update_with(
+      command: "cancel",
+      payload: None,
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+
+  let assert Ok(None) = storage.load(driver.flow_id(chat_id, "alpha"))
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:engine:cancel_removes_keyboard")
+}
+
 pub fn orphan_dialog_callback_answered_stale_test() {
   let assert Ok(storage) = flow_storage.create_ets_storage()
   let registry =
