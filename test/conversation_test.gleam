@@ -306,9 +306,10 @@ pub fn wait_filtered_or_combinator_test() {
   bot.handle_update(bot_subject, factory.command_update(command: "waitmedia"))
   |> should.be_true
 
-  // Voice does not match text|photo -> the continuation re-arms, no resolution.
+  // Voice does not match text|photo -> reported unhandled (there is no `or:`
+  // handler), and the continuation stays armed.
   bot.handle_update(bot_subject, factory.voice_update())
-  |> should.be_true
+  |> should.be_false
 
   // Photo matches -> continuation fires with the raw PhotoUpdate.
   bot.handle_update(bot_subject, factory.photo_update())

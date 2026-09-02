@@ -1489,15 +1489,12 @@ pub fn wait_for(
   continue continue: fn(Context(session, error, dependencies), update.Update) ->
     Result(Context(session, error, dependencies), error),
 ) -> Result(Context(session, error, dependencies), error) {
-  let filter_handler =
-    bot.HandleAll(fn(ctx, upd) {
-      case filter(upd) {
-        True -> continue(ctx, upd)
-        False -> wait_for(ctx, filter:, or: handle_else, timeout:, continue:)
-      }
-    })
-
-  bot.wait_handler(ctx:, timeout:, handle_else:, handler: filter_handler)
+  bot.wait_handler(
+    ctx:,
+    timeout:,
+    handle_else:,
+    handler: bot.HandleFiltered(filter:, handler: continue),
+  )
 }
 
 /// Pauses the current chat actor's handler and waits for an update that matches

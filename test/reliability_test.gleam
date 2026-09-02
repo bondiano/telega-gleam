@@ -8,8 +8,10 @@ import gleam/erlang/process
 import gleam/option.{None, Some}
 import gleam/otp/factory_supervisor as fsup
 import gleam/otp/supervision
+import gleam/regexp
 import gleeunit/should
 
+import telega
 import telega/bot
 import telega/internal/registry
 import telega/testing/context
@@ -152,4 +154,174 @@ pub fn c2_stopped_chat_instance_is_unregistered_test() {
   // The user must still be served after their instance was torn down.
   dispatch(bot_subject, factory.text_update(text: "ok"), 2000)
   |> should.equal(Ok(True))
+}
+
+// C4 — `wait_*` filters must actually filter --------------------------------
+
+fn wait_router(
+  events: process.Subject(String),
+  handler: bot.Handler(Sess, Err, Nil),
+) {
+  fn(ctx: bot.Context(Sess, Err, Nil), update) {
+    case update {
+      update_module.TextUpdate(text: "start", ..) ->
+        bot.wait_handler(
+          ctx:,
+          handler:,
+          handle_else: Some(
+            bot.HandleAll(fn(ctx, _update) {
+              process.send(events, "else")
+              Ok(ctx)
+            }),
+          ),
+          timeout: None,
+        )
+      _ -> Ok(ctx)
+    }
+  }
+}
+
+pub fn c4_wait_command_ignores_other_commands_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "c4_command",
+      router: wait_router(
+        events,
+        bot.HandleCommand("confirm", fn(ctx, _command) {
+          process.send(events, "confirm")
+          Ok(ctx)
+        }),
+      ),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let _ = dispatch(bot_subject, factory.command_update(command: "cancel"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("else"))
+}
+
+pub fn c4_wait_command_still_matches_its_command_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "c4_command_match",
+      router: wait_router(
+        events,
+        bot.HandleCommand("confirm", fn(ctx, _command) {
+          process.send(events, "confirm")
+          Ok(ctx)
+        }),
+      ),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let _ =
+    dispatch(bot_subject, factory.command_update(command: "confirm"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("confirm"))
+}
+
+pub fn c4_wait_hears_ignores_non_matching_text_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "c4_hears",
+      router: wait_router(
+        events,
+        bot.HandleHears(bot.HearText("yes"), fn(ctx, _text) {
+          process.send(events, "hears")
+          Ok(ctx)
+        }),
+      ),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let _ = dispatch(bot_subject, factory.text_update(text: "no"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("else"))
+}
+
+pub fn c4_wait_callback_query_ignores_non_matching_data_test() {
+  let assert Ok(re) = regexp.from_string("^accept$")
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "c4_callback",
+      router: wait_router(
+        events,
+        bot.HandleCallbackQuery(
+          bot.CallbackQueryFilter(re:),
+          fn(ctx, _data, _id) {
+            process.send(events, "callback")
+            Ok(ctx)
+          },
+        ),
+      ),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let _ =
+    dispatch(bot_subject, factory.callback_query_update(data: "decline"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("else"))
+}
+
+pub fn c4_wait_for_runs_the_fallback_on_a_filter_miss_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "c4_wait_for",
+      router: fn(ctx: bot.Context(Sess, Err, Nil), update) {
+        case update {
+          update_module.TextUpdate(text: "start", ..) ->
+            telega.wait_for(
+              ctx:,
+              filter: fn(update) {
+                case update {
+                  update_module.PhotoUpdate(..) -> True
+                  _ -> False
+                }
+              },
+              or: Some(
+                bot.HandleAll(fn(ctx, _update) {
+                  process.send(events, "else")
+                  Ok(ctx)
+                }),
+              ),
+              timeout: None,
+              continue: fn(ctx, _update) {
+                process.send(events, "photo")
+                Ok(ctx)
+              },
+            )
+          _ -> Ok(ctx)
+        }
+      },
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let _ = dispatch(bot_subject, factory.text_update(text: "not a photo"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("else"))
+
+  // Still waiting: the matching update resumes the conversation.
+  let _ = dispatch(bot_subject, factory.photo_update(), 2000)
+  process.receive(events, 1000)
+  |> should.equal(Ok("photo"))
 }

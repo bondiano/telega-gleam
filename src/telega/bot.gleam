@@ -1126,6 +1126,14 @@ pub type Handler(session, error, dependencies) {
     handler: fn(Context(session, error, dependencies), String, String) ->
       Result(Context(session, error, dependencies), error),
   )
+  /// Handle any update that satisfies `filter`. Updates that fail the filter
+  /// fall through to the conversation's `or:` handler, exactly like the typed
+  /// handlers above. Used by `telega.wait_for`/`telega.wait_filtered`.
+  HandleFiltered(
+    filter: fn(Update) -> Bool,
+    handler: fn(Context(session, error, dependencies), Update) ->
+      Result(Context(session, error, dependencies), error),
+  )
   /// Handle chat member update (when user joins/leaves a group). The bot must be an administrator in the chat and must explicitly specify "chat_member" in the list of `allowed_updates` to receive these updates.
   HandleChatMember(
     handler: fn(Context(session, error, dependencies), ChatMemberUpdated) ->
@@ -1187,21 +1195,56 @@ fn do_handle_with_telemetry(
   result
 }
 
+/// Does the text satisfy a `Hears` pattern?
+fn hears_matches(hears: Hears, text: String) -> Bool {
+  case hears {
+    HearText(text: expected) -> expected == text
+    HearTexts(texts:) -> list.contains(texts, text)
+    HearRegex(regex:) -> regexp.check(regex, text)
+    HearRegexes(regexes:) -> list.any(regexes, regexp.check(_, text))
+  }
+}
+
+/// Run `handler` against `update`, or return `None` when the handler does not
+/// apply — either the update is of the wrong kind, or it fails the handler's
+/// own filter (`wait_command`'s command name, `wait_hears`' patterns,
+/// `wait_callback_query`'s regexp). `None` is what routes the update to the
+/// conversation's `or:` handler instead.
 fn do_handle(context context, update update, handler handler) {
-  // We already filtered updates and receives only valid handlers
   case handler, update {
     HandleAll(handler:), _ -> context |> handler(update) |> Some
+    HandleFiltered(handler:, filter:), _ ->
+      case filter(update) {
+        True -> context |> handler(update) |> Some
+        False -> None
+      }
     HandleText(handler:), TextUpdate(text:, ..) ->
       context |> handler(text) |> Some
-    HandleHears(handler:, ..), TextUpdate(text:, ..) ->
-      context |> handler(text) |> Some
-    HandleCommand(handler:, ..), CommandUpdate(command: update_command, ..) ->
-      context |> handler(update_command) |> Some
-    HandleCommands(handler:, ..), CommandUpdate(command: update_command, ..) ->
-      context |> handler(update_command) |> Some
-    HandleCallbackQuery(handler:, ..), CallbackQueryUpdate(query:, ..) -> {
-      use data <- option.map(query.data)
-      handler(context, data, query.id)
+    HandleHears(handler:, hears:), TextUpdate(text:, ..) ->
+      case hears_matches(hears, text) {
+        True -> context |> handler(text) |> Some
+        False -> None
+      }
+    HandleCommand(handler:, command:),
+      CommandUpdate(command: update_command, ..)
+    ->
+      case update_command.command == command {
+        True -> context |> handler(update_command) |> Some
+        False -> None
+      }
+    HandleCommands(handler:, commands:),
+      CommandUpdate(command: update_command, ..)
+    ->
+      case list.contains(commands, update_command.command) {
+        True -> context |> handler(update_command) |> Some
+        False -> None
+      }
+    HandleCallbackQuery(handler:, filter:), CallbackQueryUpdate(query:, ..) -> {
+      use data <- option.then(query.data)
+      case regexp.check(filter.re, data) {
+        True -> Some(handler(context, data, query.id))
+        False -> None
+      }
     }
     HandleMessage(handler), MessageUpdate(message:, ..) ->
       context |> handler(message) |> Some
