@@ -26,6 +26,17 @@
 //// - The `Bot` creates new `ChatInstance` actors via `factory_supervisor.start_child`,
 ////   which ensures they are supervised from the moment they start.
 ////
+//// ## Chat instance lifetime
+////
+//// A `ChatInstance` is started on the first update of a `{chat_id}:{from_id}`
+//// pair and, by default, lives as long as the bot does. `telega.with_chat_idle_timeout`
+//// puts a bound on that: an instance that has received nothing for the
+//// configured time asks the `Bot` actor to evict it. The bot — the only process
+//// that dispatches updates — deregisters the key first and only then tells the
+//// instance to stop, so an update can never be delivered to an instance on its
+//// way out. The next update simply starts a fresh instance that re-reads the
+//// session from storage; only an in-memory conversation continuation is lost.
+////
 //// ## Handler pattern
 ////
 //// All handlers follow this signature:
@@ -42,6 +53,7 @@
 //// conversations: the chat instance suspends its main handler and waits for a
 //// specific update type. See `telega.wait_text`, `telega.wait_command`, etc.
 
+import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/erlang/process.{type Pid, type Subject}
 import gleam/int
@@ -112,6 +124,9 @@ pub opaque type Bot(session, error, dependencies) {
     // crashed instance can be answered for and evicted from the registry rather
     // than leaving the poller (or a webhook request) blocked forever.
     instances: Dict(Pid, InstanceWatch),
+    // How long (ms) a chat instance may sit idle before it is stopped and
+    // dropped from the registry. `None` keeps every instance alive forever.
+    chat_idle_timeout: Option(Int),
   )
 }
 
@@ -139,6 +154,9 @@ pub type ChatInstanceArgs(session, error, dependencies) {
     // Subject of the owning `Bot` actor, used to report update completion so
     // the bot can track in-flight work for graceful draining.
     bot_subject: BotSubject,
+    // How long (ms) the instance may sit idle before asking the bot to stop it.
+    // `None` disables idle eviction.
+    idle_timeout: Option(Int),
   )
 }
 
@@ -200,6 +218,11 @@ pub opaque type BotMessage {
   // A monitored chat instance exited. Any update it was still handling is
   // answered here — nothing else would ever answer it.
   ChatInstanceDownBotMessage(down: process.Down)
+  // A chat instance has been idle for longer than the configured idle timeout
+  // and asks to be stopped. The bot is the only process that dispatches to it,
+  // so only the bot can decide that safely: it deregisters the key first and
+  // then tells the instance to stop, which makes the eviction race-free.
+  ChatInstanceIdleBotMessage(key: String, pid: Pid)
   // Begin a graceful drain: stop accepting new updates and reply on
   // `reply_with` with the number of drained updates once all in-flight work
   // completes.
@@ -228,6 +251,7 @@ pub fn start(
     ChatInstanceArgs(session, error, dependencies),
     ChatInstanceSubject(session, error, dependencies),
   ),
+  chat_idle_timeout chat_idle_timeout: Option(Int),
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
   let builder =
@@ -256,6 +280,7 @@ pub fn start(
         drain_count: 0,
         drain_waiter: None,
         instances: dict.new(),
+        chat_idle_timeout:,
       )
       |> actor.initialised
       |> actor.selecting(selector)
@@ -279,7 +304,20 @@ pub fn cancel_conversation(
   bot bot: Bot(session, error, dependencies),
   key key: String,
 ) -> Nil {
-  actor.send(bot.self, CancelConversationBotMessage(key: key))
+  cancel_conversation_for(bot_subject: bot.self, key: key)
+}
+
+/// Drop the pending conversation continuation of one chat instance.
+///
+/// The instance itself keeps running (with its loaded session) — only the
+/// suspended `wait_*` handler is forgotten, so the next update is routed
+/// normally again. The registry is deliberately left alone: unregistering a
+/// *live* instance would orphan the process and leak it forever.
+pub fn cancel_conversation_for(
+  bot_subject bot_subject: BotSubject,
+  key key: String,
+) -> Nil {
+  actor.send(bot_subject, CancelConversationBotMessage(key: key))
 }
 
 fn bot_loop(
@@ -324,6 +362,8 @@ fn bot_loop(
       Bot(..bot, instances: forget_answered(bot.instances, pid))
       |> settle_in_flight(finished: 1)
     ChatInstanceDownBotMessage(down:) -> handle_instance_down(bot, down)
+    ChatInstanceIdleBotMessage(key:, pid:) ->
+      handle_instance_idle(bot, key, pid)
     StartDrainBotMessage(reply_with:) -> {
       let bot =
         Bot(..bot, accepting: False, draining: True, drain_count: bot.in_flight)
@@ -340,7 +380,14 @@ fn bot_loop(
       actor.continue(bot)
     }
     CancelConversationBotMessage(key:) -> {
-      registry.unregister(bot.registry, key)
+      // Clear the continuation, keep the instance and its registration: an
+      // unregistered but running instance would never receive another update
+      // and would live on as a leaked process.
+      case registry.get(bot.registry, key:) {
+        Some(chat_subject) ->
+          actor.send(chat_subject, CancelContinuationChatInstanceMessage)
+        None -> Nil
+      }
       actor.continue(bot)
     }
   }
@@ -469,6 +516,39 @@ fn handle_instance_down(
   }
 }
 
+/// A chat instance reports it has been idle for the configured timeout.
+///
+/// Only the bot dispatches updates, and it does so from this very actor, so
+/// deciding here is race-free: an update that was already sent to the instance
+/// is still listed in its `pending` set (its ack has not come back yet), and
+/// an update that arrives later can no longer reach the instance because the
+/// registry entry is gone by then — it spawns a fresh instance instead.
+fn handle_instance_idle(
+  bot: Bot(session, error, dependencies),
+  key: String,
+  pid: Pid,
+) -> actor.Next(Bot(session, error, dependencies), BotMessage) {
+  let busy = case dict.get(bot.instances, pid) {
+    Ok(InstanceWatch(pending: [_, ..], ..)) -> True
+    _ -> False
+  }
+  use <- bool.guard(when: busy, return: actor.continue(bot))
+
+  case registry.get(bot.registry, key:) {
+    Some(chat_subject) ->
+      case process.subject_owner(chat_subject) {
+        Ok(owner) if owner == pid -> {
+          registry.unregister_owned_by(bot.registry, key:, pid:)
+          actor.send(chat_subject, ShutdownChatInstanceMessage)
+        }
+        // The key belongs to a different (restarted) instance now — leave it.
+        _ -> Nil
+      }
+    None -> Nil
+  }
+  actor.continue(bot)
+}
+
 /// Start monitoring the instance (once) and remember the caller waiting on it.
 fn watch_instance(
   bot: Bot(session, error, dependencies),
@@ -521,6 +601,7 @@ fn handle_update_bot_message(
           bot_info: bot.bot_info,
           registry: bot.registry,
           bot_subject: bot.self,
+          idle_timeout: bot.chat_idle_timeout,
         )
       // No need to register here — start_chat_instance self-registers
       fsup.start_child(bot.chat_factory, args)
@@ -552,6 +633,12 @@ pub opaque type ChatInstanceMessage(session, error, dependencies) {
     handle_else: Option(Handler(session, error, dependencies)),
     timeout: Option(Int),
   )
+  /// Forget the suspended `wait_*` handler, keep serving updates.
+  CancelContinuationChatInstanceMessage
+  /// Self-sent tick that checks how long this instance has been idle.
+  IdleCheckChatInstanceMessage
+  /// Sent by the bot once it has deregistered this instance: stop for good.
+  ShutdownChatInstanceMessage
 }
 
 type Continuation(session, error, dependencies) {
@@ -579,6 +666,10 @@ type ChatInstance(session, error, dependencies) {
     // The registry this instance registered itself in, so it can deregister
     // when it stops for good.
     registry: Registry(ChatInstanceMessage(session, error, dependencies)),
+    // How long (ms) the instance may sit idle before asking the bot to stop it.
+    idle_timeout: Option(Int),
+    // When this instance last received a message of its own.
+    last_activity: Timestamp,
   )
 }
 
@@ -618,9 +709,12 @@ pub fn start_chat_instance(
         bot_info: args.bot_info,
         bot_subject: args.bot_subject,
         registry: args.registry,
+        idle_timeout: args.idle_timeout,
+        last_activity: timestamp.system_time(),
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
+    schedule_idle_check(subject, args.idle_timeout)
     actor.initialised(chat_instance)
     |> actor.returning(subject)
     |> Ok
@@ -634,24 +728,107 @@ fn loop_chat_instance(
   message,
 ) {
   case message {
-    HandleNewChatInstanceMessage(update:, reply_with:, envelope:) ->
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:) -> {
+      let chat = touch(chat)
       do_handle_new_chat_instance_message(
         context: new_context_with_envelope(chat:, update:, envelope:),
         chat:,
         update:,
         reply_with:,
       )
+    }
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
       ChatInstance(
-        ..chat,
+        ..touch(chat),
         continuation: Continuation(handler:, handle_else:, ttl: {
             use timeout <- option.map(timeout)
             timestamp.system_time()
-            |> timestamp.add(duration.seconds(timeout))
+            |> timestamp.add(duration.milliseconds(timeout))
           })
           |> Some,
       )
       |> actor.continue
+    CancelContinuationChatInstanceMessage ->
+      ChatInstance(..touch(chat), continuation: None)
+      |> actor.continue
+    IdleCheckChatInstanceMessage -> handle_idle_check(chat)
+    ShutdownChatInstanceMessage -> {
+      telemetry.execute(
+        ["telega", "chat_instance", "terminate"],
+        [#("count", 1)],
+        [
+          #("key", telemetry.StringValue(chat.key)),
+          #("reason", telemetry.StringValue("idle_timeout")),
+        ],
+      )
+      actor.stop()
+    }
+  }
+}
+
+/// Remember that the instance is doing something right now, so the idle clock
+/// starts over.
+fn touch(
+  chat: ChatInstance(session, error, dependencies),
+) -> ChatInstance(session, error, dependencies) {
+  case chat.idle_timeout {
+    None -> chat
+    Some(_) -> ChatInstance(..chat, last_activity: timestamp.system_time())
+  }
+}
+
+/// Arm the next idle tick, if idle eviction is enabled at all.
+fn schedule_idle_check(
+  subject: ChatInstanceSubject(session, error, dependencies),
+  delay: Option(Int),
+) -> Nil {
+  case delay {
+    None -> Nil
+    Some(delay) -> {
+      let _ =
+        process.send_after(
+          subject,
+          int.max(delay, 1),
+          IdleCheckChatInstanceMessage,
+        )
+      Nil
+    }
+  }
+}
+
+/// How long the instance has been doing nothing, in milliseconds.
+fn idle_for(chat: ChatInstance(session, error, dependencies)) -> Int {
+  timestamp.difference(chat.last_activity, timestamp.system_time())
+  |> duration.to_milliseconds
+}
+
+/// The idle tick fired: either ask the bot to evict this instance, or re-arm
+/// the tick for the time that is still left.
+///
+/// The instance never stops on its own — an update could already be on its way
+/// to it. It asks the bot, which owns both the registry and the dispatch, and
+/// stops only when the bot answers with `ShutdownChatInstanceMessage`.
+fn handle_idle_check(chat: ChatInstance(session, error, dependencies)) {
+  case chat.idle_timeout {
+    None -> actor.continue(chat)
+    Some(timeout) -> {
+      let idle_for = idle_for(chat)
+      let next_check = case idle_for >= timeout {
+        True -> {
+          process.send(
+            chat.bot_subject,
+            ChatInstanceIdleBotMessage(key: chat.key, pid: process.self()),
+          )
+          // The bot declines while the instance is still busy with an update;
+          // ask again a whole timeout later rather than spinning on the tick.
+          timeout
+        }
+        // Not idle long enough yet — check again when it could be.
+        False -> timeout - idle_for
+      }
+      schedule_idle_check(chat.self, Some(next_check))
+      actor.continue(chat)
+    }
   }
 }
 

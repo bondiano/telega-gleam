@@ -56,6 +56,7 @@ fn drive(
       catch_handler: context.catch_handler(),
       dependencies: Nil,
       chat_factory: start_factory(),
+      chat_idle_timeout: None,
       name: None,
     )
 

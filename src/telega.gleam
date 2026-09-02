@@ -74,6 +74,9 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     chat_restart_tolerance_intensity: Option(Int),
     chat_restart_tolerance_period: Option(Int),
     chat_init_timeout: Option(Int),
+    /// How long (ms) a chat instance may sit idle before it is stopped.
+    /// `None` (the default) keeps every instance alive for the bot's lifetime.
+    chat_idle_timeout: Option(Int),
     // --- Lifecycle parameters ---
     on_start: Option(
       fn(Telega(session, error, dependencies)) -> Result(Nil, error.TelegaError),
@@ -165,6 +168,7 @@ fn default_builder(
     chat_restart_tolerance_intensity: None,
     chat_restart_tolerance_period: None,
     chat_init_timeout: None,
+    chat_idle_timeout: None,
     on_start: None,
     on_shutdown: None,
     drain_timeout: None,
@@ -346,6 +350,7 @@ pub fn with_dependencies(
     chat_restart_tolerance_intensity: builder.chat_restart_tolerance_intensity,
     chat_restart_tolerance_period: builder.chat_restart_tolerance_period,
     chat_init_timeout: builder.chat_init_timeout,
+    chat_idle_timeout: builder.chat_idle_timeout,
     on_shutdown: builder.on_shutdown,
     drain_timeout: builder.drain_timeout,
     handle_signals: builder.handle_signals,
@@ -488,6 +493,37 @@ pub fn with_chat_config(
     chat_restart_tolerance_period: Some(period),
     chat_init_timeout: Some(timeout),
   )
+}
+
+/// Stop chat instances that have been idle for `timeout` milliseconds.
+///
+/// One `ChatInstance` process is started per `{chat_id}:{from_id}` and, without
+/// this setting, it lives until the bot stops. A bot that is used by many
+/// distinct users therefore accumulates one process (plus its session and any
+/// suspended conversation) per user forever, and eventually hits the BEAM
+/// process limit.
+///
+/// With an idle timeout, an instance that has received nothing for that long is
+/// deregistered and stopped by the bot actor. The next update from that user
+/// simply starts a fresh instance, which re-reads the session from storage — so
+/// nothing persisted is lost.
+///
+/// A pending conversation (`wait_*`) lives only in the instance's memory, so it
+/// is dropped along with the instance. Pick an idle timeout comfortably larger
+/// than the conversation timeouts you use.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_router(router)
+/// // reclaim a user's process after half an hour of silence
+/// |> telega.with_chat_idle_timeout(1000 * 60 * 30)
+/// |> telega.init_for_polling()
+/// ```
+pub fn with_chat_idle_timeout(
+  builder: TelegaBuilder(session, error, dependencies),
+  timeout timeout: Int,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, chat_idle_timeout: Some(timeout))
 }
 
 /// Set a hook to run once the bot has fully started.
@@ -709,6 +745,7 @@ pub fn init(
         catch_handler:,
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
+        chat_idle_timeout: builder.chat_idle_timeout,
         name: Some(bot_name),
       )
     })
@@ -798,6 +835,7 @@ pub fn init_for_polling(
         catch_handler:,
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
+        chat_idle_timeout: builder.chat_idle_timeout,
         name: Some(bot_name),
       )
     })
@@ -1547,6 +1585,20 @@ pub fn start_polling_default(
     client: telega.config.api_client,
     bot: telega.bot_subject,
   )
+}
+
+/// Cancel the conversation a chat is currently waiting in.
+///
+/// `key` is the session key of the chat instance — the `"{chat_id}:{from_id}"`
+/// string available in any handler as `ctx.key`. The pending `wait_*`
+/// continuation is dropped, so the next update from that chat is routed
+/// normally again. The chat instance itself and its session are untouched, and
+/// cancelling a chat that is not waiting for anything does nothing.
+pub fn cancel_conversation(
+  telega telega: Telega(session, error, dependencies),
+  key key: String,
+) -> Nil {
+  bot.cancel_conversation_for(bot_subject: telega.bot_subject, key:)
 }
 
 /// Graceful shutdown with in-flight draining.

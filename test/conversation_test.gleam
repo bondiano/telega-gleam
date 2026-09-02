@@ -74,6 +74,7 @@ fn build_test_bot(
       catch_handler:,
       dependencies: Nil,
       chat_factory:,
+      chat_idle_timeout: None,
       name: None,
     )
 

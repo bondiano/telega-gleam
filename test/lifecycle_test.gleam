@@ -53,6 +53,7 @@ fn start_named_bot(
       catch_handler:,
       dependencies: Nil,
       chat_factory:,
+      chat_idle_timeout: option.None,
       name: Some(name),
     )
 

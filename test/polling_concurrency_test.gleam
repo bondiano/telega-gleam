@@ -62,6 +62,7 @@ fn start_bot(
       catch_handler: context.catch_handler(),
       dependencies: Nil,
       chat_factory: start_test_factory(),
+      chat_idle_timeout: None,
       name: None,
     )
   started.data

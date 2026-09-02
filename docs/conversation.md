@@ -265,6 +265,20 @@ Conversation will be stopped after 30 seconds of waiting for a callback query, a
 - **Session Management**: Conversations work seamlessly with session management to store data between messages
 - **Error Handling**: Use `try` to handle potential errors in your conversation flow
 
+## Conversations and chat instance lifetime
+
+A conversation lives in the memory of the chat instance process that runs it, so
+it survives for as long as that process does. Two settings bound that:
+
+- The `timeout` of each `wait_*` call (milliseconds): once it passes, the next
+  update is routed normally again instead of resuming the conversation.
+- `telega.with_chat_idle_timeout(ms)`: an instance that has received nothing for
+  that long is stopped and its pending conversation is dropped. Only in-memory
+  state is lost — the session is re-read from storage for the next update. Pick
+  an idle timeout comfortably larger than the conversation timeouts you use, or
+  keep long-lived, restart-safe state in a [flow](./conversation-flows.html)
+  instead.
+
 ## Best Practices
 
 1. **Keep conversations focused**: Design conversations for specific tasks with clear endpoints

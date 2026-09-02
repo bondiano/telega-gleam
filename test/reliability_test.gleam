@@ -1,11 +1,13 @@
-//// Regression tests for the reliability audit (C1–C5).
+//// Regression tests for the reliability audit (C1–C5, H2, H3).
 ////
 //// Each test reproduces a concrete failure mode that used to hang, lose, or
 //// silently mis-route updates. They are deliberately written against the
 //// public/`@internal` surface so they keep working as the internals change.
 
 import gleam/erlang/process
-import gleam/option.{None, Some}
+import gleam/int
+import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/otp/factory_supervisor as fsup
 import gleam/otp/supervision
 import gleam/regexp
@@ -43,6 +45,21 @@ fn start_bot(
     Result(bot.Context(Sess, Err, Nil), Err),
   catch_handler catch_handler: bot.CatchHandler(Sess, Err, Nil),
 ) {
+  start_bot_with_idle_timeout(
+    name:,
+    router:,
+    catch_handler:,
+    idle_timeout: None,
+  )
+}
+
+fn start_bot_with_idle_timeout(
+  name name: String,
+  router router: fn(bot.Context(Sess, Err, Nil), update_module.Update) ->
+    Result(bot.Context(Sess, Err, Nil), Err),
+  catch_handler catch_handler: bot.CatchHandler(Sess, Err, Nil),
+  idle_timeout idle_timeout: Option(Int),
+) {
   let assert Ok(reg) = registry.start(name)
   let assert Ok(started) =
     bot.start(
@@ -58,9 +75,18 @@ fn start_bot(
       catch_handler:,
       dependencies: Nil,
       chat_factory: start_test_factory(),
+      chat_idle_timeout: idle_timeout,
       name: None,
     )
   #(started.data, reg)
+}
+
+/// Pid of the chat instance currently registered under `default_key`.
+fn instance_pid(reg) -> Result(process.Pid, Nil) {
+  case registry.get(reg, key: default_key) {
+    Some(subject) -> process.subject_owner(subject)
+    None -> Error(Nil)
+  }
 }
 
 /// Dispatch an update the way the poller does, but bounded: the caller runs in
@@ -122,6 +148,7 @@ pub fn c1_failing_persist_answers_the_caller_test() {
       catch_handler: fn(_ctx, e) { Error(e) },
       dependencies: Nil,
       chat_factory: start_test_factory(),
+      chat_idle_timeout: None,
       name: None,
     )
 
@@ -324,4 +351,220 @@ pub fn c4_wait_for_runs_the_fallback_on_a_filter_miss_test() {
   let _ = dispatch(bot_subject, factory.photo_update(), 2000)
   process.receive(events, 1000)
   |> should.equal(Ok("photo"))
+}
+
+// H2 — chat instances must not accumulate forever ---------------------------
+
+pub fn h2_idle_chat_instance_is_stopped_and_unregistered_test() {
+  let #(bot_subject, reg) =
+    start_bot_with_idle_timeout(
+      name: "h2_idle_stop",
+      router: fn(ctx, _update) { Ok(ctx) },
+      catch_handler: context.catch_handler(),
+      idle_timeout: Some(150),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "hi"), 2000)
+  |> should.equal(Ok(True))
+
+  let assert Ok(pid) = instance_pid(reg)
+  process.is_alive(pid) |> should.equal(True)
+
+  process.sleep(600)
+
+  // The idle instance is gone: no process, no registry entry.
+  process.is_alive(pid) |> should.equal(False)
+  registry.get(reg, key: default_key) |> should.equal(None)
+
+  // The next update from the same user is served by a fresh instance.
+  dispatch(bot_subject, factory.text_update(text: "hi again"), 2000)
+  |> should.equal(Ok(True))
+
+  let assert Ok(new_pid) = instance_pid(reg)
+  { new_pid == pid } |> should.equal(False)
+}
+
+pub fn h2_many_users_leave_no_instances_behind_test() {
+  let #(bot_subject, reg) =
+    start_bot_with_idle_timeout(
+      name: "h2_idle_many",
+      router: fn(ctx, _update) { Ok(ctx) },
+      catch_handler: context.catch_handler(),
+      idle_timeout: Some(150),
+    )
+
+  let user_ids =
+    list.map(list.repeat(0, 40), fn(_) { 0 })
+    |> list.index_map(fn(_, i) { i + 1 })
+  let pids =
+    list.map(user_ids, fn(id) {
+      dispatch(
+        bot_subject,
+        factory.text_update_with(text: "hi", from_id: id, chat_id: id),
+        2000,
+      )
+      |> should.equal(Ok(True))
+
+      let key = int.to_string(id) <> ":" <> int.to_string(id)
+      let assert Some(subject) = registry.get(reg, key:)
+      let assert Ok(pid) = process.subject_owner(subject)
+      pid
+    })
+
+  process.sleep(600)
+
+  // Every per-user process is reclaimed, not just the last one.
+  list.filter(pids, process.is_alive)
+  |> should.equal([])
+  list.filter(user_ids, fn(id) {
+    let key = int.to_string(id) <> ":" <> int.to_string(id)
+    registry.get(reg, key:) != None
+  })
+  |> should.equal([])
+}
+
+pub fn h2_active_chat_instance_survives_the_idle_timeout_test() {
+  let #(bot_subject, reg) =
+    start_bot_with_idle_timeout(
+      name: "h2_idle_active",
+      router: fn(ctx, _update) { Ok(ctx) },
+      catch_handler: context.catch_handler(),
+      idle_timeout: Some(400),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "hi"), 2000)
+  |> should.equal(Ok(True))
+  let assert Ok(pid) = instance_pid(reg)
+
+  // Keep talking to the bot for longer than the idle timeout.
+  list.each([1, 2, 3, 4, 5], fn(_) {
+    process.sleep(150)
+    dispatch(bot_subject, factory.text_update(text: "still here"), 2000)
+    |> should.equal(Ok(True))
+  })
+
+  instance_pid(reg) |> should.equal(Ok(pid))
+}
+
+pub fn h2_slow_handler_is_not_evicted_mid_update_test() {
+  let #(bot_subject, _reg) =
+    start_bot_with_idle_timeout(
+      name: "h2_idle_slow_handler",
+      router: fn(ctx, _update) {
+        process.sleep(300)
+        Ok(ctx)
+      },
+      catch_handler: context.catch_handler(),
+      idle_timeout: Some(100),
+    )
+
+  // The handler outlives the idle timeout — the update must still be answered.
+  dispatch(bot_subject, factory.text_update(text: "slow"), 2000)
+  |> should.equal(Ok(True))
+}
+
+pub fn h2_cancel_conversation_clears_the_continuation_not_the_registry_test() {
+  let events = process.new_subject()
+  let #(bot_subject, reg) =
+    start_bot(
+      name: "h2_cancel",
+      router: fn(ctx: bot.Context(Sess, Err, Nil), update) {
+        case update {
+          update_module.TextUpdate(text: "start", ..) ->
+            bot.wait_handler(
+              ctx:,
+              handler: bot.HandleAll(fn(ctx, _update) {
+                process.send(events, "continuation")
+                Ok(ctx)
+              }),
+              handle_else: None,
+              timeout: None,
+            )
+          _ -> {
+            process.send(events, "router")
+            Ok(ctx)
+          }
+        }
+      },
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+  let assert Ok(pid) = instance_pid(reg)
+
+  bot.cancel_conversation_for(bot_subject:, key: default_key)
+  process.sleep(100)
+
+  // The instance is still the same live, registered process...
+  process.is_alive(pid) |> should.equal(True)
+  instance_pid(reg) |> should.equal(Ok(pid))
+
+  // ...and the update goes back through the router, not the continuation.
+  dispatch(bot_subject, factory.text_update(text: "after cancel"), 2000)
+  |> should.equal(Ok(True))
+  process.receive(events, 1000)
+  |> should.equal(Ok("router"))
+}
+
+// H3 — `wait_*` timeouts are milliseconds, as documented --------------------
+
+fn timed_wait_router(events: process.Subject(String), timeout: Option(Int)) {
+  fn(ctx: bot.Context(Sess, Err, Nil), update) {
+    case update {
+      update_module.TextUpdate(text: "start", ..) ->
+        bot.wait_handler(
+          ctx:,
+          handler: bot.HandleAll(fn(ctx, _update) {
+            process.send(events, "continuation")
+            Ok(ctx)
+          }),
+          handle_else: None,
+          timeout:,
+        )
+      _ -> {
+        process.send(events, "router")
+        Ok(ctx)
+      }
+    }
+  }
+}
+
+pub fn h3_wait_timeout_expires_after_the_given_milliseconds_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "h3_timeout_ms",
+      router: timed_wait_router(events, Some(150)),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+
+  // 150 *milliseconds*, not 150 seconds.
+  process.sleep(400)
+  let _ = dispatch(bot_subject, factory.text_update(text: "too late"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("router"))
+}
+
+pub fn h3_wait_timeout_still_running_resumes_the_conversation_test() {
+  let events = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "h3_timeout_alive",
+      router: timed_wait_router(events, Some(5000)),
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "start"), 2000)
+  |> should.equal(Ok(True))
+
+  process.sleep(100)
+  let _ = dispatch(bot_subject, factory.text_update(text: "in time"), 2000)
+
+  process.receive(events, 1000)
+  |> should.equal(Ok("continuation"))
 }

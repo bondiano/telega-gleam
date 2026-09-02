@@ -336,6 +336,7 @@ pub fn run_with_client_with_dependencies(
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
       dependencies:,
       chat_factory: chat_factory_started.data,
+      chat_idle_timeout: None,
       name: None,
     )
 
