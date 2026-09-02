@@ -54,6 +54,7 @@ fn start_named_bot(
       dependencies: Nil,
       chat_factory:,
       chat_idle_timeout: option.None,
+      chat_init_timeout: 5000,
       name: Some(name),
     )
 

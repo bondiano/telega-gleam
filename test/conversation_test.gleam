@@ -85,6 +85,7 @@ fn build_test_bot_with_config(
       dependencies: Nil,
       chat_factory:,
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 

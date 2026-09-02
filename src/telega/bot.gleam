@@ -127,6 +127,8 @@ pub opaque type Bot(session, error, dependencies) {
     // How long (ms) a chat instance may sit idle before it is stopped and
     // dropped from the registry. `None` keeps every instance alive forever.
     chat_idle_timeout: Option(Int),
+    // Init timeout (ms) handed to every chat instance.
+    chat_init_timeout: Int,
   )
 }
 
@@ -157,6 +159,9 @@ pub type ChatInstanceArgs(session, error, dependencies) {
     // How long (ms) the instance may sit idle before asking the bot to stop it.
     // `None` disables idle eviction.
     idle_timeout: Option(Int),
+    // How long (ms) the instance's initialiser — which loads the session from
+    // storage — may take before the start is considered failed.
+    init_timeout: Int,
   )
 }
 
@@ -252,6 +257,7 @@ pub fn start(
     ChatInstanceSubject(session, error, dependencies),
   ),
   chat_idle_timeout chat_idle_timeout: Option(Int),
+  chat_init_timeout chat_init_timeout: Int,
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
   let builder =
@@ -281,6 +287,7 @@ pub fn start(
         drain_waiter: None,
         instances: dict.new(),
         chat_idle_timeout:,
+        chat_init_timeout:,
       )
       |> actor.initialised
       |> actor.selecting(selector)
@@ -349,11 +356,13 @@ fn bot_loop(
                 Ok(bot) ->
                   actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
                 Error(error) -> {
-                  log.error_d("Error in handler: ", error)
+                  log.error_d("Failed to dispatch update: ", error)
                   // The update never reached an instance, so nothing else will
-                  // ever answer the caller.
+                  // ever answer the caller. One failed spawn (a storage outage,
+                  // a hit process limit) must not take the whole bot down: the
+                  // next update gets a fresh attempt.
                   process.send(reply_with, False)
-                  actor.stop()
+                  actor.continue(bot)
                 }
               }
           }
@@ -602,6 +611,7 @@ fn handle_update_bot_message(
           registry: bot.registry,
           bot_subject: bot.self,
           idle_timeout: bot.chat_idle_timeout,
+          init_timeout: bot.chat_init_timeout,
         )
       // No need to register here — start_chat_instance self-registers
       fsup.start_child(bot.chat_factory, args)
@@ -673,28 +683,31 @@ type ChatInstance(session, error, dependencies) {
   )
 }
 
-const initialisation_timeout = 10
-
 /// Start a chat instance. Used as the template function for factory_supervisor.
 /// Self-registers in the registry on start (handles both first start and restart after crash).
+///
+/// The session is loaded **inside** the initialiser, so it runs in the instance
+/// process: a slow storage backend delays only this chat, and a crash there
+/// fails this one start instead of taking the factory supervisor — and every
+/// other chat instance with it — down.
 pub fn start_chat_instance(
   args: ChatInstanceArgs(session, error, dependencies),
 ) -> actor.StartResult(ChatInstanceSubject(session, error, dependencies)) {
-  let session = case args.session_settings.get_session(args.key) {
-    Ok(Some(session)) -> session
-    Ok(None) -> args.session_settings.default_session()
-    Error(error) -> {
-      log.warning(
-        "Failed to get session for key "
-        <> args.key
-        <> ", falling back to default: "
-        <> string.inspect(error),
-      )
-      args.session_settings.default_session()
+  actor.new_with_initialiser(args.init_timeout, fn(subject) {
+    let session = case args.session_settings.get_session(args.key) {
+      Ok(Some(session)) -> session
+      Ok(None) -> args.session_settings.default_session()
+      Error(error) -> {
+        log.warning(
+          "Failed to get session for key "
+          <> args.key
+          <> ", falling back to default: "
+          <> string.inspect(error),
+        )
+        args.session_settings.default_session()
+      }
     }
-  }
 
-  actor.new_with_initialiser(initialisation_timeout, fn(subject) {
     let chat_instance =
       ChatInstance(
         key: args.key,

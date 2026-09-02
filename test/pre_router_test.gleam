@@ -57,6 +57,7 @@ fn drive(
       dependencies: Nil,
       chat_factory: start_factory(),
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 

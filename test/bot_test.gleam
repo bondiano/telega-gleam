@@ -51,6 +51,7 @@ pub fn bot_start_test() {
       dependencies: Nil,
       chat_factory:,
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 
@@ -83,6 +84,7 @@ pub fn bot_handle_update_test() {
       dependencies: Nil,
       chat_factory:,
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 
@@ -190,6 +192,7 @@ pub fn get_session_error_fallback_test() {
       dependencies: Nil,
       chat_factory:,
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 

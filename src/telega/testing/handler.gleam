@@ -154,6 +154,7 @@ pub fn with_test_bot_advanced_with_dependencies(
       dependencies:,
       chat_factory: chat_factory_started.data,
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 

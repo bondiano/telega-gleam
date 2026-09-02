@@ -480,7 +480,8 @@ pub fn with_polling_on_stop(
 ///
 /// - `restart_tolerance_intensity` — max restarts within the period (default: 5)
 /// - `restart_tolerance_period` — period in seconds (default: 10)
-/// - `init_timeout` — chat instance init timeout in ms (default: 10 000)
+/// - `init_timeout` — how long (ms) a chat instance may take to start, which
+///   includes loading its session from storage (default: 10 000)
 pub fn with_chat_config(
   builder: TelegaBuilder(session, error, dependencies),
   restart_tolerance_intensity intensity: Int,
@@ -746,6 +747,7 @@ pub fn init(
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
         chat_idle_timeout: builder.chat_idle_timeout,
+        chat_init_timeout: chat_init_timeout(builder),
         name: Some(bot_name),
       )
     })
@@ -836,6 +838,7 @@ pub fn init_for_polling(
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
         chat_idle_timeout: builder.chat_idle_timeout,
+        chat_init_timeout: chat_init_timeout(builder),
         name: Some(bot_name),
       )
     })
@@ -1849,9 +1852,6 @@ fn build_chat_factory_spec(
       builder.chat_restart_tolerance_period,
       default_chat_restart_period,
     )
-  let timeout =
-    option.unwrap(builder.chat_init_timeout, default_chat_init_timeout)
-
   let name = process.new_name("telega_chat_factory")
 
   let spec =
@@ -1859,10 +1859,16 @@ fn build_chat_factory_spec(
     |> fsup.named(name)
     |> fsup.restart_strategy(supervision.Transient)
     |> fsup.restart_tolerance(intensity, period)
-    |> fsup.timeout(timeout)
     |> fsup.supervised
 
   #(spec, name)
+}
+
+// How long a chat instance may take to start, session load included.
+fn chat_init_timeout(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> Int {
+  option.unwrap(builder.chat_init_timeout, default_chat_init_timeout)
 }
 
 // Generate a unique registry name from the bot token

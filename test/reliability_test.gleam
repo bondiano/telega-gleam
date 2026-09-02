@@ -60,6 +60,26 @@ fn start_bot_with_idle_timeout(
   catch_handler catch_handler: bot.CatchHandler(Sess, Err, Nil),
   idle_timeout idle_timeout: Option(Int),
 ) {
+  start_bot_with_sessions(
+    name:,
+    router:,
+    catch_handler:,
+    idle_timeout:,
+    session_settings: context.session_settings_with(
+      default: fn() { Sess(0) },
+      initial: Sess(0),
+    ),
+  )
+}
+
+fn start_bot_with_sessions(
+  name name: String,
+  router router: fn(bot.Context(Sess, Err, Nil), update_module.Update) ->
+    Result(bot.Context(Sess, Err, Nil), Err),
+  catch_handler catch_handler: bot.CatchHandler(Sess, Err, Nil),
+  idle_timeout idle_timeout: Option(Int),
+  session_settings session_settings: bot.SessionSettings(Sess, Err),
+) {
   let assert Ok(reg) = registry.start(name)
   let assert Ok(started) =
     bot.start(
@@ -68,14 +88,12 @@ fn start_bot_with_idle_timeout(
       bot_info: factory.bot_user(),
       router_handler: router,
       pre_handlers: [],
-      session_settings: context.session_settings_with(
-        default: fn() { Sess(0) },
-        initial: Sess(0),
-      ),
+      session_settings:,
       catch_handler:,
       dependencies: Nil,
       chat_factory: start_test_factory(),
       chat_idle_timeout: idle_timeout,
+      chat_init_timeout: 5000,
       name: None,
     )
   #(started.data, reg)
@@ -149,6 +167,7 @@ pub fn c1_failing_persist_answers_the_caller_test() {
       dependencies: Nil,
       chat_factory: start_test_factory(),
       chat_idle_timeout: None,
+      chat_init_timeout: 5000,
       name: None,
     )
 
@@ -567,4 +586,74 @@ pub fn h3_wait_timeout_still_running_resumes_the_conversation_test() {
 
   process.receive(events, 1000)
   |> should.equal(Ok("continuation"))
+}
+
+// H12 — session loading lives in the instance, and a failed spawn is survivable
+
+pub fn slow_session_load_does_not_fail_the_spawn_test() {
+  let session_settings =
+    bot.SessionSettings(
+      persist_session: fn(_key, session) { Ok(session) },
+      get_session: fn(_key) {
+        // Far longer than the old hard-coded 10 ms initialisation timeout.
+        process.sleep(200)
+        Ok(Some(Sess(7)))
+      },
+      default_session: fn() { Sess(0) },
+    )
+
+  let seen = process.new_subject()
+  let #(bot_subject, _reg) =
+    start_bot_with_sessions(
+      name: "h12_slow_session",
+      router: fn(ctx, _update) {
+        process.send(seen, ctx.session)
+        Ok(ctx)
+      },
+      catch_handler: context.catch_handler(),
+      idle_timeout: None,
+      session_settings:,
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "hi"), 3000)
+  |> should.equal(Ok(True))
+
+  process.receive(seen, 1000) |> should.equal(Ok(Sess(7)))
+}
+
+pub fn failed_spawn_keeps_the_bot_and_the_factory_alive_test() {
+  let poisoned_key = "1:1"
+  let session_settings =
+    bot.SessionSettings(
+      persist_session: fn(_key, session) { Ok(session) },
+      get_session: fn(key) {
+        case key == poisoned_key {
+          True -> panic as "storage exploded"
+          False -> Ok(Some(Sess(0)))
+        }
+      },
+      default_session: fn() { Sess(0) },
+    )
+
+  let #(bot_subject, _reg) =
+    start_bot_with_sessions(
+      name: "h12_failed_spawn",
+      router: fn(ctx, _update) { Ok(ctx) },
+      catch_handler: context.catch_handler(),
+      idle_timeout: None,
+      session_settings:,
+    )
+
+  // The instance for this chat cannot start; the caller is answered `False`
+  // rather than being left waiting.
+  dispatch(
+    bot_subject,
+    factory.text_update_with(text: "boom", from_id: 1, chat_id: 1),
+    3000,
+  )
+  |> should.equal(Ok(False))
+
+  // Neither the bot actor nor the chat factory went down with it.
+  dispatch(bot_subject, factory.text_update(text: "hi"), 3000)
+  |> should.equal(Ok(True))
 }
