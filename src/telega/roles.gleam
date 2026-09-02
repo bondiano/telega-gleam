@@ -42,8 +42,8 @@
 //// On an API error the check fails closed (access denied) and the result is not
 //// cached, so the next update retries.
 
-import gleam/erlang/atom
 import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
@@ -51,12 +51,14 @@ import telega/api
 import telega/bot.{type Context}
 import telega/client.{type TelegramClient}
 import telega/error
+import telega/internal/ets_table
 import telega/internal/utils
 import telega/model/types
 import telega/router.{type Middleware}
 import telega/update.{type Update}
 
-type EtsTable
+type EtsTable =
+  ets_table.EtsTable
 
 /// A TTL cache of resolved chat roles. Create once with [`new_cache`](#new_cache).
 pub opaque type RoleCache {
@@ -73,15 +75,13 @@ const status_member = "member"
 /// Create a role cache. Entries expire after `ttl_ms` milliseconds; `ttl_ms: 0`
 /// disables caching (every check hits the API).
 ///
-/// The ETS table is owned by the calling process — create the cache from a
-/// long-lived process (bot setup), not from a handler.
+/// The cache is process-independent: its ETS table is held by a dedicated
+/// owner for the lifetime of the VM, so creating it from a short-lived setup
+/// process is safe — the table used to die with whoever called this, leaving
+/// every later lookup raising `badarg` inside a chat instance.
+///
 pub fn new_cache(ttl_ms ttl_ms: Int) -> RoleCache {
-  let table =
-    ets_new(atom.create("telega_role_cache"), [
-      atom.create("set"),
-      atom.create("public"),
-    ])
-  RoleCache(table:, ttl_ms:)
+  RoleCache(table: ets_table.create_owned(), ttl_ms:)
 }
 
 /// `True` if the user is an administrator or the owner of the chat.
@@ -273,16 +273,44 @@ fn cache_put(cache: RoleCache, key: String, status: String) -> Nil {
         status,
         utils.current_time_ms() + cache.ttl_ms,
       ))
-      Nil
+      sweep_if_crowded(cache)
     }
   }
 }
 
-@external(erlang, "ets", "new")
-fn ets_new(name: atom.Atom, options: List(atom.Atom)) -> EtsTable
+/// Entries expire lazily, on the next lookup of the *same* key — so a bot that
+/// checks many chats once each grows the table forever. Past `sweep_threshold`
+/// entries, drop everything already expired.
+const sweep_threshold = 10_000
+
+fn sweep_if_crowded(cache: RoleCache) -> Nil {
+  case ets_size(cache.table) > sweep_threshold {
+    False -> Nil
+    True -> {
+      let now = utils.current_time_ms()
+      ets_tab2list(cache.table)
+      |> list.each(fn(entry) {
+        let #(key, _status, expires_at) = entry
+        case now >= expires_at {
+          True -> {
+            ets_delete(cache.table, key)
+            Nil
+          }
+          False -> Nil
+        }
+      })
+    }
+  }
+}
 
 @external(erlang, "ets", "insert")
 fn ets_insert(table: EtsTable, tuple: #(String, String, Int)) -> Bool
+
+@external(erlang, "ets", "tab2list")
+fn ets_tab2list(table: EtsTable) -> List(#(String, String, Int))
+
+@external(erlang, "telega_ets_ffi", "size")
+fn ets_size(table: EtsTable) -> Int
 
 @external(erlang, "ets", "lookup")
 fn ets_lookup(table: EtsTable, key: String) -> List(#(String, String, Int))

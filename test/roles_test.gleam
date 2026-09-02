@@ -14,6 +14,7 @@ import telega/model/types
 import telega/roles
 import telega/testing/context as test_context
 import telega/testing/factory
+import telega/testing/mock
 
 pub fn main() {
   gleeunit.main()
@@ -184,4 +185,24 @@ pub fn ensure_admin_denies_plain_member_test() {
   |> should.be_ok()
   |> fn(ctx: Context(String, TelegaError, Nil)) { ctx.session }
   |> should.equal("denied")
+}
+
+// L1 — an ETS table must outlive the process that asked for it ---------------
+
+pub fn cache_survives_the_process_that_created_it_test() {
+  let made = process.new_subject()
+
+  // A short-lived setup process creates the cache and exits — exactly what a
+  // `main` that spawns the bot and returns does.
+  process.spawn_unlinked(fn() {
+    process.send(made, roles.new_cache(ttl_ms: 60_000))
+  })
+  let assert Ok(cache) = process.receive(made, 1000)
+  process.sleep(100)
+
+  // The table used to die with its owner, so every later lookup raised
+  // `badarg` inside a chat instance.
+  let #(client, _calls) = mock.client()
+  roles.is_admin(cache:, client:, chat_id: 1, user_id: 2)
+  |> should.be_false
 }

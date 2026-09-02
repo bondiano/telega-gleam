@@ -1,22 +1,23 @@
-import gleam/erlang/atom
 import gleam/erlang/process.{type Subject}
 import gleam/option.{type Option}
 
 import telega/error
+import telega/internal/ets_table
 
-type EtsTable
+type EtsTable =
+  ets_table.EtsTable
 
 pub opaque type Registry(message) {
   Registry(table: EtsTable)
 }
 
-pub fn start(name: String) -> Result(Registry(message), error.TelegaError) {
-  let table =
-    ets_new(atom.create("telega_registry_" <> name), [
-      atom.create("set"),
-      atom.create("public"),
-    ])
-  Ok(Registry(table:))
+/// Get (or create) the registry table called `name`.
+///
+/// The table is held by a dedicated owner process, not by the caller: a bot
+/// set up from a `main` that then returns used to lose its registry the
+/// moment that process exited, and every chat dispatch after raised `badarg`.
+pub fn start(_name: String) -> Result(Registry(message), error.TelegaError) {
+  Ok(Registry(table: ets_table.create_owned()))
 }
 
 pub fn stop(registry: Registry(message)) -> Bool {
@@ -64,9 +65,6 @@ pub fn get(
     [#(_, subject), ..] -> option.Some(subject)
   }
 }
-
-@external(erlang, "ets", "new")
-fn ets_new(name: atom.Atom, options: List(atom.Atom)) -> EtsTable
 
 @external(erlang, "ets", "insert")
 fn ets_insert(table: EtsTable, tuple: #(String, Subject(message))) -> Bool
