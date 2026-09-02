@@ -747,3 +747,58 @@ pub fn calendar_rejects_a_forged_date_test() {
     w.on_event(widget_ctx(types.new_store()), "day", Some("2026-09-10"))
   action |> should.equal(types.Stay("2026-9-10"))
 }
+
+// List group -----------------------------------------------------------------
+
+fn bookings() -> List(SelectItem) {
+  [SelectItem(id: "b1", label: "Mon"), SelectItem(id: "b2", label: "Tue")]
+}
+
+fn list_group_widget() {
+  widget.list_group(
+    id: "bk",
+    items: fn(_state, _ctx) { bookings() },
+    actions: [
+      widget.ItemAction("open", fn(item: SelectItem) { item.label }),
+      widget.ItemAction("drop", fn(_item) { "🗑" }),
+    ],
+    on_action: fn(_state, action, item_id, _ctx) {
+      Ok(types.Stay(action <> ":" <> item_id))
+    },
+  )
+}
+
+pub fn list_group_renders_a_row_per_item_test() {
+  list_group_widget().render(widget_ctx(types.new_store()))
+  |> should.equal([
+    [
+      types.ActionArgButton("Mon", "w:bk:open", "b1"),
+      types.ActionArgButton("🗑", "w:bk:drop", "b1"),
+    ],
+    [
+      types.ActionArgButton("Tue", "w:bk:open", "b2"),
+      types.ActionArgButton("🗑", "w:bk:drop", "b2"),
+    ],
+  ])
+}
+
+pub fn list_group_routes_the_action_and_the_item_test() {
+  let assert Ok(types.Emit(action)) =
+    list_group_widget().on_event(
+      widget_ctx(types.new_store()),
+      "drop",
+      Some("b2"),
+    )
+  action |> should.equal(types.Stay("drop:b2"))
+}
+
+pub fn list_group_ignores_forged_presses_test() {
+  let w = list_group_widget()
+
+  // An item the widget does not currently offer...
+  let assert Ok(types.StoreUpdated(_)) =
+    w.on_event(widget_ctx(types.new_store()), "drop", Some("b9"))
+  // ...and an action it never declared.
+  let assert Ok(types.StoreUpdated(_)) =
+    w.on_event(widget_ctx(types.new_store()), "nuke", Some("b1"))
+}

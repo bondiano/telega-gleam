@@ -24,6 +24,7 @@
 //// - `counter` — a number nudged with −/+ within `min`…`max`; read with
 ////   `counter_value`.
 //// - `calendar` — a month grid bounded by a date range, with month paging.
+//// - `list_group` — a row of buttons per item ("Edit / Delete" per row).
 ////
 //// Reading widget state from window handlers (`on_action`, `on_text`,
 //// `on_done`) and renders goes through `dialog.widget_store`:
@@ -331,6 +332,85 @@ pub fn paged_select(
     },
     goto_targets: [],
     static_actions: [action(id, "pick"), action(id, "prev"), action(id, "next")],
+  )
+}
+
+// List group ----------------------------------------------------------------------
+
+/// One button repeated for every item of a `list_group`. `label` builds its
+/// text from the item, so it can carry the item's own name.
+pub type ItemAction {
+  ItemAction(id: String, label: fn(SelectItem) -> String)
+}
+
+/// A row of buttons **per item** — the shape `select` cannot express, where
+/// every row acts on one thing: "Edit / Delete", "▲ / ▼", "Book / Details".
+///
+/// A press calls `on_action` with the pressed action id and the item id.
+/// Callback data is `w:<widget_id>:<action_id>` carrying the item id as its
+/// argument, so keep both short (the 64-byte limit is checked on every
+/// render). Item ids the widget does not currently offer are ignored —
+/// callback data can be forged or come from an outdated message.
+///
+/// ```gleam
+/// widget.list_group(
+///   id: "bk",
+///   items: fn(state: State, _ctx) {
+///     list.map(state.bookings, fn(b) { SelectItem(id: b.id, label: b.date) })
+///   },
+///   actions: [
+///     widget.ItemAction("open", fn(item: SelectItem) { item.label }),
+///     widget.ItemAction("drop", fn(_item) { "🗑" }),
+///   ],
+///   on_action: fn(state, action, item_id, _ctx) {
+///     case action {
+///       "open" -> Ok(types.Goto("details", select_booking(state, item_id)))
+///       _ -> Ok(types.Stay(remove_booking(state, item_id)))
+///     }
+///   },
+/// )
+/// ```
+pub fn list_group(
+  id id: String,
+  items items: fn(state, Context(session, error, dependencies)) ->
+    List(SelectItem),
+  actions actions: List(ItemAction),
+  on_action on_action: fn(
+    state,
+    String,
+    String,
+    Context(session, error, dependencies),
+  ) -> Result(DialogAction(state), error),
+) -> KeyboardWidget(state, session, error, dependencies) {
+  KeyboardWidget(
+    id:,
+    render: fn(wctx: WidgetCtx(state, session, error, dependencies)) {
+      items(wctx.state, wctx.ctx)
+      |> list.map(fn(item) {
+        list.map(actions, fn(item_action: ItemAction) {
+          types.ActionArgButton(
+            item_action.label(item),
+            action(id, item_action.id),
+            item.id,
+          )
+        })
+      })
+    },
+    on_event: fn(wctx, cmd, arg) {
+      let known = list.any(actions, fn(a: ItemAction) { a.id == cmd })
+      case known, arg {
+        True, Some(item_id) ->
+          case offers(items, wctx, item_id) {
+            True ->
+              on_action(wctx.state, cmd, item_id, wctx.ctx)
+              |> result.map(types.Emit)
+            False -> Ok(types.StoreUpdated(wctx.store))
+          }
+        _, _ -> Ok(types.StoreUpdated(wctx.store))
+      }
+    },
+    goto_targets: [],
+    static_actions: list.map(actions, fn(a: ItemAction) { action(id, a.id) }),
   )
 }
 

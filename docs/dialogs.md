@@ -270,6 +270,7 @@ Built-ins:
 | `paged_select(id:, items:, page_size:, columns:, on_selected:)` | select + pager in one | `widget.current_page` |
 | `counter(id:, min:, max:, step:, initial:)` | `−  3  +` row, clamped to the range | `widget.counter_value(default:)` |
 | `calendar(id:, from:, to:, on_picked:)` | month grid with `‹`/`›` paging; days outside the range are blanks | — (`on_picked` gets the `calendar.Date`) |
+| `list_group(id:, items:, actions:, on_action:)` | a row of buttons **per item** — "Edit / Delete" on every row | — (`on_action` gets the action and item ids) |
 
 `SelectItem(id:, label:)` ids travel in callback data — keep them short (the
 64-byte limit is validated on every render).
