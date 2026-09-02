@@ -42,6 +42,10 @@ pub opaque type Telega(session, error, dependencies) {
     drain_timeout: Int,
     /// Hook run during `shutdown`, after draining and before stopping children.
     on_shutdown: Option(fn() -> Nil),
+    /// Kept so `background_context` can load a session and inject the same
+    /// services a handler would see.
+    session_settings: SessionSettings(session, error),
+    dependencies: dependencies,
   )
 }
 
@@ -147,6 +151,56 @@ pub fn is_secret_token_valid(
 /// gets to retry.
 pub fn constant_time_compare(left: String, right: String) -> Bool {
   utils.constant_time_compare(left, right)
+}
+
+/// Build a `Context` for work happening **outside** an update: a background
+/// job that finished, a cron tick, a webhook from another service.
+///
+/// The context carries the same config, injected `dependencies` and bot info a
+/// handler would see, and the user's persisted session — so a render or a
+/// `reply.*` call behaves as it does inside an update.
+///
+/// Two things it cannot carry, because there is no chat instance behind it:
+///
+///   * `ctx.update` is a placeholder holding only `chat_id`/`from_id`
+///     (an `UnknownUpdate`). Anything reading the update's content sees
+///     nothing.
+///   * `wait_*` and `cancel_conversation_in` have no instance to suspend, so
+///     they do nothing. Start conversations from a real update.
+///
+/// Fails when the session cannot be read — same rule as a chat instance start:
+/// acting on a default here would persist it over the real session.
+///
+/// ```gleam
+/// // Refresh a user's open dialog once their export finishes.
+/// let assert Ok(ctx) = telega.background_context(bot, chat_id:, user_id:)
+/// let _ = dialog.refresh(ctx, registry, dialog_id: "export")
+/// ```
+pub fn background_context(
+  telega telega: Telega(session, error, dependencies),
+  chat_id chat_id: Int,
+  user_id user_id: Int,
+) -> Result(Context(session, error, dependencies), error.TelegaError) {
+  let key = int.to_string(chat_id) <> ":" <> int.to_string(user_id)
+
+  use session <- result.try(case telega.session_settings.get_session(key) {
+    Ok(Some(session)) -> Ok(session)
+    Ok(None) -> Ok(telega.session_settings.default_session())
+    Error(_) ->
+      Error(error.BotHandleUpdateError("failed to read the session for " <> key))
+  })
+
+  Ok(bot.Context(
+    key:,
+    update: update.background_update(chat_id:, user_id:),
+    config: telega.config,
+    session:,
+    dependencies: telega.dependencies,
+    chat_subject: process.new_subject(),
+    start_time: None,
+    log_prefix: None,
+    bot_info: telega.bot_info,
+  ))
 }
 
 /// Helper to get the config for API requests.
@@ -839,6 +893,7 @@ pub fn init(
     bot_subject:,
     supervisor_pid: sup_started.pid,
     poller: None,
+    session_settings:,
   )
 }
 
@@ -954,6 +1009,7 @@ pub fn init_for_polling(
     bot_subject:,
     supervisor_pid: sup_started.pid,
     poller: Some(poller),
+    session_settings:,
   )
 }
 
@@ -1774,6 +1830,7 @@ fn finalize(
   bot_subject bot_subject: BotSubject,
   supervisor_pid supervisor_pid: process.Pid,
   poller poller: Option(process.Subject(polling.PollingMessage)),
+  session_settings session_settings: SessionSettings(session, error),
 ) -> Result(Telega(session, error, dependencies), error.TelegaError) {
   let telega =
     Telega(
@@ -1784,6 +1841,8 @@ fn finalize(
       poller:,
       drain_timeout: option.unwrap(builder.drain_timeout, default_drain_timeout),
       on_shutdown: builder.on_shutdown,
+      session_settings:,
+      dependencies: builder.dependencies,
     )
 
   // Auto-publish commands first, then run the user hook. Either failing tears

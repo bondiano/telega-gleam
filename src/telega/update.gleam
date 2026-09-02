@@ -467,6 +467,50 @@ pub fn raw(update: Update) -> ModelUpdate {
   }
 }
 
+/// A stand-in update for work happening outside the update cycle.
+///
+/// It carries only the ids `telega.background_context` needs to address a
+/// chat; there is no Telegram event behind it. `UnknownUpdate` is deliberate —
+/// nothing routes it, and the dialog engine reads it as "not the user sending
+/// a message", so a background re-render edits the live message rather than
+/// resending it below one.
+pub fn background_update(chat_id chat_id: Int, user_id user_id: Int) -> Update {
+  UnknownUpdate(from_id: user_id, chat_id:, raw: empty_raw_update())
+}
+
+fn empty_raw_update() -> ModelUpdate {
+  types.Update(
+    update_id: 0,
+    message: None,
+    edited_message: None,
+    channel_post: None,
+    edited_channel_post: None,
+    business_connection: None,
+    business_message: None,
+    edited_business_message: None,
+    deleted_business_messages: None,
+    message_reaction: None,
+    message_reaction_count: None,
+    inline_query: None,
+    chosen_inline_result: None,
+    callback_query: None,
+    shipping_query: None,
+    pre_checkout_query: None,
+    purchased_paid_media: None,
+    poll: None,
+    poll_answer: None,
+    my_chat_member: None,
+    chat_member: None,
+    chat_join_request: None,
+    chat_boost: None,
+    removed_chat_boost: None,
+    managed_bot: None,
+    guest_message: None,
+    subscription: None,
+    stopped_message_generation: None,
+  )
+}
+
 /// The chat an update happened in, when it happened in one.
 ///
 /// `None` for updates that carry no chat at all — inline queries, chosen

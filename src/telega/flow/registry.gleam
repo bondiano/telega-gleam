@@ -6,6 +6,7 @@ import gleam/float
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import telega/bot.{type Context}
 import telega/flow/engine
@@ -278,6 +279,40 @@ pub fn call_flow(
   case dict.get(registry.flow_map, flow_name) {
     Ok(found_flow) -> start(found_flow, initial_data, ctx)
     Error(_) -> Ok(ctx)
+  }
+}
+
+/// Re-execute the current step of a user's running flow — the render side of
+/// a flow, without advancing it.
+///
+/// Unlike `call_flow` this never *starts* anything: a user with no running
+/// instance of `name` is left alone and `False` comes back. Pair it with
+/// `telega.background_context` to refresh what a user is looking at from a
+/// job that finished elsewhere.
+pub fn refresh_flow(
+  ctx ctx: Context(session, error, dependencies),
+  registry registry: FlowRegistry(session, error, dependencies),
+  name flow_name: String,
+) -> Result(#(Context(session, error, dependencies), Bool), error) {
+  let #(user_id, chat_id) = engine.extract_ids_from_context(ctx)
+
+  case dict.get(registry.flow_map, flow_name) {
+    Error(Nil) -> Ok(#(ctx, False))
+    Ok(flow) -> {
+      let flow_id = storage.generate_id(user_id, chat_id, flow.name)
+      case flow.storage.load(flow_id) {
+        Ok(Some(inst)) -> {
+          use ctx <- result.map(engine.resume_with_instance(
+            flow,
+            ctx,
+            inst,
+            None,
+          ))
+          #(ctx, True)
+        }
+        _ -> Ok(#(ctx, False))
+      }
+    }
   }
 }
 

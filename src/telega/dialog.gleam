@@ -1014,6 +1014,32 @@ pub fn start(
   )
 }
 
+/// Re-render a user's **open** dialog without advancing it.
+///
+/// Unlike `start`, a user who has no live instance of this dialog is left
+/// alone (`False` comes back) — a background refresh must not open a dialog
+/// nobody asked for. Pair it with `telega.background_context` to update what
+/// someone is looking at from a job that finished elsewhere:
+///
+/// ```gleam
+/// let assert Ok(ctx) = telega.background_context(bot, chat_id:, user_id:)
+/// let _ = dialog.refresh(ctx, registry, dialog_id: "export")
+/// ```
+///
+/// The window's `render` runs again with the current state, so whatever it
+/// reads — the session, an injected service, your own database — is re-read.
+pub fn refresh(
+  ctx ctx: Context(session, error, dependencies),
+  registry registry: flow_registry.FlowRegistry(session, error, dependencies),
+  dialog_id dialog_id: String,
+) -> Result(#(Context(session, error, dependencies), Bool), error) {
+  flow_registry.refresh_flow(
+    ctx,
+    registry,
+    name: engine.flow_name_prefix <> dialog_id,
+  )
+}
+
 /// Delete the current instance and start the dialog from scratch (a
 /// repeated start command only resumes — this is the hard reset).
 pub fn restart(

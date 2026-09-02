@@ -1,0 +1,38 @@
+---
+version: 2.0.1
+title: dialog:bg:refresh
+---
+1. sendMessage
+{
+  "chat_id": 260,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:alpha:home:go",
+          "text": "Go"
+        }
+      ]
+    ]
+  },
+  "text": "alpha home"
+}
+
+2. editMessageText
+{
+  "chat_id": 260,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:alpha:home:go",
+          "text": "Go"
+        }
+      ]
+    ]
+  },
+  "text": "alpha home"
+}

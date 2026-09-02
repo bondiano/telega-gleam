@@ -29,6 +29,7 @@ import telega/testing/context
 import telega/testing/factory
 import telega/testing/mock
 import telega/testing/render as testing_render
+import telega/update
 
 pub fn main() {
   gleeunit.main()
@@ -1363,4 +1364,74 @@ pub fn resend_on_user_message_moves_the_window_down_test() {
   mock.get_calls(calls)
   |> testing_render.calls_transcript
   |> birdie.snap(title: "dialog:show_mode:resend_on_user_message")
+}
+
+// bg — refreshing a dialog from outside the update cycle ---------------------
+
+pub fn refresh_re_renders_an_open_dialog_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let registry =
+    flow_registry.new_registry()
+    |> dialog.attach_on_command(
+      command: "alpha",
+      dialog: two_window_dialog("alpha", storage),
+    )
+  let r = flow_registry.apply_to_router(router.new("dialogs"), registry)
+  let #(client, calls) = dialog_mock_client()
+  let chat_id = 260
+
+  route_update(
+    r,
+    client,
+    factory.command_update_with(
+      command: "alpha",
+      payload: None,
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+
+  // A background job finished and wants the user's open window updated. The
+  // context carries no real update — only the ids.
+  let bg =
+    driver.ctx_for(
+      client,
+      update.background_update(chat_id:, user_id: driver.user_id),
+    )
+  let assert Ok(#(_ctx, refreshed)) =
+    dialog.refresh(bg, registry, dialog_id: "alpha")
+  refreshed |> should.be_true
+
+  // Still on the same window, and the live message was edited in place.
+  let assert Ok(Some(inst)) = storage.load(driver.flow_id(chat_id, "alpha"))
+  inst.state.current_step |> should.equal("home")
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:bg:refresh")
+}
+
+pub fn refresh_does_not_open_a_closed_dialog_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let registry =
+    flow_registry.new_registry()
+    |> dialog.attach_on_command(
+      command: "alpha",
+      dialog: two_window_dialog("alpha", storage),
+    )
+  let #(client, calls) = dialog_mock_client()
+  let chat_id = 261
+
+  let bg =
+    driver.ctx_for(
+      client,
+      update.background_update(chat_id:, user_id: driver.user_id),
+    )
+  let assert Ok(#(_ctx, refreshed)) =
+    dialog.refresh(bg, registry, dialog_id: "alpha")
+
+  // Nobody has this dialog open: a background refresh must not start one.
+  refreshed |> should.be_false
+  mock.get_calls(calls) |> should.equal([])
+  let assert Ok(None) = storage.load(driver.flow_id(chat_id, "alpha"))
 }

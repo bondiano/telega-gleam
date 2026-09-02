@@ -567,6 +567,34 @@ See [testing.md](./testing.md) § Graph Export.
 `examples/06-restaurant-booking/test/booking_dialog_test.gleam` are working
 references for all of the above.
 
+## Updating a dialog from outside
+
+A job that finishes elsewhere — an export, a payment webhook, a cron tick —
+can re-render what the user is currently looking at. Build a context for them
+with `telega.background_context`, then `dialog.refresh`:
+
+```gleam
+let assert Ok(ctx) = telega.background_context(bot, chat_id:, user_id:)
+let assert Ok(#(_ctx, refreshed)) =
+  dialog.refresh(ctx, registry, dialog_id: "export")
+```
+
+`refresh` re-runs the current window's `render` with the current state, so
+anything it reads (the session, an injected service, your database) is
+re-read. It **never opens** a dialog: a user with nothing open gets `False`
+and no API call.
+
+A background context carries the same config, `dependencies`, bot info and
+persisted session a handler would see, but there is no chat instance behind
+it, so:
+
+- `ctx.update` is a placeholder holding only the ids — do not read its
+  content;
+- `wait_*` and `cancel_conversation_in` do nothing (start conversations from a
+  real update);
+- `ResendOnUserMessage` edits rather than resends, since there is no message
+  from the user to land below.
+
 ## Telemetry
 
 Dialogs emit `["telega", "dialog", <event>]` with `dialog_id`/`window_id`

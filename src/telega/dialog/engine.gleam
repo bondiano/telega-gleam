@@ -833,7 +833,10 @@ fn should_resend(
     types.AlwaysResend -> True
     types.ResendOnUserMessage ->
       case ctx.update {
-        update.CallbackQueryUpdate(..) -> False
+        // A press leaves the window where the user is looking, and a
+        // background refresh (`telega.background_context`) has no message to
+        // land below — only an actual message from the user forces a resend.
+        update.CallbackQueryUpdate(..) | update.UnknownUpdate(..) -> False
         _ -> True
       }
   }
