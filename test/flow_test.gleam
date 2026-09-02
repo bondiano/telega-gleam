@@ -3239,3 +3239,36 @@ pub fn stale_wait_result_is_not_replayed_test() {
   let assert Ok(_) = engine.start_or_resume(flow, ctx, 720, 820, dict.new())
   process.receive(events, 100) |> should.equal(Ok("prompt"))
 }
+
+pub fn expired_flow_timeout_hook_error_reaches_the_caller_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let flow =
+    builder.new("m7_timeout", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      action.wait_with_timeout(ctx, inst, timeout_ms: 1)
+    })
+    |> builder.on_timeout(fn(_ctx, _inst) {
+      Error(error.RouterError("timeout hook exploded"))
+    })
+    |> builder.build(initial: Start)
+
+  let reg =
+    registry.new_registry()
+    |> registry.register(types.OnCommand("go"), flow)
+  let r = registry.apply_to_router(router.new("m7t"), reg)
+
+  let ctx =
+    flow_ctx(
+      721,
+      821,
+      factory.text_update_with(text: "", from_id: 721, chat_id: 821),
+    )
+  let assert Ok(_) = engine.start_or_resume(flow, ctx, 721, 821, dict.new())
+  process.sleep(10)
+
+  // The wait has expired; the hook fails. That failure belongs to the bot's
+  // catch handler, not to a `let _ =`.
+  let text = factory.text_update_with(text: "late", from_id: 721, chat_id: 821)
+  router.handle(r, flow_ctx(721, 821, text), text)
+  |> should.equal(Error(error.RouterError("timeout hook exploded")))
+}

@@ -520,7 +520,13 @@ fn do_resume_waiting(
         False -> do_resume_waiting(rest, ctx, accepts, data)
         True ->
           case run_timeout_and_cleanup(flow, ctx, inst) {
-            #(True, _) -> do_resume_waiting(rest, ctx, accepts, data)
+            // Expired and cleaned up. Carry the context the hooks produced —
+            // a session they updated must not be thrown away — and let the
+            // next waiting flow have the update.
+            #(True, Ok(ctx)) -> do_resume_waiting(rest, ctx, accepts, data)
+            // A failing `on_timeout`/`on_flow_exit` belongs to the bot's catch
+            // handler, not to a discarded result.
+            #(True, Error(err)) -> Some(Error(err))
             #(False, _) ->
               Some(engine.resume_with_instance(flow, ctx, inst, Some(data())))
           }
