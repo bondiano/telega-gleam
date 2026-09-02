@@ -180,10 +180,11 @@ pub fn fetch(
 }
 
 /// Send a `multipart/form-data` POST (a `BitArray` body) to `method`, routed
-/// through the SAME request queue and 429-retry path as JSON calls, using the
-/// configured `FetchBitsClient`. This is how raw file uploads (e.g. sending a
-/// photo by bytes) honor the one-queue rate-limit invariant — there is no
-/// second HTTP client. Errors if no `FetchBitsClient` is configured.
+/// through the SAME transformer chain, request queue and 429-retry path as
+/// JSON calls, using the configured `FetchBitsClient`. This is how raw file
+/// uploads (e.g. sending a photo by bytes) honor the one-queue rate-limit
+/// invariant — there is no second HTTP client. Errors if no `FetchBitsClient`
+/// is configured.
 pub fn fetch_multipart(
   client client: TelegramClient,
   method method: String,
@@ -191,6 +192,16 @@ pub fn fetch_multipart(
   body body: BitArray,
 ) -> Result(Response(String), TelegaError) {
   use <- fetch_with_telemetry(method)
+  use api_request <- apply_transformers(
+    client.transformers,
+    TelegramApiMultipartRequest(
+      url: build_url(client, method),
+      body:,
+      method:,
+      content_type:,
+    ),
+  )
+
   use fetch_bits <- result.try(case client.fetch_bits_client {
     Some(f) -> Ok(f)
     None ->
@@ -200,8 +211,11 @@ pub fn fetch_multipart(
       ))
   })
 
+  let assert TelegramApiMultipartRequest(url:, body:, method:, content_type:) =
+    api_request
+
   use req <- result.try(
-    request.to(build_url(client, method))
+    request.to(url)
     |> result.map_error(fn(_: Nil) { error.ApiToRequestConvertError }),
   )
   let bits_req =
@@ -658,6 +672,9 @@ fn api_to_request(api_request) {
         |> request.set_header("Content-Type", "application/json")
       })
     }
+    // Uploads never reach here — `fetch_multipart` owns that path because the
+    // body is a `BitArray` and needs the bits client.
+    TelegramApiMultipartRequest(..) -> Error(Nil)
   }
   |> result.map_error(fn(_: Nil) { error.ApiToRequestConvertError })
 }
@@ -680,6 +697,16 @@ pub opaque type TelegramApiRequest {
     query: Option(List(#(String, String))),
     method: String,
   )
+  /// A raw file upload. The body is binary, so `request_body` and
+  /// `map_request_body` do not apply — everything else a transformer does
+  /// (inspecting the method, short-circuiting, post-processing the result)
+  /// works the same.
+  TelegramApiMultipartRequest(
+    url: String,
+    body: BitArray,
+    method: String,
+    content_type: String,
+  )
 }
 
 /// Get the Telegram API method name of a request (e.g. "sendMessage").
@@ -691,7 +718,7 @@ pub fn request_method(request request: TelegramApiRequest) -> String {
 pub fn request_body(request request: TelegramApiRequest) -> Option(String) {
   case request {
     TelegramApiPostRequest(body:, ..) -> Some(body)
-    TelegramApiGetRequest(..) -> None
+    TelegramApiGetRequest(..) | TelegramApiMultipartRequest(..) -> None
   }
 }
 
@@ -703,7 +730,7 @@ pub fn map_request_body(
   case request {
     TelegramApiPostRequest(url:, body:, method:) ->
       TelegramApiPostRequest(url:, body: mapper(body), method:)
-    TelegramApiGetRequest(..) -> request
+    TelegramApiGetRequest(..) | TelegramApiMultipartRequest(..) -> request
   }
 }
 

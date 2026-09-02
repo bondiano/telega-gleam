@@ -77,6 +77,11 @@ Transformers run *inside* the `telega.api_call` telemetry span, so their
 latency counts toward the span duration. `next` leads into the request queue
 (if configured) or the plain retry loop, and finally into your `fetch_client`.
 
+Raw file uploads (`multipart/form-data`) go through the same chain. Their body
+is binary, so `request_body` returns `None` and `map_request_body` leaves them
+unchanged; everything else — reading the method, short-circuiting, inspecting
+the result — works exactly as for a JSON call.
+
 ## Default parse mode
 
 Setting `parse_mode` on every call gets old fast. Configure it once on the

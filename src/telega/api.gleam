@@ -465,11 +465,12 @@ fn do_send_photo_bytes(
     ]
     |> list.filter_map(option.to_result(_, Nil))
 
+  let boundary = multipart.new_boundary()
   client.fetch_multipart(
     client:,
     method: "sendPhoto",
-    content_type: multipart.content_type_header(),
-    body: multipart.encode(parts),
+    content_type: multipart.content_type_header(boundary),
+    body: multipart.encode(boundary, parts),
   )
   |> map_response(decoder.message_decoder())
 }
