@@ -9,8 +9,8 @@ import birdie
 import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
-import gleam/time/calendar
 import gleam/string
+import gleam/time/calendar
 import gleeunit
 import gleeunit/should
 
