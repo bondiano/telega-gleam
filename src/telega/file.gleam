@@ -214,7 +214,8 @@ pub fn download_by_path(
   client: TelegramClient,
   file_path: String,
 ) -> Result(BitArray, String) {
-  let url = build_file_url(client, file_path)
+  let url = file_url(client, file_path)
+  let safe_url = client.redact_token(client:, text: url)
 
   use fetch_bits <- result.try(case client.get_fetch_bits_client(client:) {
     Some(f) -> Ok(f)
@@ -226,7 +227,7 @@ pub fn download_by_path(
 
   use req <- result.try(
     request.to(url)
-    |> result.map_error(fn(_) { "Failed to build request for: " <> url }),
+    |> result.map_error(fn(_) { "Failed to build request for: " <> safe_url }),
   )
 
   // Convert to bits request with empty body for GET request
@@ -235,7 +236,10 @@ pub fn download_by_path(
   use resp <- result.try(
     fetch_bits(bits_req)
     |> result.map_error(fn(e) {
-      "Failed to download file from: " <> url <> " — " <> string.inspect(e)
+      "Failed to download file from: "
+      <> safe_url
+      <> " — "
+      <> client.redact_token(client:, text: string.inspect(e))
     }),
   )
 
@@ -266,8 +270,11 @@ pub fn get_file_info(
   |> result.map_error(fn(e) { "Failed to get file info: " <> string.inspect(e) })
 }
 
-/// Builds the full URL for downloading a file from Telegram
-fn build_file_url(client: TelegramClient, file_path: String) -> String {
+/// Builds the full download URL for a `file_path` returned by `getFile`.
+///
+/// The URL embeds the bot token, so it is a secret: do not log it or hand it
+/// to a user.
+pub fn file_url(client: TelegramClient, file_path: String) -> String {
   let api_url = client.get_api_url(client:)
   let base_url = case api_url {
     "https://api.telegram.org/bot" -> "https://api.telegram.org/file"

@@ -7,6 +7,11 @@
 //// the server (the per-chat flood fast path) silently skipped telega's calls.
 //// Replies must carry the numeric chat id of the update instead.
 
+import gleam/bit_array
+import gleam/erlang/process
+import gleam/http/request
+import gleam/http/response
+import gleam/option.{None}
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -78,4 +83,50 @@ pub fn chat_action_targets_numeric_chat_id_test() {
       body_contains: "\"chat_id\":-100500",
     )
   Nil
+}
+
+pub fn with_photo_bytes_targets_numeric_chat_id_test() {
+  let captured = process.new_subject()
+  let bits_client = fn(req: request.Request(BitArray)) {
+    process.send(captured, req)
+    Ok(response.Response(
+      status: 200,
+      headers: [],
+      body: bit_array.from_string(mock.message_response()),
+    ))
+  }
+  let tg_client =
+    client.new(token: "test_token", fetch_client: fn(_) {
+      panic as "the bytes upload must not use the JSON client"
+    })
+    |> client.set_fetch_bits_client(bits_client)
+
+  let _ =
+    reply.with_photo_bytes(
+      ctx: context_with(tg_client),
+      bytes: bit_array.from_string("PNGDATA"),
+      filename: "cat.png",
+      content_type: "image/png",
+      caption: None,
+    )
+
+  let assert Ok(req) = process.receive(captured, 100)
+  let assert Ok(body) = bit_array.to_string(req.body)
+
+  string.contains(body, "-100500") |> should.be_true
+  string.contains(body, "-100500:888") |> should.be_false
+}
+
+pub fn with_file_link_uses_the_bot_token_test() {
+  let file_response =
+    "{\"ok\":true,\"result\":{\"file_id\":\"f\",\"file_unique_id\":\"u\",\"file_path\":\"photos/x.jpg\"}}"
+  let #(tg_client, _calls) =
+    mock.client_with(handler: fn(_req) {
+      Ok(response.new(200) |> response.set_body(file_response))
+    })
+
+  let assert Ok(link) = reply.with_file_link(context_with(tg_client), "f")
+
+  link
+  |> should.equal("https://api.telegram.org/file/bottest_token/photos/x.jpg")
 }

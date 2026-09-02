@@ -325,6 +325,21 @@ pub fn get_token(client: TelegramClient) -> String {
   client.token
 }
 
+/// Replaces every occurrence of the bot token in `text` with `<token>`.
+///
+/// Telegram puts the token in the URL of every request, so any message built
+/// from a URL — an error, a log line, a link shown to a user — leaks it unless
+/// it goes through this function first.
+pub fn redact_token(
+  client client: TelegramClient,
+  text text: String,
+) -> String {
+  case client.token {
+    "" -> text
+    token -> string.replace(text, each: token, with: "<token>")
+  }
+}
+
 pub type RequestQueueConfig {
   RequestQueueConfig(
     rules: List(RequestQueueRule),

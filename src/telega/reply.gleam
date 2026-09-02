@@ -47,6 +47,7 @@
 //// back as a stub `Message` without that id — wrap such a call in
 //// `webhook_reply.without_claim` when you need the real one.
 
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -55,6 +56,7 @@ import telega/api
 import telega/bot.{type Context}
 import telega/client
 import telega/error
+import telega/file
 import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
@@ -381,7 +383,7 @@ pub fn with_photo_bytes(
 ) -> Result(Message, error.TelegaError) {
   api.send_photo_bytes(
     ctx.config.api_client,
-    chat_id: ctx.key,
+    chat_id: int.to_string(ctx.update.chat_id),
     content: bytes,
     filename:,
     content_type:,
@@ -567,6 +569,9 @@ pub fn answer_callback_query(
 }
 
 /// Get download link for the file.
+///
+/// The link embeds the bot token: it grants access to every file of the bot,
+/// so keep it server-side instead of sending it to a user.
 pub fn with_file_link(
   ctx ctx: Context(session, error, dependencies),
   file_id file_id: String,
@@ -577,13 +582,7 @@ pub fn with_file_link(
     error.FileNotFoundError,
   ))
 
-  Ok(
-    client.get_api_url(client: ctx.config.api_client)
-    <> "/file/bot"
-    <> ctx.config.secret_token
-    <> "/"
-    <> file_path,
-  )
+  Ok(file.file_url(ctx.config.api_client, file_path))
 }
 
 /// Use this method to send a native poll.
