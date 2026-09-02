@@ -20,18 +20,19 @@ import telega/model/types.{
   type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
   type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
   type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type BanChatMemberParameters, type BanChatSenderChatParameters,
-  type BotAccessSettings, type BotCommand, type BotCommandParameters,
-  type BotDescription, type BotName, type BotShortDescription,
-  type BusinessConnection, type ChatAdministratorRights, type ChatFullInfo,
-  type ChatInviteLink, type ChatMember, type CloseForumTopicParameters,
+  type ApproveSuggestedPostParameters, type BanChatMemberParameters,
+  type BanChatSenderChatParameters, type BotAccessSettings, type BotCommand,
+  type BotCommandParameters, type BotDescription, type BotName,
+  type BotShortDescription, type BusinessConnection,
+  type ChatAdministratorRights, type ChatFullInfo, type ChatInviteLink,
+  type ChatMember, type CloseForumTopicParameters,
   type CloseGeneralForumTopicParameters, type ConvertGiftToStarsParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
   type CreateChatInviteLinkParameters,
   type CreateChatSubscriptionInviteLinkParameters,
   type CreateForumTopicParameters, type CreateInvoiceLinkParameters,
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
-  type DeleteAllMessageReactionsParameters,
+  type DeclineSuggestedPostParameters, type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
   type DeleteChatStickerSetParameters, type DeleteEphemeralMessageParameters,
   type DeleteForumTopicParameters, type DeleteMessageParameters,
@@ -44,13 +45,13 @@ import telega/model/types.{
   type EditEphemeralMessageReplyMarkupParameters,
   type EditEphemeralMessageTextParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
-  type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
-  type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
-  type EditStoryParameters, type EditUserStarSubscriptionParameters,
-  type EphemeralMessageParameters, type ExportChatInviteLinkParameters,
-  type File, type ForumTopic, type ForwardMessageParameters,
-  type ForwardMessagesParameters, type GameHighScore,
-  type GetBusinessAccountGiftsParameters,
+  type EditMessageChecklistParameters, type EditMessageLiveLocationParameters,
+  type EditMessageMediaParameters, type EditMessageReplyMarkupParameters,
+  type EditMessageTextParameters, type EditStoryParameters,
+  type EditUserStarSubscriptionParameters, type EphemeralMessageParameters,
+  type ExportChatInviteLinkParameters, type File, type ForumTopic,
+  type ForwardMessageParameters, type ForwardMessagesParameters,
+  type GameHighScore, type GetBusinessAccountGiftsParameters,
   type GetBusinessAccountStarBalanceParameters,
   type GetBusinessConnectionParameters, type GetChatAdministratorsParameters,
   type GetChatGiftsParameters, type GetChatMemberCountParameters,
@@ -67,15 +68,17 @@ import telega/model/types.{
   type GiftPremiumSubscriptionParameters, type Gifts,
   type HideGeneralForumTopicParameters, type LeaveChatParameters,
   type MenuButton, type Message, type OwnedGifts, type PinChatMessageParameters,
-  type Poll, type PostStoryParameters, type PromoteChatMemberParameters,
-  type ReadBusinessMessageParameters, type RefundStarPaymentParameters,
+  type Poll, type PostStoryParameters, type PreparedInlineMessage,
+  type PromoteChatMemberParameters, type ReadBusinessMessageParameters,
+  type RefundStarPaymentParameters,
   type RemoveBusinessAccountProfilePhotoParameters,
   type RemoveChatVerificationParameters, type RemoveUserVerificationParameters,
   type ReopenForumTopicParameters, type ReopenGeneralForumTopicParameters,
   type ReplaceStickerInSetParameters, type RepostStoryParameters,
   type RestrictChatMemberParameters, type RevokeChatInviteLinkParameters,
-  type SendAnimationParameters, type SendAudioParameters,
-  type SendChatActionParameters, type SendChatJoinRequestWebAppParameters,
+  type SavePreparedInlineMessageParameters, type SendAnimationParameters,
+  type SendAudioParameters, type SendChatActionParameters,
+  type SendChatJoinRequestWebAppParameters, type SendChecklistParameters,
   type SendContactParameters, type SendDiceParameters,
   type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
   type SendInvoiceParameters, type SendLivePhotoParameters,
@@ -100,9 +103,10 @@ import telega/model/types.{
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
-  type SetStickerEmojiListParameters, type SetStickerKeywordsParameters,
-  type SetStickerMaskPositionParameters, type SetStickerPositionInSetParameters,
-  type SetStickerSetThumbnailParameters, type SetStickerSetTitleParameters,
+  type SetPassportDataErrorsParameters, type SetStickerEmojiListParameters,
+  type SetStickerKeywordsParameters, type SetStickerMaskPositionParameters,
+  type SetStickerPositionInSetParameters, type SetStickerSetThumbnailParameters,
+  type SetStickerSetTitleParameters, type SetUserEmojiStatusParameters,
   type SetWebhookParameters, type StarAmount, type StarTransactions,
   type Sticker, type StickerSet, type StopMessageLiveLocationParameters,
   type StopPollParameters, type Story,
@@ -3405,6 +3409,144 @@ pub fn send_chat_join_request_web_app(
   new_post_request(
     client:,
     path: "sendChatJoinRequestWebApp",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Changes the emoji status for a given user that previously allowed the bot to manage their emoji status via the Mini App method [requestEmojiStatusAccess](https://core.telegram.org/bots/webapps#initializing-mini-apps). Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setuseremojistatus
+pub fn set_user_emoji_status(
+  client client: client.TelegramClient,
+  parameters parameters: SetUserEmojiStatusParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_set_user_emoji_status_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setUserEmojiStatus",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Stores a message that can be sent by a user of a Mini App. Returns a [PreparedInlineMessage](https://core.telegram.org/bots/api#preparedinlinemessage) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#savepreparedinlinemessage
+pub fn save_prepared_inline_message(
+  client client: client.TelegramClient,
+  parameters parameters: SavePreparedInlineMessageParameters,
+) -> Result(PreparedInlineMessage, error.TelegaError) {
+  let body_json =
+    encoder.encode_save_prepared_inline_message_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "savePreparedInlineMessage",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.prepared_inline_message_decoder())
+}
+
+/// A method for getting the current Telegram Stars balance of the bot. Returns a [StarAmount](https://core.telegram.org/bots/api#staramount) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmystarbalance
+pub fn get_my_star_balance(
+  client client: client.TelegramClient,
+) -> Result(StarAmount, error.TelegaError) {
+  new_get_request(client:, path: "getMyStarBalance", query: None)
+  |> fetch(client)
+  |> map_response(decoder.star_amount_decoder())
+}
+
+/// Use this method to send a checklist on behalf of a connected business account. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendchecklist
+pub fn send_checklist(
+  client client: client.TelegramClient,
+  parameters parameters: SendChecklistParameters,
+) -> Result(Message, error.TelegaError) {
+  let body_json = encoder.encode_send_checklist_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "sendChecklist",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Use this method to edit a checklist on behalf of a connected business account. On success, the edited [Message](https://core.telegram.org/bots/api#message) is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#editmessagechecklist
+pub fn edit_message_checklist(
+  client client: client.TelegramClient,
+  parameters parameters: EditMessageChecklistParameters,
+) -> Result(Message, error.TelegaError) {
+  let body_json = encoder.encode_edit_message_checklist_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "editMessageChecklist",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.message_decoder())
+}
+
+/// Informs a user that some of the Telegram Passport elements they provided contain errors. The user will not be able to re-submit their Passport until the errors are fixed. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setpassportdataerrors
+pub fn set_passport_data_errors(
+  client client: client.TelegramClient,
+  parameters parameters: SetPassportDataErrorsParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_set_passport_data_errors_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setPassportDataErrors",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to approve a suggested post in a direct messages chat. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#approvesuggestedpost
+pub fn approve_suggested_post(
+  client client: client.TelegramClient,
+  parameters parameters: ApproveSuggestedPostParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_approve_suggested_post_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "approveSuggestedPost",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to decline a suggested post in a direct messages chat. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#declinesuggestedpost
+pub fn decline_suggested_post(
+  client client: client.TelegramClient,
+  parameters parameters: DeclineSuggestedPostParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_decline_suggested_post_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "declineSuggestedPost",
     body: json.to_string(body_json),
   )
   |> fetch(client)

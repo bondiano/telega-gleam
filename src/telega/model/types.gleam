@@ -9116,6 +9116,178 @@ pub fn new_ephemeral_message_parameters(
   )
 }
 
+// SetUserEmojiStatusParameters ------------------------------------------------------------
+pub type SetUserEmojiStatusParameters {
+  SetUserEmojiStatusParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// Custom emoji identifier of the emoji status to set. Pass an empty string to remove the status.
+    emoji_status_custom_emoji_id: Option(String),
+    /// Expiration date of the emoji status, if any
+    emoji_status_expiration_date: Option(Int),
+  )
+}
+
+pub fn new_set_user_emoji_status_parameters(
+  user_id user_id: Int,
+) -> SetUserEmojiStatusParameters {
+  SetUserEmojiStatusParameters(
+    user_id:,
+    emoji_status_custom_emoji_id: None,
+    emoji_status_expiration_date: None,
+  )
+}
+
+// SavePreparedInlineMessageParameters ------------------------------------------------------
+pub type SavePreparedInlineMessageParameters {
+  SavePreparedInlineMessageParameters(
+    /// Unique identifier of the target user that can use the prepared message
+    user_id: Int,
+    /// A JSON-serialized object describing the message to be sent
+    result: InlineQueryResult,
+    /// Pass True if the message can be sent to private chats with users
+    allow_user_chats: Option(Bool),
+    /// Pass True if the message can be sent to private chats with bots
+    allow_bot_chats: Option(Bool),
+    /// Pass True if the message can be sent to group and supergroup chats
+    allow_group_chats: Option(Bool),
+    /// Pass True if the message can be sent to channel chats
+    allow_channel_chats: Option(Bool),
+  )
+}
+
+pub fn new_save_prepared_inline_message_parameters(
+  user_id user_id: Int,
+  result result: InlineQueryResult,
+) -> SavePreparedInlineMessageParameters {
+  SavePreparedInlineMessageParameters(
+    user_id:,
+    result:,
+    allow_user_chats: None,
+    allow_bot_chats: None,
+    allow_group_chats: None,
+    allow_channel_chats: None,
+  )
+}
+
+// SendChecklistParameters ------------------------------------------------------------------
+pub type SendChecklistParameters {
+  SendChecklistParameters(
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: String,
+    /// Unique identifier for the target chat
+    chat_id: IntOrString,
+    /// A JSON-serialized object for the checklist to send
+    checklist: InputChecklist,
+    /// Send the message silently
+    disable_notification: Option(Bool),
+    /// Protect the content from forwarding and saving
+    protect_content: Option(Bool),
+    /// Unique identifier of the message effect to be added to the message
+    message_effect_id: Option(String),
+    /// A JSON-serialized object for description of the message to reply to
+    reply_parameters: Option(ReplyParameters),
+    /// A JSON-serialized object for an inline keyboard
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn new_send_checklist_parameters(
+  business_connection_id business_connection_id: String,
+  chat_id chat_id: IntOrString,
+  checklist checklist: InputChecklist,
+) -> SendChecklistParameters {
+  SendChecklistParameters(
+    business_connection_id:,
+    chat_id:,
+    checklist:,
+    disable_notification: None,
+    protect_content: None,
+    message_effect_id: None,
+    reply_parameters: None,
+    reply_markup: None,
+  )
+}
+
+// EditMessageChecklistParameters ------------------------------------------------------------
+pub type EditMessageChecklistParameters {
+  EditMessageChecklistParameters(
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: String,
+    /// Unique identifier for the target chat
+    chat_id: IntOrString,
+    /// Unique identifier for the target message
+    message_id: Int,
+    /// A JSON-serialized object for the new checklist
+    checklist: InputChecklist,
+    /// A JSON-serialized object for the new inline keyboard for the message
+    reply_markup: Option(InlineKeyboardMarkup),
+  )
+}
+
+pub fn new_edit_message_checklist_parameters(
+  business_connection_id business_connection_id: String,
+  chat_id chat_id: IntOrString,
+  message_id message_id: Int,
+  checklist checklist: InputChecklist,
+) -> EditMessageChecklistParameters {
+  EditMessageChecklistParameters(
+    business_connection_id:,
+    chat_id:,
+    message_id:,
+    checklist:,
+    reply_markup: None,
+  )
+}
+
+// SetPassportDataErrorsParameters ------------------------------------------------------------
+pub type SetPassportDataErrorsParameters {
+  SetPassportDataErrorsParameters(
+    /// User identifier
+    user_id: Int,
+    /// A JSON-serialized array describing the errors
+    errors: List(PassportElementError),
+  )
+}
+
+// ApproveSuggestedPostParameters -------------------------------------------------------------
+pub type ApproveSuggestedPostParameters {
+  ApproveSuggestedPostParameters(
+    /// Unique identifier for the target direct messages chat
+    chat_id: Int,
+    /// Identifier of a suggested post message to approve
+    message_id: Int,
+    /// Point in time (Unix timestamp) when the post is expected to be published
+    send_date: Option(Int),
+  )
+}
+
+pub fn new_approve_suggested_post_parameters(
+  chat_id chat_id: Int,
+  message_id message_id: Int,
+) -> ApproveSuggestedPostParameters {
+  ApproveSuggestedPostParameters(chat_id:, message_id:, send_date: None)
+}
+
+// DeclineSuggestedPostParameters -------------------------------------------------------------
+pub type DeclineSuggestedPostParameters {
+  DeclineSuggestedPostParameters(
+    /// Unique identifier for the target direct messages chat
+    chat_id: Int,
+    /// Identifier of a suggested post message to decline
+    message_id: Int,
+    /// Comment for the creator of the suggested post
+    comment: Option(String),
+  )
+}
+
+pub fn new_decline_suggested_post_parameters(
+  chat_id chat_id: Int,
+  message_id message_id: Int,
+) -> DeclineSuggestedPostParameters {
+  DeclineSuggestedPostParameters(chat_id:, message_id:, comment: None)
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type FileOrString {

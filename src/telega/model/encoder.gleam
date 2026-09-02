@@ -12,26 +12,27 @@ import telega/model/types.{
   type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
   type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
   type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type Audio, type BackgroundFill, type BackgroundFillFreeformGradient,
-  type BackgroundFillGradient, type BackgroundFillSolid, type BackgroundType,
-  type BackgroundTypeChatTheme, type BackgroundTypeFill,
-  type BackgroundTypePattern, type BackgroundTypeWallpaper,
-  type BanChatMemberParameters, type BanChatSenderChatParameters, type Birthdate,
-  type BotAccessSettings, type BotCommand, type BotCommandParameters,
-  type BotCommandScope, type BotCommandScopeAllChatAdministrators,
-  type BotCommandScopeAllGroupChats, type BotCommandScopeAllPrivateChats,
-  type BotCommandScopeChat, type BotCommandScopeChatAdministrators,
-  type BotCommandScopeChatMember, type BotCommandScopeDefault,
-  type BotDescription, type BotName, type BotShortDescription,
-  type BotSubscriptionUpdated, type BusinessBotRights, type BusinessConnection,
-  type BusinessIntro, type BusinessLocation, type BusinessMessagesDeleted,
-  type BusinessOpeningHours, type BusinessOpeningHoursInterval,
-  type CallbackGame, type CallbackQuery, type Chat, type ChatAction,
-  type ChatAdministratorRights, type ChatBackground, type ChatBoost,
-  type ChatBoostAdded, type ChatBoostRemoved, type ChatBoostSource,
-  type ChatBoostSourceGiftCode, type ChatBoostSourceGiveaway,
-  type ChatBoostSourcePremium, type ChatBoostUpdated, type ChatFullInfo,
-  type ChatInviteLink, type ChatJoinRequest, type ChatLocation, type ChatMember,
+  type ApproveSuggestedPostParameters, type Audio, type BackgroundFill,
+  type BackgroundFillFreeformGradient, type BackgroundFillGradient,
+  type BackgroundFillSolid, type BackgroundType, type BackgroundTypeChatTheme,
+  type BackgroundTypeFill, type BackgroundTypePattern,
+  type BackgroundTypeWallpaper, type BanChatMemberParameters,
+  type BanChatSenderChatParameters, type Birthdate, type BotAccessSettings,
+  type BotCommand, type BotCommandParameters, type BotCommandScope,
+  type BotCommandScopeAllChatAdministrators, type BotCommandScopeAllGroupChats,
+  type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
+  type BotCommandScopeChatAdministrators, type BotCommandScopeChatMember,
+  type BotCommandScopeDefault, type BotDescription, type BotName,
+  type BotShortDescription, type BotSubscriptionUpdated, type BusinessBotRights,
+  type BusinessConnection, type BusinessIntro, type BusinessLocation,
+  type BusinessMessagesDeleted, type BusinessOpeningHours,
+  type BusinessOpeningHoursInterval, type CallbackGame, type CallbackQuery,
+  type Chat, type ChatAction, type ChatAdministratorRights, type ChatBackground,
+  type ChatBoost, type ChatBoostAdded, type ChatBoostRemoved,
+  type ChatBoostSource, type ChatBoostSourceGiftCode,
+  type ChatBoostSourceGiveaway, type ChatBoostSourcePremium,
+  type ChatBoostUpdated, type ChatFullInfo, type ChatInviteLink,
+  type ChatJoinRequest, type ChatLocation, type ChatMember,
   type ChatMemberAdministrator, type ChatMemberBanned, type ChatMemberLeft,
   type ChatMemberMember, type ChatMemberOwner, type ChatMemberRestricted,
   type ChatMemberUpdated, type ChatOwnerChanged, type ChatOwnerLeft,
@@ -46,7 +47,7 @@ import telega/model/types.{
   type CreateChatSubscriptionInviteLinkParameters,
   type CreateForumTopicParameters, type CreateInvoiceLinkParameters,
   type CreateNewStickerSetParameters, type DeclineChatJoinRequestParameters,
-  type DeleteAllMessageReactionsParameters,
+  type DeclineSuggestedPostParameters, type DeleteAllMessageReactionsParameters,
   type DeleteBusinessMessagesParameters, type DeleteChatPhotoParameters,
   type DeleteChatStickerSetParameters, type DeleteEphemeralMessageParameters,
   type DeleteForumTopicParameters, type DeleteMessageParameters,
@@ -61,17 +62,17 @@ import telega/model/types.{
   type EditEphemeralMessageReplyMarkupParameters,
   type EditEphemeralMessageTextParameters, type EditForumTopicParameters,
   type EditGeneralForumTopicParameters, type EditMessageCaptionParameters,
-  type EditMessageLiveLocationParameters, type EditMessageMediaParameters,
-  type EditMessageReplyMarkupParameters, type EditMessageTextParameters,
-  type EditStoryParameters, type EditUserStarSubscriptionParameters,
-  type EncryptedCredentials, type EncryptedPassportElement,
-  type EphemeralMessageParameters, type ExportChatInviteLinkParameters,
-  type ExternalReplyInfo, type File, type FileOrString, type ForceReply,
-  type ForumTopic, type ForumTopicClosed, type ForumTopicCreated,
-  type ForumTopicEdited, type ForumTopicReopened, type ForwardMessageParameters,
-  type ForwardMessagesParameters, type Game, type GameHighScore,
-  type GeneralForumTopicHidden, type GeneralForumTopicUnhidden,
-  type GetBusinessAccountGiftsParameters,
+  type EditMessageChecklistParameters, type EditMessageLiveLocationParameters,
+  type EditMessageMediaParameters, type EditMessageReplyMarkupParameters,
+  type EditMessageTextParameters, type EditStoryParameters,
+  type EditUserStarSubscriptionParameters, type EncryptedCredentials,
+  type EncryptedPassportElement, type EphemeralMessageParameters,
+  type ExportChatInviteLinkParameters, type ExternalReplyInfo, type File,
+  type FileOrString, type ForceReply, type ForumTopic, type ForumTopicClosed,
+  type ForumTopicCreated, type ForumTopicEdited, type ForumTopicReopened,
+  type ForwardMessageParameters, type ForwardMessagesParameters, type Game,
+  type GameHighScore, type GeneralForumTopicHidden,
+  type GeneralForumTopicUnhidden, type GetBusinessAccountGiftsParameters,
   type GetBusinessAccountStarBalanceParameters,
   type GetBusinessConnectionParameters, type GetChatAdministratorsParameters,
   type GetChatGiftsParameters, type GetChatMemberCountParameters,
@@ -185,20 +186,21 @@ import telega/model/types.{
   type RichTextPhoneNumber, type RichTextReference, type RichTextReferenceLink,
   type RichTextSpoiler, type RichTextStrikethrough, type RichTextSubscript,
   type RichTextSuperscript, type RichTextTextMention, type RichTextUnderline,
-  type RichTextUrl, type SendAnimationParameters, type SendAudioParameters,
+  type RichTextUrl, type SavePreparedInlineMessageParameters,
+  type SendAnimationParameters, type SendAudioParameters,
   type SendChatActionParameters, type SendChatJoinRequestWebAppParameters,
-  type SendContactParameters, type SendDiceParameters,
-  type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
-  type SendInvoiceParameters, type SendLivePhotoParameters,
-  type SendLocationParameters, type SendMediaGroupParameters,
-  type SendMessageDraftParameters, type SendMessageParameters,
-  type SendMessageReplyMarkupParameters, type SendPaidMediaParameters,
-  type SendPhotoParameters, type SendPollParameters,
-  type SendRichMessageDraftParameters, type SendRichMessageParameters,
-  type SendStickerParameters, type SendVenueParameters,
-  type SendVideoNoteParameters, type SendVideoParameters,
-  type SendVoiceParameters, type SentGuestMessage, type SentWebAppMessage,
-  type SetBusinessAccountBioParameters,
+  type SendChecklistParameters, type SendContactParameters,
+  type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
+  type SendGiftParameters, type SendInvoiceParameters,
+  type SendLivePhotoParameters, type SendLocationParameters,
+  type SendMediaGroupParameters, type SendMessageDraftParameters,
+  type SendMessageParameters, type SendMessageReplyMarkupParameters,
+  type SendPaidMediaParameters, type SendPhotoParameters,
+  type SendPollParameters, type SendRichMessageDraftParameters,
+  type SendRichMessageParameters, type SendStickerParameters,
+  type SendVenueParameters, type SendVideoNoteParameters,
+  type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
+  type SentWebAppMessage, type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
   type SetBusinessAccountProfilePhotoParameters,
@@ -212,9 +214,10 @@ import telega/model/types.{
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
-  type SetStickerEmojiListParameters, type SetStickerKeywordsParameters,
-  type SetStickerMaskPositionParameters, type SetStickerPositionInSetParameters,
-  type SetStickerSetThumbnailParameters, type SetStickerSetTitleParameters,
+  type SetPassportDataErrorsParameters, type SetStickerEmojiListParameters,
+  type SetStickerKeywordsParameters, type SetStickerMaskPositionParameters,
+  type SetStickerPositionInSetParameters, type SetStickerSetThumbnailParameters,
+  type SetStickerSetTitleParameters, type SetUserEmojiStatusParameters,
   type SetWebhookParameters, type SharedUser, type ShippingAddress,
   type ShippingOption, type ShippingQuery, type StarAmount, type StarTransaction,
   type StarTransactions, type Sticker, type StickerSet,
@@ -10990,5 +10993,119 @@ pub fn encode_send_chat_join_request_web_app_parameters(
       json.string(params.chat_join_request_query_id),
     ),
     #("web_app_url", json.string(params.web_app_url)),
+  ])
+}
+
+// SetUserEmojiStatusParameters ------------------------------------------------------------
+
+pub fn encode_set_user_emoji_status_parameters(
+  params: SetUserEmojiStatusParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #(
+      "emoji_status_custom_emoji_id",
+      json.nullable(params.emoji_status_custom_emoji_id, json.string),
+    ),
+    #(
+      "emoji_status_expiration_date",
+      json.nullable(params.emoji_status_expiration_date, json.int),
+    ),
+  ])
+}
+
+// SavePreparedInlineMessageParameters ------------------------------------------------------
+
+pub fn encode_save_prepared_inline_message_parameters(
+  params: SavePreparedInlineMessageParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("result", encode_inline_query_result(params.result)),
+    #("allow_user_chats", json.nullable(params.allow_user_chats, json.bool)),
+    #("allow_bot_chats", json.nullable(params.allow_bot_chats, json.bool)),
+    #("allow_group_chats", json.nullable(params.allow_group_chats, json.bool)),
+    #(
+      "allow_channel_chats",
+      json.nullable(params.allow_channel_chats, json.bool),
+    ),
+  ])
+}
+
+// SendChecklistParameters ------------------------------------------------------------------
+
+pub fn encode_send_checklist_parameters(
+  params: SendChecklistParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("checklist", encode_input_checklist(params.checklist)),
+    #(
+      "disable_notification",
+      json.nullable(params.disable_notification, json.bool),
+    ),
+    #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "reply_parameters",
+      json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// EditMessageChecklistParameters ------------------------------------------------------------
+
+pub fn encode_edit_message_checklist_parameters(
+  params: EditMessageChecklistParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("business_connection_id", json.string(params.business_connection_id)),
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #("checklist", encode_input_checklist(params.checklist)),
+    #(
+      "reply_markup",
+      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
+    ),
+  ])
+}
+
+// SetPassportDataErrorsParameters ------------------------------------------------------------
+
+pub fn encode_set_passport_data_errors_parameters(
+  params: SetPassportDataErrorsParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("errors", json.array(params.errors, encode_passport_element_error)),
+  ])
+}
+
+// ApproveSuggestedPostParameters -------------------------------------------------------------
+
+pub fn encode_approve_suggested_post_parameters(
+  params: ApproveSuggestedPostParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", json.int(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #("send_date", json.nullable(params.send_date, json.int)),
+  ])
+}
+
+// DeclineSuggestedPostParameters -------------------------------------------------------------
+
+pub fn encode_decline_suggested_post_parameters(
+  params: DeclineSuggestedPostParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", json.int(params.chat_id)),
+    #("message_id", json.int(params.message_id)),
+    #("comment", json.nullable(params.comment, json.string)),
   ])
 }

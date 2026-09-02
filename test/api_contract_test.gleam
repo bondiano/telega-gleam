@@ -6,7 +6,7 @@
 
 import gleam/erlang/process
 import gleam/http/response
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleeunit/should
 
 import telega/api
@@ -108,4 +108,59 @@ pub fn approve_chat_join_request_reports_an_api_error_test() {
       parameters: None,
     )),
   )
+}
+
+// The methods that were simply missing ---------------------------------------
+
+pub fn newly_wired_methods_hit_their_paths_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": true}")
+
+  let assert Ok(True) =
+    api.set_user_emoji_status(
+      client:,
+      parameters: types.new_set_user_emoji_status_parameters(user_id: 1),
+    )
+  last_path() |> should.equal("/bottest-token/setUserEmojiStatus")
+
+  let assert Ok(True) =
+    api.set_passport_data_errors(
+      client:,
+      parameters: types.SetPassportDataErrorsParameters(user_id: 1, errors: []),
+    )
+  last_path() |> should.equal("/bottest-token/setPassportDataErrors")
+
+  let assert Ok(True) =
+    api.approve_suggested_post(
+      client:,
+      parameters: types.new_approve_suggested_post_parameters(
+        chat_id: 1,
+        message_id: 2,
+      ),
+    )
+  last_path() |> should.equal("/bottest-token/approveSuggestedPost")
+
+  let assert Ok(True) =
+    api.decline_suggested_post(
+      client:,
+      parameters: types.new_decline_suggested_post_parameters(
+        chat_id: 1,
+        message_id: 2,
+      ),
+    )
+  last_path() |> should.equal("/bottest-token/declineSuggestedPost")
+}
+
+pub fn get_my_star_balance_decodes_the_balance_test() {
+  let #(client, last_path) =
+    recording_client(
+      "{\"ok\": true, \"result\": {\"amount\": 42, \"nanostar_amount\": 500000000}}",
+    )
+
+  api.get_my_star_balance(client)
+  |> should.equal(
+    Ok(types.StarAmount(amount: 42, nanostar_amount: Some(500_000_000))),
+  )
+
+  last_path() |> should.equal("/bottest-token/getMyStarBalance")
 }
