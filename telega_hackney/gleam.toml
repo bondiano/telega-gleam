@@ -10,6 +10,9 @@ target = "erlang"
 [dependencies]
 gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 gleam_http = ">= 4.0.0 and < 5.0.0"
+# Depended on for the `hackney` application itself: the adapter calls hackney
+# directly (see src/telega_hackney_ffi.erl) because `gleam_hackney` hardcodes
+# the request options and leaves hackney's 5-second `recv_timeout` in force.
 gleam_hackney = ">= 1.3.3 and < 2.0.0"
 telega = { path = ".." }
 
