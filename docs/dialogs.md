@@ -511,17 +511,35 @@ render.window_frame(booking.render_confirm(state, ctx))
 telega_i18n.leave()
 ```
 
-**Level 2 — engine transcripts.** Drive the compiled flow with a mock client
-and snapshot the full visible API-call sequence (`sendMessage`,
-`editMessageText`, `answerCallbackQuery`, …):
+**Level 2 — engine transcripts.** Drive the compiled flow with
+`telega/testing/dialog` and a mock client, then snapshot the full visible
+API-call sequence (`sendMessage`, `editMessageText`, `answerCallbackQuery`, …):
 
 ```gleam
+import telega/testing/dialog as testing_dialog
+
 let flow = dialog_engine.compile(dialog.compiled(my_dialog))
-// start, press buttons, send texts against a mock client...
+let #(client, calls) = testing_dialog.text_client()
+
+let driver =
+  testing_dialog.driver(flow:, client:, dialog_id: "settings")
+  |> testing_dialog.with_chat(chat_id: 42)
+
+testing_dialog.start(driver, command: "/settings")
+testing_dialog.press(driver, data: "dlg:settings:menu:lang")
+testing_dialog.send_text(driver, text: "Alice")
+
 mock.get_calls(calls)
 |> testing_render.calls_transcript
 |> birdie.snap(title: "dialog:engine:happy_path")
 ```
+
+The driver stands in for the flow registry's auto-resume, so it exercises the
+same code path a real update takes. `press_on_message` simulates a press on an
+outdated copy of the live message, `send_photo` a media message, and
+`instance(driver)` reads the persisted state for direct assertions.
+`media_client()` is `text_client()` plus a `deleteMessage` answer, for dialogs
+with media windows or sub-dialogs.
 
 **Level 3 — error-path regressions.** Script Telegram's answers with
 `mock.stateful_client`/`mock.routed_client` (400 "message is not modified",

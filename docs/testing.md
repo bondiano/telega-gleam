@@ -12,6 +12,7 @@ Telega provides a built-in testing toolkit under `telega/testing/` for writing i
 | `telega/testing/factory` | Deterministic test data factories (users, chats, messages, updates) |
 | `telega/testing/context` | Test config and context builders |
 | `telega/testing/render` | Pure canonicalizers for snapshot testing (API-call transcripts, keyboard grids) |
+| `telega/testing/dialog` | Drives a compiled dialog (start, press, send text/photo) without a bot or a network |
 | `telega/testing/graph` | Navigation graph of a dialog or flow, exported as Graphviz DOT or Mermaid |
 
 ## Quick Start
@@ -437,6 +438,32 @@ pub fn menu_keyboard_test() {
   render in `telega_i18n.enter(catalog:, locale:)` / `leave()` — see
   `examples/06-restaurant-booking/test/booking_dialog_test.gleam`.
 - CI: `gleam test` fails on unaccepted snapshots, so a snapshot diff can't slip through unreviewed.
+
+## Driving a Dialog
+
+`telega/testing/dialog` replays what the flow registry's auto-resume would do,
+so a dialog can be driven end to end in a test:
+
+```gleam
+import telega/testing/dialog as testing_dialog
+
+let #(client, calls) = testing_dialog.text_client()
+let driver =
+  testing_dialog.driver(flow:, client:, dialog_id: "settings")
+  |> testing_dialog.with_chat(chat_id: 42)
+
+testing_dialog.start(driver, command: "/settings")
+testing_dialog.press(driver, data: "dlg:settings:menu:lang")
+testing_dialog.send_text(driver, text: "Alice")
+
+let assert Some(inst) = testing_dialog.instance(driver)
+instance.get_data(inst, "__dialog_state") |> should.equal(Some("{\"lang\":\"ru\"}"))
+```
+
+`press_on_message` presses a button on an outdated copy of the live message,
+`send_photo` delivers media to a window with `on_message`, and `instance_id`
+gives the storage key. `driver_with` is the variant for dialogs that carry a
+session or injected dependencies. See [dialogs.md](./dialogs.md) § Testing.
 
 ## Graph Export
 

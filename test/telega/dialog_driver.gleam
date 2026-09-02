@@ -1,28 +1,13 @@
-//// Shared driving harness for dialog engine tests.
-////
-//// Mimics the flow registry's auto-resume: loads the waiting instance from
-//// storage and resumes it with the same `__wait_result` payloads the
-//// registry's callback/text handlers would build. Used by `dialog_test`,
-//// `dialog_sub_test` and `dialog_widget_test`.
-
-import gleam/dict
-import gleam/list
-import gleam/option.{None, Some}
-import gleam/string
+//// Thin wrapper over the **shipped** driver (`telega/testing/dialog`), kept
+//// so the existing dialog tests read the way they always did — and so the
+//// harness users get is the one this suite exercises.
 
 import telega/bot
 import telega/client.{type TelegramClient}
-import telega/dialog/engine as dialog_engine
-import telega/dialog/render
 import telega/error
-import telega/flow/engine as flow_engine
-import telega/flow/instance
-import telega/flow/storage as flow_storage
 import telega/flow/types as flow_types
-import telega/model/types as model_types
 import telega/testing/context
-import telega/testing/factory
-import telega/testing/mock
+import telega/testing/dialog as testing_dialog
 import telega/update
 
 pub const user_id = 10
@@ -41,14 +26,21 @@ pub fn ctx_for(client: TelegramClient, upd: update.Update) -> Ctx {
   bot.Context(..ctx, config: context.config_with_client(client))
 }
 
+fn driver_for(
+  flow: DialogFlow,
+  client: TelegramClient,
+  chat_id: Int,
+  dialog_id: String,
+) -> testing_dialog.Driver(Nil, error.TelegaError, Nil) {
+  testing_dialog.driver(flow:, client:, dialog_id:)
+  |> testing_dialog.with_chat(chat_id:)
+  |> testing_dialog.with_user(user_id:)
+}
+
 /// Instance id of a dialog's flow (`__dialog:<dialog_id>`) for the shared
 /// test user.
 pub fn flow_id(chat_id: Int, dialog_id: String) -> String {
-  flow_storage.generate_id(
-    user_id,
-    chat_id,
-    dialog_engine.flow_name_prefix <> dialog_id,
-  )
+  testing_dialog.instance_id_for(dialog_id:, chat_id:, user_id:)
 }
 
 /// Start (or resume) a dialog flow the way its start command would.
@@ -58,34 +50,19 @@ pub fn start_dialog(
   chat_id: Int,
   command command: String,
 ) -> Nil {
-  let ctx =
-    ctx_for(
-      client,
-      factory.text_update_with(text: command, from_id: user_id, chat_id:),
-    )
-  let assert Ok(_) =
-    flow_engine.start_or_resume(
-      flow,
-      ctx,
-      user_id:,
-      chat_id:,
-      initial_data: dict.new(),
-    )
-  Nil
+  testing_dialog.start(driver_for(flow, client, chat_id, ""), command:)
 }
 
 /// Deliver a button press to the waiting dialog instance.
 pub fn press(
   flow: DialogFlow,
   client: TelegramClient,
-  storage: DialogStorage,
+  _storage: DialogStorage,
   chat_id: Int,
   dialog_id: String,
   data: String,
 ) -> Nil {
-  let upd =
-    factory.callback_query_update_with(data:, from_id: user_id, chat_id:)
-  resume_with_callback(flow, client, storage, chat_id, dialog_id, data, upd)
+  testing_dialog.press(driver_for(flow, client, chat_id, dialog_id), data:)
 }
 
 /// Deliver a button press whose callback query carries a custom
@@ -93,156 +70,50 @@ pub fn press(
 pub fn press_on_message(
   flow: DialogFlow,
   client: TelegramClient,
-  storage: DialogStorage,
+  _storage: DialogStorage,
   chat_id: Int,
   dialog_id: String,
   data: String,
   message_id message_id: Int,
 ) -> Nil {
-  let upd = callback_update_on_message(data:, chat_id:, message_id:)
-  resume_with_callback(flow, client, storage, chat_id, dialog_id, data, upd)
-}
-
-/// Every `press` here reuses one query id, which Telegram never does. Forget
-/// the "already answered" mark so each simulated press behaves like the fresh
-/// update it stands for.
-fn fresh_callback(body: fn() -> a) -> a {
-  render.reset_answered()
-  body()
-}
-
-fn resume_with_callback(
-  flow: DialogFlow,
-  client: TelegramClient,
-  storage: DialogStorage,
-  chat_id: Int,
-  dialog_id: String,
-  data: String,
-  upd: update.Update,
-) -> Nil {
-  use <- fresh_callback()
-  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
-  let ctx = ctx_for(client, upd)
-  let resume =
-    dict.from_list([
-      #("callback_data", data),
-      #(instance.wait_result_key, instance.encode_callback_wait_result(data)),
-    ])
-  let assert Ok(_) =
-    flow_engine.resume_with_instance(flow, ctx, inst, Some(resume))
-  Nil
+  testing_dialog.press_on_message(
+    driver_for(flow, client, chat_id, dialog_id),
+    data:,
+    message_id:,
+  )
 }
 
 /// Deliver a text message to the waiting dialog instance.
 pub fn send_text(
   flow: DialogFlow,
   client: TelegramClient,
-  storage: DialogStorage,
+  _storage: DialogStorage,
   chat_id: Int,
   dialog_id: String,
   text: String,
 ) -> Nil {
-  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
-  let ctx =
-    ctx_for(client, factory.text_update_with(text:, from_id: user_id, chat_id:))
-  let resume =
-    dict.from_list([
-      #("user_input", text),
-      #(instance.wait_result_key, instance.encode_text_wait_result(text)),
-    ])
-  let assert Ok(_) =
-    flow_engine.resume_with_instance(flow, ctx, inst, Some(resume))
-  Nil
+  testing_dialog.send_text(driver_for(flow, client, chat_id, dialog_id), text:)
 }
 
-/// Deliver a photo message to the waiting dialog instance, the way the flow
-/// registry's photo auto-resume does.
+/// Deliver a photo message to the waiting dialog instance.
 pub fn send_photo(
   flow: DialogFlow,
   client: TelegramClient,
-  storage: DialogStorage,
+  _storage: DialogStorage,
   chat_id: Int,
   dialog_id: String,
   file_ids: List(String),
 ) -> Nil {
-  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
-  let joined = string.join(file_ids, ",")
-  let ctx =
-    ctx_for(
-      client,
-      factory.photo_update_with(
-        photos: list.map(file_ids, fn(id) {
-          factory.photo_size_with(file_id: id)
-        }),
-        from_id: user_id,
-        chat_id:,
-      ),
-    )
-  let resume =
-    dict.from_list([
-      #("__photo_file_ids", joined),
-      #(instance.wait_result_key, "photo:" <> joined),
-    ])
-  let assert Ok(_) =
-    flow_engine.resume_with_instance(flow, ctx, inst, Some(resume))
-  Nil
+  testing_dialog.send_photo(
+    driver_for(flow, client, chat_id, dialog_id),
+    file_ids:,
+  )
 }
 
-/// A `CallbackQueryUpdate` whose `query.message` has the given `message_id`
-/// (the factory default is always `1`).
-pub fn callback_update_on_message(
-  data data: String,
-  chat_id chat_id: Int,
-  message_id message_id: Int,
-) -> update.Update {
-  let from = factory.user_with(id: user_id, first_name: "TestUser")
-  let chat = factory.chat_with(id: chat_id, type_: "private")
-  let msg =
-    model_types.Message(
-      ..factory.message_with(text: "", from:, chat:),
-      message_id:,
-    )
-  let query =
-    model_types.CallbackQuery(
-      id: "test_callback_query",
-      from:,
-      message: Some(model_types.MessageMaybeInaccessibleMessage(msg)),
-      inline_message_id: None,
-      chat_instance: "test_chat_instance",
-      data: Some(data),
-      game_short_name: None,
-    )
-  let raw =
-    model_types.Update(
-      ..factory.raw_update(message: msg),
-      message: None,
-      callback_query: Some(query),
-    )
-  update.CallbackQueryUpdate(query:, from_id: user_id, chat_id:, raw:)
-}
-
-/// Mock client for text-only dialogs: `answerCallbackQuery` → `true`,
-/// everything else → a valid `Message`.
 pub fn dialog_mock_client() {
-  mock.routed_client(routes: [
-    mock.route_with_response(
-      path_contains: "answerCallbackQuery",
-      response: mock.bool_response(),
-    ),
-  ])
+  testing_dialog.text_client()
 }
 
-/// Mock client for dialogs that recreate the live message (media windows,
-/// sub-dialogs): additionally answers `deleteMessage` with `true`.
 pub fn media_mock_client() {
-  mock.routed_client(routes: [
-    mock.route_with_response(
-      path_contains: "answerCallbackQuery",
-      response: mock.bool_response(),
-    ),
-    mock.route_with_response(
-      path_contains: "deleteMessage",
-      response: mock.bool_response(),
-    ),
-  ])
+  testing_dialog.media_client()
 }
