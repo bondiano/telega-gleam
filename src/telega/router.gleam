@@ -52,14 +52,19 @@
 //// ## Middleware System
 ////
 //// Middleware allows you to wrap handlers with additional functionality.
-//// Middleware is applied in reverse order of addition (last added runs first):
+//// The first middleware added is the outermost one, so it runs first and sees
+//// the handler's result last:
 ////
 //// ```gleam
 //// router
-//// |> router.use_middleware(router.with_logging)
+//// |> router.use_middleware(router.with_logging)     // outermost, runs first
 //// |> router.use_middleware(auth_middleware)
-//// |> router.use_middleware(rate_limit_middleware)
+//// |> router.use_middleware(rate_limit_middleware)   // innermost, closest to the handler
 //// ```
+////
+//// On a composed router, `use_middleware` (like `with_catch_handler` and
+//// `scope`) applies to every composed branch; route registrations go into a
+//// trailing leaf of the composition.
 ////
 //// Built-in middleware includes:
 //// - `with_logging` - Logs all update processing
@@ -316,6 +321,9 @@ pub opaque type Router(session, error, dependencies) {
     catch_handler: Option(
       fn(error) -> Result(Context(session, error, dependencies), error),
     ),
+    /// Set by `scope`: an update the predicate rejects is not this router's,
+    /// so `can_handle_update` says no and a composed sibling gets its turn.
+    scope_predicate: Option(fn(Update) -> Bool),
     name: String,
   )
   ComposedRouter(
@@ -491,8 +499,55 @@ pub fn new(name: String) -> Router(session, error, dependencies) {
     fallback: None,
     middleware: [],
     catch_handler: None,
+    scope_predicate: None,
     name: name,
   )
+}
+
+/// Suffix of the leaf a composed router collects direct registrations in.
+const direct_leaf_suffix = "_direct"
+
+/// Apply a route registration to a leaf router.
+///
+/// Registering on a composed router used to return it unchanged — silently, so
+/// `compose(a, b) |> on_command("start", h)` lost the command. The
+/// registration now lands in a trailing leaf of the composition, tried after
+/// every composed router, which is what composing one more router would do.
+fn on_leaf(
+  router: Router(session, error, dependencies),
+  apply: fn(Router(session, error, dependencies)) ->
+    Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  case router {
+    Router(..) -> apply(router)
+    ComposedRouter(composes:, name:) -> {
+      let leaf_name = name <> direct_leaf_suffix
+      case list.reverse(composes) {
+        [Router(name: last_name, ..) as last, ..rest]
+          if last_name == leaf_name
+        -> ComposedRouter(composes: list.reverse([apply(last), ..rest]), name:)
+        _ ->
+          ComposedRouter(
+            composes: list.append(composes, [apply(new(leaf_name))]),
+            name:,
+          )
+      }
+    }
+  }
+}
+
+/// Apply a change to every leaf of a router — used by settings that belong to
+/// each branch rather than to one of them (middleware, catch handler, scope).
+fn map_leaves(
+  router: Router(session, error, dependencies),
+  apply: fn(Router(session, error, dependencies)) ->
+    Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  case router {
+    Router(..) -> apply(router)
+    ComposedRouter(composes:, name:) ->
+      ComposedRouter(composes: list.map(composes, map_leaves(_, apply)), name:)
+  }
 }
 
 /// Add a command handler
@@ -501,6 +556,7 @@ pub fn on_command(
   command: String,
   handler: CommandHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(commands:, ..) -> {
       // Remove leading slash if present for consistency
@@ -548,14 +604,17 @@ pub fn on_command_with_description(
   description: String,
   handler: CommandHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
-  let command_key = normalize_command(command)
-  case on_command(router, command, handler) {
-    Router(command_descriptions:, ..) as router ->
+  let key = normalize_command(command)
+  let router = on_command(router, command, handler)
+  use router <- on_leaf(router)
+  use router <- on_leaf(router)
+  case router {
+    Router(command_descriptions:, ..) ->
       Router(
         ..router,
         command_descriptions: dict.insert(
           command_descriptions,
-          command_key,
+          key,
           description,
         ),
       )
@@ -577,6 +636,7 @@ pub fn on_text(
   pattern: Pattern,
   handler: TextHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [TextPatternRoute(pattern:, handler:), ..routes])
@@ -598,6 +658,7 @@ pub fn on_callback(
   pattern: Pattern,
   handler: CallbackHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(callbacks:, ..) -> {
       let key = callback_key(pattern)
@@ -623,6 +684,7 @@ pub fn on_photo(
   router: Router(session, error, dependencies),
   handler: PhotoHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PhotoRoute(handler:), ..routes])
@@ -634,6 +696,7 @@ pub fn on_video(
   router: Router(session, error, dependencies),
   handler: VideoHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [VideoRoute(handler:), ..routes])
@@ -645,6 +708,7 @@ pub fn on_voice(
   router: Router(session, error, dependencies),
   handler: VoiceHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [VoiceRoute(handler:), ..routes])
@@ -656,6 +720,7 @@ pub fn on_audio(
   router: Router(session, error, dependencies),
   handler: AudioHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [AudioRoute(handler:), ..routes])
@@ -668,6 +733,7 @@ pub fn on_media_group(
   router: Router(session, error, dependencies),
   handler: MediaGroupHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MediaGroupRoute(handler:), ..routes])
@@ -680,6 +746,7 @@ pub fn on_inline_query(
   router: Router(session, error, dependencies),
   handler: InlineQueryHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [InlineQueryRoute(handler:), ..routes])
@@ -692,6 +759,7 @@ pub fn on_chosen_inline_result(
   router: Router(session, error, dependencies),
   handler: ChosenInlineResultHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChosenInlineResultRoute(handler:), ..routes])
@@ -704,6 +772,7 @@ pub fn on_shipping_query(
   router: Router(session, error, dependencies),
   handler: ShippingQueryHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ShippingQueryRoute(handler:), ..routes])
@@ -716,6 +785,7 @@ pub fn on_pre_checkout_query(
   router: Router(session, error, dependencies),
   handler: PreCheckoutQueryHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PreCheckoutQueryRoute(handler:), ..routes])
@@ -728,6 +798,7 @@ pub fn on_poll(
   router: Router(session, error, dependencies),
   handler: PollHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PollRoute(handler:), ..routes])
@@ -740,6 +811,7 @@ pub fn on_poll_answer(
   router: Router(session, error, dependencies),
   handler: PollAnswerHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [PollAnswerRoute(handler:), ..routes])
@@ -752,6 +824,7 @@ pub fn on_reaction(
   router: Router(session, error, dependencies),
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionRoute(handler:), ..routes])
@@ -771,6 +844,7 @@ pub fn on_reaction_emoji(
   emoji: String,
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [
@@ -793,6 +867,7 @@ pub fn on_reaction_emojis(
   emojis: List(String),
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [
@@ -814,6 +889,7 @@ pub fn on_paid_reaction(
   router: Router(session, error, dependencies),
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionPaidRoute(handler:), ..routes])
@@ -832,6 +908,7 @@ pub fn on_reaction_added(
   router: Router(session, error, dependencies),
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionAddedRoute(handler:), ..routes])
@@ -850,6 +927,7 @@ pub fn on_reaction_removed(
   router: Router(session, error, dependencies),
   handler: MessageReactionHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionRemovedRoute(handler:), ..routes])
@@ -868,6 +946,7 @@ pub fn on_reaction_count(
   router: Router(session, error, dependencies),
   handler: MessageReactionCountHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [MessageReactionCountRoute(handler:), ..routes])
@@ -880,6 +959,7 @@ pub fn on_chat_member_updated(
   router: Router(session, error, dependencies),
   handler: ChatMemberUpdatedHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChatMemberUpdatedRoute(handler:), ..routes])
@@ -892,6 +972,7 @@ pub fn on_chat_join_request(
   router: Router(session, error, dependencies),
   handler: ChatJoinRequestHandler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [ChatJoinRequestRoute(handler:), ..routes])
@@ -905,6 +986,7 @@ pub fn on_custom(
   matcher: fn(Update) -> Bool,
   handler: Handler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [CustomRoute(matcher:, handler:), ..routes])
@@ -918,6 +1000,7 @@ pub fn on_filtered(
   filter: Filter,
   handler: Handler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(routes:, ..) ->
       Router(..router, routes: [FilteredRoute(filter:, handler:), ..routes])
@@ -1193,6 +1276,7 @@ pub fn fallback(
   router: Router(session, error, dependencies),
   handler: Handler(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- on_leaf(router)
   case router {
     Router(..) -> Router(..router, fallback: Some(handler))
     ComposedRouter(..) as composed -> composed
@@ -1204,6 +1288,7 @@ pub fn use_middleware(
   router: Router(session, error, dependencies),
   middleware: Middleware(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
+  use router <- map_leaves(router)
   case router {
     Router(middleware: existing_middleware, ..) ->
       Router(..router, middleware: [middleware, ..existing_middleware])
@@ -1217,6 +1302,7 @@ pub fn with_catch_handler(
   catch_handler: fn(error) ->
     Result(Context(session, error, dependencies), error),
 ) -> Router(session, error, dependencies) {
+  use router <- map_leaves(router)
   case router {
     Router(..) -> Router(..router, catch_handler: Some(catch_handler))
     ComposedRouter(..) as composed -> composed
@@ -1259,7 +1345,7 @@ fn handle_composed(
     [] -> Ok(ctx)
     // No router handled it
     [router, ..rest] -> {
-      case can_handle_update(router, update) {
+      case can_handle_update(router, update, ctx) {
         True -> handle(router, ctx, update)
         False -> handle_composed(rest, ctx, update)
       }
@@ -1285,6 +1371,7 @@ pub fn merge(
     fallback: first_fallback,
     middleware: first_middleware,
     catch_handler: first_catch_handler,
+    scope_predicate: first_scope,
     name: first_name,
   ) = first_flat
 
@@ -1296,6 +1383,7 @@ pub fn merge(
     fallback: second_fallback,
     middleware: second_middleware,
     catch_handler: second_catch_handler,
+    scope_predicate: second_scope,
     name: second_name,
   ) = second_flat
 
@@ -1312,6 +1400,11 @@ pub fn merge(
     fallback: option.or(first_fallback, second_fallback),
     middleware: list.append(first_middleware, second_middleware),
     catch_handler: option.or(first_catch_handler, second_catch_handler),
+    // A merged router answers for both, so it is in scope when either is.
+    scope_predicate: case first_scope, second_scope {
+      None, other | other, None -> other
+      Some(first), Some(second) -> Some(fn(u) { first(u) || second(u) })
+    },
     name: first_name <> "+" <> second_name,
   )
 }
@@ -1402,17 +1495,7 @@ fn merge_routers(
   name: String,
 ) -> Router(session, error, dependencies) {
   case routers {
-    [] ->
-      Router(
-        commands: dict.new(),
-        command_descriptions: dict.new(),
-        callbacks: dict.new(),
-        routes: [],
-        fallback: None,
-        middleware: [],
-        catch_handler: None,
-        name: name,
-      )
+    [] -> new(name)
     [router] -> {
       case router {
         Router(..) as router -> Router(..router, name: name)
@@ -1431,6 +1514,7 @@ fn merge_routers(
         fallback: first_fallback,
         middleware: first_middleware,
         catch_handler: first_catch_handler,
+        scope_predicate: first_scope,
         ..,
       ) = first
 
@@ -1442,6 +1526,7 @@ fn merge_routers(
         fallback: rest_fallback,
         middleware: rest_middleware,
         catch_handler: rest_catch_handler,
+        scope_predicate: rest_scope,
         ..,
       ) = merged_rest
 
@@ -1459,6 +1544,10 @@ fn merge_routers(
         fallback: option.or(first_fallback, rest_fallback),
         middleware: list.append(first_middleware, rest_middleware),
         catch_handler: option.or(first_catch_handler, rest_catch_handler),
+        scope_predicate: case first_scope, rest_scope {
+          None, other | other, None -> other
+          Some(first), Some(rest) -> Some(fn(u) { first(u) || rest(u) })
+        },
         name: name,
       )
     }
@@ -1558,12 +1647,24 @@ fn route_update_type(route: Route(session, error, dependencies)) -> String {
 fn can_handle_update(
   router: Router(session, error, dependencies),
   update: Update,
+  context: Context(session, error, dependencies),
 ) -> Bool {
   case router {
-    Router(commands:, callbacks:, routes:, fallback:, ..) -> {
+    Router(commands:, callbacks:, routes:, fallback:, scope_predicate:, ..) -> {
+      let in_scope = case scope_predicate {
+        Some(predicate) -> predicate(update)
+        None -> True
+      }
+      use <- bool.guard(when: !in_scope, return: False)
+
       let has_specific_route = case update {
+        // Normalized exactly like `find_command_handler` does, or `/help@bot`
+        // in a group would be claimed here and dropped there.
         update.CommandUpdate(command: cmd, ..) ->
-          dict.has_key(commands, cmd.command)
+          dict.has_key(
+            commands,
+            command_lookup_key(context.bot_info.username, cmd.command),
+          )
 
         update.TextUpdate(text:, ..) ->
           list.any(routes, fn(route) {
@@ -1641,7 +1742,7 @@ fn can_handle_update(
       || option.is_some(fallback)
     }
     ComposedRouter(composes:, ..) ->
-      list.any(composes, fn(r) { can_handle_update(r, update) })
+      list.any(composes, fn(r) { can_handle_update(r, update, context) })
   }
 }
 
@@ -1650,6 +1751,7 @@ pub fn scope(
   router: Router(session, error, dependencies),
   predicate: fn(Update) -> Bool,
 ) -> Router(session, error, dependencies) {
+  use router <- map_leaves(router)
   case router {
     Router(
       commands:,
@@ -1659,6 +1761,7 @@ pub fn scope(
       fallback:,
       middleware:,
       catch_handler:,
+      scope_predicate:,
       name:,
     ) -> {
       let scoped_handler = fn(handler) {
@@ -1836,6 +1939,13 @@ pub fn scope(
         fallback: option.map(fallback, scoped_handler),
         middleware: middleware,
         catch_handler: catch_handler,
+        // Also visible to `can_handle_update`: a scoped router used to claim
+        // every update in a composition and only then decline to handle it,
+        // which stopped the routers after it from ever running.
+        scope_predicate: Some(case scope_predicate {
+          Some(existing) -> fn(update) { existing(update) && predicate(update) }
+          None -> predicate
+        }),
         name: name <> "_scoped",
       )
     }
@@ -1866,7 +1976,7 @@ fn find_handler_in_composed(
     [] -> fn(ctx, _) { Ok(ctx) }
     // No handler found
     [router, ..rest] -> {
-      case can_handle_update(router, update) {
+      case can_handle_update(router, update, context) {
         True -> find_handler(router, update, context)
         False -> find_handler_in_composed(rest, update, context)
       }
@@ -1883,13 +1993,27 @@ fn find_handler_in_router(
   case update {
     update.CommandUpdate(..) ->
       find_command_handler(router, update, context)
-      |> option.unwrap(find_route_or_fallback(router, update))
+      |> option.unwrap(find_route_or_fallback(router, update, context))
 
     update.CallbackQueryUpdate(..) ->
       find_callback_handler(router, update)
-      |> option.unwrap(find_route_or_fallback(router, update))
+      |> option.unwrap(find_route_or_fallback(router, update, context))
 
-    _ -> find_route_or_fallback(router, update)
+    _ -> find_route_or_fallback(router, update, context)
+  }
+}
+
+/// The key a command update is looked up under.
+///
+/// `/help@yourbot` in a group addresses this bot, so the `@suffix` is dropped
+/// when it names us. Both the lookup and `can_handle_update` go through here —
+/// a second copy is how the two drifted apart.
+fn command_lookup_key(bot_username: Option(String), command: String) -> String {
+  case bot_username, string.split_once(command, "@") {
+    Some(username), Ok(#(command_text, suffix))
+      if username == suffix && username != ""
+    -> command_text
+    _, _ -> command
   }
 }
 
@@ -1900,20 +2024,12 @@ fn find_command_handler(
   context: Context(session, error, dependencies),
 ) -> Option(Handler(session, error, dependencies)) {
   case router, update {
-    Router(commands:, ..), update.CommandUpdate(command:, ..) -> {
-      //if command /help@yourbot has @ in the text,
-      //try split suffix after @ and match with current bot's username
-      let try_split = command.command |> string.split_once("@")
-      let command_key = case context.bot_info.username, try_split {
-        Some(bot_username), Ok(#(cmd_text, bot_suffix))
-          if bot_username == bot_suffix && bot_username != ""
-        -> cmd_text
-        _, _ -> command.command
-      }
-
-      dict.get(commands, command_key)
+    Router(commands:, ..), update.CommandUpdate(command:, ..) ->
+      dict.get(
+        commands,
+        command_lookup_key(context.bot_info.username, command.command),
+      )
       |> option.from_result
-    }
     _, _ -> None
   }
 }
@@ -2025,6 +2141,7 @@ fn matches_callback_pattern(key: String, data: String) -> Bool {
 fn find_route_or_fallback(
   router: Router(session, error, dependencies),
   update: Update,
+  context: Context(session, error, dependencies),
 ) -> Handler(session, error, dependencies) {
   case router {
     Router(routes:, fallback:, ..) -> {
@@ -2038,7 +2155,7 @@ fn find_route_or_fallback(
       }
     }
     ComposedRouter(composes:, ..) ->
-      find_route_or_fallback_in_composed(composes, update)
+      find_route_or_fallback_in_composed(composes, update, context)
   }
 }
 
@@ -2046,13 +2163,14 @@ fn find_route_or_fallback(
 fn find_route_or_fallback_in_composed(
   routers: List(Router(session, error, dependencies)),
   update: Update,
+  context: Context(session, error, dependencies),
 ) -> Handler(session, error, dependencies) {
   case routers {
     [] -> fn(ctx, _) { Ok(ctx) }
     [router, ..rest] -> {
-      case can_handle_update(router, update) {
-        True -> find_route_or_fallback(router, update)
-        False -> find_route_or_fallback_in_composed(rest, update)
+      case can_handle_update(router, update, context) {
+        True -> find_route_or_fallback(router, update, context)
+        False -> find_route_or_fallback_in_composed(rest, update, context)
       }
     }
   }

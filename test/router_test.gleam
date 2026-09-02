@@ -2123,3 +2123,97 @@ pub fn composed_router_handles_callback_prefix_with_colon_test() {
   |> fn(c: Context(String, TelegaError, Nil)) { c.session }
   |> should.equal("routed:travel_to:gate")
 }
+
+// H5 — composition used to lose registrations and swallow other routers' updates
+
+fn command_update(command: String) -> Update {
+  update.CommandUpdate(
+    from_id: 123,
+    chat_id: 456,
+    command: update.Command(
+      command: command,
+      payload: None,
+      text: "/" <> command,
+    ),
+    message: factory.message(text: "/" <> command),
+    raw: factory.raw_update(message: factory.message(text: "/" <> command)),
+  )
+}
+
+fn marking_command_handler(mark: String) {
+  fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
+    Ok(Context(..ctx, session: mark))
+  }
+}
+
+pub fn compose_keeps_direct_registrations_test() {
+  let composed =
+    router.compose(
+      router.new("a") |> router.on_command("a", marking_command_handler("a")),
+      router.new("b") |> router.on_command("b", marking_command_handler("b")),
+    )
+    // Used to be a silent no-op.
+    |> router.on_command("help", marking_command_handler("help"))
+
+  let assert Ok(ctx) =
+    router.handle(composed, make_ctx("initial"), command_update("help"))
+  ctx.session |> should.equal("help")
+
+  // The composed routers still get first go.
+  let assert Ok(ctx) =
+    router.handle(composed, make_ctx("initial"), command_update("a"))
+  ctx.session |> should.equal("a")
+}
+
+pub fn compose_middleware_wraps_every_branch_test() {
+  let mark_middleware = fn(handler) {
+    fn(ctx: Context(String, TelegaError, Nil), upd) {
+      let assert Ok(ctx) = handler(ctx, upd)
+      Ok(Context(..ctx, session: ctx.session <> "+mw"))
+    }
+  }
+
+  let composed =
+    router.compose(
+      router.new("a") |> router.on_command("a", marking_command_handler("a")),
+      router.new("b") |> router.on_command("b", marking_command_handler("b")),
+    )
+    |> router.use_middleware(mark_middleware)
+
+  let assert Ok(ctx) =
+    router.handle(composed, make_ctx("initial"), command_update("b"))
+  ctx.session |> should.equal("b+mw")
+}
+
+pub fn compose_matches_command_addressed_to_the_bot_test() {
+  let composed =
+    router.compose(
+      router.new("a") |> router.on_command("help", marking_command_handler("a")),
+      router.new("b")
+        |> router.on_command("other", marking_command_handler("b")),
+    )
+
+  // `/help@testbot` in a group: `can_handle_update` used to compare the raw
+  // command, so the composed router declined and the update was dropped.
+  let assert Ok(ctx) =
+    router.handle(composed, make_ctx("initial"), command_update("help@testbot"))
+  ctx.session |> should.equal("a")
+}
+
+pub fn scoped_router_does_not_swallow_other_routers_updates_test() {
+  let scoped =
+    router.new("scoped")
+    |> router.on_command("ping", marking_command_handler("scoped"))
+    |> router.scope(fn(_update) { False })
+
+  let composed =
+    router.compose(
+      scoped,
+      router.new("open")
+        |> router.on_command("ping", marking_command_handler("open")),
+    )
+
+  let assert Ok(ctx) =
+    router.handle(composed, make_ctx("initial"), command_update("ping"))
+  ctx.session |> should.equal("open")
+}

@@ -199,14 +199,14 @@ fail closed (access denied) on an API error. Pass `ttl_ms: 0` to disable caching
 
 ## Middleware
 
-Middleware wraps handlers with cross-cutting behavior. It is applied in reverse
-order of addition, so the last added runs first (outermost):
+Middleware wraps handlers with cross-cutting behavior. The first one added is
+the outermost, so it runs first and sees the handler's result last:
 
 ```gleam
 router
-|> router.use_middleware(router.with_logging)
+|> router.use_middleware(router.with_logging)     // outermost, runs first
 |> router.use_middleware(auth_middleware)
-|> router.use_middleware(rate_limit_middleware)
+|> router.use_middleware(rate_limit_middleware)   // innermost, closest to the handler
 ```
 
 Built-ins: `with_logging`, `with_filter`, `with_recovery`, and `with_rate_limit`.
@@ -305,7 +305,21 @@ let app = router.compose(private_router, public_router)
 let app = router.compose_many([admin, moderator, user])
 ```
 
-**Scope** restricts a router to updates matching a predicate:
+Registering on a composed router still works: the route lands in a trailing leaf
+that is tried after every composed branch, as if you had composed one more
+router. Settings that belong to each branch rather than to one of them —
+`use_middleware`, `with_catch_handler`, `scope` — are applied to every branch.
+
+```gleam
+// `/help` is handled after `private_router` and `public_router` decline it
+let app =
+  router.compose(private_router, public_router)
+  |> router.on_command("help", handle_help)
+```
+
+**Scope** restricts a router to updates matching a predicate. A scoped router
+declines updates outside its scope, so in a composition the next router gets
+its turn:
 
 ```gleam
 let admin =
