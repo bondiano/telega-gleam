@@ -455,21 +455,29 @@ pub fn encode_text_wait_result(text: String) -> String {
   "text:" <> text
 }
 
-/// Encode callback wait result
+/// Encode callback wait result.
+///
+/// A payload shaped `"{id}:true"` / `"{id}:false"` is a yes/no button. The id
+/// travels with it — dropping it (as this used to) left a step unable to tell
+/// `confirm:true` from `subscribe:true`.
 @internal
 pub fn encode_callback_wait_result(data: String) -> String {
-  // Bool callbacks have format: "{id}:{true/false}"
   case string.split(data, ":") {
-    [_id, "true"] -> "bool:true"
-    [_id, "false"] -> "bool:false"
+    [id, "true"] -> "bool:" <> id <> ":true"
+    [id, "false"] -> "bool:" <> id <> ":false"
     _ -> "data:" <> data
   }
 }
 
+/// Exposed for tests: the encoding above and this parser are one pair.
+@internal
+pub fn parse_wait_result_for_test(raw: String) -> WaitResult {
+  parse_wait_result(raw)
+}
+
 fn parse_wait_result(raw: String) -> WaitResult {
   case raw {
-    "bool:true" -> BoolCallback(value: True)
-    "bool:false" -> BoolCallback(value: False)
+    "bool:" <> rest -> parse_bool_result(rest)
     "photo:" <> rest -> PhotoInput(file_ids: string.split(rest, ","))
     "video:" <> rest -> VideoInput(file_id: rest)
     "voice:" <> rest -> VoiceInput(file_id: rest)
@@ -479,6 +487,17 @@ fn parse_wait_result(raw: String) -> WaitResult {
     "text:" <> rest -> TextInput(value: rest)
     "data:" <> rest -> DataCallback(value: rest)
     other -> DataCallback(value: other)
+  }
+}
+
+fn parse_bool_result(raw: String) -> WaitResult {
+  case string.split_once(raw, ":") {
+    Ok(#(id, "true")) -> BoolCallback(id:, value: True)
+    Ok(#(id, "false")) -> BoolCallback(id:, value: False)
+    // Instances persisted before the id was carried say just "true"/"false".
+    Error(Nil) if raw == "true" -> BoolCallback(id: "", value: True)
+    Error(Nil) if raw == "false" -> BoolCallback(id: "", value: False)
+    _ -> DataCallback(value: "bool:" <> raw)
   }
 }
 

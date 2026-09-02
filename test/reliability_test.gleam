@@ -4,6 +4,7 @@
 //// silently mis-route updates. They are deliberately written against the
 //// public/`@internal` surface so they keep working as the internals change.
 
+import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
 import gleam/list
@@ -696,4 +697,44 @@ pub fn m1_unreadable_session_is_not_overwritten_test() {
   process.sleep(100)
   registry.get(reg, key: default_key)
   |> should.equal(None)
+}
+
+// L1 — draining must not wait out the timeout it was given --------------------
+
+pub fn drain_returns_as_soon_as_nothing_is_in_flight_test() {
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "l1_drain_idle",
+      router: fn(ctx, _update) { Ok(ctx) },
+      catch_handler: context.catch_handler(),
+    )
+
+  let started = now_ms()
+  bot.drain(bot_subject:, timeout: 5000) |> should.equal(0)
+  { now_ms() - started < 1000 } |> should.be_true
+}
+
+pub fn a_crashed_handler_still_frees_its_in_flight_slot_test() {
+  let #(bot_subject, _reg) =
+    start_bot(
+      name: "l1_drain_crash",
+      router: fn(_ctx, _update) { panic as "handler exploded" },
+      catch_handler: context.catch_handler(),
+    )
+
+  dispatch(bot_subject, factory.text_update(text: "boom"), 2000)
+  |> should.equal(Ok(False))
+
+  // The instance died mid-update. If its slot were not released, the drain
+  // would sit here until the timeout.
+  let started = now_ms()
+  bot.drain(bot_subject:, timeout: 5000) |> should.equal(0)
+  { now_ms() - started < 1000 } |> should.be_true
+}
+
+@external(erlang, "erlang", "monotonic_time")
+fn monotonic_time(unit: atom.Atom) -> Int
+
+fn now_ms() -> Int {
+  monotonic_time(atom.create("millisecond"))
 }

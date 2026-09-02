@@ -185,14 +185,24 @@ pub fn compile(
 
 // Step handler ------------------------------------------------------------------
 
+/// Run `body`, then drop the widget stash whatever it returned.
+fn clearing_widget_stash(body: fn() -> a) -> a {
+  let result = body()
+  widget.clear_stash()
+  result
+}
+
 fn window_step(
   dialog: CompiledDialog(session, error, dependencies),
   window: Window(String, session, error, dependencies),
 ) -> flow_types.StepHandler(String, session, error, dependencies) {
   fn(ctx, inst: flow_types.FlowInstance) {
     // Make widget stores readable from user renders/handlers via
-    // `dialog.widget_store` — the chat instance is a single process.
+    // `dialog.widget_store` — the chat instance is a single process. Cleared
+    // on the way out: the same process serves this chat's non-dialog handlers
+    // too, and they must not read a finished step's stores.
     widget.stash_stores(inst.state.data)
+    use <- clearing_widget_stash()
     case instance.get_wait_result(inst) {
       flow_types.Pending -> render_and_wait(dialog, window, ctx, inst)
       flow_types.DataCallback(value:) ->

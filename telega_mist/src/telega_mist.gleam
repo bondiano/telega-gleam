@@ -104,7 +104,25 @@ pub fn handle_bot_with_reply(
   timeout timeout: Int,
   next handler: fn() -> Response(ResponseData),
 ) -> Response(ResponseData) {
-  use json <- accept_bot_request(telega, req, default_max_body_limit, handler)
+  handle_bot_with_reply_and_limit(
+    telega:,
+    req:,
+    timeout:,
+    max_body_limit: default_max_body_limit,
+    next: handler,
+  )
+}
+
+/// Same as `handle_bot_with_reply`, but lets you set the maximum request body
+/// size in bytes.
+pub fn handle_bot_with_reply_and_limit(
+  telega telega: Telega(session, error, dependencies),
+  req req: Request(Connection),
+  timeout timeout: Int,
+  max_body_limit max_body_limit: Int,
+  next handler: fn() -> Response(ResponseData),
+) -> Response(ResponseData) {
+  use json <- accept_bot_request(telega, req, max_body_limit, handler)
 
   case update.decode_raw(json) {
     Ok(message) ->

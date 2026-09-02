@@ -67,8 +67,9 @@ pub type FlowInstance {
 pub type WaitResult {
   /// Text message from user
   TextInput(value: String)
-  /// Yes/No callback button press
-  BoolCallback(value: Bool)
+  /// Yes/No callback button press. `id` is the part of the payload before the
+  /// `true`/`false`, so two yes/no buttons stay distinguishable.
+  BoolCallback(id: String, value: Bool)
   /// Other callback data (non-boolean)
   DataCallback(value: String)
   /// Photo message (list of file_ids for different sizes)

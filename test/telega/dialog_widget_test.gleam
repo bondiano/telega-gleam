@@ -611,3 +611,21 @@ pub fn widget_store_codec_roundtrip_test() {
   types.store_get(decoded, "page") |> should.equal(Some("2"))
   types.store_get(decoded, "values") |> should.equal(Some("[\"a\",\"b\"]"))
 }
+
+// L1 — seeded stores must not leak between tests -----------------------------
+
+pub fn reset_stores_drops_earlier_seeds_test() {
+  let ctx = context.context(session: Nil)
+  let radio = types.store_set(types.new_store(), key: "value", value: "blue")
+
+  widget.seed_store(window_id: "w", widget_id: "r", store: radio)
+  dialog.widget_store(ctx, window_id: "w", widget_id: "r")
+  |> widget.radio_value
+  |> should.equal(Some("blue"))
+
+  // Tests share one process, so without this the next test still sees "blue".
+  widget.reset_stores()
+  dialog.widget_store(ctx, window_id: "w", widget_id: "r")
+  |> widget.radio_value
+  |> should.equal(None)
+}

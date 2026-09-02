@@ -219,12 +219,12 @@ fn confirm_registration_step(
   instance: types.FlowInstance,
 ) -> types.StepResult(RegistrationStep, Nil, String, Dependencies) {
   case instance.get_wait_result(instance) {
-    types.BoolCallback(value: True) ->
+    types.BoolCallback(value: True, ..) ->
       save_and_complete(
         ctx,
         instance.clear_step_data_key(instance, "callback_data"),
       )
-    types.BoolCallback(value: False) ->
+    types.BoolCallback(value: False, ..) ->
       restart_registration(
         ctx,
         instance.clear_step_data_key(instance, "callback_data"),

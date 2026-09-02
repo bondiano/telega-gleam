@@ -1,7 +1,9 @@
 //// Built-in step handlers and resume handler factories.
 
 import gleam/dict
+import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import telega/bot.{type Context}
 import telega/flow/engine
@@ -157,8 +159,18 @@ pub fn create_text_handler(
   fn(ctx, upd) {
     case upd {
       update.TextUpdate(text:, from_id:, chat_id:, ..) -> {
-        case flow.storage.list_by_user(from_id, chat_id) {
-          Ok([inst, ..]) if inst.wait_token != None -> {
+        // The storage is shared between flows, so `list_by_user` also returns
+        // other flows' instances — resuming the first one handed this flow's
+        // text to whichever flow happened to come back first.
+        let waiting =
+          flow.storage.list_by_user(from_id, chat_id)
+          |> result.unwrap([])
+          |> list.find(fn(inst) {
+            inst.flow_name == flow.name && inst.wait_token != None
+          })
+
+        case waiting {
+          Ok(inst) -> {
             let data = dict.from_list([#("user_input", text)])
             engine.resume_with_token(
               flow,
@@ -167,7 +179,7 @@ pub fn create_text_handler(
               Some(data),
             )
           }
-          _ -> Ok(ctx)
+          Error(Nil) -> Ok(ctx)
         }
       }
       _ -> Ok(ctx)

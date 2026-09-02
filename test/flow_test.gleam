@@ -226,8 +226,9 @@ pub fn get_wait_result_bool_test() {
   let instance =
     instance.store_step_data(instance, "__wait_result", "bool:true")
 
+  // A blob written before ids travelled with the value.
   instance.get_wait_result(instance)
-  |> should.equal(types.BoolCallback(value: True))
+  |> should.equal(types.BoolCallback(id: "", value: True))
 }
 
 pub fn get_wait_result_bool_false_test() {
@@ -243,7 +244,7 @@ pub fn get_wait_result_bool_false_test() {
     instance.store_step_data(instance, "__wait_result", "bool:false")
 
   instance.get_wait_result(instance)
-  |> should.equal(types.BoolCallback(value: False))
+  |> should.equal(types.BoolCallback(id: "", value: False))
 }
 
 pub fn get_wait_result_data_test() {
@@ -768,11 +769,11 @@ pub fn engine_wait_callback_and_resume_test() {
           process.send(events, "waiting_callback")
           action.wait_callback(ctx, inst)
         }
-        types.BoolCallback(value: True) -> {
+        types.BoolCallback(value: True, ..) -> {
           process.send(events, "confirmed")
           action.next(ctx, inst, step: End)
         }
-        types.BoolCallback(value: False) -> {
+        types.BoolCallback(value: False, ..) -> {
           process.send(events, "declined")
           action.cancel(ctx, inst)
         }
@@ -2285,12 +2286,12 @@ pub fn instance_get_current_step_invalid_test() {
 
 pub fn encode_callback_bool_true_test() {
   instance.encode_callback_wait_result("some_id:true")
-  |> should.equal("bool:true")
+  |> should.equal("bool:some_id:true")
 }
 
 pub fn encode_callback_bool_false_test() {
   instance.encode_callback_wait_result("some_id:false")
-  |> should.equal("bool:false")
+  |> should.equal("bool:some_id:false")
 }
 
 pub fn encode_callback_data_test() {
@@ -3271,4 +3272,61 @@ pub fn expired_flow_timeout_hook_error_reaches_the_caller_test() {
   let text = factory.text_update_with(text: "late", from_id: 721, chat_id: 821)
   router.handle(r, flow_ctx(721, 821, text), text)
   |> should.equal(Error(error.RouterError("timeout hook exploded")))
+}
+
+// L1 — wait results and hand-wired handlers must not confuse flows -----------
+
+pub fn bool_callback_keeps_the_button_id_test() {
+  // "confirm:true" and "subscribe:true" both used to arrive as a bare
+  // `BoolCallback(True)`, so a step could not tell which button was pressed.
+  instance.encode_callback_wait_result("confirm:true")
+  |> instance.parse_wait_result_for_test
+  |> should.equal(types.BoolCallback(id: "confirm", value: True))
+
+  instance.encode_callback_wait_result("subscribe:false")
+  |> instance.parse_wait_result_for_test
+  |> should.equal(types.BoolCallback(id: "subscribe", value: False))
+
+  instance.encode_callback_wait_result("page:2")
+  |> instance.parse_wait_result_for_test
+  |> should.equal(types.DataCallback(value: "page:2"))
+}
+
+pub fn text_handler_only_resumes_its_own_flow_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let waiting = fn(name) {
+    builder.new(name, ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) {
+      case instance.get_step_data(inst, "user_input") {
+        Some(text) -> {
+          process.send(events, name <> ":" <> text)
+          action.complete(ctx, inst)
+        }
+        None -> action.wait(ctx, inst)
+      }
+    })
+    |> builder.build(initial: Start)
+  }
+
+  let other = waiting("l1_other")
+  let mine = waiting("l1_mine")
+
+  let ctx =
+    flow_ctx(
+      730,
+      830,
+      factory.text_update_with(text: "", from_id: 730, chat_id: 830),
+    )
+  let assert Ok(_) = engine.start_or_resume(other, ctx, 730, 830, dict.new())
+  let assert Ok(_) = engine.start_or_resume(mine, ctx, 730, 830, dict.new())
+
+  // A handler built for `mine` used to take whichever instance
+  // `list_by_user` happened to return first.
+  let text = factory.text_update_with(text: "hi", from_id: 730, chat_id: 830)
+  let assert Ok(_) =
+    handler.create_text_handler(mine)(flow_ctx(730, 830, text), text)
+
+  process.receive(events, 100) |> should.equal(Ok("l1_mine:hi"))
 }

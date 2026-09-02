@@ -474,7 +474,11 @@ pub fn widget_store(
 }
 
 /// Seed a widget store for pure render tests — the runtime equivalent is the
-/// engine's automatic stash before user code. Merges into the current stash.
+/// engine's automatic stash before user code.
+///
+/// **Merges** into the current stash, so several widgets can be seeded for one
+/// render. Tests in the same process therefore inherit each other's seeds:
+/// call `reset_stores` first when that matters.
 pub fn seed_store(
   window_id window_id: String,
   widget_id widget_id: String,
@@ -488,6 +492,12 @@ pub fn seed_store(
     )
   let _ = pdict_put(stores_pdict_key, stores)
   Nil
+}
+
+/// Drop everything `seed_store` put in place. Tests run in one process, so a
+/// seed from an earlier test is still visible without this.
+pub fn reset_stores() -> Nil {
+  clear_stash()
 }
 
 fn stashed_stores() -> Dict(String, String) {
