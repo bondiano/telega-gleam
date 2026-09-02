@@ -1399,15 +1399,20 @@ pub fn wait_email(
 
 /// Wait for user choice from inline keyboard.
 ///
-/// This function creates an inline keyboard with provided options
+/// This function sends `text` with an inline keyboard built from `options`
 /// and waits for user to select one.
+///
+/// If the prompt cannot be sent (network error, bot blocked, empty `text`),
+/// the error is logged and the conversation is **not** started: the function
+/// returns `Ok(ctx)` instead of waiting for a press that can never come.
 ///
 /// ## Examples
 ///
 /// ```gleam
 /// use ctx, color <- wait_choice(
 ///   ctx,
-///   [
+///   text: "Pick a color",
+///   options: [
 ///     #("🔴 Red", Red),
 ///     #("🔵 Blue", Blue),
 ///     #("🟢 Green", Green),
@@ -1420,6 +1425,7 @@ pub fn wait_email(
 /// See [conversation](/docs/conversation)
 pub fn wait_choice(
   ctx ctx: Context(session, error, dependencies),
+  text text: String,
   options options: List(#(String, a)),
   or handle_else: Option(bot.Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
@@ -1459,7 +1465,7 @@ pub fn wait_choice(
       business_connection_id: None,
       chat_id: types.Int(ctx.update.chat_id),
       message_thread_id: None,
-      text: "",
+      text:,
       parse_mode: None,
       entities: None,
       link_preview_options: None,
@@ -1474,25 +1480,46 @@ pub fn wait_choice(
       ephemeral_message_parameters: None,
     )
 
-  let _ = api.send_message(ctx.config.api_client, send_params)
+  case api.send_message(ctx.config.api_client, send_params) {
+    Error(err) -> {
+      log.error_d("wait_choice: failed to send the choice prompt", err)
+      Ok(ctx)
+    }
+    Ok(_) -> {
+      // Wait for callback query
+      use ctx, data, _callback_query_id <- wait_callback_query(
+        ctx,
+        filter: None,
+        or: handle_else,
+        timeout:,
+      )
 
-  // Wait for callback query
-  use ctx, data, _callback_query_id <- wait_callback_query(
-    ctx,
-    filter: None,
-    or: handle_else,
-    timeout:,
-  )
-
-  // Parse index and get value
-  case int.parse(data) {
-    Ok(idx) ->
-      case list_at(options, idx) {
-        Ok(#(_label, value)) -> continue(ctx, value)
+      // Parse index and get value
+      case int.parse(data) {
+        Ok(idx) ->
+          case list_at(options, idx) {
+            Ok(#(_label, value)) -> continue(ctx, value)
+            Error(_) ->
+              wait_choice(
+                ctx,
+                text:,
+                options:,
+                or: handle_else,
+                timeout:,
+                continue:,
+              )
+          }
         Error(_) ->
-          wait_choice(ctx, options:, or: handle_else, timeout:, continue:)
+          wait_choice(
+            ctx,
+            text:,
+            options:,
+            or: handle_else,
+            timeout:,
+            continue:,
+          )
       }
-    Error(_) -> wait_choice(ctx, options:, or: handle_else, timeout:, continue:)
+    }
   }
 }
 

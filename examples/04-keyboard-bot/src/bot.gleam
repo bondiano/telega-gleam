@@ -86,6 +86,13 @@ fn t_change_language_message(language) {
   }
 }
 
+fn t_choose_language_text(language) {
+  case language {
+    English -> "Choose your language"
+    Russian -> "Выберите ваш язык"
+  }
+}
+
 fn t_language_changed_message(language) {
   case language {
     English ->
@@ -107,6 +114,7 @@ fn change_languages_keyboard(ctx: BotContext, _command) {
 
   use ctx, selected_language <- telega.wait_choice(
     ctx:,
+    text: t_choose_language_text(language),
     options: [
       #(language_keyboard.t_russian_button_text(language), Russian),
       #(language_keyboard.t_english_button_text(language), English),
@@ -190,6 +198,13 @@ fn t_donate_description(language) {
   }
 }
 
+fn t_donate_choose_text(language) {
+  case language {
+    English -> "Choose the amount"
+    Russian -> "Выберите сумму"
+  }
+}
+
 fn t_donate_thanks(language, amount) {
   case language {
     English -> "🎉 Thank you for " <> int.to_string(amount) <> " ⭐!"
@@ -210,6 +225,7 @@ fn donate_command_handler(ctx: BotContext, _command) {
 
   use ctx, amount <- telega.wait_choice(
     ctx:,
+    text: t_donate_choose_text(language),
     options: list.map(donate_amounts, fn(amount) {
       #("⭐ " <> int.to_string(amount), amount)
     }),

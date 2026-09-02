@@ -7,10 +7,12 @@ import gleeunit/should
 
 import telega
 import telega/bot
+import telega/internal/config
 import telega/internal/registry
 import telega/router
 import telega/testing/context
 import telega/testing/factory
+import telega/testing/mock
 import telega/update
 
 pub type TestSession {
@@ -57,8 +59,16 @@ fn build_test_bot(
     Result(bot.Context(TestSession, TestError, Nil), TestError),
   session_settings: bot.SessionSettings(TestSession, TestError),
 ) -> bot.BotSubject {
+  build_test_bot_with_config(context.config(), router_handler, session_settings)
+}
+
+fn build_test_bot_with_config(
+  config: config.Config,
+  router_handler: fn(bot.Context(TestSession, TestError, Nil), update.Update) ->
+    Result(bot.Context(TestSession, TestError, Nil), TestError),
+  session_settings: bot.SessionSettings(TestSession, TestError),
+) -> bot.BotSubject {
   let assert Ok(registry) = registry.start("conv_test")
-  let config = context.config()
   let bot_info = factory.bot_user()
   let catch_handler = context.catch_handler()
   let chat_factory = start_test_factory()
@@ -330,4 +340,40 @@ fn drain_until_marker(
     Ok(_other) -> drain_until_marker(storage, marker)
     Error(_timeout) -> False
   }
+}
+
+pub fn wait_choice_sends_prompt_text_test() {
+  let #(api_client, calls) = mock.message_client()
+
+  let handlers = [
+    bot.HandleCommand("pick", fn(ctx, _command) {
+      use ctx, colour <- telega.wait_choice(
+        ctx:,
+        text: "Pick a colour",
+        options: [#("Red", "red"), #("Blue", "blue")],
+        or: None,
+        timeout: Some(5000),
+      )
+      bot.next_session(ctx, TestSession(name: colour))
+    }),
+  ]
+
+  let session_settings =
+    context.session_settings(default: fn() { TestSession(name: "") })
+  let bot_subject =
+    build_test_bot_with_config(
+      context.config_with_client(api_client),
+      handlers_to_router_handler(handlers),
+      session_settings,
+    )
+
+  bot.handle_update(bot_subject, factory.command_update(command: "pick"))
+  |> should.be_true
+
+  mock.assert_called_with_body(
+    from: calls,
+    path_contains: "sendMessage",
+    body_contains: "Pick a colour",
+  )
+  Nil
 }

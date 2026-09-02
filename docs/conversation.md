@@ -107,7 +107,8 @@ Create inline keyboard and wait for user selection:
 ```gleam
 use ctx, color <- wait_choice(
   ctx,
-  [
+  text: "Pick a color",
+  options: [
     #("🔴 Red", Red),
     #("🔵 Blue", Blue),
     #("🟢 Green", Green),
@@ -118,9 +119,11 @@ use ctx, color <- wait_choice(
 ```
 
 **Features:**
-- Automatically creates inline keyboard
+- Sends `text` together with the generated inline keyboard
 - Maps selection back to typed value
 - Handles invalid selections
+- If the prompt cannot be sent, logs the error and returns `Ok(ctx)` instead of
+  waiting for a press that will never arrive
 
 #### `wait_for` - Custom Filter
 
@@ -206,11 +209,10 @@ fn registration_handler(ctx, _cmd) {
   )
 
   // Select plan
-  use _ <- try(reply.with_text(ctx, "Choose your plan:"))
-
   use ctx, plan <- wait_choice(
     ctx,
-    [
+    text: "Choose your plan:",
+    options: [
       #("🆓 Free", Free),
       #("💎 Premium", Premium),
       #("🚀 Enterprise", Enterprise),
