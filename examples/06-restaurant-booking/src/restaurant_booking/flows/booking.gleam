@@ -77,7 +77,7 @@ pub type BookingState {
   )
 }
 
-fn initial_state() -> BookingState {
+fn initial_state(_ctx) -> BookingState {
   BookingState(
     date: "",
     time: "",
@@ -292,7 +292,7 @@ pub fn create_address_dialog(
     dialog.new(
       id: "delivery_address",
       storage:,
-      initial_state: fn() { AddressState(city: "", street: "") },
+      initial_state: fn(_ctx) { AddressState(city: "", street: "") },
       encode_state:,
       decode_state:,
     )

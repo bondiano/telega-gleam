@@ -166,7 +166,7 @@ fn settings_dialog(
     dialog.new(
       id: "settings",
       storage:,
-      initial_state: fn() { Settings(lang: "en", name: "") },
+      initial_state: fn(_ctx) { Settings(lang: "en", name: "") },
       encode_state:,
       decode_state:,
     )
@@ -264,7 +264,7 @@ fn gallery_flow(
     dialog.new(
       id: "gallery",
       storage:,
-      initial_state: fn() { "a" },
+      initial_state: fn(_ctx) { "a" },
       encode_state:,
       decode_state:,
     )
@@ -505,7 +505,7 @@ pub fn engine_toast_skips_auto_answer_test() {
     dialog.new(
       id: "toasty",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -546,7 +546,7 @@ pub fn engine_back_on_initial_window_re_renders_test() {
     dialog.new(
       id: "rooted",
       storage:,
-      initial_state: fn() { "initial" },
+      initial_state: fn(_ctx) { "initial" },
       encode_state:,
       decode_state:,
     )
@@ -651,7 +651,7 @@ fn two_window_dialog(
     dialog.new(
       id:,
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -1109,7 +1109,7 @@ fn string_builder(id: String) {
   dialog.new(
     id:,
     storage: flow_storage.create_noop_storage(),
-    initial_state: fn() { "" },
+    initial_state: fn(_ctx) { "" },
     encode_state:,
     decode_state:,
   )
@@ -1258,7 +1258,7 @@ fn avatar_dialog(storage) {
     dialog.new(
       id: "avatar",
       storage:,
-      initial_state: fn() { "none" },
+      initial_state: fn(_ctx) { "none" },
       encode_state:,
       decode_state:,
     )

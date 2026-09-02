@@ -91,12 +91,12 @@ pub type CompiledDialog(session, error, dependencies) {
     /// namespaced ids (`<sub_id>.<window_id>`).
     windows: Dict(String, Window(String, session, error, dependencies)),
     initial: String,
-    initial_encoded: fn() -> String,
+    initial_encoded: fn(Context(session, error, dependencies)) -> String,
     on_done: Option(
       fn(String, Context(session, error, dependencies)) ->
         Result(Context(session, error, dependencies), error),
     ),
-    subs: Dict(String, CompiledSub),
+    subs: Dict(String, CompiledSub(session, error, dependencies)),
     storage: flow_types.FlowStorage(error),
     ttl_ms: Option(Int),
     labels: fn(Context(session, error, dependencies)) -> Labels,
@@ -105,15 +105,20 @@ pub type CompiledDialog(session, error, dependencies) {
 
 /// A sub-dialog attachment: how to build its starting state and how to turn
 /// its final state into the result dict for `on_sub_result`.
-pub type CompiledSub {
+pub type CompiledSub(session, error, dependencies) {
   CompiledSub(
     id: String,
     /// Namespaced id of the sub-dialog's initial window.
     initial: String,
-    /// `fn(parent_encoded_state, args) -> sub_encoded_state`
-    init: fn(String, Dict(String, String)) -> String,
-    /// `fn(sub_encoded_state) -> result dict`
-    result: fn(String) -> Dict(String, String),
+    /// `fn(ctx, parent_encoded_state, args) -> sub_encoded_state`
+    init: fn(
+      Context(session, error, dependencies),
+      String,
+      Dict(String, String),
+    ) -> String,
+    /// `fn(ctx, sub_encoded_state) -> result dict`
+    result: fn(Context(session, error, dependencies), String) ->
+      Dict(String, String),
   )
 }
 
@@ -142,7 +147,7 @@ pub fn compile(
       // later non-dialog handlers don't see the finished dialog's stores.
       widget.stash_stores(inst.state.data)
       let result = case dialog.on_done {
-        Some(on_done) -> on_done(load_state(dialog, inst), ctx)
+        Some(on_done) -> on_done(load_state(dialog, ctx, inst), ctx)
         None -> Ok(ctx)
       }
       widget.clear_stash()
@@ -245,7 +250,7 @@ fn render_and_wait(
   ctx: Context(session, error, dependencies),
   inst: flow_types.FlowInstance,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
-  render_and_park(dialog, window, ctx, inst, load_state(dialog, inst))
+  render_and_park(dialog, window, ctx, inst, load_state(dialog, ctx, inst))
 }
 
 fn handle_callback(
@@ -279,7 +284,7 @@ fn handle_callback(
           case pressed_outdated_message(ctx, inst) {
             True -> answer_stale(dialog, ctx, inst)
             False -> {
-              let state = load_state(dialog, inst)
+              let state = load_state(dialog, ctx, inst)
               emit_action_event(dialog, window.id, event)
               case parse_widget_event(event) {
                 Ok(#(widget_id, cmd, arg)) ->
@@ -320,7 +325,7 @@ fn handle_message(
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   case window.on_message, message_input(result) {
     Some(on_message), Some(input) -> {
-      let state = load_state(dialog, inst)
+      let state = load_state(dialog, ctx, inst)
       case on_message(state, input, ctx) {
         Ok(action) -> apply_action(dialog, ctx, inst, action)
         Error(error) -> Error(error)
@@ -430,7 +435,7 @@ fn handle_text(
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   case window.on_text {
     Some(on_text) -> {
-      let state = load_state(dialog, inst)
+      let state = load_state(dialog, ctx, inst)
       case on_text(state, text, ctx) {
         Ok(action) -> apply_action(dialog, ctx, inst, action)
         Error(error) -> Error(error)
@@ -582,7 +587,7 @@ fn start_sub(
         |> instance.store_data(sub_key, sub_id)
         |> instance.store_data(return_window_key, inst.state.current_step)
         |> instance.store_data(sub_saved_key, parent_state)
-        |> save_state(sub.init(parent_state, args))
+        |> save_state(sub.init(ctx, parent_state, args))
       jump_and_render(dialog, ctx, inst, sub.initial)
     }
   }
@@ -602,12 +607,12 @@ fn finish_sub(
     #("count", 1),
   ])
   let result = case dict.get(dialog.subs, sub_id) {
-    Ok(sub) -> sub.result(sub_state)
+    Ok(sub) -> sub.result(ctx, sub_state)
     Error(Nil) -> dict.new()
   }
   let return_window = return_window_of(dialog, inst)
-  let inst = leave_sub(dialog, inst, sub_id)
-  let parent_state = load_state(dialog, inst)
+  let inst = leave_sub(dialog, ctx, inst, sub_id)
+  let parent_state = load_state(dialog, ctx, inst)
 
   let on_sub_result =
     dict.get(dialog.windows, return_window)
@@ -693,7 +698,7 @@ fn cancel_sub(
     #("count", 1),
   ])
   let return_window = return_window_of(dialog, inst)
-  let inst = leave_sub(dialog, inst, sub_id)
+  let inst = leave_sub(dialog, ctx, inst, sub_id)
   jump_and_render(dialog, ctx, inst, return_window)
 }
 
@@ -701,12 +706,13 @@ fn cancel_sub(
 /// bookkeeping keys cleared, sub steps stripped from the history top.
 fn leave_sub(
   dialog: CompiledDialog(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   inst: flow_types.FlowInstance,
   sub_id: String,
 ) -> flow_types.FlowInstance {
   let parent_state =
     instance.get_data(inst, sub_saved_key)
-    |> option.unwrap(dialog.initial_encoded())
+    |> option.unwrap(dialog.initial_encoded(ctx))
   let prefix = sub_id <> sub_separator
   let history =
     list.drop_while(inst.state.history, string.starts_with(_, prefix))
@@ -881,7 +887,13 @@ fn try_render_current(
       case current_window(dialog, inst) {
         Ok(window) ->
           case
-            render_window(dialog, window, ctx, inst, load_state(dialog, inst))
+            render_window(
+              dialog,
+              window,
+              ctx,
+              inst,
+              load_state(dialog, ctx, inst),
+            )
           {
             Ok(updated) -> {
               let _ =
@@ -916,11 +928,12 @@ fn current_window(
 /// by `dialog.build()`.
 fn load_state(
   dialog: CompiledDialog(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   inst: flow_types.FlowInstance,
 ) -> String {
   case instance.get_data(inst, state_key) {
     Some(raw) -> raw
-    None -> dialog.initial_encoded()
+    None -> dialog.initial_encoded(ctx)
   }
 }
 

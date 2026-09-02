@@ -157,7 +157,7 @@ fn address_dialog() -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
     dialog.new(
       id: "address",
       storage: flow_storage.create_noop_storage(),
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -179,7 +179,7 @@ fn booking_dialog() -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
     dialog.new(
       id: "booking",
       storage: flow_storage.create_noop_storage(),
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )

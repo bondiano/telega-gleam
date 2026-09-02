@@ -38,11 +38,13 @@ pub fn build_keyboard_callback_data() {
         English -> "english"
       }
     },
+    // A payload that is neither is not this keyboard's — `unpack_callback`
+    // turns the error into `Error(Nil)` instead of crashing the handler.
     deserialize: fn(payload) {
       case payload {
-        "russian" -> Russian
-        "english" -> English
-        _ -> panic as "Unknown keyboard language"
+        "russian" -> Ok(Russian)
+        "english" -> Ok(English)
+        _ -> Error(Nil)
       }
     },
   )

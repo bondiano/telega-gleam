@@ -199,7 +199,7 @@ fn prefs_flow(
     dialog.new(
       id: "prefs",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -427,7 +427,7 @@ fn catalog_flow(
     dialog.new(
       id: "cat",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -514,7 +514,7 @@ fn widget_builder(id: String) {
   dialog.new(
     id:,
     storage: flow_storage.create_noop_storage(),
-    initial_state: fn() { "" },
+    initial_state: fn(_ctx) { "" },
     encode_state:,
     decode_state:,
   )

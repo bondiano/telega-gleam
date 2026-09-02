@@ -46,7 +46,7 @@
 ////   dialog.new(
 ////     id: "settings",
 ////     storage: flow_storage,
-////     initial_state: fn() { MyState(name: "") },
+////     initial_state: fn(_ctx) { MyState(name: "") },
 ////     encode_state: encode_my_state,
 ////     decode_state: decode_my_state,
 ////   )
@@ -126,7 +126,8 @@ pub opaque type Dialog(state, session, error, dependencies) {
   Dialog(
     compiled: CompiledDialog(session, error, dependencies),
     encode_state: fn(state) -> String,
-    decode_or_initial: fn(String) -> state,
+    decode_or_initial: fn(Context(session, error, dependencies), String) ->
+      state,
   )
 }
 
@@ -137,8 +138,13 @@ type SubAttachment(session, error, dependencies) {
     id: String,
     windows: List(Window(String, session, error, dependencies)),
     initial: String,
-    init: fn(String, dict.Dict(String, String)) -> String,
-    result: fn(String) -> dict.Dict(String, String),
+    init: fn(
+      Context(session, error, dependencies),
+      String,
+      dict.Dict(String, String),
+    ) -> String,
+    result: fn(Context(session, error, dependencies), String) ->
+      dict.Dict(String, String),
     has_own_subs: Bool,
   )
 }
@@ -148,7 +154,7 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
     id: String,
     windows: List(Window(state, session, error, dependencies)),
     initial: Option(String),
-    initial_state: fn() -> state,
+    initial_state: fn(Context(session, error, dependencies)) -> state,
     encode_state: fn(state) -> String,
     decode_state: fn(String) -> Result(state, Nil),
     on_done: Option(
@@ -182,10 +188,15 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
 /// Start building a dialog. `encode_state`/`decode_state` serialize the
 /// user state for persistence (precedent: session serialization); for simple
 /// states see `string_codec` and `json_codec`.
+///
+/// `initial_state` receives the `Context`, so a dialog can open on state seeded
+/// from the session, the injected dependencies or the sender — a form
+/// pre-filled from the user's profile, say.
 pub fn new(
   id id: String,
   storage storage: flow_types.FlowStorage(error),
-  initial_state initial_state: fn() -> state,
+  initial_state initial_state: fn(Context(session, error, dependencies)) ->
+    state,
   encode_state encode_state: fn(state) -> String,
   decode_state decode_state: fn(String) -> Result(state, Nil),
 ) -> DialogBuilder(state, session, error, dependencies) {
@@ -354,10 +365,10 @@ pub fn subdialog(
       id: sub.compiled.id,
       windows: dict.values(sub.compiled.windows),
       initial: sub.compiled.initial,
-      init: fn(parent_raw, args) {
-        sub.encode_state(init(parent_decode(parent_raw), args))
+      init: fn(ctx, parent_raw, args) {
+        sub.encode_state(init(parent_decode(ctx, parent_raw), args))
       },
-      result: fn(sub_raw) { result(sub.decode_or_initial(sub_raw)) },
+      result: fn(ctx, sub_raw) { result(sub.decode_or_initial(ctx, sub_raw)) },
       has_own_subs: dict.size(sub.compiled.subs) > 0,
     )
   DialogBuilder(..builder, subs: [attachment, ..builder.subs])
@@ -506,9 +517,9 @@ pub fn build(
       id: builder.id,
       windows: dict.from_list(list.append(erased_own, erased_subs)),
       initial:,
-      initial_encoded: fn() { encode(builder.initial_state()) },
+      initial_encoded: fn(ctx) { encode(builder.initial_state(ctx)) },
       on_done: option.map(builder.on_done, fn(on_done) {
-        fn(raw, ctx) { on_done(decode(raw), ctx) }
+        fn(raw, ctx) { on_done(decode(ctx, raw), ctx) }
       }),
       subs: dict.from_list(
         list.map(subs, fn(sub) {
@@ -536,9 +547,9 @@ pub fn build(
 /// (e.g. a state shape change after a deploy) must not kill the dialog.
 fn decode_or_initial(
   builder: DialogBuilder(state, session, error, dependencies),
-) -> fn(String) -> state {
+) -> fn(Context(session, error, dependencies), String) -> state {
   let DialogBuilder(id:, decode_state:, initial_state:, ..) = builder
-  fn(raw) {
+  fn(ctx, raw) {
     case decode_state(raw) {
       Ok(state) -> state
       Error(Nil) -> {
@@ -548,7 +559,7 @@ fn decode_or_initial(
             <> id
             <> "] failed to decode state, falling back to initial",
         )
-        initial_state()
+        initial_state(ctx)
       }
     }
   }
@@ -757,30 +768,31 @@ fn require(
 fn erase_window(
   window: Window(state, session, error, dependencies),
   encode: fn(state) -> String,
-  decode: fn(String) -> state,
+  decode: fn(Context(session, error, dependencies), String) -> state,
 ) -> Window(String, session, error, dependencies) {
   Window(
     id: window.id,
-    render: fn(raw, ctx) { window.render(decode(raw), ctx) },
+    render: fn(raw, ctx) { window.render(decode(ctx, raw), ctx) },
     on_action: fn(raw, event, ctx) {
-      window.on_action(decode(raw), event, ctx)
+      window.on_action(decode(ctx, raw), event, ctx)
       |> result.map(erase_action(_, encode))
     },
     on_text: option.map(window.on_text, fn(on_text) {
       fn(raw, text, ctx) {
-        on_text(decode(raw), text, ctx) |> result.map(erase_action(_, encode))
+        on_text(decode(ctx, raw), text, ctx)
+        |> result.map(erase_action(_, encode))
       }
     }),
     on_message: option.map(window.on_message, fn(on_message) {
       fn(raw, input, ctx) {
-        on_message(decode(raw), input, ctx)
+        on_message(decode(ctx, raw), input, ctx)
         |> result.map(erase_action(_, encode))
       }
     }),
     widgets: list.map(window.widgets, erase_widget(_, encode, decode)),
     on_sub_result: option.map(window.on_sub_result, fn(handler) {
       fn(raw, sub_result, ctx) {
-        handler(decode(raw), sub_result, ctx)
+        handler(decode(ctx, raw), sub_result, ctx)
         |> result.map(erase_action(_, encode))
       }
     }),
@@ -805,7 +817,7 @@ fn erase_action(
 fn erase_widget(
   widget_item: types.KeyboardWidget(state, session, error, dependencies),
   encode: fn(state) -> String,
-  decode: fn(String) -> state,
+  decode: fn(Context(session, error, dependencies), String) -> state,
 ) -> types.KeyboardWidget(String, session, error, dependencies) {
   types.KeyboardWidget(
     id: widget_item.id,
@@ -828,10 +840,10 @@ fn erase_widget(
 
 fn typed_widget_ctx(
   wctx: types.WidgetCtx(String, session, error, dependencies),
-  decode: fn(String) -> state,
+  decode: fn(Context(session, error, dependencies), String) -> state,
 ) -> types.WidgetCtx(state, session, error, dependencies) {
   types.WidgetCtx(
-    state: decode(wctx.state),
+    state: decode(wctx.ctx, wctx.state),
     store: wctx.store,
     labels: wctx.labels,
     ctx: wctx.ctx,

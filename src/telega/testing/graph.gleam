@@ -146,7 +146,7 @@ pub fn of_dialog_probing(
   let encode = dialog.state_encoder(dialog)
   let labels = compiled.labels(ctx)
   let parent_states =
-    [compiled.initial_encoded(), ..list.map(states, encode)]
+    [compiled.initial_encoded(ctx), ..list.map(states, encode)]
     |> list.unique
 
   let windows =
@@ -173,7 +173,7 @@ pub fn of_dialog_probing(
   let sub_transitions =
     list.flat_map(sub_windows, fn(entry) {
       let states =
-        sub_states(compiled, split_namespace(entry.0).0, own_transitions)
+        sub_states(compiled, ctx, split_namespace(entry.0).0, own_transitions)
       probe_window(ctx, labels, entry.1, states, texts)
     })
 
@@ -377,6 +377,7 @@ fn transitions_of(
 /// applied to every `StartSub` found in the parent.
 fn sub_states(
   compiled: dialog_engine.CompiledDialog(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   sub_id: Option(String),
   transitions: List(Transition),
 ) -> List(String) {
@@ -390,11 +391,11 @@ fn sub_states(
           |> list.filter_map(fn(transition) {
             case transition {
               ToSub(sub_id: found, args:, state:, ..) if found == sub_id ->
-                Ok(sub.init(state, args))
+                Ok(sub.init(ctx, state, args))
               _ -> Error(Nil)
             }
           })
-          |> fallback_states(sub, compiled)
+          |> fallback_states(sub, compiled, ctx)
           |> list.unique
       }
   }
@@ -402,11 +403,12 @@ fn sub_states(
 
 fn fallback_states(
   states: List(String),
-  sub: dialog_engine.CompiledSub,
+  sub: dialog_engine.CompiledSub(session, error, dependencies),
   compiled: dialog_engine.CompiledDialog(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
 ) -> List(String) {
   case states {
-    [] -> [sub.init(compiled.initial_encoded(), dict.new())]
+    [] -> [sub.init(ctx, compiled.initial_encoded(ctx), dict.new())]
     states -> states
   }
 }
@@ -429,7 +431,7 @@ fn probe_sub_results(
             case window.on_sub_result {
               None -> []
               Some(handler) -> {
-                let result = sub.result(sub.init(state, args))
+                let result = sub.result(ctx, sub.init(ctx, state, args))
                 case handler(state, result, ctx) {
                   Ok(action) ->
                     transitions_of(from, sub_id <> " result", action)

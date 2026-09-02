@@ -66,7 +66,7 @@ fn address_dialog(
     dialog.new(
       id: "address",
       storage:,
-      initial_state: fn() { "|" },
+      initial_state: fn(_ctx) { "|" },
       encode_state:,
       decode_state:,
     )
@@ -156,7 +156,7 @@ fn profile_dialog(
     dialog.new(
       id: "profile",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -399,7 +399,7 @@ pub fn sub_nested_start_sub_is_rejected_test() {
     dialog.new(
       id: "greedy",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -422,7 +422,7 @@ pub fn sub_nested_start_sub_is_rejected_test() {
     dialog.new(
       id: "host",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -468,7 +468,7 @@ pub fn sub_widget_store_resets_on_reenter_test() {
     dialog.new(
       id: "picker",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -513,7 +513,7 @@ pub fn sub_widget_store_resets_on_reenter_test() {
     dialog.new(
       id: "host2",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -574,7 +574,7 @@ fn minimal_string_dialog(id: String) {
   dialog.new(
     id:,
     storage: flow_storage.create_noop_storage(),
-    initial_state: fn() { "" },
+    initial_state: fn(_ctx) { "" },
     encode_state:,
     decode_state:,
   )
@@ -621,7 +621,7 @@ pub fn build_dot_in_window_id_test() {
   dialog.new(
     id: "ok",
     storage: flow_storage.create_noop_storage(),
-    initial_state: fn() { "" },
+    initial_state: fn(_ctx) { "" },
     encode_state:,
     decode_state:,
   )
@@ -661,7 +661,7 @@ pub fn build_sub_window_budget_includes_namespace_test() {
     dialog.new(
       id: "sub",
       storage: flow_storage.create_noop_storage(),
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -695,7 +695,7 @@ fn button_sub(storage) {
     dialog.new(
       id: "confirm",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
@@ -722,7 +722,7 @@ fn alerting_parent(storage) {
     dialog.new(
       id: "alerting",
       storage:,
-      initial_state: fn() { "" },
+      initial_state: fn(_ctx) { "" },
       encode_state:,
       decode_state:,
     )
