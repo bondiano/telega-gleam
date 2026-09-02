@@ -1,6 +1,7 @@
 //// This module contains all decoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/dynamic/decode
+import gleam/int
 import gleam/option.{None}
 
 import telega/model/types.{
@@ -3709,13 +3710,13 @@ pub fn inline_query_result_location_decoder() -> decode.Decoder(
 ) {
   use type_ <- decode.field("type", decode.string)
   use id <- decode.field("id", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use title <- decode.field("title", decode.string)
   use horizontal_accuracy <- decode.optional_field(
     "horizontal_accuracy",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   use live_period <- decode.optional_field(
     "live_period",
@@ -3936,8 +3937,8 @@ pub fn inline_query_result_venue_decoder() -> decode.Decoder(
 ) {
   use type_ <- decode.field("type", decode.string)
   use id <- decode.field("id", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use title <- decode.field("title", decode.string)
   use address <- decode.field("address", decode.string)
   use foursquare_id <- decode.optional_field(
@@ -4345,12 +4346,12 @@ pub fn input_invoice_message_content_decoder() -> decode.Decoder(
 pub fn input_location_message_content_decoder() -> decode.Decoder(
   InputLocationMessageContent,
 ) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use horizontal_accuracy <- decode.optional_field(
     "horizontal_accuracy",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   use live_period <- decode.optional_field(
     "live_period",
@@ -4575,12 +4576,12 @@ pub fn input_media_live_photo_decoder() -> decode.Decoder(InputMediaLivePhoto) {
 
 pub fn input_media_location_decoder() -> decode.Decoder(InputMediaLocation) {
   use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use horizontal_accuracy <- decode.optional_field(
     "horizontal_accuracy",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   decode.success(InputMediaLocation(
     type_: type_,
@@ -4642,8 +4643,8 @@ pub fn input_media_sticker_decoder() -> decode.Decoder(InputMediaSticker) {
 
 pub fn input_media_venue_decoder() -> decode.Decoder(InputMediaVenue) {
   use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use title <- decode.field("title", decode.string)
   use address <- decode.field("address", decode.string)
   use foursquare_id <- decode.optional_field(
@@ -4888,7 +4889,7 @@ pub fn input_profile_photo_animated_decoder() -> decode.Decoder(
   use main_frame_timestamp <- decode.optional_field(
     "main_frame_timestamp",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   decode.success(InputProfilePhotoAnimated(
     type_: type_,
@@ -5395,12 +5396,12 @@ pub fn input_story_content_video_decoder() -> decode.Decoder(
   use duration <- decode.optional_field(
     "duration",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   use cover_frame_timestamp <- decode.optional_field(
     "cover_frame_timestamp",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   use is_animation <- decode.optional_field(
     "is_animation",
@@ -5446,8 +5447,8 @@ pub fn input_text_message_content_decoder() -> decode.Decoder(
 pub fn input_venue_message_content_decoder() -> decode.Decoder(
   InputVenueMessageContent,
 ) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use title <- decode.field("title", decode.string)
   use address <- decode.field("address", decode.string)
   use foursquare_id <- decode.optional_field(
@@ -5776,12 +5777,12 @@ pub fn live_photo_decoder() -> decode.Decoder(LivePhoto) {
 }
 
 pub fn location_decoder() -> decode.Decoder(Location) {
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use horizontal_accuracy <- decode.optional_field(
     "horizontal_accuracy",
     None,
-    decode.optional(decode.float),
+    decode.optional(lenient_float()),
   )
   use live_period <- decode.optional_field(
     "live_period",
@@ -5871,9 +5872,9 @@ pub fn managed_bot_updated_decoder() -> decode.Decoder(ManagedBotUpdated) {
 
 pub fn mask_position_decoder() -> decode.Decoder(MaskPosition) {
   use point <- decode.field("point", decode.string)
-  use x_shift <- decode.field("x_shift", decode.float)
-  use y_shift <- decode.field("y_shift", decode.float)
-  use scale <- decode.field("scale", decode.float)
+  use x_shift <- decode.field("x_shift", lenient_float())
+  use y_shift <- decode.field("y_shift", lenient_float())
+  use scale <- decode.field("scale", lenient_float())
   decode.success(MaskPosition(
     point: point,
     x_shift: x_shift,
@@ -8712,14 +8713,14 @@ pub fn story_area_decoder() -> decode.Decoder(StoryArea) {
 }
 
 pub fn story_area_position_decoder() -> decode.Decoder(StoryAreaPosition) {
-  use x_percentage <- decode.field("x_percentage", decode.float)
-  use y_percentage <- decode.field("y_percentage", decode.float)
-  use width_percentage <- decode.field("width_percentage", decode.float)
-  use height_percentage <- decode.field("height_percentage", decode.float)
-  use rotation_angle <- decode.field("rotation_angle", decode.float)
+  use x_percentage <- decode.field("x_percentage", lenient_float())
+  use y_percentage <- decode.field("y_percentage", lenient_float())
+  use width_percentage <- decode.field("width_percentage", lenient_float())
+  use height_percentage <- decode.field("height_percentage", lenient_float())
+  use rotation_angle <- decode.field("rotation_angle", lenient_float())
   use corner_radius_percentage <- decode.field(
     "corner_radius_percentage",
-    decode.float,
+    lenient_float(),
   )
   decode.success(StoryAreaPosition(
     x_percentage: x_percentage,
@@ -8741,8 +8742,8 @@ pub fn story_area_type_location_decoder() -> decode.Decoder(
   StoryAreaTypeLocation,
 ) {
   use type_ <- decode.field("type", decode.string)
-  use latitude <- decode.field("latitude", decode.float)
-  use longitude <- decode.field("longitude", decode.float)
+  use latitude <- decode.field("latitude", lenient_float())
+  use longitude <- decode.field("longitude", lenient_float())
   use address <- decode.optional_field(
     "address",
     None,
@@ -8789,7 +8790,7 @@ pub fn story_area_type_unique_gift_decoder() -> decode.Decoder(
 
 pub fn story_area_type_weather_decoder() -> decode.Decoder(StoryAreaTypeWeather) {
   use type_ <- decode.field("type", decode.string)
-  use temperature <- decode.field("temperature", decode.float)
+  use temperature <- decode.field("temperature", lenient_float())
   use emoji <- decode.field("emoji", decode.string)
   use background_color <- decode.field("background_color", decode.int)
   decode.success(StoryAreaTypeWeather(
@@ -9956,7 +9957,12 @@ pub fn background_fill_decoder() -> decode.Decoder(BackgroundFill) {
       use value <- decode.then(background_fill_freeform_gradient_decoder())
       decode.success(BackgroundFillFreeformGradientBackgroundFill(value))
     }
-    _ -> panic as "Invalid variant for BackgroundFill"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(background_fill_solid_decoder())
+      decode.failure(BackgroundFillSolidBackgroundFill(value), "BackgroundFill")
+    }
   }
 }
 
@@ -9979,7 +9985,12 @@ pub fn background_type_decoder() -> decode.Decoder(BackgroundType) {
       use value <- decode.then(background_type_chat_theme_decoder())
       decode.success(BackgroundTypeChatThemeBackgroundType(value))
     }
-    _ -> panic as "Invalid variant for BackgroundType"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(background_type_fill_decoder())
+      decode.failure(BackgroundTypeFillBackgroundType(value), "BackgroundType")
+    }
   }
 }
 
@@ -10016,7 +10027,15 @@ pub fn bot_command_scope_decoder() -> decode.Decoder(BotCommandScope) {
       use value <- decode.then(bot_command_scope_chat_member_decoder())
       decode.success(BotCommandScopeChatMemberBotCommandScope(value))
     }
-    _ -> panic as "Invalid variant for BotCommandScope"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(bot_command_scope_default_decoder())
+      decode.failure(
+        BotCommandScopeDefaultBotCommandScope(value),
+        "BotCommandScope",
+      )
+    }
   }
 }
 
@@ -10035,7 +10054,15 @@ pub fn chat_boost_source_decoder() -> decode.Decoder(ChatBoostSource) {
       use value <- decode.then(chat_boost_source_giveaway_decoder())
       decode.success(ChatBoostSourceGiveawayChatBoostSource(value))
     }
-    _ -> panic as "Invalid variant for ChatBoostSource"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(chat_boost_source_premium_decoder())
+      decode.failure(
+        ChatBoostSourcePremiumChatBoostSource(value),
+        "ChatBoostSource",
+      )
+    }
   }
 }
 
@@ -10066,7 +10093,12 @@ pub fn chat_member_decoder() -> decode.Decoder(ChatMember) {
       use value <- decode.then(chat_member_banned_decoder())
       decode.success(ChatMemberBannedChatMember(value))
     }
-    _ -> panic as "Invalid variant for ChatMember"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(chat_member_owner_decoder())
+      decode.failure(ChatMemberOwnerChatMember(value), "ChatMember")
+    }
   }
 }
 
@@ -10085,7 +10117,15 @@ pub fn input_paid_media_decoder() -> decode.Decoder(InputPaidMedia) {
       use value <- decode.then(input_paid_media_video_decoder())
       decode.success(InputPaidMediaVideoInputPaidMedia(value))
     }
-    _ -> panic as "Invalid variant for InputPaidMedia"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_paid_media_live_photo_decoder())
+      decode.failure(
+        InputPaidMediaLivePhotoInputPaidMedia(value),
+        "InputPaidMedia",
+      )
+    }
   }
 }
 
@@ -10124,7 +10164,12 @@ pub fn input_poll_media_decoder() -> decode.Decoder(InputPollMedia) {
       use value <- decode.then(input_media_video_decoder())
       decode.success(InputMediaVideoInputPollMedia(value))
     }
-    _ -> panic as "Invalid variant for InputPollMedia"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_media_animation_decoder())
+      decode.failure(InputMediaAnimationInputPollMedia(value), "InputPollMedia")
+    }
   }
 }
 
@@ -10163,7 +10208,15 @@ pub fn input_poll_option_media_decoder() -> decode.Decoder(InputPollOptionMedia)
       use value <- decode.then(input_media_video_decoder())
       decode.success(InputMediaVideoInputPollOptionMedia(value))
     }
-    _ -> panic as "Invalid variant for InputPollOptionMedia"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_media_animation_decoder())
+      decode.failure(
+        InputMediaAnimationInputPollOptionMedia(value),
+        "InputPollOptionMedia",
+      )
+    }
   }
 }
 
@@ -10178,7 +10231,15 @@ pub fn input_profile_photo_decoder() -> decode.Decoder(InputProfilePhoto) {
       use value <- decode.then(input_profile_photo_animated_decoder())
       decode.success(InputProfilePhotoAnimatedInputProfilePhoto(value))
     }
-    _ -> panic as "Invalid variant for InputProfilePhoto"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_profile_photo_static_decoder())
+      decode.failure(
+        InputProfilePhotoStaticInputProfilePhoto(value),
+        "InputProfilePhoto",
+      )
+    }
   }
 }
 
@@ -10285,7 +10346,15 @@ pub fn input_rich_block_decoder() -> decode.Decoder(InputRichBlock) {
       use value <- decode.then(input_rich_block_thinking_decoder())
       decode.success(InputRichBlockThinkingInputRichBlock(value))
     }
-    _ -> panic as "Invalid variant for InputRichBlock"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_rich_block_paragraph_decoder())
+      decode.failure(
+        InputRichBlockParagraphInputRichBlock(value),
+        "InputRichBlock",
+      )
+    }
   }
 }
 
@@ -10300,7 +10369,15 @@ pub fn input_story_content_decoder() -> decode.Decoder(InputStoryContent) {
       use value <- decode.then(input_story_content_video_decoder())
       decode.success(InputStoryContentVideoInputStoryContent(value))
     }
-    _ -> panic as "Invalid variant for InputStoryContent"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_story_content_photo_decoder())
+      decode.failure(
+        InputStoryContentPhotoInputStoryContent(value),
+        "InputStoryContent",
+      )
+    }
   }
 }
 
@@ -10319,7 +10396,12 @@ pub fn menu_button_decoder() -> decode.Decoder(MenuButton) {
       use value <- decode.then(menu_button_default_decoder())
       decode.success(MenuButtonDefaultMenuButton(value))
     }
-    _ -> panic as "Invalid variant for MenuButton"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(menu_button_commands_decoder())
+      decode.failure(MenuButtonCommandsMenuButton(value), "MenuButton")
+    }
   }
 }
 
@@ -10342,7 +10424,12 @@ pub fn message_origin_decoder() -> decode.Decoder(MessageOrigin) {
       use value <- decode.then(message_origin_channel_decoder())
       decode.success(MessageOriginChannelMessageOrigin(value))
     }
-    _ -> panic as "Invalid variant for MessageOrigin"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(message_origin_user_decoder())
+      decode.failure(MessageOriginUserMessageOrigin(value), "MessageOrigin")
+    }
   }
 }
 
@@ -10357,7 +10444,12 @@ pub fn owned_gift_decoder() -> decode.Decoder(OwnedGift) {
       use value <- decode.then(owned_gift_unique_decoder())
       decode.success(OwnedGiftUniqueOwnedGift(value))
     }
-    _ -> panic as "Invalid variant for OwnedGift"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(owned_gift_regular_decoder())
+      decode.failure(OwnedGiftRegularOwnedGift(value), "OwnedGift")
+    }
   }
 }
 
@@ -10380,7 +10472,12 @@ pub fn paid_media_decoder() -> decode.Decoder(PaidMedia) {
       use value <- decode.then(paid_media_video_decoder())
       decode.success(PaidMediaVideoPaidMedia(value))
     }
-    _ -> panic as "Invalid variant for PaidMedia"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(paid_media_live_photo_decoder())
+      decode.failure(PaidMediaLivePhotoPaidMedia(value), "PaidMedia")
+    }
   }
 }
 
@@ -10431,7 +10528,15 @@ pub fn passport_element_error_decoder() -> decode.Decoder(PassportElementError) 
       use value <- decode.then(passport_element_error_unspecified_decoder())
       decode.success(PassportElementErrorUnspecifiedPassportElementError(value))
     }
-    _ -> panic as "Invalid variant for PassportElementError"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(passport_element_error_data_field_decoder())
+      decode.failure(
+        PassportElementErrorDataFieldPassportElementError(value),
+        "PassportElementError",
+      )
+    }
   }
 }
 
@@ -10450,7 +10555,12 @@ pub fn reaction_type_decoder() -> decode.Decoder(ReactionType) {
       use value <- decode.then(reaction_type_paid_decoder())
       decode.success(ReactionTypePaidReactionType(value))
     }
-    _ -> panic as "Invalid variant for ReactionType"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(reaction_type_emoji_decoder())
+      decode.failure(ReactionTypeEmojiReactionType(value), "ReactionType")
+    }
   }
 }
 
@@ -10473,7 +10583,15 @@ pub fn revenue_withdrawal_state_decoder() -> decode.Decoder(
       use value <- decode.then(revenue_withdrawal_state_failed_decoder())
       decode.success(RevenueWithdrawalStateFailedRevenueWithdrawalState(value))
     }
-    _ -> panic as "Invalid variant for RevenueWithdrawalState"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(revenue_withdrawal_state_pending_decoder())
+      decode.failure(
+        RevenueWithdrawalStatePendingRevenueWithdrawalState(value),
+        "RevenueWithdrawalState",
+      )
+    }
   }
 }
 
@@ -10576,7 +10694,12 @@ pub fn rich_block_decoder() -> decode.Decoder(RichBlock) {
       use value <- decode.then(rich_block_thinking_decoder())
       decode.success(RichBlockThinkingRichBlock(value))
     }
-    _ -> panic as "Invalid variant for RichBlock"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(rich_block_paragraph_decoder())
+      decode.failure(RichBlockParagraphRichBlock(value), "RichBlock")
+    }
   }
 }
 
@@ -10603,7 +10726,12 @@ pub fn story_area_type_decoder() -> decode.Decoder(StoryAreaType) {
       use value <- decode.then(story_area_type_unique_gift_decoder())
       decode.success(StoryAreaTypeUniqueGiftStoryAreaType(value))
     }
-    _ -> panic as "Invalid variant for StoryAreaType"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(story_area_type_location_decoder())
+      decode.failure(StoryAreaTypeLocationStoryAreaType(value), "StoryAreaType")
+    }
   }
 }
 
@@ -10638,11 +10766,68 @@ pub fn transaction_partner_decoder() -> decode.Decoder(TransactionPartner) {
       use value <- decode.then(transaction_partner_other_decoder())
       decode.success(TransactionPartnerOtherTransactionPartner(value))
     }
-    _ -> panic as "Invalid variant for TransactionPartner"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(transaction_partner_user_decoder())
+      decode.failure(
+        TransactionPartnerUserTransactionPartner(value),
+        "TransactionPartner",
+      )
+    }
   }
 }
 
 // === MANUAL — not regenerated below (codegen) ===
+
+/// Decode one update, degrading gracefully: an update whose payload this
+/// version cannot read still yields its `update_id`, so the caller can keep the
+/// rest of the batch and still advance the polling offset past it. Such an
+/// update decodes to `update.UnknownUpdate`.
+pub fn lenient_update_decoder() -> decode.Decoder(Update) {
+  decode.one_of(update_decoder(), [unreadable_update_decoder()])
+}
+
+fn unreadable_update_decoder() -> decode.Decoder(Update) {
+  use update_id <- decode.field("update_id", decode.int)
+  decode.success(Update(
+    update_id:,
+    message: None,
+    edited_message: None,
+    channel_post: None,
+    edited_channel_post: None,
+    business_connection: None,
+    business_message: None,
+    edited_business_message: None,
+    deleted_business_messages: None,
+    message_reaction: None,
+    message_reaction_count: None,
+    inline_query: None,
+    chosen_inline_result: None,
+    callback_query: None,
+    shipping_query: None,
+    pre_checkout_query: None,
+    purchased_paid_media: None,
+    poll: None,
+    poll_answer: None,
+    my_chat_member: None,
+    chat_member: None,
+    chat_join_request: None,
+    chat_boost: None,
+    removed_chat_boost: None,
+    managed_bot: None,
+    guest_message: None,
+    subscription: None,
+    stopped_message_generation: None,
+  ))
+}
+
+/// Telegram serialises floats as plain JSON numbers, so a `Float` field can
+/// arrive as an integer (`"latitude": 51`). Accept either shape.
+pub fn lenient_float() -> decode.Decoder(Float) {
+  decode.one_of(decode.float, [decode.map(decode.int, int.to_float)])
+}
+
 //
 // Hand-written decoders for unions whose discriminator cannot be derived
 // mechanically (colliding or missing type tags) plus the generic
@@ -10692,7 +10877,12 @@ pub fn input_media_decoder() -> decode.Decoder(InputMedia) {
       use value <- decode.then(input_media_venue_decoder())
       decode.success(InputMediaVenueInputMedia(value))
     }
-    _ -> panic as "Invalid variant for InputMedia"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_media_animation_decoder())
+      decode.failure(InputMediaAnimationInputMedia(value), "InputMedia")
+    }
   }
 }
 
@@ -10820,7 +11010,12 @@ fn rich_text_object_decoder() -> decode.Decoder(RichText) {
       use value <- decode.then(rich_text_reference_link_decoder())
       decode.success(RichTextReferenceLinkRichText(value))
     }
-    _ -> panic as "Invalid variant for RichText"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(rich_text_bold_decoder())
+      decode.failure(RichTextBoldRichText(value), "RichText")
+    }
   }
 }
 
@@ -10831,14 +11026,24 @@ fn maybe_inaccessible_message_message_decoder() {
 
 fn maybe_inaccessible_message_inaccessible_message_decoder() {
   use value <- decode.then(inaccessible_message_decoder())
-  decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
+  case value.date {
+    0 -> decode.success(InaccessibleMessageMaybeInaccessibleMessage(value))
+    _ ->
+      decode.failure(
+        InaccessibleMessageMaybeInaccessibleMessage(value),
+        "InaccessibleMessage",
+      )
+  }
 }
 
 pub fn maybe_inaccessible_message_decoder() -> decode.Decoder(
   MaybeInaccessibleMessage,
 ) {
-  decode.one_of(maybe_inaccessible_message_message_decoder(), [
-    maybe_inaccessible_message_inaccessible_message_decoder(),
+  // An inaccessible message is a Message-shaped object with `date == 0`, so it
+  // also satisfies `message_decoder`. Try it first, otherwise the
+  // `InaccessibleMessage` variant would be unreachable.
+  decode.one_of(maybe_inaccessible_message_inaccessible_message_decoder(), [
+    maybe_inaccessible_message_message_decoder(),
   ])
 }
 
@@ -10976,7 +11181,15 @@ pub fn inline_query_result_decoder() -> decode.Decoder(InlineQueryResult) {
       decode.success(InlineQueryResultVenueInlineQueryResult(value))
     }
 
-    _ -> panic as "Invalid variant for InlineQueryResult"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(inline_query_result_cached_audio_decoder())
+      decode.failure(
+        InlineQueryResultCachedAudioInlineQueryResult(value),
+        "InlineQueryResult",
+      )
+    }
   }
 }
 
@@ -11003,7 +11216,15 @@ pub fn input_message_content_decoder() -> decode.Decoder(InputMessageContent) {
       use value <- decode.then(input_invoice_message_content_decoder())
       decode.success(InputInvoiceMessageContentInputMessageContent(value))
     }
-    _ -> panic as "Invalid variant for InputMessageContent"
+    _ -> {
+      // Unknown discriminator (a newer Bot API variant): fail the
+      // decode instead of taking the caller down.
+      use value <- decode.then(input_text_message_content_decoder())
+      decode.failure(
+        InputTextMessageContentInputMessageContent(value),
+        "InputMessageContent",
+      )
+    }
   }
 }
 

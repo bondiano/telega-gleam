@@ -540,6 +540,8 @@ fn get_message_id(update: Update) -> Option(Int) {
     update.GuestMessageUpdate(message:, ..) -> Some(message.message_id)
     update.SubscriptionUpdate(..) -> None
     update.MessageGenerationStoppedUpdate(..) -> None
+    update.ChatBoostUpdate(..) -> None
+    update.UnknownUpdate(..) -> None
   }
 }
 

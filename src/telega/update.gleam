@@ -13,12 +13,13 @@ import telega/model/decoder.{update_decoder}
 import telega/model/types.{
   type Audio, type BotSubscriptionUpdated, type BusinessConnection,
   type BusinessMessagesDeleted, type CallbackQuery, type ChatBoostRemoved,
-  type ChatJoinRequest, type ChatMemberUpdated, type ChosenInlineResult,
-  type InlineQuery, type ManagedBotUpdated, type Message, type MessageEntity,
-  type MessageGenerationStopped, type MessageReactionCountUpdated,
-  type MessageReactionUpdated, type PaidMediaPurchased, type PhotoSize,
-  type Poll, type PollAnswer, type PreCheckoutQuery, type ShippingQuery,
-  type Update as ModelUpdate, type Video, type Voice, type WebAppData,
+  type ChatBoostUpdated, type ChatJoinRequest, type ChatMemberUpdated,
+  type ChosenInlineResult, type InlineQuery, type ManagedBotUpdated,
+  type Message, type MessageEntity, type MessageGenerationStopped,
+  type MessageReactionCountUpdated, type MessageReactionUpdated,
+  type PaidMediaPurchased, type PhotoSize, type Poll, type PollAnswer,
+  type PreCheckoutQuery, type ShippingQuery, type Update as ModelUpdate,
+  type Video, type Voice, type WebAppData,
   InaccessibleMessageMaybeInaccessibleMessage, MessageMaybeInaccessibleMessage,
 }
 
@@ -197,6 +198,14 @@ pub type Update {
     removed_chat_boost: ChatBoostRemoved,
     raw: ModelUpdate,
   )
+  /// A chat boost was added or changed. The bot must be an administrator in the
+  /// chat to receive these updates.
+  ChatBoostUpdate(
+    from_id: Int,
+    chat_id: Int,
+    chat_boost: ChatBoostUpdated,
+    raw: ModelUpdate,
+  )
   ManagedBotUpdate(
     from_id: Int,
     chat_id: Int,
@@ -227,6 +236,11 @@ pub type Update {
     stopped_message_generation: MessageGenerationStopped,
     raw: ModelUpdate,
   )
+  /// An update this version of the library cannot interpret: a Bot API update
+  /// kind it does not know yet, or one whose payload failed to decode. It is
+  /// delivered like any other update (so the offset still advances and a
+  /// fallback handler can inspect `raw`) instead of taking the poller down.
+  UnknownUpdate(from_id: Int, chat_id: Int, raw: ModelUpdate)
 }
 
 pub type Command {
@@ -267,6 +281,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
     _ if raw_update.edited_message != None -> {
       let assert Some(edited_message) = raw_update.edited_message
       new_edited_message_update(raw_update, edited_message)
+    }
+    _ if raw_update.edited_channel_post != None -> {
+      let assert Some(edited_channel_post) = raw_update.edited_channel_post
+      new_edited_channel_post_update(raw_update, edited_channel_post)
     }
     _ if raw_update.business_connection != None -> {
       let assert Some(business_connection) = raw_update.business_connection
@@ -335,6 +353,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
       let assert Some(chat_join_request) = raw_update.chat_join_request
       new_chat_join_request_update(raw_update, chat_join_request)
     }
+    _ if raw_update.chat_boost != None -> {
+      let assert Some(chat_boost) = raw_update.chat_boost
+      new_chat_boost_update(raw_update, chat_boost)
+    }
     _ if raw_update.removed_chat_boost != None -> {
       let assert Some(removed_chat_boost) = raw_update.removed_chat_boost
       new_removed_chat_boost_update(raw_update, removed_chat_boost)
@@ -363,7 +385,10 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
       let assert Some(message) = raw_update.message
       decode_message_update(raw_update, message)
     }
-    _ -> panic as { "Unknown update: " <> string.inspect(raw_update) }
+    _ -> {
+      log.warning("Unknown update: " <> string.inspect(raw_update))
+      UnknownUpdate(raw: raw_update, from_id: -1, chat_id: -1)
+    }
   }
 }
 
@@ -432,11 +457,13 @@ pub fn raw(update: Update) -> ModelUpdate {
     PollUpdate(raw:, ..) -> raw
     PreCheckoutQueryUpdate(raw:, ..) -> raw
     RemovedChatBoost(raw:, ..) -> raw
+    ChatBoostUpdate(raw:, ..) -> raw
     ShippingQueryUpdate(raw:, ..) -> raw
     ManagedBotUpdate(raw:, ..) -> raw
     GuestMessageUpdate(raw:, ..) -> raw
     SubscriptionUpdate(raw:, ..) -> raw
     MessageGenerationStoppedUpdate(raw:, ..) -> raw
+    UnknownUpdate(raw:, ..) -> raw
   }
 }
 
@@ -558,6 +585,12 @@ pub fn to_string(update: Update) -> String {
       <> int.to_string(removed_chat_boost.chat.id)
       <> " from "
       <> int.to_string(from_id)
+    ChatBoostUpdate(chat_boost:, from_id:, ..) ->
+      "chat boost "
+      <> int.to_string(chat_boost.chat.id)
+      <> " from "
+      <> int.to_string(from_id)
+    UnknownUpdate(raw:, ..) -> "unknown update " <> int.to_string(raw.update_id)
     ShippingQueryUpdate(shipping_query:, from_id:, ..) ->
       "shipping query "
       <> shipping_query.id
@@ -621,10 +654,12 @@ pub fn type_to_string(update: Update) -> String {
     ChatMemberUpdate(..) -> "chat_member"
     ChatJoinRequestUpdate(..) -> "chat_join_request"
     RemovedChatBoost(..) -> "removed_chat_boost"
+    ChatBoostUpdate(..) -> "chat_boost"
     ManagedBotUpdate(..) -> "managed_bot"
     GuestMessageUpdate(..) -> "guest_message"
     SubscriptionUpdate(..) -> "subscription"
     MessageGenerationStoppedUpdate(..) -> "stopped_message_generation"
+    UnknownUpdate(..) -> "unknown"
   }
 }
 
@@ -748,6 +783,18 @@ fn new_edited_message_update(raw: ModelUpdate, edited_message: Message) {
     message: edited_message,
     from_id: get_sender_id(edited_message),
     chat_id: edited_message.chat.id,
+  )
+}
+
+fn new_edited_channel_post_update(
+  raw: ModelUpdate,
+  edited_channel_post: Message,
+) {
+  EditedChannelPostUpdate(
+    raw:,
+    post: edited_channel_post,
+    from_id: get_sender_id(edited_channel_post),
+    chat_id: edited_channel_post.chat.id,
   )
 }
 
@@ -992,6 +1039,15 @@ fn new_chat_join_request_update(
     chat_join_request:,
     from_id: chat_join_request.from.id,
     chat_id: chat_join_request.chat.id,
+  )
+}
+
+fn new_chat_boost_update(raw: ModelUpdate, chat_boost: ChatBoostUpdated) {
+  ChatBoostUpdate(
+    raw:,
+    chat_boost:,
+    from_id: chat_boost.chat.id,
+    chat_id: chat_boost.chat.id,
   )
 }
 

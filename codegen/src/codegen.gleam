@@ -418,7 +418,7 @@ fn generate_union_type(union: Union) -> String {
 fn base_decoder(type_: List(String)) -> String {
   case type_ {
     ["int"] -> "decode.int"
-    ["float"] -> "decode.float"
+    ["float"] -> "lenient_float()"
     ["str"] -> "decode.string"
     ["string"] -> "decode.string"
     ["boolean"] -> "decode.bool"
@@ -428,7 +428,7 @@ fn base_decoder(type_: List(String)) -> String {
     ["file", "str"] -> "file_or_string_decoder()"
     [type_name] -> justin.snake_case(type_name) <> "_decoder()"
     ["array", "int"] -> "decode.list(decode.int)"
-    ["array", "float"] -> "decode.list(decode.float)"
+    ["array", "float"] -> "decode.list(lenient_float())"
     ["array", "string"] -> "decode.list(decode.string)"
     ["array", "bool"] -> "decode.list(decode.bool)"
     ["array", "true"] -> "decode.list(decode.bool)"
@@ -517,9 +517,33 @@ fn generate_union_decoder(union: DecodableUnion) -> String {
   <> variant_field
   <> "  case variant {\n"
   <> string.join(cases, "\n")
-  <> "\n    _ -> panic as \"Invalid variant for "
-  <> union.name
-  <> "\"\n  }\n}\n"
+  <> "\n"
+  <> unknown_variant_fallback(union)
+  <> "\n  }\n}\n"
+}
+
+/// An unknown discriminator must fail the decode, never panic — Telegram adds
+/// union variants between library releases. `decode.failure` needs a value of
+/// the union type as its placeholder, so the first variant's decoder supplies
+/// one; when it fails too, its errors surface instead. Either way the result is
+/// an `Error`, never a crash.
+fn unknown_variant_fallback(union: DecodableUnion) -> String {
+  case union.variants {
+    [] -> "    _ -> decode.failure(todo, \"" <> union.name <> "\")"
+    [first, ..] ->
+      "    _ -> {\n"
+      <> "      // Unknown discriminator (a newer Bot API variant): fail the\n"
+      <> "      // decode instead of taking the caller down.\n"
+      <> "      use value <- decode.then("
+      <> justin.snake_case(first.type_name)
+      <> "_decoder())\n"
+      <> "      decode.failure("
+      <> variant_ctor_name(first.type_name, union.name)
+      <> "(value), \""
+      <> union.name
+      <> "\")\n"
+      <> "    }"
+  }
 }
 
 // --- Encoder generation -----------------------------------------------------
@@ -778,6 +802,7 @@ import gleam/option.{type Option, None}
 const decoder_header = "//// This module contains all decoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/dynamic/decode
+import gleam/int
 import gleam/option.{None}
 
 "
