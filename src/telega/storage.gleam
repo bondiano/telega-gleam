@@ -13,9 +13,12 @@ import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/string
 import telega/bot.{type SessionSettings, SessionSettings}
 import telega/flow/instance
 import telega/flow/types.{type FlowInstance, type FlowStorage, FlowStorage}
+import telega/internal/log
+import telega/telemetry
 
 /// Backend-agnostic key-value store.
 ///
@@ -42,7 +45,10 @@ const flow_prefix = "flow:"
 ///
 /// Sessions are stored under the `session:` key namespace as JSON produced by
 /// `encode`. A decode failure on load is treated as "no session" so the bot
-/// falls back to `default` instead of crashing on a corrupt or migrated value.
+/// falls back to `default` instead of crashing on a corrupt or migrated value —
+/// but it is reported first (`telega.storage.decode_error` telemetry plus an
+/// error log), because the next handler will persist that default over the
+/// value that failed to decode.
 pub fn session_settings_from_storage(
   storage storage: KeyValueStorage(error),
   encode encode: fn(session) -> json.Json,
@@ -62,7 +68,10 @@ pub fn session_settings_from_storage(
         Some(raw) ->
           case json.parse(raw, decoder) {
             Ok(session) -> Ok(Some(session))
-            Error(_) -> Ok(None)
+            Error(err) -> {
+              report_decode_error("session", key, string.inspect(err))
+              Ok(None)
+            }
           }
       }
     },
@@ -90,7 +99,10 @@ pub fn flow_storage_from_storage(
         Some(raw) ->
           case instance.from_json_string(raw) {
             Ok(inst) -> Ok(Some(inst))
-            Error(_) -> Ok(None)
+            Error(err) -> {
+              report_decode_error("flow", id, string.inspect(err))
+              Ok(None)
+            }
           }
       }
     },
@@ -108,10 +120,31 @@ pub fn flow_storage_from_storage(
                   True -> Ok([inst, ..acc])
                   False -> Ok(acc)
                 }
-              Error(_) -> Ok(acc)
+              Error(err) -> {
+                report_decode_error("flow", key, string.inspect(err))
+                Ok(acc)
+              }
             }
         }
       })
     },
   )
+}
+
+/// A stored value that will not decode is not the same as a missing one: the
+/// caller falls back to a default and then persists it *over* the value that
+/// failed. Say so loudly — a schema change is the usual cause.
+fn report_decode_error(kind: String, key: String, reason: String) -> Nil {
+  log.error(
+    "[storage] failed to decode stored "
+    <> kind
+    <> " '"
+    <> key
+    <> "' — falling back to the default, which will overwrite it: "
+    <> reason,
+  )
+  telemetry.execute(["telega", "storage", "decode_error"], [#("count", 1)], [
+    #("kind", telemetry.StringValue(kind)),
+    #("key", telemetry.StringValue(key)),
+  ])
 }

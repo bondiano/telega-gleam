@@ -1,8 +1,10 @@
 //// Instance CRUD, accessors, factories, WaitResult, and serialization.
 
+import gleam/bool
 import gleam/dict
 import gleam/dynamic/decode.{type Decoder}
 import gleam/float
+import gleam/int
 import gleam/json.{type Json}
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -192,6 +194,7 @@ pub fn clear_wait_result(instance: FlowInstance) -> FlowInstance {
 }
 
 /// Convert a FlowInstance to a flat row for database storage
+@deprecated("Lossy: a row drops history, flow_stack and parallel_state, so subflows, `Back` and parallel execution do not survive a restart. Persist `to_json_string` instead.")
 pub fn instance_to_row(instance: FlowInstance) -> FlowInstanceRow {
   FlowInstanceRow(
     id: instance.id,
@@ -209,6 +212,7 @@ pub fn instance_to_row(instance: FlowInstance) -> FlowInstanceRow {
 }
 
 /// Construct a FlowInstance from a flat row
+@deprecated("Lossy: a row drops history, flow_stack and parallel_state, so subflows, `Back` and parallel execution do not survive a restart. Restore with `from_json_string` instead.")
 pub fn instance_from_row(row: FlowInstanceRow) -> FlowInstance {
   FlowInstance(
     id: row.id,
@@ -330,9 +334,17 @@ fn state_decoder() -> Decoder(FlowState) {
   ))
 }
 
+/// Version of the persisted `FlowInstance` shape.
+///
+/// Bump it whenever a change makes an older blob no longer safe to read as-is.
+/// A blob written by a *newer* build fails to decode rather than being read
+/// partially — see `instance_decoder`.
+pub const schema_version = 1
+
 /// Encode a complete `FlowInstance` to JSON.
 pub fn to_json(instance: FlowInstance) -> Json {
   json.object([
+    #("schema_version", json.int(schema_version)),
     #("id", json.string(instance.id)),
     #("flow_name", json.string(instance.flow_name)),
     #("user_id", json.int(instance.user_id)),
@@ -347,7 +359,25 @@ pub fn to_json(instance: FlowInstance) -> Json {
 }
 
 /// Decoder for a complete `FlowInstance`.
+///
+/// A blob without `schema_version` predates the field and is schema 1. A blob
+/// from a newer build fails: reading it with this build's decoder would yield a
+/// half-populated instance that the next save would write back over the user's
+/// real state.
 pub fn instance_decoder() -> Decoder(FlowInstance) {
+  use version <- decode.optional_field("schema_version", 1, decode.int)
+  use <- bool.lazy_guard(when: version > schema_version, return: fn() {
+    decode.failure(
+      new_instance(
+        id: "",
+        flow_name: "",
+        user_id: 0,
+        chat_id: 0,
+        current_step: "",
+      ),
+      "FlowInstance schema v" <> int.to_string(schema_version) <> " or older",
+    )
+  })
   use id <- decode.field("id", decode.string)
   use flow_name <- decode.field("flow_name", decode.string)
   use user_id <- decode.field("user_id", decode.int)

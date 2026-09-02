@@ -132,7 +132,7 @@ pub fn flow_instance_id_test() {
   instance.instance_chat_id(instance) |> should.equal(456)
 }
 
-pub fn instance_to_row_round_trip_test() {
+pub fn instance_json_round_trip_test() {
   let instance =
     instance.new_instance_with_data(
       id: "roundtrip_test",
@@ -143,8 +143,8 @@ pub fn instance_to_row_round_trip_test() {
       data: dict.from_list([#("key1", "val1"), #("key2", "val2")]),
     )
 
-  let row = instance.instance_to_row(instance)
-  let restored = instance.instance_from_row(row)
+  let assert Ok(restored) =
+    instance |> instance.to_json_string |> instance.from_json_string
 
   instance.instance_id(restored) |> should.equal("roundtrip_test")
   instance.instance_flow_name(restored) |> should.equal("my_flow")

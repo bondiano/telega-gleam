@@ -853,106 +853,80 @@ pub type FlowStorage(error) {
 }
 ```
 
-Use `instance_to_row` and `instance_from_row` for serialization:
+Serialize with `to_json_string` / `from_json_string`, which encode the
+**complete** instance:
 
 ```gleam
 import telega/flow/instance
-import telega/flow/types
 
-// Saving: convert to flat row for DB
-let row = instance.instance_to_row(inst)
-// Access row.id, row.flow_name, row.current_step, row.data, etc.
+// Saving: one JSON column (or one key-value entry)
+let payload = instance.to_json_string(inst)
 
-// Loading: reconstruct from DB row
-let inst = instance.instance_from_row(types.FlowInstanceRow(
-  id: db_row.id,
-  flow_name: db_row.flow_name,
-  user_id: db_row.user_id,
-  chat_id: db_row.chat_id,
-  current_step: db_row.current_step,
-  data: parsed_data_dict,
-  step_data: parsed_step_data_dict,
-  wait_token: db_row.wait_token,
-  wait_timeout_at: db_row.wait_timeout_at,
-  created_at: db_row.created_at,
-  updated_at: db_row.updated_at,
-))
-```
-
-#### PostgreSQL Example
-
-A complete database storage implementation from the [restaurant-booking example](../examples/06-restaurant-booking/):
-
-```gleam
-import gleam/json
-import gleam/dict
-import gleam/list
-import gleam/option.{None, Some}
-import gleam/string
-import pog
-import telega/flow/instance
-import telega/flow/types
-
-pub fn create_database_storage(db: pog.Connection) -> types.FlowStorage(String) {
-  types.FlowStorage(
-    save: fn(inst) {
-      let row = instance.instance_to_row(inst)
-
-      let state_data_json =
-        json.object(
-          row.data
-          |> dict.to_list
-          |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
-        )
-
-      let step_data_json = case dict.size(row.step_data) {
-        0 -> json.null()
-        _ ->
-          json.object(
-            row.step_data
-            |> dict.to_list
-            |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) }),
-          )
-      }
-
-      case
-        sql.save_flow_instance(
-          db, row.id, row.flow_name, row.user_id, row.chat_id,
-          row.current_step, state_data_json, step_data_json,
-          option.unwrap(row.wait_token, ""),
-        )
-      {
-        Ok(_) -> Ok(Nil)
-        Error(err) ->
-          Error("Failed to save flow instance: " <> string.inspect(err))
-      }
-    },
-    load: fn(id) {
-      case sql.load_flow_instance(db, id) {
-        Ok(pog.Returned(count: _, rows: [row])) ->
-          Ok(Some(db_row_to_flow_instance(row)))
-        Ok(pog.Returned(count: _, rows: [])) -> Ok(None)
-        _ -> Error("Failed to load flow instance")
-      }
-    },
-    delete: fn(id) {
-      case sql.delete_flow_instance(db, id) {
-        Ok(_) -> Ok(Nil)
-        Error(err) ->
-          Error("Failed to delete flow instance: " <> string.inspect(err))
-      }
-    },
-    list_by_user: fn(user_id, chat_id) {
-      case sql.list_user_instances(db, user_id, chat_id) {
-        Ok(pog.Returned(count: _, rows:)) ->
-          Ok(list.map(rows, db_row_to_flow_instance))
-        Error(err) ->
-          Error("Failed to list instances: " <> string.inspect(err))
-      }
-    },
-  )
+// Loading
+case instance.from_json_string(db_row.payload) {
+  Ok(inst) -> Ok(Some(inst))
+  // Not "no instance": a blob that will not decode is a corrupt or
+  // future-schema value. Log it — the flow is about to start over and
+  // overwrite it.
+  Error(err) -> {
+    log_decode_failure(err)
+    Ok(None)
+  }
 }
 ```
+
+The JSON carries a `schema_version`. A blob written by a newer build of Telega
+fails to decode rather than being read half-populated.
+
+> `instance_to_row` / `instance_from_row` are **deprecated**. A flat row drops
+> `history`, `flow_stack` and `parallel_state`, so `Back`, subflows and
+> parallel execution silently stop working across a restart.
+
+Simpler still: implement the `KeyValueStorage` contract from `telega/storage`
+and let `storage.flow_storage_from_storage` do the serialization — that is what
+the `telega_storage_postgres`, `telega_storage_sqlite` and
+`telega_storage_redis` packages do.
+
+#### Key-value backend example
+
+Most backends are simpler to write once as a `KeyValueStorage`: the bridge then
+gives you both `FlowStorage` **and** `SessionSettings` from the same wiring, and
+handles the JSON itself.
+
+```gleam
+import gleam/option.{type Option, None, Some}
+import telega/storage.{KeyValueStorage}
+
+pub fn my_storage(db) -> KeyValueStorage(MyError) {
+  KeyValueStorage(
+    get: fn(key) { db_select(db, key) },
+    set: fn(key, value) { db_upsert(db, key, value, expires_at: None) },
+    set_with_ttl: fn(key, value, ttl_ms) {
+      db_upsert(db, key, value, expires_at: Some(now_ms() + ttl_ms))
+    },
+    delete: fn(key) { db_delete(db, key) },
+    // Live keys only — expired rows must not be returned.
+    scan: fn(prefix) { db_keys_with_prefix(db, prefix) },
+  )
+}
+
+let flow_store = storage.flow_storage_from_storage(my_storage(db))
+let sessions =
+  storage.session_settings_from_storage(
+    storage: my_storage(db),
+    encode: encode_session,
+    decode: session_decoder(),
+    default: fn() { new_session() },
+  )
+```
+
+This is exactly how `telega_storage_postgres`, `telega_storage_sqlite` and
+`telega_storage_redis` are built — read one of them before writing your own.
+
+Implement `FlowStorage` directly only when the instances must live in a
+purpose-built table with queryable columns. In that case still store the
+payload from `instance.to_json_string` alongside them, and rebuild with
+`instance.from_json_string`.
 
 ## Testing
 
@@ -1028,20 +1002,8 @@ pub fn serialization_round_trip_test() {
     )
     |> instance.store_data("key", "value")
 
-  let row = instance.instance_to_row(inst)
-  let restored = instance.instance_from_row(types.FlowInstanceRow(
-    id: row.id,
-    flow_name: row.flow_name,
-    user_id: row.user_id,
-    chat_id: row.chat_id,
-    current_step: row.current_step,
-    data: row.data,
-    step_data: row.step_data,
-    wait_token: row.wait_token,
-    wait_timeout_at: row.wait_timeout_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  ))
+  let assert Ok(restored) =
+    inst |> instance.to_json_string |> instance.from_json_string
 
   instance.get_data(restored, "key")
   |> should.equal(Some("value"))

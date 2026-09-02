@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/erlang/process
 import gleam/dynamic/decode
 import gleam/json
 import gleam/list
@@ -10,6 +11,7 @@ import telega/flow/instance
 import telega/flow/types.{FlowInstance, FlowStackFrame, FlowState, ParallelState}
 import telega/storage
 import telega/storage/ets
+import telega/telemetry
 
 // ETS KeyValueStorage ---------------------------------------------------------
 
@@ -165,4 +167,77 @@ pub fn flow_bridge_list_by_user_test() {
 
   let assert Ok(none_found) = flow_storage.list_by_user(1, 1)
   none_found |> should.equal([])
+}
+
+// M6 — schema version, and a decode failure that does not look like "absent" --
+
+pub fn flow_instance_json_carries_a_schema_version_test() {
+  sample_instance()
+  |> instance.to_json_string
+  |> string.contains("\"schema_version\":1")
+  |> should.be_true()
+}
+
+pub fn flow_instance_json_reads_a_versionless_blob_test() {
+  // Instances written before the version field existed are schema 1.
+  let legacy =
+    sample_instance()
+    |> instance.to_json_string
+    |> string.replace("\"schema_version\":1,", "")
+
+  let assert Ok(restored) = instance.from_json_string(legacy)
+  restored |> should.equal(sample_instance())
+}
+
+pub fn flow_instance_json_rejects_a_newer_schema_test() {
+  let future =
+    sample_instance()
+    |> instance.to_json_string
+    |> string.replace("\"schema_version\":1", "\"schema_version\":99")
+
+  // A blob this build does not understand must not decode into a
+  // half-populated instance that then overwrites the user's real state.
+  instance.from_json_string(future) |> should.be_error()
+}
+
+pub fn flow_bridge_undecodable_value_is_reported_test() {
+  let assert Ok(kv) = ets.new("test_flow_decode_error")
+  let store = storage.flow_storage_from_storage(kv)
+  let events = attach_storage_forwarder("flow-decode-error")
+
+  let assert Ok(Nil) = kv.set("flow:booking_20_10", "{\"nope\":true}")
+
+  // Still "no instance" for the caller — but loudly, not silently.
+  store.load("booking_20_10") |> should.equal(Ok(None))
+
+  let assert Ok(event) = process.receive(events, 100)
+  event |> should.equal(["telega", "storage", "decode_error"])
+}
+
+pub fn session_bridge_undecodable_value_is_reported_test() {
+  let assert Ok(kv) = ets.new("test_session_decode_error")
+  let settings =
+    storage.session_settings_from_storage(
+      storage: kv,
+      encode: json.int,
+      decode: decode.int,
+      default: fn() { 0 },
+    )
+  let events = attach_storage_forwarder("session-decode-error")
+
+  let assert Ok(Nil) = kv.set("session:1:2", "\"not-an-int\"")
+  settings.get_session("1:2") |> should.equal(Ok(None))
+
+  let assert Ok(event) = process.receive(events, 100)
+  event |> should.equal(["telega", "storage", "decode_error"])
+}
+
+fn attach_storage_forwarder(id: String) -> process.Subject(List(String)) {
+  let subject = process.new_subject()
+  telemetry.attach_many(
+    id:,
+    events: [["telega", "storage", "decode_error"]],
+    handler: fn(name, _measurements, _metadata) { process.send(subject, name) },
+  )
+  subject
 }
