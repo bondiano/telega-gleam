@@ -269,126 +269,122 @@ pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
 
 /// Decode a update from the Telegram API to `Update` instance.
 pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
-  case raw_update {
-    _ if raw_update.callback_query != None -> {
-      let assert Some(callback_query) = raw_update.callback_query
-      new_callback_query_update(raw_update, callback_query)
-    }
-    _ if raw_update.channel_post != None -> {
-      let assert Some(channel_post) = raw_update.channel_post
-      new_channel_post_update(raw_update, channel_post)
-    }
-    _ if raw_update.edited_message != None -> {
-      let assert Some(edited_message) = raw_update.edited_message
-      new_edited_message_update(raw_update, edited_message)
-    }
-    _ if raw_update.edited_channel_post != None -> {
-      let assert Some(edited_channel_post) = raw_update.edited_channel_post
-      new_edited_channel_post_update(raw_update, edited_channel_post)
-    }
-    _ if raw_update.business_connection != None -> {
-      let assert Some(business_connection) = raw_update.business_connection
-      new_business_connection_update(raw_update, business_connection)
-    }
-    _ if raw_update.business_message != None -> {
-      let assert Some(business_message) = raw_update.business_message
-      new_business_message_update(raw_update, business_message)
-    }
-    _ if raw_update.edited_business_message != None -> {
-      let assert Some(edited_business_message) =
-        raw_update.edited_business_message
-      new_edited_business_message_update(raw_update, edited_business_message)
-    }
-    _ if raw_update.deleted_business_messages != None -> {
-      let assert Some(deleted_business_messages) =
-        raw_update.deleted_business_messages
-      new_deleted_business_message_update(raw_update, deleted_business_messages)
-    }
-    _ if raw_update.message_reaction != None -> {
-      let assert Some(message_reaction) = raw_update.message_reaction
-      new_message_reaction_update(raw_update, message_reaction)
-    }
-    _ if raw_update.message_reaction_count != None -> {
-      let assert Some(message_reaction_count) =
-        raw_update.message_reaction_count
-      new_message_reaction_count_update(raw_update, message_reaction_count)
-    }
-    _ if raw_update.inline_query != None -> {
-      let assert Some(inline_query) = raw_update.inline_query
-      new_inline_query_update(raw_update, inline_query)
-    }
-    _ if raw_update.chosen_inline_result != None -> {
-      let assert Some(chosen_inline_result) = raw_update.chosen_inline_result
-      new_chosen_inline_result_update(raw_update, chosen_inline_result)
-    }
-    _ if raw_update.shipping_query != None -> {
-      let assert Some(shipping_query) = raw_update.shipping_query
-      new_shipping_query_update(raw_update, shipping_query)
-    }
-    _ if raw_update.pre_checkout_query != None -> {
-      let assert Some(pre_checkout_query) = raw_update.pre_checkout_query
-      new_pre_checkout_query_update(raw_update, pre_checkout_query)
-    }
-    _ if raw_update.purchased_paid_media != None -> {
-      let assert Some(purchased_paid_media) = raw_update.purchased_paid_media
-      new_paid_media_purchase_update(raw_update, purchased_paid_media)
-    }
-    _ if raw_update.poll != None -> {
-      let assert Some(poll) = raw_update.poll
-      new_poll_update(raw_update, poll)
-    }
-    _ if raw_update.poll_answer != None -> {
-      let assert Some(poll_answer) = raw_update.poll_answer
-      new_poll_answer_update(raw_update, poll_answer)
-    }
-    _ if raw_update.my_chat_member != None -> {
-      let assert Some(my_chat_member) = raw_update.my_chat_member
-      new_my_chat_member_update(raw_update, my_chat_member)
-    }
-    _ if raw_update.chat_member != None -> {
-      let assert Some(chat_member) = raw_update.chat_member
-      new_chat_member_update(raw_update, chat_member)
-    }
-    _ if raw_update.chat_join_request != None -> {
-      let assert Some(chat_join_request) = raw_update.chat_join_request
-      new_chat_join_request_update(raw_update, chat_join_request)
-    }
-    _ if raw_update.chat_boost != None -> {
-      let assert Some(chat_boost) = raw_update.chat_boost
-      new_chat_boost_update(raw_update, chat_boost)
-    }
-    _ if raw_update.removed_chat_boost != None -> {
-      let assert Some(removed_chat_boost) = raw_update.removed_chat_boost
-      new_removed_chat_boost_update(raw_update, removed_chat_boost)
-    }
-    _ if raw_update.managed_bot != None -> {
-      let assert Some(managed_bot) = raw_update.managed_bot
-      new_managed_bot_update(raw_update, managed_bot)
-    }
-    _ if raw_update.guest_message != None -> {
-      let assert Some(guest_message) = raw_update.guest_message
-      new_guest_message_update(raw_update, guest_message)
-    }
-    _ if raw_update.subscription != None -> {
-      let assert Some(subscription) = raw_update.subscription
-      new_subscription_update(raw_update, subscription)
-    }
-    _ if raw_update.stopped_message_generation != None -> {
-      let assert Some(stopped_message_generation) =
-        raw_update.stopped_message_generation
-      new_message_generation_stopped_update(
-        raw_update,
-        stopped_message_generation,
-      )
-    }
-    _ if raw_update.message != None -> {
-      let assert Some(message) = raw_update.message
-      decode_message_update(raw_update, message)
-    }
-    _ -> {
-      log.warning("Unknown update: " <> string.inspect(raw_update))
-      UnknownUpdate(raw: raw_update, from_id: -1, chat_id: -1)
-    }
+  use <- on_field(
+    raw_update.callback_query,
+    raw_update,
+    new_callback_query_update,
+  )
+  use <- on_field(raw_update.channel_post, raw_update, new_channel_post_update)
+  use <- on_field(
+    raw_update.edited_message,
+    raw_update,
+    new_edited_message_update,
+  )
+  use <- on_field(
+    raw_update.edited_channel_post,
+    raw_update,
+    new_edited_channel_post_update,
+  )
+  use <- on_field(
+    raw_update.business_connection,
+    raw_update,
+    new_business_connection_update,
+  )
+  use <- on_field(
+    raw_update.business_message,
+    raw_update,
+    new_business_message_update,
+  )
+  use <- on_field(
+    raw_update.edited_business_message,
+    raw_update,
+    new_edited_business_message_update,
+  )
+  use <- on_field(
+    raw_update.deleted_business_messages,
+    raw_update,
+    new_deleted_business_message_update,
+  )
+  use <- on_field(
+    raw_update.message_reaction,
+    raw_update,
+    new_message_reaction_update,
+  )
+  use <- on_field(
+    raw_update.message_reaction_count,
+    raw_update,
+    new_message_reaction_count_update,
+  )
+  use <- on_field(raw_update.inline_query, raw_update, new_inline_query_update)
+  use <- on_field(
+    raw_update.chosen_inline_result,
+    raw_update,
+    new_chosen_inline_result_update,
+  )
+  use <- on_field(
+    raw_update.shipping_query,
+    raw_update,
+    new_shipping_query_update,
+  )
+  use <- on_field(
+    raw_update.pre_checkout_query,
+    raw_update,
+    new_pre_checkout_query_update,
+  )
+  use <- on_field(
+    raw_update.purchased_paid_media,
+    raw_update,
+    new_paid_media_purchase_update,
+  )
+  use <- on_field(raw_update.poll, raw_update, new_poll_update)
+  use <- on_field(raw_update.poll_answer, raw_update, new_poll_answer_update)
+  use <- on_field(
+    raw_update.my_chat_member,
+    raw_update,
+    new_my_chat_member_update,
+  )
+  use <- on_field(raw_update.chat_member, raw_update, new_chat_member_update)
+  use <- on_field(
+    raw_update.chat_join_request,
+    raw_update,
+    new_chat_join_request_update,
+  )
+  use <- on_field(raw_update.chat_boost, raw_update, new_chat_boost_update)
+  use <- on_field(
+    raw_update.removed_chat_boost,
+    raw_update,
+    new_removed_chat_boost_update,
+  )
+  use <- on_field(raw_update.managed_bot, raw_update, new_managed_bot_update)
+  use <- on_field(
+    raw_update.guest_message,
+    raw_update,
+    new_guest_message_update,
+  )
+  use <- on_field(raw_update.subscription, raw_update, new_subscription_update)
+  use <- on_field(
+    raw_update.stopped_message_generation,
+    raw_update,
+    new_message_generation_stopped_update,
+  )
+  use <- on_field(raw_update.message, raw_update, decode_message_update)
+
+  log.warning("Unknown update: " <> string.inspect(raw_update))
+  UnknownUpdate(raw: raw_update, from_id: -1, chat_id: -1)
+}
+
+/// Dispatch on the first update field Telegram filled in. The value comes out
+/// of the same `case` that tests it, so the chain is total by construction —
+/// no guard to keep in sync with an assertion.
+fn on_field(
+  field: Option(field),
+  raw_update: ModelUpdate,
+  build: fn(ModelUpdate, field) -> Update,
+  otherwise: fn() -> Update,
+) -> Update {
+  case field {
+    Some(value) -> build(raw_update, value)
+    None -> otherwise()
   }
 }
 

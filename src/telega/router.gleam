@@ -1390,54 +1390,12 @@ pub fn merge(
   first: Router(session, error, dependencies),
   second: Router(session, error, dependencies),
 ) -> Router(session, error, dependencies) {
-  // Convert both routers to flat representation for merging
-  let first_flat = to_flat_router(first)
-  let second_flat = to_flat_router(second)
+  let first = flatten(first)
+  let second = flatten(second)
 
-  let assert Router(
-    commands: first_commands,
-    command_descriptions: first_descriptions,
-    callbacks: first_callbacks,
-    routes: first_routes,
-    fallback: first_fallback,
-    middleware: first_middleware,
-    catch_handler: first_catch_handler,
-    scope_predicate: first_scope,
-    name: first_name,
-  ) = first_flat
-
-  let assert Router(
-    commands: second_commands,
-    command_descriptions: second_descriptions,
-    callbacks: second_callbacks,
-    routes: second_routes,
-    fallback: second_fallback,
-    middleware: second_middleware,
-    catch_handler: second_catch_handler,
-    scope_predicate: second_scope,
-    name: second_name,
-  ) = second_flat
-
-  let merged_commands = merge_keeping_first(second_commands, first_commands)
-  let merged_descriptions =
-    merge_keeping_first(second_descriptions, first_descriptions)
-  let merged_callbacks = merge_keeping_first(second_callbacks, first_callbacks)
-
-  Router(
-    commands: merged_commands,
-    command_descriptions: merged_descriptions,
-    callbacks: merged_callbacks,
-    routes: list.append(first_routes, second_routes),
-    fallback: option.or(first_fallback, second_fallback),
-    middleware: list.append(first_middleware, second_middleware),
-    catch_handler: option.or(first_catch_handler, second_catch_handler),
-    // A merged router answers for both, so it is in scope when either is.
-    scope_predicate: case first_scope, second_scope {
-      None, other | other, None -> other
-      Some(first), Some(second) -> Some(fn(u) { first(u) || second(u) })
-    },
-    name: first_name <> "+" <> second_name,
-  )
+  // A merged router answers for both, so it carries both names.
+  merge_flat([first, second], first.name <> "+" <> second.name)
+  |> unflatten
 }
 
 /// Merge `incoming` into `base`, keeping `base`'s value on key conflicts.
@@ -1506,82 +1464,116 @@ fn get_router_name(router: Router(session, error, dependencies)) -> String {
   }
 }
 
-/// Convert any router (including ComposedRouter) to a flat Router with all routes merged
-fn to_flat_router(
+/// The fields every router reduces to. `ComposedRouter` carries none of its
+/// own, so flattening folds its children into one of these — and callers then
+/// read plain fields instead of re-matching a sum type that, as far as the
+/// type checker is concerned, could still be composed.
+type FlatRouter(session, error, dependencies) {
+  FlatRouter(
+    commands: Dict(String, Handler(session, error, dependencies)),
+    command_descriptions: Dict(String, String),
+    callbacks: Dict(String, Handler(session, error, dependencies)),
+    routes: List(Route(session, error, dependencies)),
+    fallback: Option(Handler(session, error, dependencies)),
+    middleware: List(Middleware(session, error, dependencies)),
+    catch_handler: Option(
+      fn(error) -> Result(Context(session, error, dependencies), error),
+    ),
+    scope_predicate: Option(fn(Update) -> Bool),
+    name: String,
+  )
+}
+
+/// Flatten any router (composed or not) into its merged fields.
+fn flatten(
   router: Router(session, error, dependencies),
-) -> Router(session, error, dependencies) {
+) -> FlatRouter(session, error, dependencies) {
   case router {
-    Router(..) -> router
-    ComposedRouter(composes:, name:) -> {
-      // Flatten all routers in the list
-      let flattened = list.map(composes, to_flat_router)
-      merge_routers(flattened, name)
+    Router(
+      commands:,
+      command_descriptions:,
+      callbacks:,
+      routes:,
+      fallback:,
+      middleware:,
+      catch_handler:,
+      scope_predicate:,
+      name:,
+    ) ->
+      FlatRouter(
+        commands:,
+        command_descriptions:,
+        callbacks:,
+        routes:,
+        fallback:,
+        middleware:,
+        catch_handler:,
+        scope_predicate:,
+        name:,
+      )
+    ComposedRouter(composes:, name:) ->
+      composes
+      |> list.map(flatten)
+      |> merge_flat(name)
+  }
+}
+
+fn unflatten(
+  flat: FlatRouter(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  Router(
+    commands: flat.commands,
+    command_descriptions: flat.command_descriptions,
+    callbacks: flat.callbacks,
+    routes: flat.routes,
+    fallback: flat.fallback,
+    middleware: flat.middleware,
+    catch_handler: flat.catch_handler,
+    scope_predicate: flat.scope_predicate,
+    name: flat.name,
+  )
+}
+
+/// Merge already-flattened routers into one, earlier routers winning conflicts.
+fn merge_flat(
+  routers: List(FlatRouter(session, error, dependencies)),
+  name: String,
+) -> FlatRouter(session, error, dependencies) {
+  case routers {
+    [] -> flatten(new(name))
+    [router] -> FlatRouter(..router, name:)
+    [first, ..rest] -> {
+      let rest = merge_flat(rest, name)
+
+      FlatRouter(
+        commands: merge_keeping_first(rest.commands, first.commands),
+        command_descriptions: merge_keeping_first(
+          rest.command_descriptions,
+          first.command_descriptions,
+        ),
+        callbacks: merge_keeping_first(rest.callbacks, first.callbacks),
+        routes: list.append(first.routes, rest.routes),
+        fallback: option.or(first.fallback, rest.fallback),
+        middleware: list.append(first.middleware, rest.middleware),
+        catch_handler: option.or(first.catch_handler, rest.catch_handler),
+        scope_predicate: merge_scopes(
+          first.scope_predicate,
+          rest.scope_predicate,
+        ),
+        name:,
+      )
     }
   }
 }
 
-/// Merge a list of routers into a single flat router
-fn merge_routers(
-  routers: List(Router(session, error, dependencies)),
-  name: String,
-) -> Router(session, error, dependencies) {
-  case routers {
-    [] -> new(name)
-    [router] -> {
-      case router {
-        Router(..) as router -> Router(..router, name: name)
-        ComposedRouter(..) -> router
-        // Should not happen after flattening
-      }
-    }
-    [first, ..rest] -> {
-      let merged_rest = merge_routers(rest, name)
-
-      let assert Router(
-        commands: first_commands,
-        command_descriptions: first_descriptions,
-        callbacks: first_callbacks,
-        routes: first_routes,
-        fallback: first_fallback,
-        middleware: first_middleware,
-        catch_handler: first_catch_handler,
-        scope_predicate: first_scope,
-        ..,
-      ) = first
-
-      let assert Router(
-        commands: rest_commands,
-        command_descriptions: rest_descriptions,
-        callbacks: rest_callbacks,
-        routes: rest_routes,
-        fallback: rest_fallback,
-        middleware: rest_middleware,
-        catch_handler: rest_catch_handler,
-        scope_predicate: rest_scope,
-        ..,
-      ) = merged_rest
-
-      let merged_commands = merge_keeping_first(rest_commands, first_commands)
-      let merged_descriptions =
-        merge_keeping_first(rest_descriptions, first_descriptions)
-      let merged_callbacks =
-        merge_keeping_first(rest_callbacks, first_callbacks)
-
-      Router(
-        commands: merged_commands,
-        command_descriptions: merged_descriptions,
-        callbacks: merged_callbacks,
-        routes: list.append(first_routes, rest_routes),
-        fallback: option.or(first_fallback, rest_fallback),
-        middleware: list.append(first_middleware, rest_middleware),
-        catch_handler: option.or(first_catch_handler, rest_catch_handler),
-        scope_predicate: case first_scope, rest_scope {
-          None, other | other, None -> other
-          Some(first), Some(rest) -> Some(fn(u) { first(u) || rest(u) })
-        },
-        name: name,
-      )
-    }
+/// A merged router is in scope when either side is; unscoped stays unscoped.
+fn merge_scopes(
+  first: Option(fn(Update) -> Bool),
+  second: Option(fn(Update) -> Bool),
+) -> Option(fn(Update) -> Bool) {
+  case first, second {
+    None, other | other, None -> other
+    Some(first), Some(second) -> Some(fn(u) { first(u) || second(u) })
   }
 }
 
@@ -1594,9 +1586,7 @@ fn merge_routers(
 pub fn registered_commands(
   router: Router(session, error, dependencies),
 ) -> List(#(String, String)) {
-  let assert Router(command_descriptions:, ..) = to_flat_router(router)
-
-  command_descriptions
+  flatten(router).command_descriptions
   |> dict.to_list
   |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
 }
@@ -1613,8 +1603,8 @@ pub fn registered_commands(
 pub fn allowed_updates(
   router: Router(session, error, dependencies),
 ) -> List(String) {
-  let assert Router(commands:, callbacks:, routes:, fallback:, ..) =
-    to_flat_router(router)
+  let FlatRouter(commands:, callbacks:, routes:, fallback:, ..) =
+    flatten(router)
 
   let has_wildcard =
     option.is_some(fallback)

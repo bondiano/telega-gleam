@@ -40,6 +40,20 @@ tasks:
     desc: Show what the last codegen run changed in the model layer
     cmd: git --no-pager diff --stat -- src/telega/model
 
+  lint:totality:
+    desc: >
+      Guard the decode boundary: no `panic` and no `let assert` in
+      `update.gleam` or the generated model layer. A malformed update must
+      decode to `UnknownUpdate`, never take the poller down.
+    cmd: |
+      set -u
+      if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/; then
+        echo ""
+        echo "Totality lint failed: rewrite the matches above as a total 'case'."
+        exit 1
+      fi
+      echo "Totality lint passed."
+
   test:
     desc: Run tests in root project
     cmd: gleam test

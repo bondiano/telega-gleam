@@ -211,8 +211,18 @@ pub fn fetch_multipart(
       ))
   })
 
-  let assert TelegramApiMultipartRequest(url:, body:, method:, content_type:) =
-    api_request
+  // A transformer may hand back a different request kind; the bits client has
+  // no binary body to send then, so refuse instead of panicking.
+  use #(url, body, method, content_type) <- result.try(case api_request {
+    TelegramApiMultipartRequest(url:, body:, method:, content_type:) ->
+      Ok(#(url, body, method, content_type))
+    TelegramApiPostRequest(..) | TelegramApiGetRequest(..) ->
+      Error(error.FetchError(
+        "A transformer replaced the multipart upload for "
+        <> method
+        <> " with a non-multipart request; uploads must stay multipart.",
+      ))
+  })
 
   use req <- result.try(
     request.to(url)

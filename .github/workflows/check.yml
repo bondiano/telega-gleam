@@ -27,6 +27,14 @@ jobs:
       - name: Check
         run: gleam check
 
+      - name: Totality Lint
+        run: |
+          if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/; then
+            echo ""
+            echo "Totality lint failed: rewrite the matches above as a total 'case'."
+            exit 1
+          fi
+
       - name: Test
         run: GLEAM_LOG=trace gleam test
 
