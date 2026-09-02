@@ -42,8 +42,10 @@
 //// conversations: the chat instance suspends its main handler and waits for a
 //// specific update type. See `telega.wait_text`, `telega.wait_command`, etc.
 
-import gleam/erlang/process.{type Subject}
+import gleam/dict.{type Dict}
+import gleam/erlang/process.{type Pid, type Subject}
 import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/order
 import gleam/otp/actor
@@ -105,6 +107,21 @@ pub opaque type Bot(session, error, dependencies) {
     drain_count: Int,
     // Subject to notify once the drain completes (in_flight reaches zero).
     drain_waiter: Option(Subject(Int)),
+    // Chat instances this bot has dispatched to, keyed by their pid. Each entry
+    // monitors the instance and remembers the callers still waiting on it, so a
+    // crashed instance can be answered for and evicted from the registry rather
+    // than leaving the poller (or a webhook request) blocked forever.
+    instances: Dict(Pid, InstanceWatch),
+  )
+}
+
+/// A monitored chat instance and the update callers it has not answered yet.
+type InstanceWatch {
+  InstanceWatch(
+    key: String,
+    monitor: process.Monitor,
+    /// Reply subjects of dispatched-but-unfinished updates, oldest first.
+    pending: List(Subject(Bool)),
   )
 }
 
@@ -177,8 +194,12 @@ pub opaque type BotMessage {
     envelope: Option(Envelope),
   )
   // Sent by a chat instance once it finishes handling one update (success or
-  // handled error). Used to keep the in-flight counter accurate for draining.
-  UpdateHandledBotMessage
+  // handled error). Used to keep the in-flight counter accurate for draining
+  // and to forget the caller it has just answered.
+  UpdateHandledBotMessage(pid: Pid)
+  // A monitored chat instance exited. Any update it was still handling is
+  // answered here — nothing else would ever answer it.
+  ChatInstanceDownBotMessage(down: process.Down)
   // Begin a graceful drain: stop accepting new updates and reply on
   // `reply_with` with the number of drained updates once all in-flight work
   // completes.
@@ -211,6 +232,13 @@ pub fn start(
 ) -> actor.StartResult(BotSubject) {
   let builder =
     actor.new_with_initialiser(bot_init_timeout, fn(self) {
+      // Chat instances are monitored, not linked: their `DOWN` messages arrive
+      // as `ChatInstanceDownBotMessage` alongside the bot's own messages.
+      let selector =
+        process.new_selector()
+        |> process.select(self)
+        |> process.select_monitors(ChatInstanceDownBotMessage)
+
       Bot(
         self:,
         config:,
@@ -227,8 +255,10 @@ pub fn start(
         draining: False,
         drain_count: 0,
         drain_waiter: None,
+        instances: dict.new(),
       )
       |> actor.initialised
+      |> actor.selecting(selector)
       |> actor.returning(self)
       |> Ok
     })
@@ -278,28 +308,22 @@ fn bot_loop(
               case
                 handle_update_bot_message(bot:, update:, reply_with:, envelope:)
               {
-                Ok(_) ->
+                Ok(bot) ->
                   actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
                 Error(error) -> {
                   log.error_d("Error in handler: ", error)
+                  // The update never reached an instance, so nothing else will
+                  // ever answer the caller.
+                  process.send(reply_with, False)
                   actor.stop()
                 }
               }
           }
       }
-    UpdateHandledBotMessage -> {
-      let in_flight = int.max(0, bot.in_flight - 1)
-      case bot.draining && in_flight == 0 {
-        True -> {
-          case bot.drain_waiter {
-            Some(waiter) -> process.send(waiter, bot.drain_count)
-            None -> Nil
-          }
-          actor.continue(Bot(..bot, in_flight: 0, drain_waiter: None))
-        }
-        False -> actor.continue(Bot(..bot, in_flight:))
-      }
-    }
+    UpdateHandledBotMessage(pid:) ->
+      Bot(..bot, instances: forget_answered(bot.instances, pid))
+      |> settle_in_flight(finished: 1)
+    ChatInstanceDownBotMessage(down:) -> handle_instance_down(bot, down)
     StartDrainBotMessage(reply_with:) -> {
       let bot =
         Bot(..bot, accepting: False, draining: True, drain_count: bot.in_flight)
@@ -385,22 +409,100 @@ fn do_run_pre_handlers(
   }
 }
 
+/// One update finished: forget the caller the instance has just answered.
+fn forget_answered(
+  instances: Dict(Pid, InstanceWatch),
+  pid: Pid,
+) -> Dict(Pid, InstanceWatch) {
+  case dict.get(instances, pid) {
+    Ok(InstanceWatch(pending: [_answered, ..rest], ..) as watch) ->
+      dict.insert(instances, pid, InstanceWatch(..watch, pending: rest))
+    _ -> instances
+  }
+}
+
+/// Account for `finished` updates leaving the in-flight set, completing a
+/// pending drain once nothing is left.
+fn settle_in_flight(
+  bot: Bot(session, error, dependencies),
+  finished finished: Int,
+) -> actor.Next(Bot(session, error, dependencies), BotMessage) {
+  let in_flight = int.max(0, bot.in_flight - finished)
+  case bot.draining && in_flight == 0 {
+    True -> {
+      case bot.drain_waiter {
+        Some(waiter) -> process.send(waiter, bot.drain_count)
+        None -> Nil
+      }
+      actor.continue(Bot(..bot, in_flight: 0, drain_waiter: None))
+    }
+    False -> actor.continue(Bot(..bot, in_flight:))
+  }
+}
+
+/// A chat instance exited — through a crash, or through its own `actor.stop`.
+///
+/// Whatever it was still handling will never be answered by anyone else, so the
+/// bot answers for it.
+fn handle_instance_down(
+  bot: Bot(session, error, dependencies),
+  down: process.Down,
+) -> actor.Next(Bot(session, error, dependencies), BotMessage) {
+  case down {
+    process.ProcessDown(pid:, ..) ->
+      case dict.get(bot.instances, pid) {
+        Error(Nil) -> actor.continue(bot)
+        Ok(watch) -> {
+          list.each(watch.pending, process.send(_, False))
+          telemetry.execute(
+            ["telega", "chat_instance", "down"],
+            [#("unanswered", list.length(watch.pending))],
+            [#("key", telemetry.StringValue(watch.key))],
+          )
+          Bot(..bot, instances: dict.delete(bot.instances, pid))
+          |> settle_in_flight(finished: list.length(watch.pending))
+        }
+      }
+    process.PortDown(..) -> actor.continue(bot)
+  }
+}
+
+/// Start monitoring the instance (once) and remember the caller waiting on it.
+fn watch_instance(
+  bot: Bot(session, error, dependencies),
+  key key: String,
+  chat_subject chat_subject: ChatInstanceSubject(session, error, dependencies),
+  reply_with reply_with: Subject(Bool),
+) -> Bot(session, error, dependencies) {
+  case process.subject_owner(chat_subject) {
+    Error(Nil) -> bot
+    Ok(pid) -> {
+      let watch = case dict.get(bot.instances, pid) {
+        Ok(watch) ->
+          InstanceWatch(
+            ..watch,
+            pending: list.append(watch.pending, [reply_with]),
+          )
+        Error(Nil) ->
+          InstanceWatch(key:, monitor: process.monitor(pid), pending: [
+            reply_with,
+          ])
+      }
+      Bot(..bot, instances: dict.insert(bot.instances, pid, watch))
+    }
+  }
+}
+
 fn handle_update_bot_message(
   bot bot: Bot(session, error, dependencies),
   update update,
   reply_with reply_with,
   envelope envelope,
-) {
+) -> Result(Bot(session, error, dependencies), error.TelegaError) {
   let key = build_session_key(update)
 
-  case registry.get(bot.registry, key:) {
-    Some(chat_subject) -> {
-      actor.send(
-        chat_subject,
-        HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
-      )
-      |> Ok
-    }
+  use chat_subject <- result.try(case registry.get(bot.registry, key:) {
+    Some(chat_subject) -> Ok(chat_subject)
     None -> {
       telemetry.execute(["telega", "chat_instance", "spawn"], [#("count", 1)], [
         #("chat_id", telemetry.IntValue(update.chat_id)),
@@ -418,18 +520,18 @@ fn handle_update_bot_message(
           registry: bot.registry,
           bot_subject: bot.self,
         )
-      use started <- result.try(
-        fsup.start_child(bot.chat_factory, args)
-        |> result.map_error(error.ChatInstanceStartError),
-      )
       // No need to register here — start_chat_instance self-registers
-      actor.send(
-        started.data,
-        HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
-      )
-      |> Ok
+      fsup.start_child(bot.chat_factory, args)
+      |> result.map(fn(started) { started.data })
+      |> result.map_error(error.ChatInstanceStartError)
     }
-  }
+  })
+
+  actor.send(
+    chat_subject,
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
+  )
+  Ok(watch_instance(bot, key:, chat_subject:, reply_with:))
 }
 
 // Chat Instance --------------------------------------------------------------------
@@ -608,7 +710,7 @@ fn do_handle_new_chat_instance_message(
                 }
                 Error(e) -> {
                   log.error_d("Error in session persistence: ", e)
-                  stop_chat_instance(chat, "session_persist_failed")
+                  stop_chat_instance(chat, reply_with, "session_persist_failed")
                 }
               }
             }
@@ -622,7 +724,7 @@ fn do_handle_new_chat_instance_message(
             }
             Error(e) -> {
               log.error_d("Error in catch handler: ", e)
-              stop_chat_instance(chat, "catch_handler_failed")
+              stop_chat_instance(chat, reply_with, "catch_handler_failed")
             }
           }
         }
@@ -638,13 +740,16 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
   ]
 }
 
+/// Give up on this chat instance.
+///
+/// The update in flight is answered (`False`) before stopping: the caller is
+/// blocked on that reply and nothing else would ever send it.
 fn stop_chat_instance(
   chat: ChatInstance(session, error, dependencies),
+  reply_with: Subject(Bool),
   reason: String,
 ) {
-  // The update that was being handled is finished (the instance is going away),
-  // so release its slot in the bot's in-flight counter before stopping.
-  process.send(chat.bot_subject, UpdateHandledBotMessage)
+  ack(chat, reply_with, False)
   telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
     #("reason", telemetry.StringValue(reason)),
@@ -660,7 +765,7 @@ fn ack(
   value: Bool,
 ) -> Nil {
   process.send(reply_with, value)
-  process.send(chat.bot_subject, UpdateHandledBotMessage)
+  process.send(chat.bot_subject, UpdateHandledBotMessage(process.self()))
 }
 
 fn do_handle_continuation(
@@ -693,7 +798,7 @@ fn do_handle_continuation(
                 "Error in session persistence after continuation: ",
                 e,
               )
-              stop_chat_instance(chat, "session_persist_failed")
+              stop_chat_instance(chat, reply_with, "session_persist_failed")
             }
           }
         }
@@ -707,7 +812,7 @@ fn do_handle_continuation(
         }
         Error(e) -> {
           log.error_d("Error in catch handler: ", e)
-          stop_chat_instance(chat, "catch_handler_failed")
+          stop_chat_instance(chat, reply_with, "catch_handler_failed")
         }
       }
     }
@@ -736,7 +841,11 @@ fn do_handle_continuation(
                         "Error in session persistence after handle_else: ",
                         e,
                       )
-                      stop_chat_instance(chat, "session_persist_failed")
+                      stop_chat_instance(
+                        chat,
+                        reply_with,
+                        "session_persist_failed",
+                      )
                     }
                   }
                 }
@@ -750,7 +859,7 @@ fn do_handle_continuation(
                 }
                 Error(e) -> {
                   log.error_d("Error in catch else handler: ", e)
-                  stop_chat_instance(chat, "catch_handler_failed")
+                  stop_chat_instance(chat, reply_with, "catch_handler_failed")
                 }
               }
             }
@@ -863,10 +972,53 @@ pub fn get_session(
   |> session_settings.get_session
 }
 
+/// How long a caller waits for an update to be handled before it stops
+/// blocking on the answer.
+///
+/// A chat instance that dies is answered straight away (the bot monitors it),
+/// and every handled-error path answers too; this is the last-resort backstop
+/// for a handler that is alive but wedged. The handler keeps running — only the
+/// caller gives up waiting, and reports the update as unhandled.
+pub const update_dispatch_timeout = 60_000
+
 // User should use methods from `telega` module.
 @internal
-pub fn handle_update(bot_subject bot_subject, update update) {
-  process.call_forever(bot_subject, HandleUpdateBotMessage(update, _, None))
+pub fn handle_update(bot_subject bot_subject, update update) -> Bool {
+  handle_update_within(bot_subject:, update:, timeout: update_dispatch_timeout)
+}
+
+/// Dispatch an update and wait up to `timeout` ms for it to be handled.
+/// Returns `False` if the bot is gone, rejects the update, or does not answer
+/// in time. Users should use methods from the `telega` module.
+@internal
+pub fn handle_update_within(
+  bot_subject bot_subject: BotSubject,
+  update update: Update,
+  timeout timeout: Int,
+) -> Bool {
+  case process.subject_owner(bot_subject) {
+    Error(Nil) -> False
+    Ok(bot_pid) -> {
+      let reply_with = process.new_subject()
+      let monitor = process.monitor(bot_pid)
+      let selector =
+        process.new_selector()
+        |> process.select(reply_with)
+        |> process.select_specific_monitor(monitor, fn(_down) { False })
+
+      process.send(
+        bot_subject,
+        HandleUpdateBotMessage(update:, reply_with:, envelope: None),
+      )
+
+      let handled =
+        process.selector_receive(from: selector, within: timeout)
+        |> result.unwrap(False)
+
+      process.demonitor_process(monitor)
+      handled
+    }
+  }
 }
 
 // Dispatch an update with a webhook-reply envelope without blocking. The
