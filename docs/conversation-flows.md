@@ -530,6 +530,16 @@ fn payment_step(ctx, inst) {
 }
 ```
 
+### What happens without `on_error`
+
+Every failure — a step handler, a hook, a storage save, a step name that is not
+registered — is logged and emitted as a `["telega", "flow", "error"]` telemetry
+event with `flow_name`, `step` and `reason`.
+
+With no `on_error` handler the error is then returned to the caller, so it
+reaches the bot's catch handler like any other handler error. An `on_error`
+handler that itself fails propagates the same way — neither is swallowed.
+
 ## Lifecycle Hooks
 
 ### Flow Hooks

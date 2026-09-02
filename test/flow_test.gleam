@@ -1554,7 +1554,9 @@ pub fn engine_complete_deletes_before_failing_on_complete_test() {
     )
   let ctx = bot.Context(..ctx, config: context.config_with_client(client))
 
-  let assert Ok(_) =
+  // Without an `on_error` handler the failure reaches the caller instead of
+  // being swallowed.
+  let assert Error(_) =
     engine.start_or_resume(
       flow,
       ctx,
@@ -1568,6 +1570,67 @@ pub fn engine_complete_deletes_before_failing_on_complete_test() {
   // step's side effects.
   let flow_id = storage.generate_id(1, 2, "complete_del")
   let assert Ok(None) = ets.load(flow_id)
+}
+
+pub fn engine_step_error_reaches_the_caller_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("h9_no_handler", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(_ctx, _inst) {
+      Error(error.ActorError("step boom"))
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  // Used to be `Ok(ctx)`: the error was dropped with no log, no telemetry and
+  // no way for the bot's catch handler to see it.
+  engine.start_or_resume(
+    flow,
+    ctx,
+    user_id: 1,
+    chat_id: 2,
+    initial_data: dict.new(),
+  )
+  |> should.equal(Error(error.ActorError("step boom")))
+}
+
+pub fn engine_failing_on_error_handler_is_not_swallowed_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("h9_handler", ets, test_step_to_string, string_to_test_step)
+    |> builder.on_error(fn(_ctx, _inst, _err) {
+      Error(error.ActorError("on_error boom"))
+    })
+    |> builder.add_step(Start, fn(_ctx, _inst) {
+      Error(error.ActorError("step boom"))
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  engine.start_or_resume(
+    flow,
+    ctx,
+    user_id: 1,
+    chat_id: 2,
+    initial_data: dict.new(),
+  )
+  |> should.equal(Error(error.ActorError("on_error boom")))
 }
 
 // ============================================================================

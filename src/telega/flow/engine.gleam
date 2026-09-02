@@ -17,6 +17,7 @@ import telega/flow/types.{
   ParallelState, ReturnFromSubflow, StartParallel, Wait, WaitCallback,
   WaitCallbackWithTimeout, WaitWithTimeout,
 }
+import telega/internal/log
 import telega/internal/utils
 import telega/telemetry
 
@@ -50,7 +51,7 @@ pub fn start_or_resume(
     Ok(Some(existing_instance)) ->
       case instance.is_expired(existing_instance, flow.ttl_ms) {
         True -> {
-          let _ = flow.storage.delete(existing_instance.id)
+          delete_instance(flow, existing_instance.id)
           let initial_step_name = flow.step_to_string(flow.initial_step)
           let new_instance =
             instance.new_instance_with_data(
@@ -228,7 +229,13 @@ pub fn execute_step(
   }
 }
 
-/// Handle an error in a flow
+/// Handle an error in a flow.
+///
+/// Every failure — a step handler, a hook, a save, an unknown step — is logged
+/// and emitted as `["telega", "flow", "error"]`. Without an `on_error` handler
+/// the error is propagated to the bot's catch handler instead of being turned
+/// into a successful `Ok(ctx)`, which used to leave a flow stuck with nothing
+/// written anywhere.
 @internal
 pub fn handle_error(
   flow: Flow(step_type, session, error, dependencies),
@@ -236,14 +243,53 @@ pub fn handle_error(
   instance: FlowInstance,
   error: Option(error),
 ) -> Result(Context(session, error, dependencies), error) {
+  let reason = case error {
+    Some(err) -> string.inspect(err)
+    None -> "unknown step '" <> instance.state.current_step <> "'"
+  }
+
+  log.error(
+    "[flow:"
+    <> flow.name
+    <> "] step '"
+    <> instance.state.current_step
+    <> "' failed: "
+    <> reason,
+  )
+  telemetry.execute(["telega", "flow", "error"], [#("count", 1)], [
+    #("flow_name", telemetry.StringValue(instance.flow_name)),
+    #("step", telemetry.StringValue(instance.state.current_step)),
+    #("reason", telemetry.StringValue(reason)),
+  ])
+
   case flow.on_error {
-    Some(handler) -> {
-      case handler(ctx, instance, error) {
-        Ok(new_ctx) -> Ok(new_ctx)
-        Error(_) -> Ok(ctx)
+    Some(handler) -> handler(ctx, instance, error)
+    None ->
+      case error {
+        Some(err) -> Error(err)
+        // Nothing to propagate: an unknown step is a build-time mistake, not a
+        // user error, and the log line above is the report.
+        None -> Ok(ctx)
       }
-    }
-    None -> Ok(ctx)
+  }
+}
+
+/// Delete an instance, reporting a storage failure instead of dropping it.
+fn delete_instance(
+  flow: Flow(step_type, session, error, dependencies),
+  id: String,
+) -> Nil {
+  case flow.storage.delete(id) {
+    Ok(_) -> Nil
+    Error(err) ->
+      log.error(
+        "[flow:"
+        <> flow.name
+        <> "] failed to delete instance '"
+        <> id
+        <> "': "
+        <> string.inspect(err),
+      )
   }
 }
 
@@ -533,7 +579,7 @@ fn process_action(
       // a failing on_complete/exit hook must not resurrect the instance —
       // otherwise side effects already performed by the completing step could
       // be repeated on the next event.
-      let _ = flow.storage.delete(instance.id)
+      delete_instance(flow, instance.id)
       case flow.on_complete {
         Some(handler) -> {
           case handler(ctx, completed_instance) {
@@ -566,7 +612,7 @@ fn process_action(
       emit_flow_event("cancel", instance, [#("count", 1)])
       case run_flow_exit_hook(flow.on_flow_exit, ctx, instance) {
         Ok(final_ctx) -> {
-          let _ = flow.storage.delete(instance.id)
+          delete_instance(flow, instance.id)
           Ok(final_ctx)
         }
         Error(err) -> handle_error(flow, ctx, instance, Some(err))
@@ -607,7 +653,7 @@ fn process_action(
     }
 
     Exit(_) -> {
-      let _ = flow.storage.delete(instance.id)
+      delete_instance(flow, instance.id)
       Ok(ctx)
     }
 
@@ -937,7 +983,7 @@ fn process_subflow_action(
 
     Cancel -> {
       emit_flow_event("cancel", instance, [#("count", 1)])
-      let _ = flow.storage.delete(instance.id)
+      delete_instance(flow, instance.id)
       Ok(ctx)
     }
 
