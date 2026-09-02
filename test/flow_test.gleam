@@ -2727,6 +2727,80 @@ pub fn action_wait_callback_with_timeout_returns_correct_action_test() {
   }
 }
 
+// H8 — a subflow that waits used to strand the parent flow
+
+pub fn engine_subflow_resumes_and_returns_to_parent_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+  let events = process.new_subject()
+
+  let flow =
+    builder.new("h8_parent", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.next(ctx, inst, Middle) })
+    |> builder.with_inline_subflow(
+      name: "address",
+      trigger: Middle,
+      return_to: End,
+      initial: "street",
+      steps: [
+        #("street", fn(ctx, inst) {
+          case instance.get_step_data(inst, "user_input") {
+            Some(street) -> {
+              let inst = instance.store_data(inst, "street", street)
+              Ok(#(ctx, types.Complete(inst.state.data), inst))
+            }
+            None -> {
+              process.send(events, "asked")
+              action.wait(ctx, inst)
+            }
+          }
+        }),
+      ],
+    )
+    |> builder.add_step(End, fn(ctx, inst) {
+      process.send(
+        events,
+        "done:" <> option.unwrap(instance.get_data(inst, "street"), "?"),
+      )
+      action.complete(ctx, inst)
+    })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+  let assert Ok("asked") = process.receive(events, 100)
+
+  // The instance sits on a subflow step, under the parent's id. Resuming used
+  // to look the step up in the parent's table, find nothing and drop the input.
+  let assert Ok(Some(waiting)) =
+    ets.load(storage.generate_id(1, 2, "h8_parent"))
+
+  let assert Ok(_) =
+    engine.resume_with_instance(
+      flow,
+      ctx,
+      waiting,
+      Some(dict.from_list([#("user_input", "Baker St")])),
+    )
+
+  // The subflow completed and the parent's return step ran — it used to be
+  // saved but never executed, so the parent hung until the next update.
+  let assert Ok("done:Baker St") = process.receive(events, 100)
+}
+
 pub fn action_enter_subflow_returns_correct_action_test() {
   let ctx = context.context(session: Nil)
   let inst =

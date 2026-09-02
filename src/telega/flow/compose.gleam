@@ -71,7 +71,14 @@ pub fn compose_conditional(
   builder.build(flow_builder, initial: ComposedSelectFlow)
 }
 
-/// Compose flows for parallel execution
+/// Compose flows for parallel execution.
+///
+/// Each branch starts its child flow as an instance of its own and is marked
+/// complete immediately, so the merged results are the parent's data rather
+/// than the children's, and a child that waits for input keeps running on its
+/// own with nothing to return to. Build the steps into a single flow, or drive
+/// them from a dialog, instead.
+@deprecated("Branches complete before their flows do, so results are never collected and a waiting child flow is stranded. Compose the steps into one flow instead.")
 pub fn compose_parallel(
   name: String,
   flows: List(Flow(Dynamic, session, error, dependencies)),

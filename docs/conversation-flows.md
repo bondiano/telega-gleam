@@ -738,9 +738,13 @@ let support_flow = compose.compose_conditional(
 )
 ```
 
-### Parallel Composition
+### Parallel Composition (deprecated)
 
-Run multiple flows concurrently and merge their results:
+> **Deprecated.** `compose_parallel` starts each flow as an instance of its own
+> and marks the branch complete right away, so the merged results are the
+> parent's data rather than the children's, and a child flow that waits for
+> input is left running with nothing to return to. Build the steps into a single
+> flow, or drive them from a [dialog](./dialogs.md), instead.
 
 ```gleam
 let survey_flow = compose.compose_parallel(

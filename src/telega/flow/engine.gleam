@@ -144,7 +144,24 @@ pub fn resume_with_instance(
       )
     None -> FlowInstance(..instance, wait_token: None, wait_timeout_at: None)
   }
-  execute_step(flow, ctx, updated_instance)
+
+  // The instance keeps the parent's id while a subflow runs, so a resume
+  // arrives here with the parent flow but a step that only the subflow knows.
+  // Looking it up in the parent's step table found nothing and the update was
+  // dropped — or, worse, ran the parent step that happened to share the name.
+  case updated_instance.flow_name == flow.name {
+    True -> execute_step(flow, ctx, updated_instance)
+    False ->
+      case
+        list.find(flow.subflows, fn(config) {
+          config.flow.name == updated_instance.flow_name
+        })
+      {
+        Ok(config) ->
+          execute_subflow_step(config.flow, ctx, updated_instance, config, flow)
+        Error(Nil) -> handle_error(flow, ctx, updated_instance, None)
+      }
+  }
 }
 
 /// Execute the current step of a flow
@@ -698,6 +715,7 @@ fn process_action(
                 ctx,
                 updated_instance,
                 subflow_config,
+                flow,
               )
             Error(err) -> handle_error(flow, ctx, instance, Some(err))
           }
@@ -887,6 +905,7 @@ fn start_subflow_execution(
             ctx_after_leave,
             updated_instance,
             config,
+            parent_flow,
           )
         Error(err) -> handle_error(parent_flow, ctx, instance, Some(err))
       }
@@ -966,6 +985,7 @@ pub fn execute_subflow_step(
   ctx: Context(session, error, dependencies),
   instance: FlowInstance,
   config: SubflowConfig(step_type, session, error, dependencies),
+  parent_flow: Flow(step_type, session, error, dependencies),
 ) -> Result(Context(session, error, dependencies), error) {
   case dict.get(flow.steps, instance.state.current_step) {
     Ok(step_config) -> {
@@ -983,7 +1003,14 @@ pub fn execute_subflow_step(
       ])
       case result {
         Ok(#(new_ctx, action, new_instance)) ->
-          process_subflow_action(flow, new_ctx, action, new_instance, config)
+          process_subflow_action(
+            flow,
+            new_ctx,
+            action,
+            new_instance,
+            config,
+            parent_flow,
+          )
         Error(err) ->
           handle_subflow_error(flow, ctx, instance, Some(err), config)
       }
@@ -998,18 +1025,25 @@ fn process_subflow_action(
   action: FlowAction(dynamic.Dynamic),
   instance: FlowInstance,
   config: SubflowConfig(step_type, session, error, dependencies),
+  parent_flow: Flow(step_type, session, error, dependencies),
 ) -> Result(Context(session, error, dependencies), error) {
   case action {
     Complete(data) | Exit(Some(data)) -> {
-      return_to_parent_flow(ctx, instance, data, config)
+      return_to_parent_flow(ctx, instance, data, config, parent_flow)
     }
 
     Exit(None) -> {
-      return_to_parent_flow(ctx, instance, instance.state.data, config)
+      return_to_parent_flow(
+        ctx,
+        instance,
+        instance.state.data,
+        config,
+        parent_flow,
+      )
     }
 
     ReturnFromSubflow(result) -> {
-      return_to_parent_flow(ctx, instance, result, config)
+      return_to_parent_flow(ctx, instance, result, config, parent_flow)
     }
 
     Cancel -> {
@@ -1031,7 +1065,8 @@ fn process_subflow_action(
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
-        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Ok(_) ->
+          execute_subflow_step(flow, ctx, updated_instance, config, parent_flow)
         Error(err) ->
           handle_subflow_error(flow, ctx, instance, Some(err), config)
       }
@@ -1049,7 +1084,8 @@ fn process_subflow_action(
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
-        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Ok(_) ->
+          execute_subflow_step(flow, ctx, updated_instance, config, parent_flow)
         Error(err) ->
           handle_subflow_error(flow, ctx, instance, Some(err), config)
       }
@@ -1073,7 +1109,8 @@ fn process_subflow_action(
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
-        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Ok(_) ->
+          execute_subflow_step(flow, ctx, updated_instance, config, parent_flow)
         Error(err) ->
           handle_subflow_error(flow, ctx, instance, Some(err), config)
       }
@@ -1089,7 +1126,8 @@ fn process_subflow_action(
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
-        Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+        Ok(_) ->
+          execute_subflow_step(flow, ctx, updated_instance, config, parent_flow)
         Error(err) ->
           handle_subflow_error(flow, ctx, instance, Some(err), config)
       }
@@ -1110,7 +1148,14 @@ fn process_subflow_action(
               updated_at: utils.current_time_ms(),
             )
           case flow.storage.save(updated_instance) {
-            Ok(_) -> execute_subflow_step(flow, ctx, updated_instance, config)
+            Ok(_) ->
+              execute_subflow_step(
+                flow,
+                ctx,
+                updated_instance,
+                config,
+                parent_flow,
+              )
             Error(err) ->
               handle_subflow_error(flow, ctx, instance, Some(err), config)
           }
@@ -1163,6 +1208,7 @@ fn return_to_parent_flow(
   instance: FlowInstance,
   result: dict.Dict(String, String),
   config: SubflowConfig(step_type, session, error, dependencies),
+  parent_flow: Flow(step_type, session, error, dependencies),
 ) -> Result(Context(session, error, dependencies), error) {
   case instance.state.flow_stack {
     [frame, ..rest_stack] -> {
@@ -1187,9 +1233,12 @@ fn return_to_parent_flow(
           updated_at: utils.current_time_ms(),
         )
 
+      // Saving the return step is not the same as running it: the parent used
+      // to sit on that step until the user sent something else.
       case config.flow.storage.save(updated_instance) {
-        Ok(_) -> Ok(ctx)
-        Error(_) -> Ok(ctx)
+        Ok(_) -> execute_step(parent_flow, ctx, updated_instance)
+        Error(err) ->
+          handle_error(parent_flow, ctx, updated_instance, Some(err))
       }
     }
     [] -> Ok(ctx)
