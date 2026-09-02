@@ -164,3 +164,31 @@ pub fn get_my_star_balance_decodes_the_balance_test() {
 
   last_path() |> should.equal("/bottest-token/getMyStarBalance")
 }
+
+pub fn every_spec_method_reachable_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": true}")
+
+  let assert Ok(True) =
+    api.set_chat_member_tag(
+      client:,
+      parameters: types.new_set_chat_member_tag_parameters(
+        chat_id: types.Int(-100),
+        user_id: 5,
+      ),
+    )
+  last_path() |> should.equal("/bottest-token/setChatMemberTag")
+}
+
+pub fn managed_bot_token_decodes_a_bare_string_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": \"123:ABC\"}")
+
+  api.get_managed_bot_token(
+    client:,
+    parameters: types.ManagedBotTokenParameters(user_id: 5),
+  )
+  |> should.equal(Ok("123:ABC"))
+
+  last_path() |> should.equal("/bottest-token/getManagedBotToken")
+}

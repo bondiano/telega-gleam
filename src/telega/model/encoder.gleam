@@ -11,28 +11,28 @@ import telega/model/types.{
   type Animation, type AnswerCallbackQueryParameters,
   type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
   type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
-  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type ApproveSuggestedPostParameters, type Audio, type BackgroundFill,
-  type BackgroundFillFreeformGradient, type BackgroundFillGradient,
-  type BackgroundFillSolid, type BackgroundType, type BackgroundTypeChatTheme,
-  type BackgroundTypeFill, type BackgroundTypePattern,
-  type BackgroundTypeWallpaper, type BanChatMemberParameters,
-  type BanChatSenderChatParameters, type Birthdate, type BotAccessSettings,
-  type BotCommand, type BotCommandParameters, type BotCommandScope,
-  type BotCommandScopeAllChatAdministrators, type BotCommandScopeAllGroupChats,
-  type BotCommandScopeAllPrivateChats, type BotCommandScopeChat,
-  type BotCommandScopeChatAdministrators, type BotCommandScopeChatMember,
-  type BotCommandScopeDefault, type BotDescription, type BotName,
-  type BotShortDescription, type BotSubscriptionUpdated, type BusinessBotRights,
-  type BusinessConnection, type BusinessIntro, type BusinessLocation,
-  type BusinessMessagesDeleted, type BusinessOpeningHours,
-  type BusinessOpeningHoursInterval, type CallbackGame, type CallbackQuery,
-  type Chat, type ChatAction, type ChatAdministratorRights, type ChatBackground,
-  type ChatBoost, type ChatBoostAdded, type ChatBoostRemoved,
-  type ChatBoostSource, type ChatBoostSourceGiftCode,
-  type ChatBoostSourceGiveaway, type ChatBoostSourcePremium,
-  type ChatBoostUpdated, type ChatFullInfo, type ChatInviteLink,
-  type ChatJoinRequest, type ChatLocation, type ChatMember,
+  type AnswerShippingQueryParameters, type AnswerWebAppQueryParameters,
+  type ApproveChatJoinRequestParameters, type ApproveSuggestedPostParameters,
+  type Audio, type BackgroundFill, type BackgroundFillFreeformGradient,
+  type BackgroundFillGradient, type BackgroundFillSolid, type BackgroundType,
+  type BackgroundTypeChatTheme, type BackgroundTypeFill,
+  type BackgroundTypePattern, type BackgroundTypeWallpaper,
+  type BanChatMemberParameters, type BanChatSenderChatParameters, type Birthdate,
+  type BotAccessSettings, type BotCommand, type BotCommandParameters,
+  type BotCommandScope, type BotCommandScopeAllChatAdministrators,
+  type BotCommandScopeAllGroupChats, type BotCommandScopeAllPrivateChats,
+  type BotCommandScopeChat, type BotCommandScopeChatAdministrators,
+  type BotCommandScopeChatMember, type BotCommandScopeDefault,
+  type BotDescription, type BotName, type BotShortDescription,
+  type BotSubscriptionUpdated, type BusinessBotRights, type BusinessConnection,
+  type BusinessIntro, type BusinessLocation, type BusinessMessagesDeleted,
+  type BusinessOpeningHours, type BusinessOpeningHoursInterval,
+  type CallbackGame, type CallbackQuery, type Chat, type ChatAction,
+  type ChatAdministratorRights, type ChatBackground, type ChatBoost,
+  type ChatBoostAdded, type ChatBoostRemoved, type ChatBoostSource,
+  type ChatBoostSourceGiftCode, type ChatBoostSourceGiveaway,
+  type ChatBoostSourcePremium, type ChatBoostUpdated, type ChatFullInfo,
+  type ChatInviteLink, type ChatJoinRequest, type ChatLocation, type ChatMember,
   type ChatMemberAdministrator, type ChatMemberBanned, type ChatMemberLeft,
   type ChatMemberMember, type ChatMemberOwner, type ChatMemberRestricted,
   type ChatMemberUpdated, type ChatOwnerChanged, type ChatOwnerLeft,
@@ -134,11 +134,12 @@ import telega/model/types.{
   type KeyboardButtonRequestUsers, type LabeledPrice, type LeaveChatParameters,
   type Link, type LinkPreviewOptions, type LivePhoto, type Location,
   type LocationAddress, type LoginUrl, type ManagedBotCreated,
-  type ManagedBotUpdated, type MaskPosition, type MaybeInaccessibleMessage,
-  type MenuButton, type MenuButtonCommands, type MenuButtonDefault,
-  type MenuButtonWebApp, type Message, type MessageAutoDeleteTimerChanged,
-  type MessageEntity, type MessageGenerationStopped, type MessageId,
-  type MessageOrigin, type MessageOriginChannel, type MessageOriginChat,
+  type ManagedBotTokenParameters, type ManagedBotUpdated, type MaskPosition,
+  type MaybeInaccessibleMessage, type MenuButton, type MenuButtonCommands,
+  type MenuButtonDefault, type MenuButtonWebApp, type Message,
+  type MessageAutoDeleteTimerChanged, type MessageEntity,
+  type MessageGenerationStopped, type MessageId, type MessageOrigin,
+  type MessageOriginChannel, type MessageOriginChat,
   type MessageOriginHiddenUser, type MessageOriginUser,
   type MessageReactionCountUpdated, type MessageReactionUpdated, type OrderInfo,
   type OwnedGift, type OwnedGiftRegular, type OwnedGiftUnique, type OwnedGifts,
@@ -187,30 +188,32 @@ import telega/model/types.{
   type RichTextSpoiler, type RichTextStrikethrough, type RichTextSubscript,
   type RichTextSuperscript, type RichTextTextMention, type RichTextUnderline,
   type RichTextUrl, type SavePreparedInlineMessageParameters,
-  type SendAnimationParameters, type SendAudioParameters,
-  type SendChatActionParameters, type SendChatJoinRequestWebAppParameters,
-  type SendChecklistParameters, type SendContactParameters,
-  type SendDiceParameters, type SendDocumentParameters, type SendGameParameters,
-  type SendGiftParameters, type SendInvoiceParameters,
-  type SendLivePhotoParameters, type SendLocationParameters,
-  type SendMediaGroupParameters, type SendMessageDraftParameters,
-  type SendMessageParameters, type SendMessageReplyMarkupParameters,
-  type SendPaidMediaParameters, type SendPhotoParameters,
-  type SendPollParameters, type SendRichMessageDraftParameters,
-  type SendRichMessageParameters, type SendStickerParameters,
-  type SendVenueParameters, type SendVideoNoteParameters,
-  type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
-  type SentWebAppMessage, type SetBusinessAccountBioParameters,
+  type SavePreparedKeyboardButtonParameters, type SendAnimationParameters,
+  type SendAudioParameters, type SendChatActionParameters,
+  type SendChatJoinRequestWebAppParameters, type SendChecklistParameters,
+  type SendContactParameters, type SendDiceParameters,
+  type SendDocumentParameters, type SendGameParameters, type SendGiftParameters,
+  type SendInvoiceParameters, type SendLivePhotoParameters,
+  type SendLocationParameters, type SendMediaGroupParameters,
+  type SendMessageDraftParameters, type SendMessageParameters,
+  type SendMessageReplyMarkupParameters, type SendPaidMediaParameters,
+  type SendPhotoParameters, type SendPollParameters,
+  type SendRichMessageDraftParameters, type SendRichMessageParameters,
+  type SendStickerParameters, type SendVenueParameters,
+  type SendVideoNoteParameters, type SendVideoParameters,
+  type SendVoiceParameters, type SentGuestMessage, type SentWebAppMessage,
+  type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
   type SetBusinessAccountProfilePhotoParameters,
   type SetBusinessAccountUsernameParameters,
   type SetChatAdministratorCustomTitleParameters,
-  type SetChatDescriptionParameters, type SetChatMenuButtonParameters,
-  type SetChatPermissionsParameters, type SetChatPhotoParameters,
-  type SetChatStickerSetParameters, type SetChatTitleParameters,
-  type SetCustomEmojiStickerSetThumbnailParameters, type SetGameScoreParameters,
-  type SetManagedBotAccessSettingsParameters, type SetMessageReactionParameters,
+  type SetChatDescriptionParameters, type SetChatMemberTagParameters,
+  type SetChatMenuButtonParameters, type SetChatPermissionsParameters,
+  type SetChatPhotoParameters, type SetChatStickerSetParameters,
+  type SetChatTitleParameters, type SetCustomEmojiStickerSetThumbnailParameters,
+  type SetGameScoreParameters, type SetManagedBotAccessSettingsParameters,
+  type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
@@ -11108,4 +11111,46 @@ pub fn encode_decline_suggested_post_parameters(
     #("message_id", json.int(params.message_id)),
     #("comment", json.nullable(params.comment, json.string)),
   ])
+}
+
+// AnswerWebAppQueryParameters -----------------------------------------------------------------
+
+pub fn encode_answer_web_app_query_parameters(
+  params: AnswerWebAppQueryParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("web_app_query_id", json.string(params.web_app_query_id)),
+    #("result", encode_inline_query_result(params.result)),
+  ])
+}
+
+// SavePreparedKeyboardButtonParameters -----------------------------------------------------
+
+pub fn encode_save_prepared_keyboard_button_parameters(
+  params: SavePreparedKeyboardButtonParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("user_id", json.int(params.user_id)),
+    #("button", encode_keyboard_button(params.button)),
+  ])
+}
+
+// SetChatMemberTagParameters ---------------------------------------------------------------
+
+pub fn encode_set_chat_member_tag_parameters(
+  params: SetChatMemberTagParameters,
+) -> Json {
+  json_object_filter_nulls([
+    #("chat_id", encode_int_or_string(params.chat_id)),
+    #("user_id", json.int(params.user_id)),
+    #("tag", json.nullable(params.tag, json.string)),
+  ])
+}
+
+// ManagedBotTokenParameters ----------------------------------------------------------------
+
+pub fn encode_managed_bot_token_parameters(
+  params: ManagedBotTokenParameters,
+) -> Json {
+  json_object_filter_nulls([#("user_id", json.int(params.user_id))])
 }

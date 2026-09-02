@@ -9288,6 +9288,54 @@ pub fn new_decline_suggested_post_parameters(
   DeclineSuggestedPostParameters(chat_id:, message_id:, comment: None)
 }
 
+// AnswerWebAppQueryParameters -----------------------------------------------------------------
+pub type AnswerWebAppQueryParameters {
+  AnswerWebAppQueryParameters(
+    /// Unique identifier for the query to be answered
+    web_app_query_id: String,
+    /// A JSON-serialized object describing the message to be sent
+    result: InlineQueryResult,
+  )
+}
+
+// SavePreparedKeyboardButtonParameters -----------------------------------------------------
+pub type SavePreparedKeyboardButtonParameters {
+  SavePreparedKeyboardButtonParameters(
+    /// Unique identifier of the target user that can press the button
+    user_id: Int,
+    /// A JSON-serialized object describing the button to be pressed
+    button: KeyboardButton,
+  )
+}
+
+// SetChatMemberTagParameters ---------------------------------------------------------------
+pub type SetChatMemberTagParameters {
+  SetChatMemberTagParameters(
+    /// Unique identifier for the target chat or username of the target supergroup
+    chat_id: IntOrString,
+    /// Unique identifier of the target user
+    user_id: Int,
+    /// New tag for the user; pass an empty string to remove the tag
+    tag: Option(String),
+  )
+}
+
+pub fn new_set_chat_member_tag_parameters(
+  chat_id chat_id: IntOrString,
+  user_id user_id: Int,
+) -> SetChatMemberTagParameters {
+  SetChatMemberTagParameters(chat_id:, user_id:, tag: None)
+}
+
+// ManagedBotTokenParameters ----------------------------------------------------------------
+/// Shared by `getManagedBotToken` and `replaceManagedBotToken`.
+pub type ManagedBotTokenParameters {
+  ManagedBotTokenParameters(
+    /// Unique identifier of the target user
+    user_id: Int,
+  )
+}
+
 // Common ------------------------------------------------------------------------------------------------------------
 
 pub type FileOrString {

@@ -19,13 +19,13 @@ import telega/model/types.{
   type AddStickerToSetParameters, type AnswerCallbackQueryParameters,
   type AnswerChatJoinRequestQueryParameters, type AnswerGuestQueryParameters,
   type AnswerInlineQueryParameters, type AnswerPreCheckoutQueryParameters,
-  type AnswerShippingQueryParameters, type ApproveChatJoinRequestParameters,
-  type ApproveSuggestedPostParameters, type BanChatMemberParameters,
-  type BanChatSenderChatParameters, type BotAccessSettings, type BotCommand,
-  type BotCommandParameters, type BotDescription, type BotName,
-  type BotShortDescription, type BusinessConnection,
-  type ChatAdministratorRights, type ChatFullInfo, type ChatInviteLink,
-  type ChatMember, type CloseForumTopicParameters,
+  type AnswerShippingQueryParameters, type AnswerWebAppQueryParameters,
+  type ApproveChatJoinRequestParameters, type ApproveSuggestedPostParameters,
+  type BanChatMemberParameters, type BanChatSenderChatParameters,
+  type BotAccessSettings, type BotCommand, type BotCommandParameters,
+  type BotDescription, type BotName, type BotShortDescription,
+  type BusinessConnection, type ChatAdministratorRights, type ChatFullInfo,
+  type ChatInviteLink, type ChatMember, type CloseForumTopicParameters,
   type CloseGeneralForumTopicParameters, type ConvertGiftToStarsParameters,
   type CopyMessageParameters, type CopyMessagesParameters,
   type CreateChatInviteLinkParameters,
@@ -67,8 +67,9 @@ import telega/model/types.{
   type GetUserProfileAudiosParameters, type GetUserProfilePhotosParameters,
   type GiftPremiumSubscriptionParameters, type Gifts,
   type HideGeneralForumTopicParameters, type LeaveChatParameters,
-  type MenuButton, type Message, type OwnedGifts, type PinChatMessageParameters,
-  type Poll, type PostStoryParameters, type PreparedInlineMessage,
+  type ManagedBotTokenParameters, type MenuButton, type Message, type OwnedGifts,
+  type PinChatMessageParameters, type Poll, type PostStoryParameters,
+  type PreparedInlineMessage, type PreparedKeyboardButton,
   type PromoteChatMemberParameters, type ReadBusinessMessageParameters,
   type RefundStarPaymentParameters,
   type RemoveBusinessAccountProfilePhotoParameters,
@@ -76,7 +77,8 @@ import telega/model/types.{
   type ReopenForumTopicParameters, type ReopenGeneralForumTopicParameters,
   type ReplaceStickerInSetParameters, type RepostStoryParameters,
   type RestrictChatMemberParameters, type RevokeChatInviteLinkParameters,
-  type SavePreparedInlineMessageParameters, type SendAnimationParameters,
+  type SavePreparedInlineMessageParameters,
+  type SavePreparedKeyboardButtonParameters, type SendAnimationParameters,
   type SendAudioParameters, type SendChatActionParameters,
   type SendChatJoinRequestWebAppParameters, type SendChecklistParameters,
   type SendContactParameters, type SendDiceParameters,
@@ -89,17 +91,18 @@ import telega/model/types.{
   type SendRichMessageParameters, type SendStickerParameters,
   type SendVenueParameters, type SendVideoNoteParameters,
   type SendVideoParameters, type SendVoiceParameters, type SentGuestMessage,
-  type SetBusinessAccountBioParameters,
+  type SentWebAppMessage, type SetBusinessAccountBioParameters,
   type SetBusinessAccountGiftSettingsParameters,
   type SetBusinessAccountNameParameters,
   type SetBusinessAccountProfilePhotoParameters,
   type SetBusinessAccountUsernameParameters,
   type SetChatAdministratorCustomTitleParameters,
-  type SetChatDescriptionParameters, type SetChatMenuButtonParameters,
-  type SetChatPermissionsParameters, type SetChatPhotoParameters,
-  type SetChatStickerSetParameters, type SetChatTitleParameters,
-  type SetCustomEmojiStickerSetThumbnailParameters, type SetGameScoreParameters,
-  type SetManagedBotAccessSettingsParameters, type SetMessageReactionParameters,
+  type SetChatDescriptionParameters, type SetChatMemberTagParameters,
+  type SetChatMenuButtonParameters, type SetChatPermissionsParameters,
+  type SetChatPhotoParameters, type SetChatStickerSetParameters,
+  type SetChatTitleParameters, type SetCustomEmojiStickerSetThumbnailParameters,
+  type SetGameScoreParameters, type SetManagedBotAccessSettingsParameters,
+  type SetMessageReactionParameters,
   type SetMyDefaultAdministratorRightsParameters,
   type SetMyDescriptionParameters, type SetMyNameParameters,
   type SetMyProfilePhotoParameters, type SetMyShortDescriptionParameters,
@@ -3551,6 +3554,97 @@ pub fn decline_suggested_post(
   )
   |> fetch(client)
   |> map_response(decode.bool)
+}
+
+/// Use this method to set the result of an interaction with a [Web App](https://core.telegram.org/bots/webapps) and send a corresponding message on behalf of the user. On success, a [SentWebAppMessage](https://core.telegram.org/bots/api#sentwebappmessage) object is returned.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#answerwebappquery
+pub fn answer_web_app_query(
+  client client: client.TelegramClient,
+  parameters parameters: AnswerWebAppQueryParameters,
+) -> Result(SentWebAppMessage, error.TelegaError) {
+  let body_json = encoder.encode_answer_web_app_query_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "answerWebAppQuery",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.sent_web_app_message_decoder())
+}
+
+/// Stores a keyboard button that can be pressed by a user of a Mini App. Returns a [PreparedKeyboardButton](https://core.telegram.org/bots/api#preparedkeyboardbutton) object.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#savepreparedkeyboardbutton
+pub fn save_prepared_keyboard_button(
+  client client: client.TelegramClient,
+  parameters parameters: SavePreparedKeyboardButtonParameters,
+) -> Result(PreparedKeyboardButton, error.TelegaError) {
+  let body_json =
+    encoder.encode_save_prepared_keyboard_button_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "savePreparedKeyboardButton",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decoder.prepared_keyboard_button_decoder())
+}
+
+/// Use this method to change the tag of a user in a supergroup chat. Returns `True` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#setchatmembertag
+pub fn set_chat_member_tag(
+  client client: client.TelegramClient,
+  parameters parameters: SetChatMemberTagParameters,
+) -> Result(Bool, error.TelegaError) {
+  let body_json = encoder.encode_set_chat_member_tag_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "setChatMemberTag",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.bool)
+}
+
+/// Use this method to get the authentication token of a bot managed by the current bot. Returns the token as a `String` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#getmanagedbottoken
+pub fn get_managed_bot_token(
+  client client: client.TelegramClient,
+  parameters parameters: ManagedBotTokenParameters,
+) -> Result(String, error.TelegaError) {
+  let body_json = encoder.encode_managed_bot_token_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "getManagedBotToken",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.string)
+}
+
+/// Use this method to replace the authentication token of a bot managed by the current bot. Returns the new token as a `String` on success.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#replacemanagedbottoken
+pub fn replace_managed_bot_token(
+  client client: client.TelegramClient,
+  parameters parameters: ManagedBotTokenParameters,
+) -> Result(String, error.TelegaError) {
+  let body_json = encoder.encode_managed_bot_token_parameters(parameters)
+
+  new_post_request(
+    client:,
+    path: "replaceManagedBotToken",
+    body: json.to_string(body_json),
+  )
+  |> fetch(client)
+  |> map_response(decode.string)
 }
 
 // Common Helpers --------------------------------------------------------------------------------------
