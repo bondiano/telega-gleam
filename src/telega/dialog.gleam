@@ -166,6 +166,13 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
         ) -> Result(DialogAction(state), error),
       ),
     ),
+    message_hooks: List(
+      #(
+        String,
+        fn(state, types.MessageInput, Context(session, error, dependencies)) ->
+          Result(DialogAction(state), error),
+      ),
+    ),
     storage: flow_types.FlowStorage(error),
     ttl_ms: Option(Int),
     labels: fn(Context(session, error, dependencies)) -> Labels,
@@ -192,6 +199,7 @@ pub fn new(
     on_done: None,
     subs: [],
     sub_result_hooks: [],
+    message_hooks: [],
     storage:,
     ttl_ms: None,
     labels: fn(_ctx) { types.default_labels() },
@@ -238,6 +246,7 @@ pub fn window(
       render:,
       on_action:,
       on_text: None,
+      on_message: None,
       widgets: [],
       on_sub_result: None,
     ),
@@ -265,6 +274,7 @@ pub fn window_with_input(
       render:,
       on_action:,
       on_text: Some(on_text),
+      on_message: None,
       widgets: [],
       on_sub_result: None,
     ),
@@ -302,6 +312,7 @@ pub fn window_with_widgets(
       render:,
       on_action:,
       on_text: None,
+      on_message: None,
       widgets:,
       on_sub_result: None,
     ),
@@ -372,6 +383,34 @@ pub fn on_sub_result(
   ])
 }
 
+/// Accept non-text messages (a photo, a location, a voice note) on `window`.
+///
+/// Without it the engine politely ignores them and re-renders. The classified
+/// input is in `MessageInput`; the raw update stays on `ctx.update`.
+///
+/// ```gleam
+/// |> dialog.on_message(window: "avatar", handler: fn(state, input, _ctx) {
+///   case input {
+///     types.PhotoMessage(file_ids: [best, ..]) -> Ok(types.Goto("confirm", best))
+///     _ -> Ok(types.Stay(state))
+///   }
+/// })
+/// ```
+pub fn on_message(
+  builder builder: DialogBuilder(state, session, error, dependencies),
+  window window: String,
+  handler handler: fn(
+    state,
+    types.MessageInput,
+    Context(session, error, dependencies),
+  ) -> Result(DialogAction(state), error),
+) -> DialogBuilder(state, session, error, dependencies) {
+  DialogBuilder(..builder, message_hooks: [
+    #(window, handler),
+    ..builder.message_hooks
+  ])
+}
+
 /// Set the window the dialog opens with.
 pub fn initial(
   builder builder: DialogBuilder(state, session, error, dependencies),
@@ -431,6 +470,10 @@ pub fn build(
   use windows <- result.try(attach_sub_result_hooks(
     windows,
     list.reverse(builder.sub_result_hooks),
+  ))
+  use windows <- result.try(attach_message_hooks(
+    windows,
+    list.reverse(builder.message_hooks),
   ))
   use Nil <- result.try(validate_windows(builder.id, windows))
   use Nil <- result.try(validate_widget_targets(windows))
@@ -534,6 +577,33 @@ fn attach_sub_result_hooks(
       list.map(windows, fn(window) {
         case window.id == window_id {
           True -> Window(..window, on_sub_result: Some(handler))
+          False -> window
+        }
+      }),
+    )
+  })
+}
+
+fn attach_message_hooks(
+  windows: List(Window(state, session, error, dependencies)),
+  hooks: List(
+    #(
+      String,
+      fn(state, types.MessageInput, Context(session, error, dependencies)) ->
+        Result(DialogAction(state), error),
+    ),
+  ),
+) -> Result(List(Window(state, session, error, dependencies)), DialogBuildError) {
+  list.try_fold(hooks, windows, fn(windows, hook) {
+    let #(window_id, handler) = hook
+    use <- require(
+      list.any(windows, fn(window) { window.id == window_id }),
+      types.UnknownWindowReference(from: "on_message", to: window_id),
+    )
+    Ok(
+      list.map(windows, fn(window) {
+        case window.id == window_id {
+          True -> Window(..window, on_message: Some(handler))
           False -> window
         }
       }),
@@ -701,6 +771,12 @@ fn erase_window(
         on_text(decode(raw), text, ctx) |> result.map(erase_action(_, encode))
       }
     }),
+    on_message: option.map(window.on_message, fn(on_message) {
+      fn(raw, input, ctx) {
+        on_message(decode(raw), input, ctx)
+        |> result.map(erase_action(_, encode))
+      }
+    }),
     widgets: list.map(window.widgets, erase_widget(_, encode, decode)),
     on_sub_result: option.map(window.on_sub_result, fn(handler) {
       fn(raw, sub_result, ctx) {
@@ -787,6 +863,11 @@ fn namespace_window(
     },
     on_text: option.map(window.on_text, fn(on_text) {
       fn(raw, text, ctx) { on_text(raw, text, ctx) |> result.map(map_action) }
+    }),
+    on_message: option.map(window.on_message, fn(on_message) {
+      fn(raw, input, ctx) {
+        on_message(raw, input, ctx) |> result.map(map_action)
+      }
     }),
     widgets: list.map(window.widgets, fn(widget_item) {
       types.KeyboardWidget(

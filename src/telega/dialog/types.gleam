@@ -75,6 +75,20 @@ pub type ActionEvent {
   ActionEvent(action_id: String, arg: Option(String))
 }
 
+/// A non-text message delivered to `on_message`: what the user sent while the
+/// window was open, already classified.
+///
+/// These are the kinds the flow registry's auto-resume can deliver. The raw
+/// update is on `ctx.update` when you need more than this — the caption of a
+/// photo, say.
+pub type MessageInput {
+  PhotoMessage(file_ids: List(String))
+  VideoMessage(file_id: String)
+  VoiceMessage(file_id: String)
+  AudioMessage(file_id: String)
+  LocationMessage(latitude: Float, longitude: Float)
+}
+
 /// A single dialog window: a pure render function plus event handlers.
 ///
 /// - `render` must be pure — its only "effect" is reading `ctx` (e.g. for
@@ -82,6 +96,8 @@ pub type ActionEvent {
 /// - `on_action` receives an already-parsed `ActionEvent`, not a raw string.
 /// - `on_text: None` means text sent to this window is politely ignored:
 ///   the engine just re-renders the window.
+/// - `on_message: None` does the same for photos, videos, voice, audio and
+///   locations. Set it to accept them.
 /// - `widgets` are managed keyboard widgets (see `telega/dialog/widget`):
 ///   the engine appends their button rows after `render`'s own buttons and
 ///   routes their events to `KeyboardWidget.on_event`, bypassing `on_action`.
@@ -97,6 +113,10 @@ pub type Window(state, session, error, dependencies) {
       Result(DialogAction(state), error),
     on_text: Option(
       fn(state, String, Context(session, error, dependencies)) ->
+        Result(DialogAction(state), error),
+    ),
+    on_message: Option(
+      fn(state, MessageInput, Context(session, error, dependencies)) ->
         Result(DialogAction(state), error),
     ),
     widgets: List(KeyboardWidget(state, session, error, dependencies)),

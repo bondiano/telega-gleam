@@ -1249,3 +1249,56 @@ pub fn pack_callback_data_reserves_widget_namespace_test() {
   )
   |> should.equal(Ok("dlg:d:m:wide"))
 }
+
+// M13 — a window can accept non-text input -----------------------------------
+
+fn avatar_dialog(storage) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "avatar",
+      storage:,
+      initial_state: fn() { "none" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "ask",
+      render: fn(state, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Send a photo (" <> state <> ")")
+            |> format.to_formatted(),
+          buttons: [],
+          media: None,
+        )
+      },
+      on_action: fn(state, _event, _ctx) { Ok(types.Stay(state)) },
+    )
+    |> dialog.on_message(window: "ask", handler: fn(_state, input, _ctx) {
+      case input {
+        types.PhotoMessage(file_ids: [first, ..]) -> Ok(types.Stay(first))
+        _ -> Ok(types.Stay("unsupported"))
+      }
+    })
+    |> dialog.initial("ask")
+    |> dialog.build()
+  dialog_engine.compile(dialog.compiled(built))
+}
+
+pub fn window_can_handle_a_photo_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let flow = avatar_dialog(storage)
+  let #(client, _calls) = dialog_mock_client()
+  let chat_id = 240
+
+  driver.start_dialog(flow, client, chat_id, command: "/avatar")
+  // A photo used to be swallowed silently: the window just re-rendered.
+  driver.send_photo(flow, client, storage, chat_id, "avatar", [
+    "FILE_A",
+    "FILE_B",
+  ])
+
+  let assert Ok(Some(inst)) = storage.load(driver.flow_id(chat_id, "avatar"))
+  instance.get_data(inst, "__dialog_state") |> should.equal(Some("FILE_A"))
+}

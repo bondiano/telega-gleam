@@ -456,6 +456,11 @@ filter:
   out of webhook-reply claiming (`webhook_reply.without_claim`) — the engine
   needs the real message id to edit the live message later, and a claimed
   `sendMessage` would yield a fake stub id.
+- `dialog.on_message(builder, window:, handler:)` accepts a photo, video,
+  voice note, audio or location sent while `window` is open, classified as a
+  `MessageInput` (the raw update stays on `ctx.update`). Without it those
+  messages are politely ignored and the window re-renders, exactly like text
+  without `on_text`.
 - `alert(ctx, text)` / `toast(ctx, text)` show a modal alert or a toast from
   inside `on_action`, `on_sub_result` or a widget handler; the engine then
   skips its automatic spinner-removing callback answer for that event. The

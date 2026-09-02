@@ -6,7 +6,9 @@
 //// `dialog_sub_test` and `dialog_widget_test`.
 
 import gleam/dict
+import gleam/list
 import gleam/option.{None, Some}
+import gleam/string
 
 import telega/bot
 import telega/client.{type TelegramClient}
@@ -147,6 +149,39 @@ pub fn send_text(
     dict.from_list([
       #("user_input", text),
       #(instance.wait_result_key, instance.encode_text_wait_result(text)),
+    ])
+  let assert Ok(_) =
+    flow_engine.resume_with_instance(flow, ctx, inst, Some(resume))
+  Nil
+}
+
+/// Deliver a photo message to the waiting dialog instance, the way the flow
+/// registry's photo auto-resume does.
+pub fn send_photo(
+  flow: DialogFlow,
+  client: TelegramClient,
+  storage: DialogStorage,
+  chat_id: Int,
+  dialog_id: String,
+  file_ids: List(String),
+) -> Nil {
+  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
+  let joined = string.join(file_ids, ",")
+  let ctx =
+    ctx_for(
+      client,
+      factory.photo_update_with(
+        photos: list.map(file_ids, fn(id) {
+          factory.photo_size_with(file_id: id)
+        }),
+        from_id: user_id,
+        chat_id:,
+      ),
+    )
+  let resume =
+    dict.from_list([
+      #("__photo_file_ids", joined),
+      #(instance.wait_result_key, "photo:" <> joined),
     ])
   let assert Ok(_) =
     flow_engine.resume_with_instance(flow, ctx, inst, Some(resume))

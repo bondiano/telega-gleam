@@ -230,10 +230,11 @@ fn window_step(
         render.answer_quietly(ctx, None)
         wait(ctx, inst)
       }
-      // Commands, media and everything else are not dialog events: keep
-      // waiting. Cancel commands are handled by the flow registry before the
-      // instance is resumed.
-      _ -> wait(ctx, inst)
+      // Media the window asked for goes to `on_message`; commands and
+      // everything else are not dialog events, so keep waiting. Cancel
+      // commands are handled by the flow registry before the instance is
+      // resumed.
+      other -> handle_message(dialog, window, ctx, inst, other)
     }
   }
 }
@@ -306,6 +307,45 @@ fn handle_callback(
             }
           }
       }
+  }
+}
+
+/// Route a non-text message to the window's `on_message`, if it has one.
+fn handle_message(
+  dialog: CompiledDialog(session, error, dependencies),
+  window: Window(String, session, error, dependencies),
+  ctx: Context(session, error, dependencies),
+  inst: flow_types.FlowInstance,
+  result: flow_types.WaitResult,
+) -> flow_types.StepResult(String, session, error, dependencies) {
+  case window.on_message, message_input(result) {
+    Some(on_message), Some(input) -> {
+      let state = load_state(dialog, inst)
+      case on_message(state, input, ctx) {
+        Ok(action) -> apply_action(dialog, ctx, inst, action)
+        Error(error) -> Error(error)
+      }
+    }
+    _, _ -> wait(ctx, inst)
+  }
+}
+
+/// Classify what the flow's auto-resume delivered. `Pending`, text and
+/// callbacks are handled before this and never reach it; a command is not a
+/// dialog event.
+fn message_input(result: flow_types.WaitResult) -> Option(types.MessageInput) {
+  case result {
+    flow_types.PhotoInput(file_ids:) -> Some(types.PhotoMessage(file_ids:))
+    flow_types.VideoInput(file_id:) -> Some(types.VideoMessage(file_id:))
+    flow_types.VoiceInput(file_id:) -> Some(types.VoiceMessage(file_id:))
+    flow_types.AudioInput(file_id:) -> Some(types.AudioMessage(file_id:))
+    flow_types.LocationInput(latitude:, longitude:) ->
+      Some(types.LocationMessage(latitude:, longitude:))
+    flow_types.CommandInput(..)
+    | flow_types.TextInput(..)
+    | flow_types.DataCallback(..)
+    | flow_types.BoolCallback(..)
+    | flow_types.Pending -> None
   }
 }
 
