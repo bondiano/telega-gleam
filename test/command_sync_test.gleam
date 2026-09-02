@@ -145,3 +145,45 @@ pub fn no_commands_published_without_opt_in_test() {
 
   stop(bot)
 }
+
+// M9 — derivation only sees the router ---------------------------------------
+
+pub fn extra_allowed_updates_are_added_to_the_derived_set_test() {
+  let #(client, calls) = mock.routed_client(start_routes())
+
+  // The router registers no callback route, but a conversation in it uses
+  // `wait_callback`. Without this, Telegram never sends `callback_query` and
+  // the wait hangs forever.
+  let assert Ok(bot) =
+    new_builder(client)
+    |> telega.with_auto_allowed_updates()
+    |> telega.with_extra_allowed_updates(["callback_query"])
+    |> telega.init()
+
+  let calls = drain(calls)
+  seen(calls, "setWebhook", "callback_query") |> should.be_true
+  seen(calls, "setWebhook", "inline_query") |> should.be_true
+
+  stop(bot)
+}
+
+pub fn extra_allowed_updates_do_not_narrow_a_wildcard_router_test() {
+  let #(client, calls) = mock.routed_client(start_routes())
+
+  // A router with a fallback handles anything, so derivation deliberately
+  // returns "do not restrict". Extras must not turn that into a narrow list.
+  let assert Ok(bot) =
+    new_builder(client)
+    |> telega.with_router(
+      router.new("wildcard")
+      |> router.fallback(fn(ctx, _upd) { Ok(ctx) }),
+    )
+    |> telega.with_auto_allowed_updates()
+    |> telega.with_extra_allowed_updates(["callback_query"])
+    |> telega.init()
+
+  let calls = drain(calls)
+  seen(calls, "setWebhook", "allowed_updates") |> should.be_false
+
+  stop(bot)
+}

@@ -94,6 +94,9 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     /// Localizer: `(command, language_code) -> Option(description)`. `None`
     /// for a given pair falls back to the router's default description.
     command_translate: Option(fn(String, String) -> Option(String)),
+    /// Update types added to the derived set — what the router cannot know
+    /// about, such as a conversation's `wait_callback`.
+    extra_allowed_updates: List(String),
     /// When `True` and `allowed_updates` was not set manually, derive the
     /// requested update types from the router's registered routes.
     auto_allowed_updates: Bool,
@@ -178,6 +181,7 @@ fn default_builder(
     auto_commands: False,
     command_locales: [],
     command_translate: None,
+    extra_allowed_updates: [],
     auto_allowed_updates: False,
   )
 }
@@ -360,6 +364,7 @@ pub fn with_dependencies(
     auto_commands: builder.auto_commands,
     command_locales: builder.command_locales,
     command_translate: builder.command_translate,
+    extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
   )
 }
@@ -682,6 +687,31 @@ pub fn with_auto_allowed_updates(
   builder: TelegaBuilder(session, error, dependencies),
 ) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, auto_allowed_updates: True)
+}
+
+/// Add update types to the auto-derived `allowed_updates`.
+///
+/// Derivation only sees the *router*. Updates a conversation or a flow waits
+/// for are invisible to it: a bot whose router registers only commands, but
+/// whose handlers use `wait_callback`, derives `["message"]` — and then waits
+/// forever for a `callback_query` Telegram was never asked to send.
+///
+/// ```gleam
+/// |> telega.with_auto_allowed_updates()
+/// |> telega.with_extra_allowed_updates(["callback_query"])
+/// ```
+///
+/// Has no effect when derivation already returns "do not restrict" (a router
+/// with a fallback, custom or filtered route), and none when
+/// `set_allowed_updates` set the list manually.
+pub fn with_extra_allowed_updates(
+  builder: TelegaBuilder(session, error, dependencies),
+  updates updates: List(String),
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(
+    ..builder,
+    extra_allowed_updates: list.append(builder.extra_allowed_updates, updates),
+  )
 }
 
 /// Set nil session for the bot.
@@ -1784,8 +1814,14 @@ fn resolve_allowed_updates(
       case builder.auto_allowed_updates, builder.router {
         True, Some(router) ->
           case router.allowed_updates(router) {
+            // Derivation gave up on narrowing; adding extras would turn "send
+            // everything" into a narrower list than the router can handle.
             [] -> None
-            updates -> Some(updates)
+            updates ->
+              list.append(updates, builder.extra_allowed_updates)
+              |> list.unique
+              |> list.sort(string.compare)
+              |> Some
           }
         _, _ -> None
       }

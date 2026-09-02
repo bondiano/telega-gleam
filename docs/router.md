@@ -472,9 +472,19 @@ Route → update type mapping:
 
 `router.allowed_updates(router)` returns the derived list directly.
 
+**Derivation only sees the router.** Updates a *conversation* or a *flow* waits
+for are invisible to it: a bot whose router registers only commands, but whose
+handlers call `wait_callback`, derives `["message"]` and then waits forever for
+a `callback_query` Telegram was never asked to send. Add those explicitly:
+
+```gleam
+|> telega.with_auto_allowed_updates()
+|> telega.with_extra_allowed_updates(["callback_query"])
+```
+
 **Escape hatches.** A manual `telega.set_allowed_updates(builder, updates)` always
 wins; auto derivation is skipped entirely. And if the router has a **fallback**,
 **custom**, or **filtered** route — which can match any update — the set can't be
 narrowed safely, so derivation returns the empty list and Telegram falls back to
-its default update set. Use `set_allowed_updates` when you need narrowing alongside
-catch-all routes.
+its default update set (`with_extra_allowed_updates` is a no-op in that case).
+Use `set_allowed_updates` when you need narrowing alongside catch-all routes.
