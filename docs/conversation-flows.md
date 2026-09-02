@@ -142,11 +142,14 @@ import telega/flow/action
 // Move to next step
 action.next(ctx, instance, NextStep)
 
-// Go back to previous step
+// Go back to the previous step the user visited
+// (routing steps — the ones a conditional starts from — are skipped)
 action.back(ctx, instance)
 
-// Jump to any step
-action.goto(ctx, instance, TargetStep)
+// Hard reset to any step: clears step data, history and the flow stack,
+// so `back` has nothing to return to afterwards.
+// `action.goto` is the same function under its older name.
+action.reset_to(ctx, instance, TargetStep)
 
 // Complete the flow
 action.complete(ctx, instance)
@@ -1265,7 +1268,7 @@ fn string_to_step(s) {
 |---|---|
 | `telega/flow/types` | All shared type definitions (`FlowInstance`, `FlowAction`, `WaitResult`, etc.) |
 | `telega/flow/instance` | Instance CRUD, accessors, data operations, serialization |
-| `telega/flow/action` | Navigation helpers (`next`, `back`, `goto`, `complete`, `cancel`, `wait`, `wait_with_timeout`) |
+| `telega/flow/action` | Navigation helpers (`next`, `back`, `reset_to`/`goto`, `complete`, `cancel`, `wait`, `wait_with_timeout`) |
 | `telega/flow/storage` | Storage utilities (ETS, noop, `generate_id`) |
 | `telega/flow/builder` | Flow construction (`new`, `add_step`, `build`, hooks, middleware, conditionals, `declare_next` / `declare_choice` / `declare_complete` / `declare_cancel`, `declaration_errors`) |
 | `telega/flow/engine` | Core execution engine (internal) |

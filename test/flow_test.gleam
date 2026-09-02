@@ -1129,6 +1129,94 @@ pub fn engine_conditional_routing_test() {
   let assert Ok("conditional_a") = process.receive(events, 100)
 }
 
+pub fn engine_routing_steps_stay_out_of_history_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("h10_history", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.next(ctx, inst, Middle) })
+    |> builder.add_conditional(
+      Middle,
+      fn(_inst) { True },
+      true: ConditionalA,
+      false: ConditionalB,
+    )
+    |> builder.add_step(ConditionalA, fn(ctx, inst) { action.wait(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) =
+    engine.start_or_resume(
+      flow,
+      ctx,
+      user_id: 1,
+      chat_id: 2,
+      initial_data: dict.new(),
+    )
+
+  let assert Ok(Some(saved)) =
+    ets.load(storage.generate_id(1, 2, "h10_history"))
+
+  saved.state.current_step |> should.equal("conditional_a")
+  // "middle" only routes; recording it made `Back` bounce forward again.
+  list.contains(saved.state.history, "middle") |> should.be_false
+}
+
+pub fn engine_back_skips_routing_steps_test() {
+  let assert Ok(ets) = storage.create_ets_storage()
+
+  let flow =
+    builder.new("h10_back", ets, test_step_to_string, string_to_test_step)
+    |> builder.add_step(Start, fn(ctx, inst) { action.wait(ctx, inst) })
+    |> builder.add_conditional(
+      Middle,
+      fn(_inst) { True },
+      true: ConditionalA,
+      false: ConditionalB,
+    )
+    |> builder.add_step(ConditionalA, fn(ctx, inst) { action.back(ctx, inst) })
+    |> builder.build(initial: Start)
+
+  // An instance written before routing steps were kept out of the history.
+  let base =
+    instance.new_instance(
+      id: storage.generate_id(1, 2, "h10_back"),
+      flow_name: "h10_back",
+      user_id: 1,
+      chat_id: 2,
+      current_step: "conditional_a",
+    )
+  let stale =
+    types.FlowInstance(
+      ..base,
+      state: types.FlowState(..base.state, history: ["middle", "start"]),
+    )
+  let assert Ok(_) = ets.save(stale)
+
+  let #(client, _) = mock.message_client()
+  let ctx =
+    context.context_with(
+      session: Nil,
+      update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
+    )
+  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+
+  let assert Ok(_) = engine.resume_with_instance(flow, ctx, stale, None)
+
+  let assert Ok(Some(saved)) = ets.load(storage.generate_id(1, 2, "h10_back"))
+
+  // "middle" would have routed straight back to "conditional_a".
+  saved.state.current_step |> should.equal("start")
+  saved.state.history |> should.equal([])
+}
+
 pub fn engine_conditional_default_branch_test() {
   let assert Ok(ets) = storage.create_ets_storage()
   let events = process.new_subject()

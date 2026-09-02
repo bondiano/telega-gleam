@@ -28,7 +28,12 @@ pub fn unsafe_next(
   Ok(#(ctx, NextString(step), instance))
 }
 
-/// Type-safe goto navigation (clears step data)
+/// Hard reset to `step`: clears step data **and erases history and the flow
+/// stack**, so `back` has nothing to return to afterwards.
+///
+/// This is rarely what a "go to this step" reads like — `reset_to` is the same
+/// function under a name that says so. To move between steps while keeping the
+/// history, return `Jump` instead.
 pub fn goto(
   ctx: Context(session, error, dependencies),
   instance: FlowInstance,
@@ -37,7 +42,21 @@ pub fn goto(
   Ok(#(ctx, GoTo(step), instance))
 }
 
-/// Go back to previous step
+/// Hard reset to `step` — the explicit spelling of `goto`.
+///
+/// Step data, history and the flow stack are all cleared.
+pub fn reset_to(
+  ctx: Context(session, error, dependencies),
+  instance: FlowInstance,
+  step step: step_type,
+) -> StepResult(step_type, session, error, dependencies) {
+  goto(ctx, instance, step:)
+}
+
+/// Go back to the previous step the user actually visited.
+///
+/// Routing steps — the ones a conditional transition starts from — are skipped:
+/// stopping on one would immediately route forward again.
 pub fn back(
   ctx: Context(session, error, dependencies),
   instance: FlowInstance,

@@ -216,7 +216,9 @@ pub type FlowAction(step_type) {
   WaitWithTimeout(timeout_ms: Int)
   /// Wait for callback query with timeout
   WaitCallbackWithTimeout(timeout_ms: Int)
-  /// Jump to any step (clears step data)
+  /// Hard reset to any step: step data is cleared, and **history and the flow
+  /// stack are erased** — after a `GoTo` there is nothing to go `Back` to.
+  /// Use `Jump` to move between steps while keeping both.
   GoTo(step_type)
   /// Jump to any step preserving history and flow stack as-is (no push, no
   /// erase). For programmatic navigation that manages history itself — e.g.

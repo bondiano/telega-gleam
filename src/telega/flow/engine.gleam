@@ -157,13 +157,14 @@ pub fn execute_step(
   // Check for conditional transitions first
   case check_conditionals(flow, instance) {
     Some(next_step) -> {
+      // A routing step is not somewhere the user has *been*, so it stays out of
+      // the history. Recording it made `Back` return to the router, which
+      // immediately routed forward again — the user could never step back past
+      // a conditional, and the history grew on every press.
       let updated_instance =
         FlowInstance(
           ..instance,
-          state: FlowState(..instance.state, current_step: next_step, history: [
-            instance.state.current_step,
-            ..instance.state.history
-          ]),
+          state: FlowState(..instance.state, current_step: next_step),
           updated_at: utils.current_time_ms(),
         )
       case flow.storage.save(updated_instance) {
@@ -510,6 +511,8 @@ fn process_action(
       }
     }
 
+    // A hard reset: history and flow stack are dropped on purpose. Use `Jump`
+    // to move without touching them.
     GoTo(step) -> {
       let step_name = flow.step_to_string(step)
       let updated_instance =
@@ -549,8 +552,8 @@ fn process_action(
     }
 
     Back -> {
-      case instance.state.history {
-        [previous_step, ..rest] -> {
+      case back_target(flow, instance.state.history) {
+        Some(#(previous_step, rest)) -> {
           let updated_instance =
             FlowInstance(
               ..instance,
@@ -568,7 +571,7 @@ fn process_action(
             Error(err) -> handle_error(flow, ctx, instance, Some(err))
           }
         }
-        [] -> Ok(ctx)
+        None -> Ok(ctx)
       }
     }
 
@@ -791,6 +794,34 @@ fn check_conditionals(
       }
     }
   })
+}
+
+/// Where `Back` lands: the most recent step in `history` that is not a routing
+/// step, together with the history left behind it.
+///
+/// Older instances (written before routing steps stopped being recorded) can
+/// still carry them, and skipping keeps `Back` from bouncing forward again.
+fn back_target(
+  flow: Flow(step_type, session, error, dependencies),
+  history: List(String),
+) -> Option(#(String, List(String))) {
+  case history {
+    [] -> None
+    [step, ..rest] ->
+      case is_routing_step(flow, step) {
+        True -> back_target(flow, rest)
+        False -> Some(#(step, rest))
+      }
+  }
+}
+
+/// A step that only routes: a conditional transition starts from it, so
+/// `execute_step` never reaches its handler.
+fn is_routing_step(
+  flow: Flow(step_type, session, error, dependencies),
+  step: String,
+) -> Bool {
+  list.any(flow.conditionals, fn(conditional) { conditional.from == step })
 }
 
 fn check_parallel_trigger(
@@ -1024,6 +1055,8 @@ fn process_subflow_action(
       }
     }
 
+    // A hard reset: history and flow stack are dropped on purpose. Use `Jump`
+    // to move without touching them.
     GoTo(step) -> {
       let step_name = flow.step_to_string(step)
       let updated_instance =
@@ -1063,8 +1096,8 @@ fn process_subflow_action(
     }
 
     Back -> {
-      case instance.state.history {
-        [previous_step, ..rest] -> {
+      case back_target(flow, instance.state.history) {
+        Some(#(previous_step, rest)) -> {
           let updated_instance =
             FlowInstance(
               ..instance,
@@ -1082,7 +1115,7 @@ fn process_subflow_action(
               handle_subflow_error(flow, ctx, instance, Some(err), config)
           }
         }
-        [] -> Ok(ctx)
+        None -> Ok(ctx)
       }
     }
 
