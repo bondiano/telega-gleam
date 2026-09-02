@@ -12,6 +12,7 @@ links = [
 pages = [
     { title = " ", path = "#", source = "" },
     { title = "Router", path="docs/router.html", source="docs/router.md" },
+    { title = "Client", path="docs/client.html", source="docs/client.md" },
     { title = "Conversation", path="docs/conversation.html", source="docs/conversation.md" },
     { title = "Conversation Flows", path="docs/conversation-flows.html", source="docs/conversation-flows.md" },
     { title = "Dialogs", path="docs/dialogs.html", source="docs/dialogs.md" },
