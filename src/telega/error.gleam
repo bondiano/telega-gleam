@@ -1,13 +1,22 @@
 import gleam/int
 import gleam/json
+import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/string
 
-import telega/model/types.{type Update}
+import telega/model/types.{type ResponseParameters, type Update}
 
 pub type TelegaError {
-  /// Returned by Bot API if server returns `ok: false`, indicating that your API request was invalid and failed
-  TelegramApiError(error_code: Int, description: String)
+  /// Returned by Bot API if server returns `ok: false`, indicating that your API request was invalid and failed.
+  ///
+  /// `parameters` is Telegram's own `ResponseParameters` when it sent one —
+  /// `retry_after` on a flood wait, `migrate_to_chat_id` when a group became a
+  /// supergroup. Read them with `retry_after` / `migrate_to_chat_id`.
+  TelegramApiError(
+    error_code: Int,
+    description: String,
+    parameters: Option(ResponseParameters),
+  )
   /// Returned if the Bot API server could not be reached or the request failed
   FetchError(error: String)
   /// Returned if the JSON response from the Bot API could not be decoded
@@ -45,7 +54,7 @@ pub type TelegaError {
 
 pub fn to_string(error: TelegaError) -> String {
   case error {
-    TelegramApiError(error_code, description) ->
+    TelegramApiError(error_code:, description:, ..) ->
       "Telegram API error: " <> int.to_string(error_code) <> " " <> description
     JsonDecodeError(error) -> "Decode JSON error: " <> string.inspect(error)
     ApiToRequestConvertError -> "Failed to convert API request to HTTP request"
@@ -94,11 +103,71 @@ pub fn is_message_cant_be_edited(error error: TelegaError) -> Bool {
 }
 
 fn is_400_with(error: TelegaError, needle: String) -> Bool {
+  is_code_with(error, 400, needle)
+}
+
+fn is_code_with(error: TelegaError, code: Int, needle: String) -> Bool {
   case error {
-    TelegramApiError(error_code: 400, description:) ->
+    TelegramApiError(error_code:, description:, ..) if error_code == code ->
       string.contains(string.lowercase(description), needle)
     _ -> False
   }
+}
+
+/// Seconds to wait before repeating the request, as Telegram reported them in
+/// `parameters.retry_after` (flood control). `None` for every other error.
+pub fn retry_after(error error: TelegaError) -> Option(Int) {
+  case error {
+    TelegramApiError(parameters: Some(parameters), ..) -> parameters.retry_after
+    _ -> None
+  }
+}
+
+/// The supergroup id this chat was migrated to, as Telegram reported it in
+/// `parameters.migrate_to_chat_id`. Resend to this id instead.
+pub fn migrate_to_chat_id(error error: TelegaError) -> Option(Int) {
+  case error {
+    TelegramApiError(parameters: Some(parameters), ..) ->
+      parameters.migrate_to_chat_id
+    _ -> None
+  }
+}
+
+/// The user blocked the bot (403). They can unblock it later, so the chat id
+/// stays valid.
+///
+/// The Bot API has no structured error codes, so a case-insensitive substring
+/// match on the description is the only way to classify this error.
+pub fn is_bot_blocked(error error: TelegaError) -> Bool {
+  is_code_with(error, 403, "bot was blocked by the user")
+}
+
+/// The account is gone for good (403 "user is deactivated").
+pub fn is_user_deactivated(error error: TelegaError) -> Bool {
+  is_code_with(error, 403, "user is deactivated")
+}
+
+/// Telegram does not know this chat (400 "chat not found") — a wrong id, or a
+/// user who never started the bot.
+pub fn is_chat_not_found(error error: TelegaError) -> Bool {
+  is_400_with(error, "chat not found")
+}
+
+/// The bot was removed from the chat (403 "bot was kicked" / "bot is not a
+/// member").
+pub fn is_bot_kicked(error error: TelegaError) -> Bool {
+  is_code_with(error, 403, "bot was kicked")
+  || is_code_with(error, 403, "bot is not a member")
+}
+
+/// This chat cannot be delivered to right now: blocked, deactivated, kicked,
+/// or unknown to Telegram. Retrying the same call will not help, which is what
+/// separates it from a flood wait or a 5xx.
+pub fn is_chat_unreachable(error error: TelegaError) -> Bool {
+  is_bot_blocked(error)
+  || is_user_deactivated(error)
+  || is_bot_kicked(error)
+  || is_chat_not_found(error)
 }
 
 /// Helper to replace `result.try` for api call and error mapping.

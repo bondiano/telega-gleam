@@ -97,8 +97,10 @@ pub fn classification_test() {
         Error(error.TelegramApiError(
           403,
           "Forbidden: bot was blocked by the user",
+          option.None,
         ))
-      _ -> Error(error.TelegramApiError(500, "Internal Server Error"))
+      _ ->
+        Error(error.TelegramApiError(500, "Internal Server Error", option.None))
     }
   }
 
@@ -220,7 +222,8 @@ pub fn retry_429_then_success_test() {
       chat_ids: [1],
       send: fn(_client, _chat_id) {
         case attempt() {
-          1 -> Error(error.TelegramApiError(429, "Too Many Requests"))
+          1 ->
+            Error(error.TelegramApiError(429, "Too Many Requests", option.None))
           _ -> Ok(Nil)
         }
       },
@@ -243,7 +246,7 @@ pub fn retry_429_exhausted_test() {
         case chat_id {
           1 -> {
             let _ = attempt()
-            Error(error.TelegramApiError(429, "Too Many Requests"))
+            Error(error.TelegramApiError(429, "Too Many Requests", option.None))
           }
           _ -> Ok(Nil)
         }
@@ -255,7 +258,39 @@ pub fn retry_429_exhausted_test() {
   report.sent |> should.equal([#(2, Nil)])
   // one initial attempt + exactly one retry
   attempt() |> should.equal(3)
-  let assert [#(1, error.TelegramApiError(429, _))] = report.failed
+  let assert [#(1, error.TelegramApiError(error_code: 429, ..))] = report.failed
+}
+
+/// M3 — "unreachable" is a description, not the 403 code: Telegram answers
+/// "chat not found" with a 400 and it is just as undeliverable.
+pub fn unreachable_chat_is_blocked_not_failed_test() {
+  let send = fn(_client, chat_id) {
+    case chat_id {
+      1 ->
+        Error(error.TelegramApiError(
+          400,
+          "Bad Request: chat not found",
+          option.None,
+        ))
+      2 ->
+        Error(error.TelegramApiError(
+          403,
+          "Forbidden: user is deactivated",
+          option.None,
+        ))
+      3 ->
+        Error(error.TelegramApiError(500, "Internal Server Error", option.None))
+      _ -> Ok(Nil)
+    }
+  }
+
+  let assert Ok(report) =
+    broadcast.new(client: mock_client(), chat_ids: [1, 2, 3, 4], send:)
+    |> broadcast.run
+
+  report.blocked |> should.equal([1, 2])
+  report.sent |> should.equal([#(4, Nil)])
+  let assert [#(3, _)] = report.failed
 }
 
 pub fn empty_list_test() {

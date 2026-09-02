@@ -813,15 +813,17 @@ pub fn init_for_polling(
     api.get_me(api_client)
     |> result.map_error(fn(err) {
       case err {
-        error.TelegramApiError(404, _desc) ->
+        error.TelegramApiError(error_code: 404, ..) ->
           error.TelegramApiError(
-            404,
-            "Bot not found. Please check that your BOT_TOKEN is valid and the bot exists. Get a valid token from @BotFather on Telegram.",
+            error_code: 404,
+            description: "Bot not found. Please check that your BOT_TOKEN is valid and the bot exists. Get a valid token from @BotFather on Telegram.",
+            parameters: option.None,
           )
-        error.TelegramApiError(401, _desc) ->
+        error.TelegramApiError(error_code: 401, ..) ->
           error.TelegramApiError(
-            401,
-            "Unauthorized. Your bot token is invalid. Please get a valid token from @BotFather on Telegram.",
+            error_code: 401,
+            description: "Unauthorized. Your bot token is invalid. Please get a valid token from @BotFather on Telegram.",
+            parameters: option.None,
           )
         _ -> err
       }

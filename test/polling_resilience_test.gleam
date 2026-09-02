@@ -36,10 +36,10 @@ pub type Err {
 pub fn h11_recoverable_errors_never_stop_polling_test() {
   [
     error.FetchError("connection refused"),
-    error.TelegramApiError(409, "Conflict: webhook is active"),
-    error.TelegramApiError(429, "Too Many Requests"),
-    error.TelegramApiError(500, "Internal Server Error"),
-    error.TelegramApiError(418, "I'm a teapot"),
+    error.TelegramApiError(409, "Conflict: webhook is active", option.None),
+    error.TelegramApiError(429, "Too Many Requests", option.None),
+    error.TelegramApiError(500, "Internal Server Error", option.None),
+    error.TelegramApiError(418, "I'm a teapot", option.None),
     error.ApiToRequestConvertError,
   ]
   |> list.map(polling.stops_polling)
@@ -48,8 +48,8 @@ pub fn h11_recoverable_errors_never_stop_polling_test() {
 
 pub fn h11_only_fatal_errors_stop_polling_test() {
   [
-    error.TelegramApiError(401, "Unauthorized"),
-    error.TelegramApiError(404, "Not Found"),
+    error.TelegramApiError(401, "Unauthorized", option.None),
+    error.TelegramApiError(404, "Not Found", option.None),
   ]
   |> list.map(polling.stops_polling)
   |> should.equal([True, True])

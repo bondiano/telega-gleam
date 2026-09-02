@@ -475,7 +475,11 @@ fn map_response(
     case parsed {
       ApiSuccess(result:) -> Ok(result)
       ApiFailure(error_code:, description:) ->
-        Error(error.TelegramApiError(error_code, description))
+        Error(error.TelegramApiError(
+          error_code:,
+          description:,
+          parameters: None,
+        ))
     }
   })
 }

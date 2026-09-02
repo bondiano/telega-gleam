@@ -464,7 +464,7 @@ fn handle_polling_message(
           // a webhook that is still registered. Go back through the lazy
           // `deleteWebhook` step instead of hammering `getUpdates`.
           let #(retry_message, webhook_deleted) = case error {
-            error.TelegramApiError(409, _) -> #(
+            error.TelegramApiError(error_code: 409, ..) -> #(
               StartPolling(Some(offset)),
               False,
             )
@@ -501,9 +501,9 @@ fn handle_polling_message(
 pub fn stops_polling(error: TelegaError) -> Bool {
   case error {
     // Unauthorized — the token will not become valid by itself
-    error.TelegramApiError(401, _) -> True
+    error.TelegramApiError(error_code: 401, ..) -> True
     // Not found — the bot was deleted
-    error.TelegramApiError(404, _) -> True
+    error.TelegramApiError(error_code: 404, ..) -> True
     // Everything else — network errors, 409 Conflict, rate limits, 5xx,
     // undecodable payloads, unknown 4xx — is retried.
     _ -> False

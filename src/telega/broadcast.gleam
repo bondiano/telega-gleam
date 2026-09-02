@@ -7,8 +7,8 @@
 //// paced below Telegram's limit, and classifies every result:
 ////
 //// - `sent` — delivered, with the value returned by the send function
-//// - `blocked` — HTTP 403: the user blocked the bot, was deactivated,
-////   or kicked the bot
+//// - `blocked` — undeliverable: the user blocked the bot, was deactivated,
+////   kicked the bot, or the chat is unknown to Telegram
 //// - `failed` — everything else after retries
 ////
 //// ```gleam
@@ -18,7 +18,7 @@
 ////   broadcast.send_text(client:, chat_ids:, text: "Big news!")
 ////   |> broadcast.run
 ////
-//// // 403s are users who blocked the bot — stop sending to them
+//// // undeliverable chats — stop sending to them
 //// mark_as_dead(report.blocked)
 //// ```
 ////
@@ -118,8 +118,9 @@
 ////
 //// ## Blocked-user hygiene
 ////
-//// A 403 (`Forbidden: bot was blocked by the user` and friends) is
-//// permanent until the user comes back on their own. Every broadcast to
+//// An undeliverable chat (`error.is_chat_unreachable`: blocked, deactivated,
+//// kicked, or a 400 `chat not found`) stays that way until the user comes
+//// back on their own. Every broadcast to
 //// a dead chat id wastes your rate budget, so treat `report.blocked` as
 //// a to-do list: mark those chat ids as inactive in your storage,
 //// exclude them from future broadcasts, and re-activate a user when
@@ -185,7 +186,7 @@ pub type BroadcastReport(a) {
   BroadcastReport(
     /// Successfully delivered, with the send function's return value.
     sent: List(#(Int, a)),
-    /// HTTP 403: bot blocked / kicked / user deactivated.
+    /// Undeliverable chats: bot blocked / kicked / user deactivated / chat not found.
     blocked: List(Int),
     /// Everything else after retries.
     failed: List(#(Int, TelegaError)),
@@ -515,10 +516,7 @@ fn send_to_chat(state: State(a), chat_id: Int) -> actor.Next(State(a), Msg(a)) {
   case state.send(state.client, chat_id) {
     Ok(value) -> record(State(..state, sent: [#(chat_id, value), ..state.sent]))
 
-    Error(error.TelegramApiError(403, _)) ->
-      record(State(..state, blocked: [chat_id, ..state.blocked]))
-
-    Error(error.TelegramApiError(429, description)) ->
+    Error(error.TelegramApiError(error_code: 429, ..) as reason) ->
       case is_retry {
         // A 429 that survived the client's own retries: pause for a full
         // window and retry this chat id once
@@ -528,16 +526,18 @@ fn send_to_chat(state: State(a), chat_id: Int) -> actor.Next(State(a), Msg(a)) {
           actor.continue(state)
         }
         True ->
-          record(
-            State(..state, failed: [
-              #(chat_id, error.TelegramApiError(429, description)),
-              ..state.failed
-            ]),
-          )
+          record(State(..state, failed: [#(chat_id, reason), ..state.failed]))
       }
 
+    // Blocked, deactivated, kicked or unknown: the id is not deliverable, and
+    // no amount of retrying changes that. Classified by description, not by
+    // the bare 403 — Telegram answers "chat not found" with a 400.
     Error(reason) ->
-      record(State(..state, failed: [#(chat_id, reason), ..state.failed]))
+      case error.is_chat_unreachable(reason) {
+        True -> record(State(..state, blocked: [chat_id, ..state.blocked]))
+        False ->
+          record(State(..state, failed: [#(chat_id, reason), ..state.failed]))
+      }
   }
 }
 

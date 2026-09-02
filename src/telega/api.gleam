@@ -118,7 +118,12 @@ import telega/model/types.{
 
 type ApiResponse(result) {
   ApiSuccessResponse(ok: Bool, result: result)
-  ApiErrorResponse(ok: Bool, error_code: Int, description: String)
+  ApiErrorResponse(
+    ok: Bool,
+    error_code: Int,
+    description: String,
+    parameters: Option(types.ResponseParameters),
+  )
 }
 
 /// Set the webhook URL using [setWebhook](https://core.telegram.org/bots/api#setwebhook) API.
@@ -3318,8 +3323,8 @@ fn map_response(
       ApiSuccessResponse(result: result, ..) -> {
         Ok(result)
       }
-      ApiErrorResponse(error_code: error_code, description: description, ..) -> {
-        Error(error.TelegramApiError(error_code, description))
+      ApiErrorResponse(error_code:, description:, parameters:, ..) -> {
+        Error(error.TelegramApiError(error_code:, description:, parameters:))
       }
     }
   })
@@ -3338,7 +3343,18 @@ fn response_decoder(
     False -> {
       use error_code <- decode.field("error_code", decode.int)
       use description <- decode.field("description", decode.string)
-      decode.success(ApiErrorResponse(ok:, error_code:, description:))
+      // Telegram only sends `parameters` for flood waits and chat migrations.
+      use parameters <- decode.optional_field(
+        "parameters",
+        None,
+        decode.optional(decoder.response_parameters_decoder()),
+      )
+      decode.success(ApiErrorResponse(
+        ok:,
+        error_code:,
+        description:,
+        parameters:,
+      ))
     }
   }
 }
