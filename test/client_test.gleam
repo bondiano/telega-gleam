@@ -405,3 +405,118 @@ pub fn queued_request_retries_on_429_test() {
 
   client.shutdown(tg_client)
 }
+
+// ---------------------------------------------------------------------------
+// M2 — retries must not duplicate non-idempotent calls
+// ---------------------------------------------------------------------------
+
+/// A fetch client that counts its calls and always fails the way `how` says.
+fn counting_fetch_client(
+  calls: process.Subject(Int),
+  how: fn() -> Result(response.Response(String), error.TelegaError),
+) {
+  fn(_req: request.Request(String)) {
+    process.send(calls, 1)
+    how()
+  }
+}
+
+pub fn transport_error_is_not_retried_for_send_message_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Error(error.FetchError("connection closed"))
+      }),
+    )
+    |> client.set_max_retry_attempts(3)
+
+  client.new_post_request(client, "sendMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_error()
+
+  // Replaying a `sendMessage` whose response was merely lost would post the
+  // message twice.
+  count_messages(calls, 0) |> should.equal(1)
+}
+
+pub fn transport_error_is_retried_for_idempotent_method_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Error(error.FetchError("connection closed"))
+      }),
+    )
+    |> client.set_max_retry_attempts(2)
+
+  client.new_post_request(client, "deleteMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_error()
+
+  count_messages(calls, 0) |> should.equal(3)
+}
+
+pub fn server_error_is_retried_for_idempotent_method_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
+      }),
+    )
+    |> client.set_max_retry_attempts(2)
+
+  client.new_get_request(client, "getMe", None)
+  |> client.fetch(client)
+  |> should.be_ok()
+
+  count_messages(calls, 0) |> should.equal(3)
+}
+
+pub fn server_error_is_not_retried_for_send_message_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
+      }),
+    )
+    |> client.set_max_retry_attempts(3)
+
+  client.new_post_request(client, "sendMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_ok()
+
+  count_messages(calls, 0) |> should.equal(1)
+}
+
+pub fn long_retry_after_is_not_slept_off_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Ok(response.Response(
+          status: 429,
+          headers: [],
+          body: "{\"ok\": false, \"error_code\": 429, \"parameters\": {\"retry_after\": 3600}}",
+        ))
+      }),
+    )
+    |> client.set_max_retry_attempts(3)
+    |> client.set_max_retry_delay(50)
+
+  // An hour-long `process.sleep` would block the calling chat instance, so the
+  // 429 comes back to the caller instead.
+  client.new_post_request(client, "sendMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_ok()
+  |> fn(r: response.Response(String)) { r.status |> should.equal(429) }
+
+  count_messages(calls, 0) |> should.equal(1)
+}

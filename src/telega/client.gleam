@@ -16,6 +16,7 @@
 //// ```
 
 import gleam/bit_array
+import gleam/bool
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http.{Get, Post}
@@ -34,6 +35,9 @@ import telega/internal/request_queue.{type RequestQueue}
 import telega/telemetry
 
 const default_retry_delay = 1000
+
+/// Longest `retry_after` (ms) worth sleeping off inside the calling process.
+const default_max_retry_delay = 60_000
 
 const telegram_url = "https://api.telegram.org/bot"
 
@@ -72,6 +76,9 @@ pub opaque type TelegramClient {
     token: String,
     /// The maximum number of times to retry sending a API message. Default is 3.
     max_retry_attempts: Int,
+    /// Longest 429 `retry_after` (ms) the client waits out before handing the
+    /// response back to the caller. Default is 60_000.
+    max_retry_delay: Int,
     /// The Telegram Bot API URL. Default is "https://api.telegram.org".
     /// This is useful for running [a local server](https://core.telegram.org/bots/api#using-a-local-bot-api-server).
     tg_api_url: String,
@@ -96,6 +103,7 @@ pub fn new(
   TelegramClient(
     token:,
     max_retry_attempts: default_retry_count,
+    max_retry_delay: default_max_retry_delay,
     tg_api_url: telegram_url,
     fetch_client:,
     fetch_bits_client: None,
@@ -208,7 +216,7 @@ pub fn fetch_multipart(
   let send = fn() { fetch_bits(bits_req) |> stringify_response }
 
   let send_with_retries = fn() {
-    send_bits_with_retry(client, method, send, client.max_retry_attempts)
+    do_send_with_retry(client, method, send, client.max_retry_attempts)
   }
   case client.request_queue {
     Some(queue) -> request_queue.execute(queue, send_with_retries)
@@ -225,45 +233,6 @@ fn stringify_response(
     "upload response body was not valid UTF-8",
   ))
   |> result.map(response.set_body(response, _))
-}
-
-fn send_bits_with_retry(
-  client: TelegramClient,
-  method: String,
-  send: fn() -> Result(Response(String), TelegaError),
-  retries: Int,
-) -> Result(Response(String), TelegaError) {
-  let response = send()
-
-  case retries {
-    0 -> response
-    _ ->
-      case response {
-        Ok(response) ->
-          case response.status {
-            429 -> {
-              let retry_delay = retry_delay_from_response(response)
-              emit_api_retry(
-                method,
-                client.max_retry_attempts - retries + 1,
-                retry_delay,
-              )
-              process.sleep(retry_delay)
-              send_bits_with_retry(client, method, send, retries - 1)
-            }
-            _ -> Ok(response)
-          }
-        Error(_) -> {
-          emit_api_retry(
-            method,
-            client.max_retry_attempts - retries + 1,
-            default_retry_delay,
-          )
-          process.sleep(default_retry_delay)
-          send_bits_with_retry(client, method, send, retries - 1)
-        }
-      }
-  }
 }
 
 fn apply_transformers(
@@ -310,6 +279,18 @@ pub fn set_max_retry_attempts(
   max_retry_attempts max_retry_attempts: Int,
 ) -> TelegramClient {
   TelegramClient(..client, max_retry_attempts:)
+}
+
+/// Set the longest 429 `retry_after` the client will wait out.
+///
+/// Telegram can ask for minutes; sleeping that off blocks the process that made
+/// the call (a chat instance, the broadcast actor). Beyond this the 429
+/// response is returned to the caller instead. Default is 60_000 ms.
+pub fn set_max_retry_delay(
+  client client: TelegramClient,
+  max_retry_delay max_retry_delay: Int,
+) -> TelegramClient {
+  TelegramClient(..client, max_retry_delay:)
 }
 
 /// Set the Telegram Bot API URL.
@@ -588,39 +569,73 @@ fn send_with_retry(
   api_request: Request(String),
   retries: Int,
 ) -> Result(Response(String), TelegaError) {
-  let response = client.fetch_client(api_request)
+  do_send_with_retry(
+    client,
+    method,
+    fn() { client.fetch_client(api_request) },
+    retries,
+  )
+}
 
-  case retries {
-    0 -> response
-    _ -> {
-      case response {
-        Ok(response) -> {
-          case response.status {
-            429 -> {
-              // Rate limited, wait and retry
-              let retry_delay = retry_delay_from_response(response)
-              emit_api_retry(
-                method,
-                client.max_retry_attempts - retries + 1,
-                retry_delay,
-              )
-              process.sleep(retry_delay)
-              send_with_retry(client, method, api_request, retries - 1)
-            }
-            _ -> Ok(response)
+/// Telegram methods that CREATE something. A transport error or a 5xx says
+/// nothing about whether Telegram applied the call, so replaying one of these
+/// risks a duplicate message, invite link or sticker set. They are only
+/// retried when Telegram itself asked for it with a 429, which it only answers
+/// *instead of* doing the work.
+fn is_retry_safe(method: String) -> Bool {
+  case method {
+    // Duplicating a "typing…" is free, and it is the one `send*` a long
+    // handler repeats on purpose anyway.
+    "sendChatAction" -> True
+    _ ->
+      !{
+        string.starts_with(method, "send")
+        || string.starts_with(method, "forward")
+        || string.starts_with(method, "copy")
+        || string.starts_with(method, "create")
+        || string.starts_with(method, "upload")
+      }
+  }
+}
+
+fn do_send_with_retry(
+  client: TelegramClient,
+  method: String,
+  send: fn() -> Result(Response(String), TelegaError),
+  retries: Int,
+) -> Result(Response(String), TelegaError) {
+  let response = send()
+
+  use <- bool.guard(when: retries <= 0, return: response)
+
+  let again = fn(delay) {
+    emit_api_retry(method, client.max_retry_attempts - retries + 1, delay)
+    process.sleep(delay)
+    do_send_with_retry(client, method, send, retries - 1)
+  }
+  let retry_if_safe = fn(give_up) {
+    case is_retry_safe(method) {
+      True -> again(default_retry_delay)
+      False -> give_up
+    }
+  }
+
+  case response {
+    Ok(res) ->
+      case res.status {
+        429 -> {
+          let retry_delay = retry_delay_from_response(res)
+          case retry_delay > client.max_retry_delay {
+            // Sleeping this off would block the calling process for minutes;
+            // hand the 429 back and let the caller decide.
+            True -> Ok(res)
+            False -> again(retry_delay)
           }
         }
-        Error(_) -> {
-          emit_api_retry(
-            method,
-            client.max_retry_attempts - retries + 1,
-            default_retry_delay,
-          )
-          process.sleep(default_retry_delay)
-          send_with_retry(client, method, api_request, retries - 1)
-        }
+        status if status >= 500 -> retry_if_safe(Ok(res))
+        _ -> Ok(res)
       }
-    }
+    Error(e) -> retry_if_safe(Error(e))
   }
 }
 

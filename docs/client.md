@@ -108,8 +108,17 @@ The client retries failed calls up to `set_max_retry_attempts` times
 
 - **429 Too Many Requests** — the client reads `parameters.retry_after`
   (seconds) from the response body and sleeps exactly that long before
-  retrying; if the field is missing it falls back to 1 second.
-- **Transport errors** — retried after a fixed 1 second delay.
+  retrying; if the field is missing it falls back to 1 second. Telegram
+  answers a 429 *instead of* doing the work, so this retry is safe for every
+  method. A `retry_after` longer than `set_max_retry_delay` (default 60 s) is
+  **not** slept off — blocking the calling chat instance for minutes is worse
+  than the failure, so the 429 response is returned to the caller.
+- **Transport errors and 5xx** — retried after a fixed 1 second delay, but
+  only for methods that cannot be duplicated by a replay. A lost response to
+  `sendMessage` says nothing about whether the message was posted, so
+  `send*` (except `sendChatAction`), `forward*`, `copy*`, `create*` and
+  `upload*` are handed back to the caller on the first failure instead of
+  being sent twice.
 
 Each retry emits a `telega.api_call.retry` telemetry event carrying the
 actual delay in `retry_after` (milliseconds).
