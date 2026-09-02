@@ -1,4 +1,6 @@
+import gleam/list
 import gleam/option.{None, Some}
+import gleam/regexp
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -640,4 +642,82 @@ pub fn forced_reply_markups_test() {
   let assert SendMessageReplyReplyKeyboardMarkupParameters(reply_markup) =
     keyboard.to_markup(reply)
   reply_markup.force_reply |> should.equal(Some(True))
+}
+
+// L1 — keyboard edge cases ---------------------------------------------------
+
+pub fn inline_columns_rejects_a_non_positive_width_test() {
+  let buttons = [
+    keyboard.inline_url_button("a", "https://example.com"),
+    keyboard.inline_url_button("b", "https://example.com"),
+  ]
+
+  // `list.split(l, 0)` returns the whole list as the remainder, so chunking by
+  // zero recursed forever on the same list.
+  let assert SendMessageReplyInlineKeyboardMarkupParameters(markup) =
+    keyboard.inline_grid(buttons, 0)
+    |> keyboard.inline_to_markup
+
+  // One row holding everything is the sane reading of "zero columns".
+  list.length(markup.inline_keyboard) |> should.equal(1)
+}
+
+pub fn unpack_callback_rejects_another_ids_payload_test() {
+  let page = keyboard.int_callback_data("page")
+  let user = keyboard.int_callback_data("user")
+
+  let packed = keyboard.pack_callback(page, 3)
+
+  // The payload belongs to `page`; unpacking it as a `user` callback used to
+  // succeed and hand back 3.
+  keyboard.unpack_callback(packed.payload, user) |> should.be_error
+  let assert Ok(unpacked) = keyboard.unpack_callback(packed.payload, page)
+  unpacked.data |> should.equal(3)
+}
+
+pub fn unpack_callback_rejects_undecodable_data_test() {
+  let page = keyboard.int_callback_data("page")
+
+  // "page:banana" used to deserialize to 0 — a silently wrong page number.
+  keyboard.unpack_callback("page:banana", page) |> should.be_error
+
+  let flag = keyboard.bool_callback_data("flag")
+  // Anything that was not "true" used to be False, including garbage.
+  keyboard.unpack_callback("flag:banana", flag) |> should.be_error
+  let assert Ok(off) = keyboard.unpack_callback("flag:false", flag)
+  off.data |> should.be_false
+}
+
+pub fn callback_data_must_not_be_empty_test() {
+  // The error text promises "1-64 bytes long", but only the upper bound was
+  // checked — Telegram rejects a button whose `callback_data` is empty.
+  let data = keyboard.string_callback_data("go")
+  keyboard.inline_button(
+    "Go",
+    keyboard.KeyboardCallback(
+      data: "x",
+      id: "go",
+      payload: "",
+      callback_data: data,
+    ),
+  )
+  |> should.be_error
+}
+
+pub fn filter_escapes_regex_metacharacters_in_payloads_test() {
+  let data = keyboard.string_callback_data("q")
+  let assert Ok(a) =
+    keyboard.inline_button("A", keyboard.pack_callback(data, "a.b"))
+  let assert Ok(b) =
+    keyboard.inline_button("B", keyboard.pack_callback(data, "c+d"))
+
+  let assert Ok(filter) =
+    keyboard.filter_inline_keyboard_query(keyboard.new_inline([[a, b]]))
+
+  // Unescaped, `q:a.b` matched `q:axb` too, and `q:c+d` was an invalid or
+  // wrong pattern.
+  let bot.CallbackQueryFilter(re) = filter
+  regexp.check(re, "q:a.b") |> should.be_true
+  regexp.check(re, "q:axb") |> should.be_false
+  regexp.check(re, "q:c+d") |> should.be_true
 }

@@ -225,6 +225,7 @@
 //// - Cache callback data configurations to avoid recreation
 //// - Consider using `one_time()` keyboards for single interactions
 
+import gleam/bool
 import gleam/function
 import gleam/int
 import gleam/list
@@ -388,11 +389,15 @@ pub fn inline_grid(
   new_inline(rows)
 }
 
-/// Split a list into chunks of specified size
+/// Split a list into chunks of specified size.
+///
+/// A size below 1 would make `list.split` hand the whole list back as the
+/// remainder and this recurse on it forever, so it is read as "one row".
 fn chunk_list(list: List(a), size: Int) -> List(List(a)) {
-  case list {
-    [] -> []
-    _ -> {
+  case list, size < 1 {
+    [], _ -> []
+    _, True -> [list]
+    _, False -> {
       let #(chunk, rest) = list.split(list, size)
       [chunk, ..chunk_list(rest, size)]
     }
@@ -1002,6 +1007,9 @@ pub fn filter_inline_keyboard_query(
       button.callback_data
     })
     |> option.values
+    // A payload is a literal, not a pattern: `page:1+2` would otherwise build
+    // an invalid regex, and `a.b` would also match `axb`.
+    |> list.map(escape_regex)
     |> string.join("|")
 
   case options {
@@ -1014,10 +1022,36 @@ pub fn filter_inline_keyboard_query(
   }
 }
 
+/// Escape the regex metacharacters in a literal payload.
+fn escape_regex(literal: String) -> String {
+  literal
+  |> string.to_graphemes
+  |> list.map(fn(grapheme) {
+    case grapheme {
+      "\\"
+      | "^"
+      | "$"
+      | "."
+      | "|"
+      | "?"
+      | "*"
+      | "+"
+      | "("
+      | ")"
+      | "["
+      | "]"
+      | "{"
+      | "}" -> "\\" <> grapheme
+      _ -> grapheme
+    }
+  })
+  |> string.concat
+}
+
 /// Validate callback data according to Telegram API limits
 fn validate_callback_data(data: String) -> Result(Nil, String) {
   let byte_length = string.byte_size(data)
-  case byte_length > 64 {
+  case byte_length > 64 || byte_length < 1 {
     True ->
       Error(
         "Callback data must be 1-64 bytes long, got "
@@ -1034,7 +1068,7 @@ pub opaque type KeyboardCallbackData(data) {
   KeyboardCallbackData(
     id: String,
     serialize: fn(data) -> String,
-    deserialize: fn(String) -> data,
+    deserialize: fn(String) -> Result(data, Nil),
     delimiter: String,
   )
 }
@@ -1086,7 +1120,7 @@ pub type KeyboardCallback(data) {
 pub fn new_callback_data(
   id id: String,
   serialize serialize: fn(data) -> String,
-  deserialize deserialize: fn(String) -> data,
+  deserialize deserialize: fn(String) -> Result(data, Nil),
 ) -> KeyboardCallbackData(data) {
   KeyboardCallbackData(id:, serialize:, deserialize:, delimiter: ":")
 }
@@ -1111,6 +1145,11 @@ pub fn pack_callback(
 }
 
 /// Unpack payload into a callback
+/// Unpack payload into a callback.
+///
+/// Fails when the payload belongs to a different callback id, or when its data
+/// does not decode — both used to succeed, handing back another button's
+/// argument or a `0`/`False` stand-in for garbage.
 pub fn unpack_callback(
   payload payload: String,
   callback_data callback_data: KeyboardCallbackData(data),
@@ -1119,13 +1158,10 @@ pub fn unpack_callback(
     payload,
     callback_data.delimiter,
   ))
+  use <- bool.guard(when: id != callback_data.id, return: Error(Nil))
+  use data <- result.try(callback_data.deserialize(data))
 
-  Ok(KeyboardCallback(
-    id:,
-    payload:,
-    callback_data:,
-    data: callback_data.deserialize(data),
-  ))
+  Ok(KeyboardCallback(id:, payload:, callback_data:, data:))
 }
 
 // Convenience functions for common callback data patterns
@@ -1147,11 +1183,7 @@ pub fn unpack_callback(
 /// }
 /// ```
 pub fn string_callback_data(id: String) -> KeyboardCallbackData(String) {
-  new_callback_data(
-    id: id,
-    serialize: function.identity,
-    deserialize: function.identity,
-  )
+  new_callback_data(id: id, serialize: function.identity, deserialize: Ok)
 }
 
 /// Create an integer callback data configuration.
@@ -1168,12 +1200,7 @@ pub fn string_callback_data(id: String) -> KeyboardCallbackData(String) {
 /// let page_number = unpacked.data // Int
 /// ```
 pub fn int_callback_data(id: String) -> KeyboardCallbackData(Int) {
-  new_callback_data(id: id, serialize: int.to_string, deserialize: fn(data) {
-    case int.parse(data) {
-      Ok(i) -> i
-      Error(_) -> 0
-    }
-  })
+  new_callback_data(id: id, serialize: int.to_string, deserialize: int.parse)
 }
 
 /// Create a boolean callback data configuration.
@@ -1210,6 +1237,10 @@ fn serialize_bool(data: Bool) -> String {
   }
 }
 
-fn deserialize_bool(data: String) -> Bool {
-  data == "true"
+fn deserialize_bool(data: String) -> Result(Bool, Nil) {
+  case data {
+    "true" -> Ok(True)
+    "false" -> Ok(False)
+    _ -> Error(Nil)
+  }
 }
