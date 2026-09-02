@@ -145,7 +145,9 @@ type SubAttachment(session, error, dependencies) {
     ) -> String,
     result: fn(Context(session, error, dependencies), String) ->
       dict.Dict(String, String),
-    has_own_subs: Bool,
+    /// The sub's *own* sub-dialogs, already compiled. They are re-keyed under
+    /// this sub's namespace so nesting is transitive.
+    nested: List(#(String, engine.CompiledSub(session, error, dependencies))),
   )
 }
 
@@ -342,9 +344,12 @@ fn add_window(
 /// Attach a built dialog as a **sub-dialog**, startable from any window via
 /// `StartSub(sub_id, args, state)` (the sub id is the attached dialog's id).
 /// The sub takes over the live dialog message; its `Done` hands control back
-/// to the window that started it (see `on_sub_result`). Nesting is one level
-/// deep: a dialog with sub-dialogs of its own cannot be attached
-/// (`NestedSubDialog`).
+/// to the window that started it (see `on_sub_result`).
+///
+/// Nesting is **transitive**: a dialog that has sub-dialogs of its own can be
+/// attached, and its whole tree is flattened into this dialog's namespace
+/// (`<sub>.<inner>.<window>`). At runtime the entered dialogs form a stack —
+/// each `Done` or boundary `Back` pops one level.
 ///
 /// - `init` builds the sub's starting state from the parent state and the
 ///   `StartSub` args.
@@ -371,7 +376,7 @@ pub fn subdialog(
         sub.encode_state(init(parent_decode(ctx, parent_raw), args))
       },
       result: fn(ctx, sub_raw) { result(sub.decode_or_initial(ctx, sub_raw)) },
-      has_own_subs: dict.size(sub.compiled.subs) > 0,
+      nested: dict.to_list(sub.compiled.subs),
     )
   DialogBuilder(..builder, subs: [attachment, ..builder.subs])
 }
@@ -540,19 +545,7 @@ pub fn build(
       on_done: option.map(builder.on_done, fn(on_done) {
         fn(raw, ctx) { on_done(decode(ctx, raw), ctx) }
       }),
-      subs: dict.from_list(
-        list.map(subs, fn(sub) {
-          #(
-            sub.id,
-            engine.CompiledSub(
-              id: sub.id,
-              initial: namespaced_id(sub.id, sub.initial),
-              init: sub.init,
-              result: sub.result,
-            ),
-          )
-        }),
-      ),
+      subs: dict.from_list(list.flat_map(subs, namespaced_subs)),
       storage: builder.storage,
       ttl_ms: builder.ttl_ms,
       labels: builder.labels,
@@ -749,7 +742,6 @@ fn validate_subs(
         !set.contains(seen, sub.id),
         types.DuplicateSubDialogId(id: sub.id),
       )
-      use <- require(!sub.has_own_subs, types.NestedSubDialog(id: sub.id))
       use Nil <- result.try(
         list.try_each(sub.windows, fn(window) {
           let namespaced = namespaced_id(sub.id, window.id)
@@ -870,6 +862,42 @@ fn typed_widget_ctx(
   )
 }
 
+/// One sub attachment contributes itself plus every sub it attaches, each
+/// re-keyed under this sub's namespace: `<sub>.<inner>`. Ids stay unique
+/// however deep the tree goes, and the engine keeps looking subs up by the
+/// same path `StartSub` carries.
+fn namespaced_subs(
+  sub: SubAttachment(session, error, dependencies),
+) -> List(#(String, engine.CompiledSub(session, error, dependencies))) {
+  let own = #(
+    sub.id,
+    engine.CompiledSub(
+      id: sub.id,
+      initial: namespaced_id(sub.id, sub.initial),
+      init: sub.init,
+      result: sub.result,
+    ),
+  )
+
+  let inner =
+    list.map(sub.nested, fn(entry) {
+      let #(key, compiled) = entry
+      let key = namespaced_id(sub.id, key)
+      #(
+        key,
+        engine.CompiledSub(
+          id: key,
+          // Already namespaced inside the sub, so this only adds our level.
+          initial: namespaced_id(sub.id, compiled.initial),
+          init: compiled.init,
+          result: compiled.result,
+        ),
+      )
+    })
+
+  [own, ..inner]
+}
+
 fn namespaced_id(sub_id: String, window_id: String) -> String {
   sub_id <> engine.sub_separator <> window_id
 }
@@ -877,18 +905,22 @@ fn namespaced_id(sub_id: String, window_id: String) -> String {
 /// Re-key an (already erased) sub-dialog window under the sub namespace and
 /// map its navigation targets into it.
 fn namespace_window(
-  sub_id: String,
+  namespace: String,
   window: Window(String, session, error, dependencies),
 ) -> Window(String, session, error, dependencies) {
   let map_action = fn(action: DialogAction(String)) {
     case action {
       types.Goto(window_id:, state:) ->
-        types.Goto(window_id: namespaced_id(sub_id, window_id), state:)
+        types.Goto(window_id: namespaced_id(namespace, window_id), state:)
+      // A sub of a sub is addressed by the same path the compiled `subs` map
+      // is keyed with, so `StartSub` moves into the namespace as well.
+      types.StartSub(sub_id:, args:, state:) ->
+        types.StartSub(sub_id: namespaced_id(namespace, sub_id), args:, state:)
       other -> other
     }
   }
   Window(
-    id: namespaced_id(sub_id, window.id),
+    id: namespaced_id(namespace, window.id),
     render: window.render,
     on_action: fn(raw, event, ctx) {
       window.on_action(raw, event, ctx) |> result.map(map_action)
@@ -914,7 +946,7 @@ fn namespace_window(
           })
         },
         goto_targets: list.map(widget_item.goto_targets, namespaced_id(
-          sub_id,
+          namespace,
           _,
         )),
       )

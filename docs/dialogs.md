@@ -352,10 +352,18 @@ Semantics:
   re-rendered, `on_sub_result` is **not** called.
 - A sub cannot `Goto` parent windows (its navigation is namespaced), and the
   sub's own `storage`/`ttl`/`labels`/`on_done` are ignored while attached.
-- Nesting is **one level**: attaching a dialog that itself has sub-dialogs
-  fails at `build()` (`NestedSubDialog`); a `StartSub` from inside a sub is
-  rejected at runtime (logged, window re-rendered). Chaining is fine:
-  `on_sub_result` may return another `StartSub`.
+- Nesting is **transitive**. A dialog that has sub-dialogs of its own can be
+  attached: `build()` flattens the whole tree into one window namespace
+  (`<sub>.<inner>.<window>`) and keys each attachment by the same path, so a
+  `StartSub("inner")` inside `middle` resolves to `middle.inner`. At runtime
+  the entered dialogs form a **stack**: `Done` pops one level and hands its
+  result to that level's return window, and a boundary `Back` cancels one
+  level. Chaining still works too — `on_sub_result` may return another
+  `StartSub`.
+
+  Ids get longer with depth and they travel in callback data, so the 64-byte
+  budget is what actually limits how deep you can go; `build()` measures every
+  namespaced window against it.
 
 ## i18n
 

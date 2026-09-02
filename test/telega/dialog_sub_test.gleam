@@ -7,6 +7,7 @@
 
 import birdie
 import gleam/dict
+import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
 import gleeunit
@@ -250,9 +251,8 @@ pub fn sub_happy_path_test() {
 
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("address.city")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(Some("address"))
-  instance.get_data(inst, "__dialog_return_window")
-  |> should.equal(Some("menu"))
+  dialog_engine.active_sub(inst) |> should.equal(Some("address"))
+  dialog_engine.sub_depth(inst) |> should.equal(1)
   instance.get_data(inst, "__dialog_state")
   |> should.equal(Some("Springfield|"))
 
@@ -263,8 +263,8 @@ pub fn sub_happy_path_test() {
   // on_sub_result, sub bookkeeping gone.
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("menu")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(None)
-  instance.get_data(inst, "__dialog_sub_saved") |> should.equal(None)
+  dialog_engine.active_sub(inst) |> should.equal(None)
+  dialog_engine.sub_depth(inst) |> should.equal(0)
   instance.get_data(inst, "__dialog_state")
   |> should.equal(Some("Shelbyville, Evergreen Terrace 742"))
 
@@ -294,7 +294,7 @@ pub fn sub_back_inside_sub_stays_in_sub_test() {
 
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("address.city")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(Some("address"))
+  dialog_engine.active_sub(inst) |> should.equal(Some("address"))
 }
 
 pub fn sub_back_on_first_window_cancels_sub_test() {
@@ -318,7 +318,7 @@ pub fn sub_back_on_first_window_cancels_sub_test() {
 
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("menu")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(None)
+  dialog_engine.active_sub(inst) |> should.equal(None)
   instance.get_data(inst, "__dialog_state") |> should.equal(Some(""))
 
   mock.get_calls(calls)
@@ -340,7 +340,7 @@ pub fn sub_stale_parent_button_while_in_sub_test() {
 
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("address.city")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(Some("address"))
+  dialog_engine.active_sub(inst) |> should.equal(Some("address"))
 }
 
 pub fn sub_persistence_roundtrip_mid_sub_test() {
@@ -387,17 +387,17 @@ pub fn sub_unknown_sub_id_stays_test() {
 
   let inst = profile_instance(storage, chat_id)
   inst.state.current_step |> should.equal("menu")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(None)
+  dialog_engine.active_sub(inst) |> should.equal(None)
 }
 
-pub fn sub_nested_start_sub_is_rejected_test() {
+pub fn sub_nested_two_levels_test() {
   let assert Ok(storage) = flow_storage.create_ets_storage()
   let #(encode_state, decode_state) = dialog.string_codec()
 
-  // A sub whose window tries to start another sub at runtime.
-  let assert Ok(greedy) =
+  // Innermost: one window that finishes with a value.
+  let assert Ok(inner) =
     dialog.new(
-      id: "greedy",
+      id: "inner",
       storage:,
       initial_state: fn(_ctx) { "" },
       encode_state:,
@@ -406,11 +406,11 @@ pub fn sub_nested_start_sub_is_rejected_test() {
     |> dialog.window(
       id: "main",
       render: fn(_state, _ctx) {
-        text_window("Greedy", [[ActionButton("Deeper", "deeper")]])
+        text_window("Inner", [[ActionButton("Pick", "pick")]])
       },
       on_action: fn(state, event: ActionEvent, _ctx) {
         case event.action_id {
-          "deeper" -> Ok(types.StartSub("greedy", dict.new(), state))
+          "pick" -> Ok(types.Done("picked"))
           _ -> Ok(types.Stay(state))
         }
       },
@@ -418,9 +418,244 @@ pub fn sub_nested_start_sub_is_rejected_test() {
     |> dialog.initial("main")
     |> dialog.build()
 
-  let assert Ok(parent) =
+  // Middle: starts `inner`, and records what came back.
+  let assert Ok(middle) =
     dialog.new(
-      id: "host",
+      id: "middle",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "main",
+      render: fn(state, _ctx) {
+        text_window("Middle(" <> state <> ")", [
+          [ActionButton("Deeper", "deeper"), ActionButton("Done", "done")],
+        ])
+      },
+      on_action: fn(state, event: ActionEvent, _ctx) {
+        case event.action_id {
+          "deeper" -> Ok(types.StartSub("inner", dict.new(), state))
+          "done" -> Ok(types.Done(state))
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.subdialog(
+      sub: inner,
+      init: fn(_state, _args) { "" },
+      result: fn(sub_state) { dict.from_list([#("inner", sub_state)]) },
+    )
+    |> dialog.on_sub_result(window: "main", handler: fn(_state, result, _ctx) {
+      Ok(types.Stay(
+        "got:"
+        <> option.unwrap(option.from_result(dict.get(result, "inner")), "?"),
+      ))
+    })
+    |> dialog.initial("main")
+    |> dialog.build()
+
+  let assert Ok(outer) =
+    dialog.new(
+      id: "outer",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "menu",
+      render: fn(state, _ctx) {
+        text_window("Outer(" <> state <> ")", [[ActionButton("Go", "go")]])
+      },
+      on_action: fn(state, event: ActionEvent, _ctx) {
+        case event.action_id {
+          "go" -> Ok(types.StartSub("middle", dict.new(), state))
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.subdialog(
+      sub: middle,
+      init: fn(_state, _args) { "" },
+      result: fn(sub_state) { dict.from_list([#("middle", sub_state)]) },
+    )
+    |> dialog.on_sub_result(window: "menu", handler: fn(_state, result, _ctx) {
+      Ok(
+        types.Stay(option.unwrap(
+          option.from_result(dict.get(result, "middle")),
+          "?",
+        )),
+      )
+    })
+    |> dialog.initial("menu")
+    |> dialog.build()
+
+  let flow = dialog_engine.compile(dialog.compiled(outer))
+  let #(client, _calls) = dialog_mock_client()
+  let chat_id = 607
+
+  driver.start_dialog(flow, client, chat_id, command: "/outer")
+  press(flow, client, storage, chat_id, "outer", "dlg:outer:menu:go")
+
+  let inst = load(storage, chat_id)
+  inst.state.current_step |> should.equal("middle.main")
+  dialog_engine.sub_depth(inst) |> should.equal(1)
+
+  // Two levels deep: `middle` started `inner`.
+  press(flow, client, storage, chat_id, "outer", "dlg:outer:middle.main:deeper")
+  let inst = load(storage, chat_id)
+  inst.state.current_step |> should.equal("middle.inner.main")
+  dialog_engine.active_sub(inst) |> should.equal(Some("middle.inner"))
+  dialog_engine.sub_depth(inst) |> should.equal(2)
+
+  // Inner `Done` pops one level and hands its result to middle's window.
+  press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "outer",
+    "dlg:outer:middle.inner.main:pick",
+  )
+  let inst = load(storage, chat_id)
+  inst.state.current_step |> should.equal("middle.main")
+  dialog_engine.active_sub(inst) |> should.equal(Some("middle"))
+  dialog_engine.sub_depth(inst) |> should.equal(1)
+  instance.get_data(inst, "__dialog_state") |> should.equal(Some("got:picked"))
+
+  // Middle `Done` pops the last level back to the outer menu.
+  press(flow, client, storage, chat_id, "outer", "dlg:outer:middle.main:done")
+  let inst = load(storage, chat_id)
+  inst.state.current_step |> should.equal("menu")
+  dialog_engine.sub_depth(inst) |> should.equal(0)
+  instance.get_data(inst, "__dialog_state") |> should.equal(Some("got:picked"))
+}
+
+pub fn sub_nested_back_cancels_one_level_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let flow = nested_back_flow(storage)
+  let #(client, _calls) = dialog_mock_client()
+  let chat_id = 608
+
+  driver.start_dialog(flow, client, chat_id, command: "/outer2")
+  press(flow, client, storage, chat_id, "outer2", "dlg:outer2:menu:go")
+  press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "outer2",
+    "dlg:outer2:middle2.main:deeper",
+  )
+  dialog_engine.sub_depth(load_from(storage, chat_id, "outer2"))
+  |> should.equal(2)
+
+  // Back on the inner dialog's first window cancels *that* level only.
+  press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "outer2",
+    "dlg:outer2:middle2.inner2.main:back",
+  )
+  let inst = load_from(storage, chat_id, "outer2")
+  inst.state.current_step |> should.equal("middle2.main")
+  dialog_engine.active_sub(inst) |> should.equal(Some("middle2"))
+  dialog_engine.sub_depth(inst) |> should.equal(1)
+
+  // And again to leave the middle one.
+  press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "outer2",
+    "dlg:outer2:middle2.main:back",
+  )
+  let inst = load_from(storage, chat_id, "outer2")
+  inst.state.current_step |> should.equal("menu")
+  dialog_engine.sub_depth(inst) |> should.equal(0)
+}
+
+fn load(
+  storage: flow_types.FlowStorage(error.TelegaError),
+  chat_id: Int,
+) -> flow_types.FlowInstance {
+  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, "outer"))
+  inst
+}
+
+fn load_from(
+  storage: flow_types.FlowStorage(error.TelegaError),
+  chat_id: Int,
+  dialog_id: String,
+) -> flow_types.FlowInstance {
+  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
+  inst
+}
+
+/// Outer → middle → inner, each level's first window offering only `Back`.
+fn nested_back_flow(storage) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+
+  let back_window = fn(label) {
+    fn(_state: String, _ctx: Ctx) {
+      text_window(label, [[ActionButton("‹ Back", "back")]])
+    }
+  }
+
+  let assert Ok(inner) =
+    dialog.new(
+      id: "inner2",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "main",
+      render: back_window("Inner"),
+      on_action: back_or_stay,
+    )
+    |> dialog.initial("main")
+    |> dialog.build()
+
+  let assert Ok(middle) =
+    dialog.new(
+      id: "middle2",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "main",
+      render: fn(_state, _ctx) {
+        text_window("Middle", [
+          [ActionButton("Deeper", "deeper"), ActionButton("‹ Back", "back")],
+        ])
+      },
+      on_action: fn(state, event: ActionEvent, ctx) {
+        case event.action_id {
+          "deeper" -> Ok(types.StartSub("inner2", dict.new(), state))
+          _ -> back_or_stay(state, event, ctx)
+        }
+      },
+    )
+    |> dialog.subdialog(
+      sub: inner,
+      init: fn(_state, _args) { "" },
+      result: fn(_state) { dict.new() },
+    )
+    |> dialog.initial("main")
+    |> dialog.build()
+
+  let assert Ok(outer) =
+    dialog.new(
+      id: "outer2",
       storage:,
       initial_state: fn(_ctx) { "" },
       encode_state:,
@@ -429,35 +664,24 @@ pub fn sub_nested_start_sub_is_rejected_test() {
     |> dialog.window(
       id: "menu",
       render: fn(_state, _ctx) {
-        text_window("Host", [[ActionButton("Go", "go")]])
+        text_window("Outer", [[ActionButton("Go", "go")]])
       },
       on_action: fn(state, event: ActionEvent, _ctx) {
         case event.action_id {
-          "go" -> Ok(types.StartSub("greedy", dict.new(), state))
+          "go" -> Ok(types.StartSub("middle2", dict.new(), state))
           _ -> Ok(types.Stay(state))
         }
       },
     )
     |> dialog.subdialog(
-      sub: greedy,
+      sub: middle,
       init: fn(_state, _args) { "" },
       result: fn(_state) { dict.new() },
     )
     |> dialog.initial("menu")
     |> dialog.build()
 
-  let flow = dialog_engine.compile(dialog.compiled(parent))
-  let #(client, _calls) = dialog_mock_client()
-  let chat_id = 607
-
-  driver.start_dialog(flow, client, chat_id, command: "/host")
-  press(flow, client, storage, chat_id, "host", "dlg:host:menu:go")
-  // Nested StartSub from inside the sub: rejected, window re-rendered.
-  press(flow, client, storage, chat_id, "host", "dlg:host:greedy.main:deeper")
-
-  let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, "host"))
-  inst.state.current_step |> should.equal("greedy.main")
-  instance.get_data(inst, "__dialog_sub") |> should.equal(Some("greedy"))
+  dialog_engine.compile(dialog.compiled(outer))
 }
 
 pub fn sub_widget_store_resets_on_reenter_test() {
@@ -600,7 +824,7 @@ pub fn build_duplicate_sub_id_test() {
   |> should.equal(Error(types.DuplicateSubDialogId(id: "addr")))
 }
 
-pub fn build_nested_sub_is_rejected_test() {
+pub fn build_nests_sub_windows_transitively_test() {
   let assert Ok(inner) = minimal_string_dialog("inner") |> dialog.build()
   let assert Ok(middle) =
     minimal_string_dialog("middle")
@@ -608,12 +832,24 @@ pub fn build_nested_sub_is_rejected_test() {
       dict.new()
     })
     |> dialog.build()
-  minimal_string_dialog("outer")
-  |> dialog.subdialog(sub: middle, init: fn(_s, _a) { "" }, result: fn(_s) {
-    dict.new()
-  })
-  |> dialog.build()
-  |> should.equal(Error(types.NestedSubDialog(id: "middle")))
+  let assert Ok(outer) =
+    minimal_string_dialog("outer")
+    |> dialog.subdialog(sub: middle, init: fn(_s, _a) { "" }, result: fn(_s) {
+      dict.new()
+    })
+    |> dialog.build()
+
+  // Every level's windows are flattened into one namespace, so the innermost
+  // window is addressable as a step of the outer dialog's flow.
+  let compiled = dialog.compiled(outer)
+  dict.keys(compiled.windows)
+  |> list.sort(string.compare)
+  |> should.equal(["main", "middle.inner.main", "middle.main"])
+
+  // ...and so is its sub attachment, keyed by the same path `StartSub` uses.
+  dict.keys(compiled.subs)
+  |> list.sort(string.compare)
+  |> should.equal(["middle", "middle.inner"])
 }
 
 pub fn build_dot_in_window_id_test() {

@@ -41,9 +41,12 @@
 //// (which must not push sub steps onto the parent history).
 
 import gleam/dict.{type Dict}
+import gleam/dynamic/decode
 import gleam/int
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 
 import logging
@@ -75,11 +78,99 @@ const message_id_key = "__dialog_message_id"
 
 const message_kind_key = "__dialog_message_kind"
 
-const sub_key = "__dialog_sub"
+/// The sub-dialog stack, innermost first, as JSON. Three flat keys used to
+/// hold one frame's worth of this, which is what capped nesting at one level.
+const sub_stack_key = "__dialog_sub_stack"
 
-const return_window_key = "__dialog_return_window"
+// The pre-stack keys. Still read, so a dialog that was inside a sub-dialog
+// when the bot was redeployed keeps working.
+const legacy_sub_key = "__dialog_sub"
 
-const sub_saved_key = "__dialog_sub_saved"
+const legacy_return_window_key = "__dialog_return_window"
+
+const legacy_sub_saved_key = "__dialog_sub_saved"
+
+/// One entered sub-dialog: which one, the window to come back to, and the
+/// parent state parked while it runs.
+type SubFrame {
+  SubFrame(sub_id: String, return_window: String, saved_state: String)
+}
+
+fn sub_stack(inst: flow_types.FlowInstance) -> List(SubFrame) {
+  case instance.get_data(inst, sub_stack_key) {
+    Some(raw) ->
+      json.parse(raw, decode.list(sub_frame_decoder()))
+      |> result.unwrap([])
+    // Pre-stack instance: the three flat keys are one frame.
+    None ->
+      case
+        instance.get_data(inst, legacy_sub_key),
+        instance.get_data(inst, legacy_return_window_key)
+      {
+        Some(sub_id), Some(return_window) -> [
+          SubFrame(
+            sub_id:,
+            return_window:,
+            saved_state: instance.get_data(inst, legacy_sub_saved_key)
+              |> option.unwrap(""),
+          ),
+        ]
+        _, _ -> []
+      }
+  }
+}
+
+/// How deep the sub-dialog stack currently is.
+@internal
+pub fn sub_depth(inst: flow_types.FlowInstance) -> Int {
+  list.length(sub_stack(inst))
+}
+
+fn sub_frame_decoder() -> decode.Decoder(SubFrame) {
+  use sub_id <- decode.field("s", decode.string)
+  use return_window <- decode.field("r", decode.string)
+  use saved_state <- decode.field("v", decode.string)
+  decode.success(SubFrame(sub_id:, return_window:, saved_state:))
+}
+
+fn store_sub_stack(
+  inst: flow_types.FlowInstance,
+  frames: List(SubFrame),
+) -> flow_types.FlowInstance {
+  let inst =
+    inst
+    |> remove_data(legacy_sub_key)
+    |> remove_data(legacy_return_window_key)
+    |> remove_data(legacy_sub_saved_key)
+
+  case frames {
+    [] -> remove_data(inst, sub_stack_key)
+    frames ->
+      instance.store_data(
+        inst,
+        sub_stack_key,
+        json.to_string(
+          json.array(frames, fn(frame: SubFrame) {
+            json.object([
+              #("s", json.string(frame.sub_id)),
+              #("r", json.string(frame.return_window)),
+              #("v", json.string(frame.saved_state)),
+            ])
+          }),
+        ),
+      )
+  }
+}
+
+/// The sub-dialog currently running, if any — the innermost one. Its id is the
+/// full namespaced path (`outer.inner`) once dialogs are nested.
+@internal
+pub fn active_sub(inst: flow_types.FlowInstance) -> Option(String) {
+  case sub_stack(inst) {
+    [frame, ..] -> Some(frame.sub_id)
+    [] -> None
+  }
+}
 
 /// Everything the engine needs to know about a dialog, with all window
 /// handlers erased to the encoded-state form. Built by
@@ -479,7 +570,7 @@ fn apply_action(
 
     types.Back(state) -> {
       let inst = save_state(inst, state)
-      case instance.get_data(inst, sub_key) {
+      case active_sub(inst) {
         // The flow engine's `Back` on an empty history silently drops the
         // instance update (nothing is saved or re-rendered), which would
         // lose the state carried in `Back(state)` — treat it as `Stay`.
@@ -506,32 +597,15 @@ fn apply_action(
     }
 
     types.Done(state) ->
-      case instance.get_data(inst, sub_key) {
+      case active_sub(inst) {
         Some(sub_id) -> finish_sub(dialog, ctx, inst, sub_id, state)
         None -> finish_dialog(dialog, ctx, inst, state)
       }
 
     types.StartSub(sub_id:, args:, state:) ->
-      case instance.get_data(inst, sub_key) {
-        // One level of nesting only (documented): reject and re-render.
-        Some(active) -> {
-          logging.log(
-            logging.Error,
-            "[dialog:"
-              <> dialog.id
-              <> "] StartSub('"
-              <> sub_id
-              <> "') rejected: sub-dialog '"
-              <> active
-              <> "' is already active (nesting is one level deep)",
-          )
-          apply_action(dialog, ctx, inst, types.Stay(state))
-        }
-        None ->
-          start_sub(dialog, ctx, inst, sub_id, args, state, when_unknown: fn() {
-            apply_action(dialog, ctx, inst, types.Stay(state))
-          })
-      }
+      start_sub(dialog, ctx, inst, sub_id, args, state, when_unknown: fn() {
+        apply_action(dialog, ctx, inst, types.Stay(state))
+      })
   }
 }
 
@@ -582,12 +656,16 @@ fn start_sub(
       emit_dialog_event(dialog, "sub_start", inst.state.current_step, [
         #("count", 1),
       ])
+      let frame =
+        SubFrame(
+          sub_id:,
+          return_window: inst.state.current_step,
+          saved_state: parent_state,
+        )
       let inst =
         inst
         |> reset_sub_widget_stores(sub_id)
-        |> instance.store_data(sub_key, sub_id)
-        |> instance.store_data(return_window_key, inst.state.current_step)
-        |> instance.store_data(sub_saved_key, parent_state)
+        |> store_sub_stack([frame, ..sub_stack(inst)])
         |> save_state(sub.init(ctx, parent_state, args))
       jump_and_render(dialog, ctx, inst, sub.initial)
     }
@@ -711,17 +789,16 @@ fn leave_sub(
   inst: flow_types.FlowInstance,
   sub_id: String,
 ) -> flow_types.FlowInstance {
-  let parent_state =
-    instance.get_data(inst, sub_saved_key)
-    |> option.unwrap(dialog.initial_encoded(ctx))
+  let #(parent_state, rest) = case sub_stack(inst) {
+    [frame, ..rest] -> #(frame.saved_state, rest)
+    [] -> #(dialog.initial_encoded(ctx), [])
+  }
   let prefix = sub_id <> sub_separator
   let history =
     list.drop_while(inst.state.history, string.starts_with(_, prefix))
   inst
   |> save_state(parent_state)
-  |> remove_data(sub_key)
-  |> remove_data(return_window_key)
-  |> remove_data(sub_saved_key)
+  |> store_sub_stack(rest)
   |> set_history(history)
 }
 
@@ -729,8 +806,10 @@ fn return_window_of(
   dialog: CompiledDialog(session, error, dependencies),
   inst: flow_types.FlowInstance,
 ) -> String {
-  instance.get_data(inst, return_window_key)
-  |> option.unwrap(dialog.initial)
+  case sub_stack(inst) {
+    [frame, ..] -> frame.return_window
+    [] -> dialog.initial
+  }
 }
 
 /// A re-entered sub-dialog must not see widget selections from a previous

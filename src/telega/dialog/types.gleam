@@ -297,7 +297,4 @@ pub type DialogBuildError {
   /// additionally forbidden in dialog and window ids.
   ReservedIdCharacter(kind: String, id: String)
   DuplicateSubDialogId(id: String)
-  /// The attached sub-dialog has sub-dialogs of its own — nesting is one
-  /// level deep.
-  NestedSubDialog(id: String)
 }
