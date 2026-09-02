@@ -45,13 +45,7 @@ test_name: engine_radio_pick_persists_store_test
   "text": "Preferences"
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 501,
   "message_id": 1,
@@ -91,4 +85,10 @@ test_name: engine_radio_pick_persists_store_test
     ]
   },
   "text": "Preferences"
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }

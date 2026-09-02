@@ -37,13 +37,7 @@ test_name: render_unexpected_400_keeps_dialog_alive_test
   "text": "<b>Settings</b>\nlang: en, name: "
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 303,
   "message_id": 1,
@@ -75,4 +69,10 @@ test_name: render_unexpected_400_keeps_dialog_alive_test
     ]
   },
   "text": "<b>Settings</b>\nlang: ru, name: "
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }

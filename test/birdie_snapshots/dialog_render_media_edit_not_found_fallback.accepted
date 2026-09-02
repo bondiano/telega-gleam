@@ -61,13 +61,7 @@ test_name: render_media_edit_not_found_falls_back_to_send_test
   }
 }
 
-5. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-6. editMessageMedia
+5. editMessageMedia
 {
   "chat_id": 405,
   "media": {
@@ -100,7 +94,7 @@ test_name: render_media_edit_not_found_falls_back_to_send_test
   }
 }
 
-7. sendPhoto
+6. sendPhoto
 {
   "caption": "Photo b",
   "chat_id": 405,
@@ -127,4 +121,10 @@ test_name: render_media_edit_not_found_falls_back_to_send_test
       ]
     ]
   }
+}
+
+7. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }

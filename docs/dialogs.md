@@ -457,8 +457,12 @@ filter:
   needs the real message id to edit the live message later, and a claimed
   `sendMessage` would yield a fake stub id.
 - `alert(ctx, text)` / `toast(ctx, text)` show a modal alert or a toast from
-  inside `on_action`; the engine then skips its automatic spinner-removing
-  callback answer for that event.
+  inside `on_action`, `on_sub_result` or a widget handler; the engine then
+  skips its automatic spinner-removing callback answer for that event. The
+  automatic answer happens **after** the handler and the re-render, so a
+  handler reached later in the same press — an `on_sub_result` running when a
+  sub-dialog is `Done` — still gets to be the answer instead of a second one
+  Telegram would reject.
 
 ## Lifecycle
 

@@ -37,13 +37,7 @@ test_name: engine_stay_rerenders_with_new_state_test
   "text": "<b>Settings</b>\nlang: en, name: "
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 203,
   "message_id": 1,
@@ -75,4 +69,10 @@ test_name: engine_stay_rerenders_with_new_state_test
     ]
   },
   "text": "<b>Settings</b>\nlang: ru, name: "
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }

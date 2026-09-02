@@ -3362,7 +3362,11 @@ pub fn enter_subflow_accepts_an_inline_subflow_short_name_test() {
     |> builder.build(initial: Start)
 
   let ctx =
-    flow_ctx(740, 840, factory.text_update_with(text: "", from_id: 740, chat_id: 840))
+    flow_ctx(
+      740,
+      840,
+      factory.text_update_with(text: "", from_id: 740, chat_id: 840),
+    )
   let assert Ok(_) = engine.start_or_resume(flow, ctx, 740, 840, dict.new())
 
   process.receive(events, 200) |> should.equal(Ok("street"))

@@ -43,13 +43,7 @@ test_name: engine_paged_select_next_then_pick_test
   "text": "Pick"
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 507,
   "message_id": 1,
@@ -87,6 +81,12 @@ test_name: engine_paged_select_next_then_pick_test
     ]
   },
   "text": "Pick"
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }
 
 4. answerCallbackQuery

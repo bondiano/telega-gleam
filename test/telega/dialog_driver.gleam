@@ -11,6 +11,7 @@ import gleam/option.{None, Some}
 import telega/bot
 import telega/client.{type TelegramClient}
 import telega/dialog/engine as dialog_engine
+import telega/dialog/render
 import telega/error
 import telega/flow/engine as flow_engine
 import telega/flow/instance
@@ -100,6 +101,14 @@ pub fn press_on_message(
   resume_with_callback(flow, client, storage, chat_id, dialog_id, data, upd)
 }
 
+/// Every `press` here reuses one query id, which Telegram never does. Forget
+/// the "already answered" mark so each simulated press behaves like the fresh
+/// update it stands for.
+fn fresh_callback(body: fn() -> a) -> a {
+  render.reset_answered()
+  body()
+}
+
 fn resume_with_callback(
   flow: DialogFlow,
   client: TelegramClient,
@@ -109,6 +118,7 @@ fn resume_with_callback(
   data: String,
   upd: update.Update,
 ) -> Nil {
+  use <- fresh_callback()
   let assert Ok(Some(inst)) = storage.load(flow_id(chat_id, dialog_id))
   let ctx = ctx_for(client, upd)
   let resume =

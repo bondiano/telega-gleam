@@ -684,3 +684,94 @@ pub fn build_sub_window_budget_includes_namespace_test() {
   let assert Error(types.CallbackDataTooLong(window:, ..)) = result
   window |> should.equal("sub." <> long_id)
 }
+
+// M13 — an alert from `on_sub_result` must be the answer, not a second one ----
+
+/// A sub whose window finishes on a **button press**, so `on_sub_result` runs
+/// while a callback query is still unanswered.
+fn button_sub(storage) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "confirm",
+      storage:,
+      initial_state: fn() { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "ask",
+      render: fn(_state, _ctx) {
+        text_window("Sure?", [[ActionButton("Yes", "yes")]])
+      },
+      on_action: fn(state, event: ActionEvent, _ctx) {
+        case event.action_id {
+          "yes" -> Ok(types.Done("yes"))
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.initial("ask")
+    |> dialog.build()
+  built
+}
+
+fn alerting_parent(storage) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "alerting",
+      storage:,
+      initial_state: fn() { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "menu",
+      render: fn(_state, _ctx) {
+        text_window("Menu", [[ActionButton("Confirm", "confirm")]])
+      },
+      on_action: fn(state, event: ActionEvent, _ctx) {
+        case event.action_id {
+          "confirm" -> Ok(types.StartSub("confirm", dict.new(), state))
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.subdialog(
+      sub: button_sub(storage),
+      init: fn(_parent_state, _args) { "" },
+      result: fn(sub_state) { dict.from_list([#("answer", sub_state)]) },
+    )
+    |> dialog.on_sub_result(window: "menu", handler: fn(state, _result, ctx) {
+      let _ = dialog.toast(ctx, "Saved")
+      Ok(types.Stay(state))
+    })
+    |> dialog.initial("menu")
+    |> dialog.build()
+  dialog_engine.compile(dialog.compiled(built))
+}
+
+pub fn alert_from_on_sub_result_is_the_only_answer_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let flow = alerting_parent(storage)
+  let #(client, calls) = dialog_mock_client()
+  let chat_id = 640
+
+  driver.start_dialog(flow, client, chat_id, command: "/alerting")
+  press(flow, client, storage, chat_id, "alerting", "dlg:alerting:menu:confirm")
+  press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "alerting",
+    "dlg:alerting:confirm.ask:yes",
+  )
+
+  // The engine used to answer the press before `on_sub_result` ran, so the
+  // toast was a *second* answer to the same query and never reached the user.
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:sub:alert_from_on_sub_result")
+}

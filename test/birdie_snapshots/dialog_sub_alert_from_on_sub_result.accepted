@@ -1,0 +1,69 @@
+---
+version: 2.0.1
+title: dialog:sub:alert_from_on_sub_result
+---
+1. sendMessage
+{
+  "chat_id": 640,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:alerting:menu:confirm",
+          "text": "Confirm"
+        }
+      ]
+    ]
+  },
+  "text": "Menu"
+}
+
+2. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+3. editMessageText
+{
+  "chat_id": 640,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:alerting:confirm.ask:yes",
+          "text": "Yes"
+        }
+      ]
+    ]
+  },
+  "text": "Sure?"
+}
+
+4. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false,
+  "text": "Saved"
+}
+
+5. editMessageText
+{
+  "chat_id": 640,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:alerting:menu:confirm",
+          "text": "Confirm"
+        }
+      ]
+    ]
+  },
+  "text": "Menu"
+}

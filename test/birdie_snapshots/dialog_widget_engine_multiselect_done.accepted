@@ -45,13 +45,7 @@ test_name: engine_multiselect_toggle_and_done_test
   "text": "Preferences"
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 502,
   "message_id": 1,
@@ -99,13 +93,13 @@ test_name: engine_multiselect_toggle_and_done_test
   "text": "Preferences"
 }
 
-4. answerCallbackQuery
+3. answerCallbackQuery
 {
   "callback_query_id": "test_callback_query",
   "show_alert": false
 }
 
-5. editMessageText
+4. editMessageText
 {
   "chat_id": 502,
   "message_id": 1,
@@ -151,6 +145,12 @@ test_name: engine_multiselect_toggle_and_done_test
     ]
   },
   "text": "Preferences"
+}
+
+5. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }
 
 6. answerCallbackQuery

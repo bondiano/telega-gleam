@@ -185,6 +185,18 @@ pub fn compile(
 
 // Step handler ------------------------------------------------------------------
 
+/// Run `body`, then answer the callback query it was handling unless
+/// something already did.
+fn answering_callback(
+  ctx: Context(session, error, dependencies),
+  body: fn() -> a,
+) -> a {
+  render.begin_callback_answer(ctx)
+  let result = body()
+  render.auto_answer(ctx)
+  result
+}
+
 /// Run `body`, then drop the widget stash whatever it returned.
 fn clearing_widget_stash(body: fn() -> a) -> a {
   let result = body()
@@ -203,6 +215,9 @@ fn window_step(
     // too, and they must not read a finished step's stores.
     widget.stash_stores(inst.state.data)
     use <- clearing_widget_stash()
+    // Whatever path the step takes, the press it is handling gets exactly one
+    // answer — unless user code already gave it one with `alert`/`toast`.
+    use <- answering_callback(ctx)
     case instance.get_wait_result(inst) {
       flow_types.Pending -> render_and_wait(dialog, window, ctx, inst)
       flow_types.DataCallback(value:) ->
@@ -278,9 +293,11 @@ fn handle_callback(
                     arg,
                   )
                 Error(Nil) -> {
-                  let handled = window.on_action(state, event, ctx)
-                  render.auto_answer(ctx)
-                  case handled {
+                  // The answer comes after the action has been applied: a
+                  // `Done` inside a sub-dialog runs the parent's
+                  // `on_sub_result` on the way, and its `alert`/`toast` has to
+                  // be *the* answer, not a second one to the same query.
+                  case window.on_action(state, event, ctx) {
                     Ok(action) -> apply_action(dialog, ctx, inst, action)
                     Error(error) -> Error(error)
                   }
@@ -352,9 +369,7 @@ fn handle_widget_event(
       let store = load_widget_store(inst, window.id, widget_id)
       let widget_ctx =
         types.WidgetCtx(state:, store:, labels: dialog.labels(ctx), ctx:)
-      let handled = found.on_event(widget_ctx, cmd, arg)
-      render.auto_answer(ctx)
-      case handled {
+      case found.on_event(widget_ctx, cmd, arg) {
         Ok(types.StoreUpdated(store)) -> {
           let inst = save_widget_store(inst, window.id, widget_id, store)
           apply_action(dialog, ctx, inst, types.Stay(state))

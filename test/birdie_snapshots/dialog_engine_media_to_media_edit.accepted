@@ -61,13 +61,7 @@ test_name: engine_media_to_media_edits_in_place_test
   }
 }
 
-5. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-6. editMessageMedia
+5. editMessageMedia
 {
   "chat_id": 402,
   "media": {
@@ -98,4 +92,10 @@ test_name: engine_media_to_media_edits_in_place_test
       ]
     ]
   }
+}
+
+6. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }

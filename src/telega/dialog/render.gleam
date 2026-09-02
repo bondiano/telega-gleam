@@ -627,15 +627,20 @@ pub fn toast(
 
 /// Answer the current callback query without text (removes the client-side
 /// spinner). Used by the engine; no-op if the update is not a callback query
-/// or the query was already answered via `alert`/`toast`.
+/// or the query was already answered — by `alert`/`toast`, or by an earlier
+/// `auto_answer` for the same query.
+///
+/// Idempotent per query id, so the engine can call it at every point a step
+/// can leave without answering twice.
 @internal
 pub fn auto_answer(ctx: Context(session, error, dependencies)) -> Nil {
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) ->
-      case take_answered() == Some(query.id) {
+      case answered_query() == Some(query.id) {
         True -> Nil
         False -> {
           let _ = do_answer(ctx, query.id, None, False)
+          mark_answered(query.id)
           Nil
         }
       }
@@ -677,8 +682,9 @@ fn do_answer(
   |> result.replace(Nil)
 }
 
-/// Answer the current callback query with the given text (no alert), without
-/// marking it answered. Used by the engine for stale-button responses.
+/// Answer the current callback query with the given text (no alert). Used by
+/// the engine for stale-button and foreign-payload responses; marks the query
+/// answered so the step's own `auto_answer` does not answer it a second time.
 @internal
 pub fn answer_quietly(
   ctx: Context(session, error, dependencies),
@@ -687,6 +693,7 @@ pub fn answer_quietly(
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) -> {
       let _ = do_answer(ctx, query.id, text, False)
+      mark_answered(query.id)
       Nil
     }
     _ -> Nil
@@ -706,14 +713,48 @@ fn mark_answered(query_id: String) -> Nil {
   Nil
 }
 
-fn take_answered() -> Option(String) {
-  pdict_erase(answered_key)
+/// The query already answered, if any. Peeks rather than consumes, so several
+/// `auto_answer` calls within one update stay a single answer.
+fn answered_query() -> Option(String) {
+  pdict_get(answered_key)
   |> decode.run(decode.string)
   |> option.from_result
 }
 
+/// Start handling a callback query: forget a mark left by an *earlier* update.
+///
+/// A mark for this same query is kept — one update can run several dialog
+/// steps (a `Goto` re-enters the step handler), and an `alert` from the first
+/// of them must still count.
+@internal
+pub fn begin_callback_answer(
+  ctx: Context(session, error, dependencies),
+) -> Nil {
+  case ctx.update {
+    update.CallbackQueryUpdate(query:, ..) -> {
+      let current = query.id
+      case answered_query() {
+        Some(id) if id != current -> reset_answered()
+        _ -> Nil
+      }
+    }
+    _ -> Nil
+  }
+}
+
+/// Forget which query was answered. Used between updates; tests that replay
+/// one query id need it too.
+@internal
+pub fn reset_answered() -> Nil {
+  let _ = pdict_erase(answered_key)
+  Nil
+}
+
 @external(erlang, "erlang", "put")
 fn pdict_put(key: String, value: String) -> Dynamic
+
+@external(erlang, "erlang", "get")
+fn pdict_get(key: String) -> Dynamic
 
 @external(erlang, "erlang", "erase")
 fn pdict_erase(key: String) -> Dynamic

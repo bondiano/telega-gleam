@@ -37,13 +37,7 @@ test_name: render_edit_not_found_falls_back_to_send_test
   "text": "<b>Settings</b>\nlang: en, name: "
 }
 
-2. answerCallbackQuery
-{
-  "callback_query_id": "test_callback_query",
-  "show_alert": false
-}
-
-3. editMessageText
+2. editMessageText
 {
   "chat_id": 302,
   "message_id": 1,
@@ -77,7 +71,7 @@ test_name: render_edit_not_found_falls_back_to_send_test
   "text": "<b>Settings</b>\nlang: ru, name: "
 }
 
-4. sendMessage
+3. sendMessage
 {
   "chat_id": 302,
   "parse_mode": "HTML",
@@ -108,4 +102,10 @@ test_name: render_edit_not_found_falls_back_to_send_test
     ]
   },
   "text": "<b>Settings</b>\nlang: ru, name: "
+}
+
+4. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
 }
