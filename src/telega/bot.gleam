@@ -1031,6 +1031,24 @@ pub fn handle_update_within(
   }
 }
 
+/// Dispatch an update without waiting for it to be handled.
+///
+/// The bot answers `reply_with` once the update settles (handled, failed, or
+/// its chat instance died), which lets the caller — the polling worker — keep
+/// fetching and dispatching while handlers run, and still count what is in
+/// flight. Users should use methods from the `telega` module.
+@internal
+pub fn dispatch_update(
+  bot_subject bot_subject: BotSubject,
+  update update: Update,
+  reply_with reply_with: Subject(Bool),
+) -> Nil {
+  process.send(
+    bot_subject,
+    HandleUpdateBotMessage(update:, reply_with:, envelope: None),
+  )
+}
+
 // Dispatch an update with a webhook-reply envelope without blocking. The
 // caller (`telega.handle_update_webhook`) listens on both `reply_with` and
 // the envelope itself. Users should use `telega.handle_update_webhook`.

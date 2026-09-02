@@ -34,6 +34,19 @@
 ////   )
 //// ```
 ////
+//// ## Concurrency and backpressure
+////
+//// Updates are dispatched to the bot without waiting for their handlers to
+//// finish, so a slow handler in one chat never holds up another chat or the
+//// next `getUpdates`. Ordering is preserved: the poller sends updates in the
+//// order Telegram returned them, and each chat has a single actor, so updates
+//// of the *same* chat are still handled one after another.
+////
+//// To keep a burst from piling up without bound, the worker stops fetching
+//// once `limit` updates are in flight and resumes as soon as one settles —
+//// i.e. at most one `getUpdates` batch is being handled at a time. Tune it
+//// with `telega.with_polling_config(limit:)`.
+////
 //// ## Error handling
 ////
 //// The polling worker uses exponential backoff for transient errors (network issues,
@@ -41,6 +54,7 @@
 //// 10+ consecutive failures) stop polling and invoke the optional `on_stop` callback.
 
 import gleam/erlang/process.{type Subject}
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
@@ -118,6 +132,11 @@ pub type PollingMessage {
   InjectUpdates(updates: List(Update), offset: Int)
   SetSelf(subject: Subject(PollingMessage))
   HandleError(error: TelegaError, offset: Int)
+  /// One dispatched update has settled (handled, failed, or its chat instance
+  /// died), freeing an in-flight slot. Produced from the bot's answers.
+  UpdateSettled
+  /// Backstop for a pause that never got its slots back: resume intake anyway.
+  CapacityTimeout(offset: Int, epoch: Int)
 }
 
 /// State for the polling worker
@@ -128,32 +147,81 @@ type PollingState {
     is_running: Bool,
     self: Option(Subject(PollingMessage)),
     consecutive_errors: Int,
+    // Subject the bot answers on once a dispatched update settles. Selected
+    // into the actor's own message type as `UpdateSettled`.
+    ack: Subject(Bool),
+    // Updates dispatched to the bot that have not settled yet.
+    in_flight: Int,
+    // Offset to poll from once capacity frees up, when intake is paused.
+    paused: Option(Int),
+    // Bumped on every pause so a stale `CapacityTimeout` is ignored.
+    pause_epoch: Int,
   )
+}
+
+/// How many updates the poller keeps in flight before it stops fetching more.
+///
+/// Bounded by the batch size, so at most one `getUpdates` batch is being
+/// handled at a time — tune it with `telega.with_polling_config(limit:)`.
+fn max_in_flight(config: PollingConfig) -> Int {
+  int.max(1, config.limit)
+}
+
+fn init_state(
+  config: PollingConfig,
+  self: Subject(PollingMessage),
+  ack: Subject(Bool),
+) -> PollingState {
+  PollingState(
+    config:,
+    offset: None,
+    is_running: False,
+    self: Some(self),
+    consecutive_errors: 0,
+    ack:,
+    in_flight: 0,
+    paused: None,
+    pause_epoch: 0,
+  )
+}
+
+fn polling_selector(
+  self: Subject(PollingMessage),
+  ack: Subject(Bool),
+) -> process.Selector(PollingMessage) {
+  process.new_selector()
+  |> process.select(self)
+  |> process.select_map(ack, fn(_settled) { UpdateSettled })
+}
+
+fn send_self(state: PollingState, message: PollingMessage) -> Nil {
+  case state.self {
+    Some(self) -> process.send(self, message)
+    None -> log.error("No self reference available for polling")
+  }
 }
 
 /// Start the polling worker actor
 fn start_polling_worker(
   config: PollingConfig,
 ) -> Result(Subject(PollingMessage), actor.StartError) {
-  let initial_state =
-    PollingState(
-      config:,
-      offset: None,
-      is_running: False,
-      self: None,
-      consecutive_errors: 0,
-    )
-
   use started <- result.try(
-    actor.new(initial_state)
+    actor.new_with_initialiser(worker_init_timeout, fn(self) {
+      let ack = process.new_subject()
+      init_state(config, self, ack)
+      |> actor.initialised
+      |> actor.selecting(polling_selector(self, ack))
+      |> actor.returning(self)
+      |> Ok
+    })
     |> actor.on_message(handle_polling_message)
     |> actor.start(),
   )
 
-  process.send(started.data, SetSelf(started.data))
-
   Ok(started.data)
 }
+
+const worker_init_timeout = 1000
 
 /// Create a `ChildSpecification` for running polling inside a supervision tree.
 /// The polling worker will automatically delete the webhook and start polling.
@@ -183,23 +251,20 @@ pub fn supervised(
       |> result.map_error(fn(err) { actor.InitFailed(error.to_string(err)) }),
     )
 
-    let initial_state =
-      PollingState(
-        config:,
-        offset: None,
-        is_running: False,
-        self: None,
-        consecutive_errors: 0,
-      )
-
     use started <- result.try(
-      actor.new(initial_state)
+      actor.new_with_initialiser(worker_init_timeout, fn(self) {
+        let ack = process.new_subject()
+        init_state(config, self, ack)
+        |> actor.initialised
+        |> actor.selecting(polling_selector(self, ack))
+        |> actor.returning(self)
+        |> Ok
+      })
       |> actor.on_message(handle_polling_message)
       |> actor.named(name)
       |> actor.start(),
     )
 
-    process.send(started.data, SetSelf(started.data))
     process.send(started.data, StartPolling(None))
     Ok(started)
   })
@@ -246,34 +311,55 @@ fn handle_polling_message(
     PollNext(offset) -> {
       case state.is_running {
         False -> actor.continue(state)
-        True -> {
-          case poll_updates(state, offset) {
-            Ok(new_offset) -> {
-              schedule_next_poll(state, new_offset)
-              actor.continue(
-                PollingState(
-                  ..state,
-                  offset: Some(new_offset),
-                  consecutive_errors: 0,
-                ),
-              )
-            }
-            Error(error) -> {
-              case state.self {
-                Some(self) -> process.send(self, HandleError(error, offset))
-                None -> Nil
-              }
-              actor.continue(state)
-            }
+        True ->
+          case state.in_flight >= max_in_flight(state.config) {
+            True -> pause_for_capacity(state, offset)
+            False -> poll_now(state, offset)
           }
+      }
+    }
+
+    UpdateSettled -> {
+      let in_flight = int.max(0, state.in_flight - 1)
+      let state = PollingState(..state, in_flight:)
+      let capacity = max_in_flight(state.config)
+      case state.paused {
+        Some(offset) if in_flight < capacity -> {
+          let state = PollingState(..state, paused: None)
+          send_self(state, PollNext(offset))
+          actor.continue(state)
         }
+        _ -> actor.continue(state)
+      }
+    }
+
+    CapacityTimeout(offset:, epoch:) -> {
+      let stale = state.pause_epoch != epoch
+      case state.paused {
+        Some(_) if !stale -> {
+          log.warning(
+            "Polling stalled: "
+            <> string.inspect(state.in_flight)
+            <> " dispatched update(s) never settled — resuming intake",
+          )
+          let state = PollingState(..state, paused: None, in_flight: 0)
+          send_self(state, PollNext(offset))
+          actor.continue(state)
+        }
+        _ -> actor.continue(state)
       }
     }
 
     InjectUpdates(updates, offset) -> {
-      list.each(updates, fn(update) { process_update(state.config.bot, update) })
+      let dispatched = dispatch_updates(state, updates)
       let new_offset = calculate_new_offset(updates, offset)
-      actor.continue(PollingState(..state, offset: Some(new_offset)))
+      actor.continue(
+        PollingState(
+          ..state,
+          offset: Some(new_offset),
+          in_flight: state.in_flight + dispatched,
+        ),
+      )
     }
 
     HandleError(error, offset) -> {
@@ -387,8 +473,63 @@ fn handle_polling_message(
   }
 }
 
-/// Poll for updates and process them
-fn poll_updates(state: PollingState, offset: Int) -> Result(Int, TelegaError) {
+/// Stop fetching until dispatched updates settle. Schedules a one-shot backstop
+/// so a handler that never answers cannot silence the poller for good.
+fn pause_for_capacity(
+  state: PollingState,
+  offset: Int,
+) -> actor.Next(PollingState, PollingMessage) {
+  case state.paused {
+    Some(_) -> actor.continue(state)
+    None -> {
+      let epoch = state.pause_epoch + 1
+      let state =
+        PollingState(..state, paused: Some(offset), pause_epoch: epoch)
+      case state.self {
+        Some(self) -> {
+          process.send_after(
+            self,
+            bot.update_dispatch_timeout,
+            CapacityTimeout(offset:, epoch:),
+          )
+          Nil
+        }
+        None -> Nil
+      }
+      actor.continue(state)
+    }
+  }
+}
+
+fn poll_now(
+  state: PollingState,
+  offset: Int,
+) -> actor.Next(PollingState, PollingMessage) {
+  case poll_updates(state, offset) {
+    Ok(#(new_offset, dispatched)) -> {
+      schedule_next_poll(state, new_offset)
+      actor.continue(
+        PollingState(
+          ..state,
+          offset: Some(new_offset),
+          consecutive_errors: 0,
+          in_flight: state.in_flight + dispatched,
+        ),
+      )
+    }
+    Error(error) -> {
+      send_self(state, HandleError(error, offset))
+      actor.continue(state)
+    }
+  }
+}
+
+/// Poll for updates and dispatch them. Returns the next offset and how many
+/// updates were dispatched (and are therefore in flight).
+fn poll_updates(
+  state: PollingState,
+  offset: Int,
+) -> Result(#(Int, Int), TelegaError) {
   let parameters =
     GetUpdatesParameters(
       offset: Some(offset),
@@ -405,9 +546,19 @@ fn poll_updates(state: PollingState, offset: Int) -> Result(Int, TelegaError) {
     Some(parameters),
   ))
 
-  list.each(updates, fn(update) { process_update(state.config.bot, update) })
+  let dispatched = dispatch_updates(state, updates)
 
-  Ok(calculate_new_offset(updates, offset))
+  Ok(#(calculate_new_offset(updates, offset), dispatched))
+}
+
+/// Hand every update to the bot without waiting for it to be handled, so a slow
+/// handler in one chat cannot hold up other chats or the next `getUpdates`.
+/// Sends stay in poller order, so updates of the same chat keep their order.
+fn dispatch_updates(state: PollingState, updates: List(Update)) -> Int {
+  list.each(updates, fn(update) {
+    process_update(state.config.bot, state.ack, update)
+  })
+  list.length(updates)
 }
 
 /// Calculate the next offset based on received updates
@@ -423,12 +574,18 @@ pub fn calculate_new_offset(updates: List(Update), current_offset: Int) -> Int {
   }
 }
 
-/// Process a single update by converting and sending to bot
-/// Handles errors gracefully to prevent polling from stopping
-fn process_update(bot_subject: BotSubject, update: Update) -> Nil {
-  let decoded_update = update_module.raw_to_update(update)
-  bot.handle_update(bot_subject, decoded_update)
-  Nil
+/// Convert a raw update and dispatch it to the bot. The bot answers `ack` once
+/// the update settles, which is what keeps the in-flight count honest.
+fn process_update(
+  bot_subject: BotSubject,
+  ack: Subject(Bool),
+  update: Update,
+) -> Nil {
+  bot.dispatch_update(
+    bot_subject:,
+    update: update_module.raw_to_update(update),
+    reply_with: ack,
+  )
 }
 
 /// Schedule the next poll
