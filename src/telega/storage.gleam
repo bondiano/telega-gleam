@@ -88,9 +88,39 @@ pub fn session_settings_from_storage(
 pub fn flow_storage_from_storage(
   storage storage: KeyValueStorage(error),
 ) -> FlowStorage(error) {
+  do_flow_storage(storage, None)
+}
+
+/// Derive `FlowStorage` that lets the backend reclaim abandoned instances.
+///
+/// Every save renews the entry, so `retention_ms` is "how long an instance may
+/// sit untouched before the backend drops it". Redis expires it natively; the
+/// ETS and SQL backends expire lazily on access and skip expired keys in
+/// `scan`. Without this, a flow a user walked away from stays in storage
+/// forever — nothing sweeps it.
+///
+/// Pick a retention comfortably longer than the flow's `builder.with_ttl`:
+/// once the entry is gone the instance simply looks absent, so `on_timeout`
+/// will not fire for it and the user's next message starts a fresh flow.
+pub fn flow_storage_from_storage_with_retention(
+  storage storage: KeyValueStorage(error),
+  retention_ms retention_ms: Int,
+) -> FlowStorage(error) {
+  do_flow_storage(storage, Some(retention_ms))
+}
+
+fn do_flow_storage(
+  storage: KeyValueStorage(error),
+  retention_ms: Option(Int),
+) -> FlowStorage(error) {
   FlowStorage(
     save: fn(inst: FlowInstance) {
-      storage.set(flow_prefix <> inst.id, instance.to_json_string(inst))
+      let key = flow_prefix <> inst.id
+      let payload = instance.to_json_string(inst)
+      case retention_ms {
+        Some(ttl) -> storage.set_with_ttl(key, payload, ttl)
+        None -> storage.set(key, payload)
+      }
     },
     load: fn(id) {
       use maybe <- result.try(storage.get(flow_prefix <> id))

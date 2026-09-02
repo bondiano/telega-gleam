@@ -241,3 +241,40 @@ fn attach_storage_forwarder(id: String) -> process.Subject(List(String)) {
   )
   subject
 }
+
+// M7 — abandoned instances must be reclaimable ---------------------------------
+
+pub fn flow_bridge_without_retention_keeps_instances_test() {
+  let assert Ok(kv) = ets.new("test_flow_no_retention")
+  let store = storage.flow_storage_from_storage(kv)
+
+  let assert Ok(Nil) = store.save(sample_instance())
+  store.load("booking_20_10") |> should.equal(Ok(Some(sample_instance())))
+}
+
+pub fn flow_bridge_retention_expires_abandoned_instances_test() {
+  let assert Ok(kv) = ets.new("test_flow_retention")
+  // A retention window already in the past: the entry is dead on arrival.
+  let store =
+    storage.flow_storage_from_storage_with_retention(
+      storage: kv,
+      retention_ms: -1,
+    )
+
+  let assert Ok(Nil) = store.save(sample_instance())
+
+  store.load("booking_20_10") |> should.equal(Ok(None))
+  store.list_by_user(10, 20) |> should.equal(Ok([]))
+}
+
+pub fn flow_bridge_retention_renews_on_save_test() {
+  let assert Ok(kv) = ets.new("test_flow_retention_renew")
+  let store =
+    storage.flow_storage_from_storage_with_retention(
+      storage: kv,
+      retention_ms: 60_000,
+    )
+
+  let assert Ok(Nil) = store.save(sample_instance())
+  store.load("booking_20_10") |> should.equal(Ok(Some(sample_instance())))
+}

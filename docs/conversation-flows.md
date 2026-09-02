@@ -1066,7 +1066,7 @@ builder.new("booking", store, step_to_string, string_to_step)
 |> builder.build(initial: Date)
 ```
 
-The `on_timeout` hook is called with the user's context when the expiration is detected via lazy check (i.e., when the user sends the next message). It is **not** called by the background sweeper.
+The `on_timeout` hook is called with the user's context when the expiration is detected via lazy check (i.e., when the user sends the next message). There is no background sweeper, so a user who never comes back never triggers it — see [Reclaiming abandoned instances](#reclaiming-abandoned-instances).
 
 ### Cancel Command
 
@@ -1122,6 +1122,30 @@ An instance is expired if:
 - Flow has TTL and `current_time - created_at > ttl_ms`, OR
 - Instance has `wait_timeout_at` and `current_time > wait_timeout_at`
 
+Both checks are **lazy**: they run when the user comes back. A user who never
+does leaves the instance in storage.
+
+### Reclaiming abandoned instances
+
+TTL decides when a flow stops being *valid*; retention decides when the row
+stops *existing*. Set it on the storage bridge:
+
+```gleam
+let flow_store =
+  storage.flow_storage_from_storage_with_retention(
+    storage: kv,
+    retention_ms: 24 * 60 * 60 * 1000,
+  )
+```
+
+Every save renews the window, so it means "untouched for this long". Redis
+expires the key natively; the ETS and SQL backends expire lazily on access and
+skip expired keys when scanning.
+
+Keep the retention comfortably longer than the flow TTL. Once the entry is
+gone the instance looks absent: `on_timeout` will not fire for it, and the
+user's next message starts a fresh flow instead of getting the expiry message.
+
 ## Best Practices
 
 1. **One question per step.** Keep steps focused — each step should ask for one piece of information. This makes navigation (back/goto) predictable.
@@ -1140,7 +1164,7 @@ An instance is expired if:
 
 8. **Use subflows for reusable sequences.** If the same sequence of steps appears in multiple flows (e.g., address collection), extract it into a subflow.
 
-9. **Set TTL for production flows.** Flows without TTL accumulate in storage forever. Use `builder.with_ttl` to set a reasonable lifetime (e.g., 10–30 minutes for form-like flows). For long-running workflows, use per-wait timeouts instead.
+9. **Set TTL for production flows, and a retention on the store.** `builder.with_ttl` sets a reasonable lifetime (e.g. 10–30 minutes for form-like flows); for long-running workflows use per-wait timeouts instead. TTL alone only expires the flow *lazily*, when the user returns — pair it with `storage.flow_storage_from_storage_with_retention` so instances nobody comes back to are actually reclaimed.
 
 10. **Use programmatic cancellation for admin tools.** `registry.cancel_user_flows` and `registry.cancel_flow_instance` work without `Context` — ideal for admin webhooks, cron jobs, and graceful shutdown. Because they have no `Context`, they cannot run `on_flow_exit`; from inside a handler use `registry.cancel_user_flows_for` / `registry.cancel_flow_instance_for`, which do.
 
