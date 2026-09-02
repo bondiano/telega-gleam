@@ -4,6 +4,7 @@
 
 import gleam/dynamic/decode
 import gleam/http/response.{type Response}
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -589,6 +590,105 @@ pub fn send_media_group(
   )
   |> fetch(client)
   |> map_response(decoder.messages_array_decoder())
+}
+
+/// One file uploaded alongside an album, referenced from the album JSON as
+/// `attach://<field_name>`.
+///
+/// `telega/file` produces these from a path or from raw bytes
+/// (`file.to_multipart_file`); `media_group.send` does the conversion for you.
+pub type Attachment {
+  Attachment(
+    field_name: String,
+    filename: String,
+    content_type: String,
+    content: BitArray,
+  )
+}
+
+/// Send an album whose items include attached files, as
+/// `multipart/form-data`.
+///
+/// The album JSON refers to each attachment by its `attach://<field_name>`
+/// name; the bytes ride along in the same request under that field. Reading
+/// local files is the caller's job — `media_group.send` does it for you.
+///
+/// **Official reference:** https://core.telegram.org/bots/api#sendmediagroup
+pub fn send_media_group_files(
+  client client: client.TelegramClient,
+  parameters parameters: SendMediaGroupParameters,
+  files files: List(Attachment),
+) -> Result(List(Message), error.TelegaError) {
+  let media_json =
+    json.array(parameters.media, encoder.encode_input_media)
+    |> json.to_string
+
+  let fields =
+    [
+      Some(multipart.FieldPart(
+        name: "chat_id",
+        value: int_or_string_value(parameters.chat_id),
+      )),
+      Some(multipart.FieldPart(name: "media", value: media_json)),
+      option.map(parameters.business_connection_id, fn(id) {
+        multipart.FieldPart(name: "business_connection_id", value: id)
+      }),
+      option.map(parameters.message_thread_id, fn(id) {
+        multipart.FieldPart(name: "message_thread_id", value: int.to_string(id))
+      }),
+      option.map(parameters.disable_notification, fn(v) {
+        multipart.FieldPart(name: "disable_notification", value: bool_value(v))
+      }),
+      option.map(parameters.protect_content, fn(v) {
+        multipart.FieldPart(name: "protect_content", value: bool_value(v))
+      }),
+      option.map(parameters.allow_paid_broadcast, fn(v) {
+        multipart.FieldPart(name: "allow_paid_broadcast", value: bool_value(v))
+      }),
+      option.map(parameters.message_effect_id, fn(id) {
+        multipart.FieldPart(name: "message_effect_id", value: id)
+      }),
+      option.map(parameters.reply_parameters, fn(p) {
+        multipart.FieldPart(
+          name: "reply_parameters",
+          value: json.to_string(encoder.encode_reply_parameters(p)),
+        )
+      }),
+    ]
+    |> list.filter_map(option.to_result(_, Nil))
+
+  let attachments =
+    list.map(files, fn(f: Attachment) {
+      multipart.FilePart(
+        name: f.field_name,
+        filename: f.filename,
+        content_type: f.content_type,
+        content: f.content,
+      )
+    })
+
+  let boundary = multipart.new_boundary()
+  client.fetch_multipart(
+    client:,
+    method: "sendMediaGroup",
+    content_type: multipart.content_type_header(boundary),
+    body: multipart.encode(boundary, list.append(fields, attachments)),
+  )
+  |> map_response(decoder.messages_array_decoder())
+}
+
+fn int_or_string_value(value: types.IntOrString) -> String {
+  case value {
+    types.Int(value) -> int.to_string(value)
+    types.Str(value) -> value
+  }
+}
+
+fn bool_value(value: Bool) -> String {
+  case value {
+    True -> "true"
+    False -> "false"
+  }
 }
 
 /// Use this method to send point on the map. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.

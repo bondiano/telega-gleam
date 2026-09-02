@@ -43,6 +43,17 @@
 ////   |> media_group.validate_and_build()
 //// ```
 ////
+//// ### Sending an Album
+//// ```gleam
+//// // URLs and file_ids go out as JSON; add one local file or byte array and
+//// // `send` switches the whole album to multipart automatically.
+//// let assert Ok(messages) =
+////   media_group.new()
+////   |> media_group.add_photo(file.from_bytes(bytes, "cat.png"), None)
+////   |> media_group.add_photo_url("https://example.com/dog.jpg", None)
+////   |> media_group.send(client:, chat_id: "12345", group: _)
+//// ```
+////
 //// ### Document Group
 //// ```gleam
 //// let docs = media_group.new()
@@ -68,20 +79,31 @@
 
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
+import gleam/string
 
+import telega/api
+import telega/client.{type TelegramClient}
+import telega/error.{type TelegaError}
 import telega/file.{type MediaInput}
 import telega/model/types.{
-  type InputMedia, type MessageEntity, InputMediaAnimation,
+  type InputMedia, type Message, type MessageEntity,
+  type SendMediaGroupParameters, InputMediaAnimation,
   InputMediaAnimationInputMedia, InputMediaAudio, InputMediaAudioInputMedia,
   InputMediaDocument, InputMediaDocumentInputMedia,
   InputMediaLivePhotoInputMedia, InputMediaLocationInputMedia, InputMediaPhoto,
   InputMediaPhotoInputMedia, InputMediaStickerInputMedia,
   InputMediaVenueInputMedia, InputMediaVideo, InputMediaVideoInputMedia,
+  SendMediaGroupParameters, Str,
 }
 
-/// A builder for creating media groups
+/// A builder for creating media groups.
+///
+/// `attachments` holds the inputs that travel as multipart parts rather than
+/// as a URL or `file_id` — the JSON only carries their `attach://` name, so
+/// the bytes have to be kept alongside it or the album cannot be sent.
 pub type MediaGroupBuilder {
-  MediaGroupBuilder(media: List(InputMedia))
+  MediaGroupBuilder(media: List(InputMedia), attachments: List(MediaInput))
 }
 
 /// Media group validation errors
@@ -165,7 +187,7 @@ pub type AnimationOptions {
 /// This is the starting point for building a media group. Chain other methods
 /// to add media items, then call `validate_and_build()` to get the final result.
 pub fn new() -> MediaGroupBuilder {
-  MediaGroupBuilder(media: [])
+  MediaGroupBuilder(media: [], attachments: [])
 }
 
 /// Adds a photo to the media group with optional formatting options.
@@ -215,11 +237,7 @@ pub fn add_photo(
       )
   }
 
-  MediaGroupBuilder(
-    media: list.append(builder.media, [
-      InputMediaPhotoInputMedia(photo),
-    ]),
-  )
+  push(builder, media, InputMediaPhotoInputMedia(photo))
 }
 
 /// Adds a video to the media group with optional formatting options.
@@ -271,11 +289,7 @@ pub fn add_video(
       )
   }
 
-  MediaGroupBuilder(
-    media: list.append(builder.media, [
-      InputMediaVideoInputMedia(video),
-    ]),
-  )
+  push(builder, media, InputMediaVideoInputMedia(video))
 }
 
 /// Adds an audio file to the media group
@@ -311,11 +325,7 @@ pub fn add_audio(
       )
   }
 
-  MediaGroupBuilder(
-    media: list.append(builder.media, [
-      InputMediaAudioInputMedia(audio),
-    ]),
-  )
+  push(builder, media, InputMediaAudioInputMedia(audio))
 }
 
 /// Adds a document to the media group
@@ -347,11 +357,7 @@ pub fn add_document(
       )
   }
 
-  MediaGroupBuilder(
-    media: list.append(builder.media, [
-      InputMediaDocumentInputMedia(document),
-    ]),
-  )
+  push(builder, media, InputMediaDocumentInputMedia(document))
 }
 
 /// Adds an animation to the media group
@@ -391,11 +397,7 @@ pub fn add_animation(
       )
   }
 
-  MediaGroupBuilder(
-    media: list.append(builder.media, [
-      InputMediaAnimationInputMedia(animation),
-    ]),
-  )
+  push(builder, media, InputMediaAnimationInputMedia(animation))
 }
 
 /// Builds the media group and returns the list of InputMedia
@@ -713,29 +715,107 @@ pub fn add_audio_with_caption(
   )
 }
 
-/// Checks if any media in the group requires multipart upload
-pub fn requires_multipart(builder: MediaGroupBuilder) -> Bool {
-  list.any(builder.media, fn(media) {
-    case media {
-      InputMediaPhotoInputMedia(photo) ->
-        file.requires_multipart(file.from_string(photo.media))
-      InputMediaVideoInputMedia(video) ->
-        file.requires_multipart(file.from_string(video.media))
-      InputMediaAudioInputMedia(audio) ->
-        file.requires_multipart(file.from_string(audio.media))
-      InputMediaDocumentInputMedia(document) ->
-        file.requires_multipart(file.from_string(document.media))
-      InputMediaAnimationInputMedia(animation) ->
-        file.requires_multipart(file.from_string(animation.media))
-      InputMediaLivePhotoInputMedia(live_photo) ->
-        file.requires_multipart(file.from_string(live_photo.media))
-        || file.requires_multipart(file.from_string(live_photo.photo))
-      InputMediaStickerInputMedia(sticker) ->
-        file.requires_multipart(file.from_string(sticker.media))
-      InputMediaLocationInputMedia(_) -> False
-      InputMediaVenueInputMedia(_) -> False
+/// Append one item, remembering the input when it needs to be uploaded.
+fn push(
+  builder: MediaGroupBuilder,
+  media: MediaInput,
+  item: InputMedia,
+) -> MediaGroupBuilder {
+  MediaGroupBuilder(
+    media: list.append(builder.media, [item]),
+    attachments: case file.requires_multipart(media) {
+      True -> list.append(builder.attachments, [media])
+      False -> builder.attachments
+    },
+  )
+}
+
+/// Send this album to `chat_id`, picking the transport it needs.
+///
+/// A group of URLs and `file_id`s goes out as JSON; as soon as one item is a
+/// local file or raw bytes the whole album has to be `multipart/form-data`,
+/// with the bytes attached under the `attach://` names the JSON refers to.
+/// Local files are read here — that is the only IO this module does.
+pub fn send(
+  client client: TelegramClient,
+  chat_id chat_id: String,
+  group group: MediaGroupBuilder,
+) -> Result(List(Message), TelegaError) {
+  send_with(client:, parameters: parameters(chat_id, group), group:)
+}
+
+/// `send` with the full `sendMediaGroup` parameter record — silent sends,
+/// topics, reply parameters. `parameters.media` is taken from `group`.
+pub fn send_with(
+  client client: TelegramClient,
+  parameters parameters: SendMediaGroupParameters,
+  group group: MediaGroupBuilder,
+) -> Result(List(Message), TelegaError) {
+  let parameters = SendMediaGroupParameters(..parameters, media: group.media)
+
+  case group.attachments {
+    [] -> api.send_media_group(client:, parameters:)
+    attachments -> {
+      use files <- result.try(
+        list.try_map(attachments, to_attachment)
+        |> result.map_error(fn(err) {
+          error.FetchError("Failed to read album attachment: " <> err)
+        }),
+      )
+      api.send_media_group_files(
+        client:,
+        parameters:,
+        files: list.flatten(files),
+      )
     }
-  })
+  }
+}
+
+fn parameters(chat_id: String, group: MediaGroupBuilder) {
+  SendMediaGroupParameters(
+    chat_id: Str(chat_id),
+    business_connection_id: None,
+    message_thread_id: None,
+    media: group.media,
+    disable_notification: None,
+    protect_content: None,
+    allow_paid_broadcast: None,
+    message_effect_id: None,
+    reply_parameters: None,
+  )
+}
+
+fn to_attachment(input: MediaInput) -> Result(List(api.Attachment), String) {
+  case file.to_multipart_file(input) {
+    Ok(Some(f)) ->
+      Ok([
+        api.Attachment(
+          field_name: f.field_name,
+          filename: f.filename,
+          content_type: option.unwrap(f.mime_type, "application/octet-stream"),
+          content: f.content,
+        ),
+      ])
+    // A URL or file_id never lands in `attachments`, but treat it as nothing
+    // to upload rather than an error.
+    Ok(None) -> Ok([])
+    Error(err) -> Error(string.inspect(err))
+  }
+}
+
+/// The inputs in this group that have to be uploaded as multipart parts:
+/// local files and raw bytes. URLs and `file_id`s are not attachments.
+pub fn attachments(builder: MediaGroupBuilder) -> List(MediaInput) {
+  builder.attachments
+}
+
+/// Whether this group has to go out as `multipart/form-data`.
+///
+/// True as soon as one item is a local file or raw bytes — those are only
+/// referenced by `attach://` in the album JSON, and the bytes must ride along
+/// in the same request.
+pub fn requires_multipart(builder: MediaGroupBuilder) -> Bool {
+  builder.attachments != []
 }
 
 /// Creates a media group from a list of photo URLs.

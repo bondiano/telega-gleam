@@ -212,3 +212,41 @@ pub fn default_options_test() {
   let doc_opts = media_group.default_document_options()
   doc_opts.disable_content_type_detection |> should.equal(None)
 }
+
+// M10 — albums of local bytes ------------------------------------------------
+
+pub fn requires_multipart_sees_attached_media_test() {
+  let urls =
+    media_group.new()
+    |> media_group.add_photo(
+      file.from_string("https://example.com/a.jpg"),
+      None,
+    )
+    |> media_group.add_photo(file.from_string("some-file-id"), None)
+
+  media_group.requires_multipart(urls) |> should.be_false
+
+  // An attached photo travels as `attach://<name>` in the JSON and as a
+  // multipart part alongside it — the album cannot be sent as plain JSON.
+  let attached =
+    urls
+    |> media_group.add_photo(file.from_bytes(<<1, 2, 3>>, "cat.png"), None)
+
+  media_group.requires_multipart(attached) |> should.be_true
+  media_group.attachments(attached)
+  |> list.length
+  |> should.equal(1)
+}
+
+pub fn attachments_keep_their_bytes_test() {
+  let builder =
+    media_group.new()
+    |> media_group.add_photo(file.from_bytes(<<9>>, "a.png"), None)
+    |> media_group.add_video(file.from_bytes(<<8>>, "b.mp4"), None)
+
+  // The builder used to keep only the `attach://` reference and drop the
+  // bytes, so there was nothing left to upload.
+  media_group.attachments(builder)
+  |> list.map(file.to_json_value)
+  |> should.equal(["attach://bytes_a.png", "attach://bytes_b.mp4"])
+}

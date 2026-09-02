@@ -14,7 +14,9 @@ import gleeunit/should
 import telega/api
 import telega/client
 import telega/error
+import telega/file
 import telega/internal/multipart
+import telega/media_group
 import telega/model/types
 
 const message_with_photo = "{\"ok\":true,\"result\":{\"message_id\":7,\"date\":0,\"chat\":{\"id\":123,\"type\":\"private\"},\"photo\":[{\"file_id\":\"MINTED_FILE_ID\",\"file_unique_id\":\"u1\",\"width\":90,\"height\":90}]}}"
@@ -241,4 +243,41 @@ pub fn a_transformer_can_short_circuit_an_upload_test() {
   |> should.be_error()
 
   process.receive(calls, 100) |> should.equal(Error(Nil))
+}
+
+pub fn send_media_group_uploads_attached_files_test() {
+  let captured = process.new_subject()
+  let bits_client = fn(req: request.Request(BitArray)) {
+    process.send(captured, req)
+    Ok(response.Response(
+      status: 200,
+      headers: [],
+      body: bit_array.from_string("{\"ok\":true,\"result\":[]}"),
+    ))
+  }
+  let tg_client =
+    client.new(token: "T", fetch_client: json_should_not_be_used)
+    |> client.set_fetch_bits_client(bits_client)
+
+  let album =
+    media_group.new()
+    |> media_group.add_photo(file.from_bytes(<<1, 2, 3>>, "a.png"), None)
+    |> media_group.add_photo(
+      file.from_string("https://example.com/b.jpg"),
+      None,
+    )
+
+  let assert Ok(_) =
+    media_group.send(client: tg_client, chat_id: "123", group: album)
+
+  let assert Ok(req) = process.receive(captured, 100)
+  string.ends_with(req.path, "/sendMediaGroup") |> should.be_true
+
+  let assert Ok(text) = bit_array.to_string(req.body)
+  // The album JSON references the attachment, and the bytes ride along as a
+  // part named the same.
+  string.contains(text, "attach://bytes_a.png") |> should.be_true
+  string.contains(text, "name=\"bytes_a.png\"; filename=\"a.png\"")
+  |> should.be_true
+  string.contains(text, "name=\"chat_id\"") |> should.be_true
 }
