@@ -1,0 +1,23 @@
+---
+version: 2.0.1
+title: format:daily_report:entities
+file: ./test/format_test.gleam
+test_name: entities_daily_report_test
+---
+text: 📊 Daily Report
+
+Statistics:
+• Users: 1234
+• Messages: 5678
+
+Secret data
+Details & more
+let x = 42
+---
+[0..15) bold
+[17..28) underline
+[38..42) code
+[55..59) code
+[61..72) spoiler
+[73..87) text_link url=https://example.com?a=1&b=2
+[88..98) pre language=gleam

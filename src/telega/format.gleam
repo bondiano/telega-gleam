@@ -21,6 +21,8 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 
+import telega/model/types.{type MessageEntity, MessageEntity}
+
 /// Supported parse modes for Telegram
 pub type ParseMode {
   HTML
@@ -397,4 +399,127 @@ fn segment_to_markdown_v2(segment: Segment) -> String {
       |> list.map(segment_to_markdown_v2)
       |> string.join("")
   }
+}
+
+// Entity rendering
+//
+// The alternative to a parse mode: send the text raw and describe the
+// formatting positionally. Nothing has to be escaped, so a user-supplied
+// string can never close a span it did not open, and a `*` the user typed
+// stays a `*`.
+
+/// Render `FormattedText` to a plain string plus the `MessageEntity` list that
+/// describes its formatting.
+///
+/// This is the escape-free way to send formatted text: no parse mode is
+/// involved, so no character in the text is special. Offsets and lengths are
+/// in UTF-16 code units, as the Bot API requires — an emoji outside the BMP
+/// counts as two.
+///
+/// ```gleam
+/// let #(text, entities) =
+///   format.build()
+///   |> format.text("Result: ")
+///   |> format.bold_text(user_supplied)
+///   |> format.to_formatted
+///   |> format.entities
+/// ```
+///
+/// Zero-length segments produce no entity — Telegram rejects those. A
+/// `Mention` renders as `@username` with a `mention` entity over it, and a
+/// `Nested` group contributes its children's entities without one of its own.
+pub fn entities(formatted: FormattedText) -> #(String, List(MessageEntity)) {
+  let #(_, texts, entities) = collect_entities(formatted.segments, 0, [], [])
+  #(texts |> list.reverse |> string.join(""), entities |> list.reverse)
+}
+
+fn collect_entities(
+  segments: List(Segment),
+  offset: Int,
+  texts: List(String),
+  entities: List(MessageEntity),
+) -> #(Int, List(String), List(MessageEntity)) {
+  case segments {
+    [] -> #(offset, texts, entities)
+    [Nested(inner), ..rest] -> {
+      let #(offset, texts, entities) =
+        collect_entities(inner, offset, texts, entities)
+      collect_entities(rest, offset, texts, entities)
+    }
+    [segment, ..rest] -> {
+      let #(text, entity) = segment_entity(segment, offset)
+      let length = utf16_length(text)
+      let entities = case entity, length {
+        _, 0 -> entities
+        None, _ -> entities
+        Some(entity), _ -> [MessageEntity(..entity, length:), ..entities]
+      }
+      collect_entities(rest, offset + length, [text, ..texts], entities)
+    }
+  }
+}
+
+/// The plain text a segment contributes, and the entity covering it — with a
+/// placeholder `length` the caller replaces once it has measured the text.
+fn segment_entity(
+  segment: Segment,
+  offset: Int,
+) -> #(String, Option(MessageEntity)) {
+  case segment {
+    Plain(text) -> #(text, None)
+    Bold(text) -> #(text, Some(entity("bold", offset)))
+    Italic(text) -> #(text, Some(entity("italic", offset)))
+    Underline(text) -> #(text, Some(entity("underline", offset)))
+    Strikethrough(text) -> #(text, Some(entity("strikethrough", offset)))
+    Spoiler(text) -> #(text, Some(entity("spoiler", offset)))
+    Code(text) -> #(text, Some(entity("code", offset)))
+    Pre(code, language) -> #(
+      code,
+      Some(MessageEntity(..entity("pre", offset), language:)),
+    )
+    Link(text, url) -> #(
+      text,
+      Some(MessageEntity(..entity("text_link", offset), url: Some(url))),
+    )
+    Mention(username) -> #("@" <> username, Some(entity("mention", offset)))
+    CustomEmoji(emoji, id) -> #(
+      emoji,
+      Some(
+        MessageEntity(
+          ..entity("custom_emoji", offset),
+          custom_emoji_id: Some(id),
+        ),
+      ),
+    )
+    // Handled by `collect_entities`, which flattens the group instead.
+    Nested(_) -> #("", None)
+  }
+}
+
+fn entity(type_: String, offset: Int) -> MessageEntity {
+  MessageEntity(
+    type_:,
+    offset:,
+    length: 0,
+    url: None,
+    user: None,
+    language: None,
+    custom_emoji_id: None,
+    unix_time: None,
+    date_time_format: None,
+  )
+}
+
+/// Telegram counts entity offsets in UTF-16 code units, not graphemes and not
+/// bytes: every codepoint above the BMP (emoji, most of them) is a surrogate
+/// pair and counts twice.
+fn utf16_length(text: String) -> Int {
+  text
+  |> string.to_utf_codepoints
+  |> list.fold(0, fn(length, codepoint) {
+    case string.utf_codepoint_to_int(codepoint) > 0xFFFF {
+      True -> length + 2
+      False -> length + 1
+    }
+  })
 }

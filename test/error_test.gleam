@@ -85,3 +85,142 @@ pub fn unreachable_chat_classifiers_test() {
   error.is_chat_unreachable(not_found) |> should.be_true()
   error.is_chat_unreachable(flood) |> should.be_false()
 }
+
+// classify
+//
+// The Bot API has no error codes beyond the HTTP status: everything else is
+// English prose. These pin down the reading, so a caller can `case` instead of
+// spelling substrings of its own.
+
+fn api_error(code: Int, description: String) -> error.TelegaError {
+  error.TelegramApiError(error_code: code, description:, parameters: None)
+}
+
+pub fn classify_reads_403_descriptions_test() {
+  api_error(403, "Forbidden: bot was blocked by the user")
+  |> error.classify
+  |> should.equal(error.BotBlocked)
+
+  api_error(403, "Forbidden: user is deactivated")
+  |> error.classify
+  |> should.equal(error.UserDeactivated)
+
+  api_error(403, "Forbidden: bot was kicked from the supergroup chat")
+  |> error.classify
+  |> should.equal(error.BotKicked)
+
+  api_error(403, "Forbidden: bot is not a member of the channel chat")
+  |> error.classify
+  |> should.equal(error.BotKicked)
+
+  // A 403 this module cannot read more precisely stays a plain `Forbidden`
+  // rather than being guessed into one of the specific kinds.
+  api_error(403, "Forbidden: something new Telegram invented")
+  |> error.classify
+  |> should.equal(error.Forbidden)
+}
+
+pub fn classify_reads_400_descriptions_test() {
+  api_error(400, "Bad Request: chat not found")
+  |> error.classify
+  |> should.equal(error.ChatNotFound)
+
+  api_error(400, "Bad Request: message is not modified")
+  |> error.classify
+  |> should.equal(error.MessageNotModified)
+
+  api_error(400, "Bad Request: message to edit not found")
+  |> error.classify
+  |> should.equal(error.MessageNotFound)
+
+  api_error(400, "Bad Request: message can't be edited")
+  |> error.classify
+  |> should.equal(error.MessageCantBeEdited)
+
+  api_error(400, "Bad Request: message is too long")
+  |> error.classify
+  |> should.equal(error.MessageTooLong)
+
+  api_error(400, "Bad Request: CHAT_WRITE_FORBIDDEN")
+  |> error.classify
+  |> should.equal(error.ChatWriteForbidden)
+
+  api_error(400, "Bad Request: wrong file identifier")
+  |> error.classify
+  |> should.equal(error.BadRequest)
+}
+
+pub fn classify_needs_both_status_and_description_test() {
+  // The words alone do not decide it: a 400 that mentions blocking is not a
+  // blocked user.
+  api_error(400, "Bad Request: bot was blocked by the user")
+  |> error.classify
+  |> should.equal(error.BadRequest)
+}
+
+pub fn classify_reads_response_parameters_test() {
+  error.TelegramApiError(
+    error_code: 429,
+    description: "Too Many Requests: retry later",
+    parameters: Some(types.ResponseParameters(
+      migrate_to_chat_id: None,
+      retry_after: Some(17),
+    )),
+  )
+  |> error.classify
+  |> should.equal(error.TooManyRequests(retry_after: 17))
+
+  // A 429 without parameters is still a flood wait; Telegram just did not say
+  // for how long.
+  api_error(429, "Too Many Requests")
+  |> error.classify
+  |> should.equal(error.TooManyRequests(retry_after: 0))
+
+  error.TelegramApiError(
+    error_code: 400,
+    description: "Bad Request: group chat was upgraded to a supergroup chat",
+    parameters: Some(types.ResponseParameters(
+      migrate_to_chat_id: Some(-1_001_234_567_890),
+      retry_after: None,
+    )),
+  )
+  |> error.classify
+  |> should.equal(error.ChatMigrated(new_chat_id: -1_001_234_567_890))
+}
+
+pub fn classify_reads_status_alone_test() {
+  api_error(401, "Unauthorized")
+  |> error.classify
+  |> should.equal(error.Unauthorized)
+
+  api_error(500, "Internal Server Error")
+  |> error.classify
+  |> should.equal(error.ServerError)
+
+  api_error(502, "Bad Gateway")
+  |> error.classify
+  |> should.equal(error.ServerError)
+}
+
+pub fn classify_non_api_errors_as_other_test() {
+  // A transport failure carries no Telegram status to read.
+  error.FetchError("connection refused")
+  |> error.classify
+  |> should.equal(error.Other)
+}
+
+pub fn predicates_agree_with_classify_test() {
+  let blocked = api_error(403, "Forbidden: bot was blocked by the user")
+  let write_forbidden =
+    api_error(400, "Bad Request: have no rights to send a message")
+  let flood = api_error(429, "Too Many Requests")
+
+  error.is_bot_blocked(blocked) |> should.be_true
+  error.is_chat_unreachable(blocked) |> should.be_true
+  // A chat the bot may not write in is as undeliverable as a blocked one:
+  // retrying the same call never helps.
+  error.is_chat_unreachable(write_forbidden) |> should.be_true
+  error.is_chat_unreachable(flood) |> should.be_false
+  error.is_message_too_long(api_error(400, "Bad Request: message is too long"))
+  |> should.be_true
+}

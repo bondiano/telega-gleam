@@ -118,9 +118,9 @@
 ////
 //// ## Blocked-user hygiene
 ////
-//// An undeliverable chat (`error.is_chat_unreachable`: blocked, deactivated,
-//// kicked, or a 400 `chat not found`) stays that way until the user comes
-//// back on their own. Every broadcast to
+//// An undeliverable chat — `error.classify` reads it as `BotBlocked`,
+//// `BotKicked`, `UserDeactivated`, `ChatNotFound` or `ChatWriteForbidden` —
+//// stays that way until the user comes back on their own. Every broadcast to
 //// a dead chat id wastes your rate budget, so treat `report.blocked` as
 //// a to-do list: mark those chat ids as inactive in your storage,
 //// exclude them from future broadcasts, and re-activate a user when
@@ -128,7 +128,18 @@
 ////
 //// `failed` is different — those are transient errors (network,
 //// server-side 5xx, a 429 that survived retries). Keep those ids and
-//// retry them in a later broadcast.
+//// retry them in a later broadcast. `error.classify` says which is which
+//// without reading a single description yourself:
+////
+//// ```gleam
+//// use #(chat_id, reason) <- list.each(report.failed)
+//// case error.classify(reason) {
+////   error.BotBlocked | error.UserDeactivated -> forget(chat_id)
+////   error.ChatMigrated(new_chat_id:) -> resend_to(new_chat_id)
+////   error.TooManyRequests(retry_after:) -> retry_in(chat_id, retry_after)
+////   _ -> retry_later(chat_id)
+//// }
+//// ```
 
 import gleam/erlang/process.{type Subject}
 import gleam/int
@@ -516,26 +527,26 @@ fn send_to_chat(state: State(a), chat_id: Int) -> actor.Next(State(a), Msg(a)) {
   case state.send(state.client, chat_id) {
     Ok(value) -> record(State(..state, sent: [#(chat_id, value), ..state.sent]))
 
-    Error(error.TelegramApiError(error_code: 429, ..) as reason) ->
-      case is_retry {
+    Error(reason) ->
+      case error.classify(reason), is_retry {
         // A 429 that survived the client's own retries: pause for a full
-        // window and retry this chat id once
-        False -> {
+        // window and retry this chat id once.
+        error.TooManyRequests(..), False -> {
           let state = State(..state, retry_chat: Some(chat_id))
           process.send_after(state.self, state.window_ms, SendNext)
           actor.continue(state)
         }
-        True ->
-          record(State(..state, failed: [#(chat_id, reason), ..state.failed]))
-      }
 
-    // Blocked, deactivated, kicked or unknown: the id is not deliverable, and
-    // no amount of retrying changes that. Classified by description, not by
-    // the bare 403 — Telegram answers "chat not found" with a 400.
-    Error(reason) ->
-      case error.is_chat_unreachable(reason) {
-        True -> record(State(..state, blocked: [chat_id, ..state.blocked]))
-        False ->
+        // Blocked, deactivated, kicked, unknown or unwritable: the id is not
+        // deliverable, and no amount of retrying changes that.
+        error.BotBlocked, _
+        | error.BotKicked, _
+        | error.UserDeactivated, _
+        | error.ChatNotFound, _
+        | error.ChatWriteForbidden, _
+        -> record(State(..state, blocked: [chat_id, ..state.blocked]))
+
+        _, _ ->
           record(State(..state, failed: [#(chat_id, reason), ..state.failed]))
       }
   }

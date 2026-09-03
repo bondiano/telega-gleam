@@ -9,6 +9,9 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 
+import logging
+
+import telega/api
 import telega/bot
 import telega/client
 import telega/error
@@ -779,4 +782,89 @@ pub fn get_updates_does_not_go_through_the_queue_test() {
 
   count_messages(calls, 0) |> should.equal(1)
   client.shutdown(tg_client)
+}
+
+// cache_get_me / trace_transformer
+
+/// Counts how many times the fetch client is actually reached.
+fn counting_client() -> #(client.TelegramClient, process.Subject(String)) {
+  let calls = process.new_subject()
+
+  let tg_client =
+    client.new(
+      token: "test-token",
+      fetch_client: fn(req: request.Request(String)) {
+        process.send(calls, req.path)
+        Ok(response.Response(
+          status: 200,
+          headers: [],
+          body: "{\"ok\":true,\"result\":{\"id\":1,\"is_bot\":true,\"first_name\":\"Bot\"}}",
+        ))
+      },
+    )
+
+  #(tg_client, calls)
+}
+
+fn drain(calls: process.Subject(String), acc: List(String)) -> List(String) {
+  case process.receive(calls, 0) {
+    Ok(path) -> drain(calls, [path, ..acc])
+    Error(_) -> list.reverse(acc)
+  }
+}
+
+pub fn cache_get_me_answers_from_the_cache_test() {
+  let #(tg_client, calls) = counting_client()
+  let tg_client = client.cache_get_me(tg_client)
+
+  let assert Ok(first) = api.get_me(tg_client)
+  let assert Ok(second) = api.get_me(tg_client)
+
+  // Same answer, one round trip.
+  second |> should.equal(first)
+  drain(calls, []) |> list.length |> should.equal(1)
+}
+
+pub fn cache_get_me_leaves_other_methods_alone_test() {
+  let #(tg_client, calls) = counting_client()
+  let tg_client = client.cache_get_me(tg_client)
+
+  let assert Ok(_) = api.get_me(tg_client)
+  let assert Ok(_) = api.get_me(tg_client)
+  let _ = api.get_webhook_info(tg_client)
+
+  // Only `getMe` is cached; everything else still goes out every time.
+  drain(calls, [])
+  |> should.equal(["/bottest-token/getMe", "/bottest-token/getWebhookInfo"])
+}
+
+pub fn cache_get_me_does_not_cache_a_failure_test() {
+  let attempts = process.new_subject()
+  let tg_client =
+    client.new(token: "test-token", fetch_client: fn(_req) {
+      process.send(attempts, Nil)
+      Error(error.FetchError("connection refused"))
+    })
+    |> client.set_max_retry_attempts(0)
+    |> client.cache_get_me
+
+  let assert Error(_) = api.get_me(tg_client)
+  let assert Error(_) = api.get_me(tg_client)
+
+  // A failure is worth retrying; only a successful answer is remembered.
+  process.receive(attempts, 0) |> should.equal(Ok(Nil))
+  process.receive(attempts, 0) |> should.equal(Ok(Nil))
+}
+
+pub fn trace_transformer_passes_the_call_through_test() {
+  let #(tg_client, calls) = counting_client()
+  let tg_client =
+    client.use_transformer(tg_client, client.trace_transformer(logging.Debug))
+
+  let assert Ok(user) = api.get_me(tg_client)
+
+  // Tracing is observation only: the request still goes out and the result
+  // still comes back.
+  user.id |> should.equal(1)
+  drain(calls, []) |> should.equal(["/bottest-token/getMe"])
 }

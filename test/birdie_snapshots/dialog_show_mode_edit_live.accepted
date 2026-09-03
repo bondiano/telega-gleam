@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:show_mode:edit_live
+file: ./test/telega/dialog_test.gleam
+test_name: edit_live_keeps_editing_after_text_test
 ---
 1. sendMessage
 {

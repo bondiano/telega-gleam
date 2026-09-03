@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:engine:happy_path
+file: ./test/telega/dialog_test.gleam
+test_name: engine_happy_path_test
 ---
 1. sendMessage
 {

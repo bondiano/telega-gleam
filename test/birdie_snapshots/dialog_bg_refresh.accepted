@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:bg:refresh
+file: ./test/telega/dialog_test.gleam
+test_name: refresh_re_renders_an_open_dialog_test
 ---
 1. sendMessage
 {

@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:sub:alert_from_on_sub_result
+file: ./test/telega/dialog_sub_test.gleam
+test_name: alert_from_on_sub_result_is_the_only_answer_test
 ---
 1. sendMessage
 {

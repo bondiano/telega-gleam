@@ -52,14 +52,14 @@ import telega_httpc
 
 fn handle_text(ctx, text) {
   use ctx <- telega.log_context(ctx, "echo_text")
-  let assert Ok(_) = reply.with_text(ctx, text)
-  Ok(ctx)
+  // `reply.text` sends the message and hands the context back, so a handler
+  // that only replies is one line.
+  reply.text(ctx, text)
 }
 
 fn handle_command(ctx, command: update.Command) {
   use ctx <- telega.log_context(ctx, "echo_command")
-  let assert Ok(_) = reply.with_text(ctx, "Command: " <> command.text)
-  Ok(ctx)
+  reply.text(ctx, "Command: " <> command.text)
 }
 
 pub fn main() {
@@ -206,6 +206,7 @@ Progressive examples in the [examples](./examples) directory:
 5. `04-keyboard-bot` — Inline keyboards and callbacks
 6. `05-media-group-bot` — Media group handling
 7. `06-restaurant-booking` — Full-featured application with flows and database
+8. `07-streaming-bot` — LLM-style streaming into one growing message
 
 ## Development
 

@@ -47,10 +47,12 @@
 //// back as a stub `Message` without that id — wrap such a call in
 //// `webhook_reply.without_claim` when you need the real one.
 
+import gleam/erlang/atom.{type Atom}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/yielder.{type Yielder}
 
 import telega/api
 import telega/bot.{type Context}
@@ -61,14 +63,16 @@ import telega/format.{type FormattedText}
 import telega/model/types.{
   type AnswerCallbackQueryParameters, type EditMessageTextParameters,
   type EphemeralMessageParameters, type FileOrString,
-  type ForwardMessageParameters, type InputMedia, type InputPaidMedia,
-  type Message, type SendDiceParameters, type SendMessageReplyMarkupParameters,
-  EditMessageTextParameters, EphemeralMessageParameters, LabeledPrice,
-  SendDiceParameters, SendInvoiceParameters, SendMediaGroupParameters,
-  SendMessageParameters, SendPaidMediaParameters, SendPhotoParameters,
-  SendPollParameters, SendStickerParameters,
+  type ForwardMessageParameters, type InlineKeyboardMarkup, type InputMedia,
+  type InputPaidMedia, type Message, type SendDiceParameters,
+  type SendMessageReplyMarkupParameters, EditMessageTextParameters,
+  EphemeralMessageParameters, LabeledPrice, SendDiceParameters,
+  SendInvoiceParameters, SendMediaGroupParameters, SendMessageParameters,
+  SendPaidMediaParameters, SendPhotoParameters, SendPollParameters,
+  SendStickerParameters,
 }
 import telega/update
+import telega/webhook_reply
 
 /// Use this method to send text messages.
 ///
@@ -792,4 +796,441 @@ pub fn with_paid_media(
       reply_markup: None,
     ),
   )
+}
+
+// Shortcuts
+//
+// The handful of calls a handler makes over and over: answer the chat, answer
+// the button, edit the message the button sits on. Each is one line here and
+// a record with a dozen `None`s without.
+
+/// Send `text` to the active chat and hand the context back unchanged.
+///
+/// The shape a handler wants: `reply.text` *is* the handler body, with no
+/// `let assert` and no `use _ <- result.try` around a `Message` nobody reads.
+///
+/// ```gleam
+/// fn handle_text(ctx, text) {
+///   reply.text(ctx, "You said: " <> text)
+/// }
+/// ```
+///
+/// The failure is a `TelegaError`, so a router using this shortcut has
+/// `TelegaError` as its error type. A bot with an error type of its own keeps
+/// using `with_text` and maps the error itself.
+pub fn text(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Context(session, error, dependencies), error.TelegaError) {
+  use _ <- result.try(with_text(ctx:, text:))
+  Ok(ctx)
+}
+
+/// Send text with formatting described positionally, as `MessageEntity`s,
+/// instead of through a parse mode.
+///
+/// Nothing is escaped, because nothing is special: a user-supplied string
+/// carrying `*`, `_` or `<b>` arrives exactly as typed. See `format.entities`.
+///
+/// ```gleam
+/// format.build()
+/// |> format.text("Result: ")
+/// |> format.bold_text(whatever_the_user_typed)
+/// |> format.to_formatted
+/// |> reply.with_entities(ctx, _)
+/// ```
+pub fn with_entities(
+  ctx ctx: Context(session, error, dependencies),
+  formatted formatted: FormattedText,
+) -> Result(Message, error.TelegaError) {
+  let #(text, entities) = format.entities(formatted)
+
+  api.send_message(
+    ctx.config.api_client,
+    parameters: SendMessageParameters(
+      ..base_message_parameters(ctx, text),
+      parse_mode: None,
+      entities: Some(entities),
+    ),
+  )
+}
+
+/// Reply to the message that triggered this update, quoting it in the client.
+///
+/// An update that is not about a message (a callback query, an inline query)
+/// has nothing to quote, so the text is sent as a plain message.
+pub fn quote(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Message, error.TelegaError) {
+  let reply_parameters =
+    update.message(ctx.update)
+    |> option.map(fn(message) {
+      types.ReplyParameters(
+        message_id: Some(message.message_id),
+        chat_id: None,
+        ephemeral_message_id: None,
+        // The user may delete their message between sending it and this reply;
+        // arriving without the quote beats not arriving.
+        allow_sending_without_reply: Some(True),
+        quote: None,
+        quote_parse_mode: None,
+        quote_entities: None,
+        quote_position: None,
+        checklist_task_id: None,
+        poll_option_id: None,
+      )
+    })
+
+  api.send_message(
+    ctx.config.api_client,
+    parameters: SendMessageParameters(
+      ..base_message_parameters(ctx, text),
+      reply_parameters:,
+    ),
+  )
+}
+
+/// Send `text` and take the custom (reply) keyboard off the user's screen.
+pub fn remove_keyboard(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Message, error.TelegaError) {
+  api.send_message(
+    ctx.config.api_client,
+    parameters: SendMessageParameters(
+      ..base_message_parameters(ctx, text),
+      reply_markup: Some(
+        types.SendMessageReplyRemoveKeyboardMarkupParameters(
+          types.ReplyKeyboardRemove(remove_keyboard: True, selective: None),
+        ),
+      ),
+    ),
+  )
+}
+
+/// Replace the text of the message the pressed button belongs to.
+///
+/// Works for an inline-mode message too (`inline_message_id`), which is why it
+/// returns whatever `editMessageText` returned rather than assuming a chat
+/// message. Errors when the update is not a callback query.
+pub fn edit_callback_message(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Message, error.TelegaError) {
+  edit_callback(ctx, text, None)
+}
+
+/// `edit_callback_message` that also replaces the inline keyboard — the usual
+/// way to advance a menu in place.
+pub fn edit_callback_markup(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+  markup markup: InlineKeyboardMarkup,
+) -> Result(Message, error.TelegaError) {
+  edit_callback(ctx, text, Some(markup))
+}
+
+fn edit_callback(
+  ctx: Context(session, error, dependencies),
+  text: String,
+  reply_markup: Option(InlineKeyboardMarkup),
+) -> Result(Message, error.TelegaError) {
+  use query <- result.try(callback_query(ctx, "edit_callback_message"))
+
+  let #(chat_id, message_id) = case query.message {
+    Some(types.MessageMaybeInaccessibleMessage(message)) -> #(
+      Some(types.Int(message.chat.id)),
+      Some(message.message_id),
+    )
+    Some(types.InaccessibleMessageMaybeInaccessibleMessage(message)) -> #(
+      Some(types.Int(message.chat.id)),
+      Some(message.message_id),
+    )
+    None -> #(None, None)
+  }
+
+  api.edit_message_text(
+    ctx.config.api_client,
+    EditMessageTextParameters(
+      text:,
+      chat_id:,
+      message_id:,
+      inline_message_id: query.inline_message_id,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      entities: None,
+      link_preview_options: None,
+      reply_markup:,
+    ),
+  )
+}
+
+/// Answer the callback query of this update with a toast — the notification
+/// strip at the top of the chat.
+///
+/// Every callback query must be answered, or the client keeps showing a
+/// spinner on the button for a minute. Errors when the update is not a
+/// callback query.
+pub fn answer_toast(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Bool, error.TelegaError) {
+  answer_query(ctx, "answer_toast", Some(text), show_alert: False)
+}
+
+/// Answer the callback query of this update with a modal alert the user has to
+/// dismiss. Use it for refusals and mistakes; `answer_toast` for everything
+/// else.
+pub fn answer_alert(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(Bool, error.TelegaError) {
+  answer_query(ctx, "answer_alert", Some(text), show_alert: True)
+}
+
+/// Answer the callback query of this update without showing anything — just
+/// stop the button's spinner.
+pub fn answer_quietly(
+  ctx ctx: Context(session, error, dependencies),
+) -> Result(Bool, error.TelegaError) {
+  answer_query(ctx, "answer_quietly", None, show_alert: False)
+}
+
+fn answer_query(
+  ctx: Context(session, error, dependencies),
+  caller: String,
+  text: Option(String),
+  show_alert show_alert: Bool,
+) -> Result(Bool, error.TelegaError) {
+  use query <- result.try(callback_query(ctx, caller))
+
+  api.answer_callback_query(
+    ctx.config.api_client,
+    types.AnswerCallbackQueryParameters(
+      callback_query_id: query.id,
+      text:,
+      show_alert: Some(show_alert),
+      url: None,
+      cache_time: None,
+    ),
+  )
+}
+
+fn callback_query(
+  ctx: Context(session, error, dependencies),
+  caller: String,
+) -> Result(types.CallbackQuery, error.TelegaError) {
+  case ctx.update {
+    update.CallbackQueryUpdate(query:, ..) -> Ok(query)
+    _ ->
+      Error(error.BotHandleUpdateError(
+        "reply."
+        <> caller
+        <> " needs a callback query update, got a "
+        <> update.type_to_string(ctx.update),
+      ))
+  }
+}
+
+/// The `sendMessage` parameters every shortcut starts from: this chat, the
+/// client's default parse mode, nothing else set.
+fn base_message_parameters(
+  ctx: Context(session, error, dependencies),
+  text: String,
+) -> types.SendMessageParameters {
+  SendMessageParameters(
+    text:,
+    chat_id: types.Int(ctx.update.chat_id),
+    parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+    business_connection_id: None,
+    message_thread_id: None,
+    entities: None,
+    link_preview_options: None,
+    disable_notification: None,
+    protect_content: None,
+    message_effect_id: None,
+    allow_paid_broadcast: None,
+    reply_parameters: None,
+    reply_markup: None,
+    ephemeral_message_parameters: None,
+  )
+}
+
+// Streaming
+//
+// One message that grows, instead of a wall of fragments. A token stream from
+// an LLM arrives faster than Telegram lets anyone edit a message, so the text
+// is accumulated and flushed on a clock.
+
+/// The block cursor appended while a stream is still running, so the message
+/// reads as "still writing" rather than "finished, oddly short".
+const stream_cursor = "▌"
+
+/// Stream text into a single message that is edited as it grows.
+///
+/// `chunks` is pulled to exhaustion — token by token from an LLM, line by line
+/// from a long job. The first non-empty chunk sends a message; after that the
+/// message is edited at most once per `every_ms`, and a final edit drops the
+/// cursor and shows the complete text. A stream of 400 tokens costs a handful
+/// of API calls, not 400.
+///
+/// ```gleam
+/// use ctx <- telega.log_context(ctx, "answer")
+/// let assert Ok(_) = reply.stream_text(ctx, llm_tokens(prompt), every_ms: 700)
+/// ```
+///
+/// Pick `every_ms` above Telegram's per-chat pacing — 700 ms is a good
+/// default, and below ~500 ms in a private chat the edits queue up behind the
+/// rate limiter and the animation stutters.
+///
+/// Edits that fail while the stream runs are swallowed: a flood wait halfway
+/// through must not cost the user the answer, and the next flush carries the
+/// text the failed one would have. The first send and the final edit are not —
+/// their failure is returned. An empty stream sends nothing and is an error,
+/// since Telegram has no empty message to return.
+pub fn stream_text(
+  ctx ctx: Context(session, error, dependencies),
+  chunks chunks: Yielder(String),
+  every_ms every_ms: Int,
+) -> Result(Message, error.TelegaError) {
+  stream(ctx, chunks, every_ms, into: None)
+}
+
+/// `stream_text` into a message that already exists — the "Thinking…" placeholder
+/// you sent before calling the model, so the user sees something immediately.
+///
+/// The message must be one the bot can edit in this chat. Under
+/// `handle_bot_with_reply`, send that placeholder inside
+/// `webhook_reply.without_claim` — a claimed send returns a stub with
+/// `message_id: -1`, and there is nothing to write into.
+pub fn stream_into(
+  ctx ctx: Context(session, error, dependencies),
+  message_id message_id: Int,
+  chunks chunks: Yielder(String),
+  every_ms every_ms: Int,
+) -> Result(Message, error.TelegaError) {
+  stream(ctx, chunks, every_ms, into: Some(message_id))
+}
+
+/// What the stream knows between chunks: where it is writing, what it has
+/// collected so far, and when it last flushed.
+type Stream {
+  Stream(message_id: Option(Int), text: String, last_flush_ms: Int)
+}
+
+fn stream(
+  ctx: Context(session, error, dependencies),
+  chunks: Yielder(String),
+  every_ms: Int,
+  into message_id: Option(Int),
+) -> Result(Message, error.TelegaError) {
+  // Dated one window into the past, so the first chunk shows up at once
+  // instead of after `every_ms` of silence.
+  let initial =
+    Stream(message_id:, text: "", last_flush_ms: monotonic_ms() - every_ms)
+
+  // Under `handle_bot_with_reply` the first eligible send of an update is
+  // answered through the webhook response itself and comes back as a stub with
+  // `message_id: -1` — every edit after it would target a message that does
+  // not exist.
+  use <- webhook_reply.without_claim
+
+  use stream <- result.try(
+    yielder.try_fold(over: chunks, from: initial, with: fn(stream, chunk) {
+      push_chunk(ctx, stream, chunk, every_ms)
+    }),
+  )
+
+  finish_stream(ctx, stream)
+}
+
+fn push_chunk(
+  ctx: Context(session, error, dependencies),
+  stream: Stream,
+  chunk: String,
+  every_ms: Int,
+) -> Result(Stream, error.TelegaError) {
+  let stream = Stream(..stream, text: stream.text <> chunk)
+  let now = monotonic_ms()
+
+  case stream.text == "" || now - stream.last_flush_ms < every_ms {
+    True -> Ok(stream)
+    False -> flush(ctx, stream, now)
+  }
+}
+
+/// Show what has accumulated so far, with the cursor.
+///
+/// Only the very first send can fail the stream: without a message there is
+/// nothing to edit later, and a second attempt could leave the user with two
+/// half-written answers. A failed *edit* costs nothing — the text is still in
+/// `stream.text` and the next flush carries it — so it is swallowed, and only
+/// the clock moves on.
+fn flush(
+  ctx: Context(session, error, dependencies),
+  stream: Stream,
+  now: Int,
+) -> Result(Stream, error.TelegaError) {
+  let body = stream.text <> stream_cursor
+
+  case stream.message_id {
+    None -> {
+      use message <- result.try(with_text(ctx:, text: body))
+      Ok(
+        Stream(
+          ..stream,
+          message_id: Some(message.message_id),
+          last_flush_ms: now,
+        ),
+      )
+    }
+    Some(message_id) -> {
+      let _ = edit_stream_message(ctx, message_id, body)
+      Ok(Stream(..stream, last_flush_ms: now))
+    }
+  }
+}
+
+/// The last write: the full text, no cursor.
+fn finish_stream(
+  ctx: Context(session, error, dependencies),
+  stream: Stream,
+) -> Result(Message, error.TelegaError) {
+  case stream.message_id, stream.text {
+    _, "" ->
+      Error(error.BotHandleUpdateError(
+        "reply.stream_text: the stream produced no text",
+      ))
+    None, text -> with_text(ctx:, text:)
+    // Every flush appends the cursor, so what is on screen never equals the
+    // final text: this edit always has something to change.
+    Some(message_id), text -> edit_stream_message(ctx, message_id, text)
+  }
+}
+
+fn edit_stream_message(
+  ctx: Context(session, error, dependencies),
+  message_id: Int,
+  text: String,
+) -> Result(Message, error.TelegaError) {
+  api.edit_message_text(
+    ctx.config.api_client,
+    EditMessageTextParameters(
+      text:,
+      chat_id: Some(types.Int(ctx.update.chat_id)),
+      message_id: Some(message_id),
+      inline_message_id: None,
+      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
+      entities: None,
+      link_preview_options: None,
+      reply_markup: None,
+    ),
+  )
+}
+
+@external(erlang, "erlang", "monotonic_time")
+fn erlang_monotonic_time(unit: Atom) -> Int
+
+fn monotonic_ms() -> Int {
+  erlang_monotonic_time(atom.create("millisecond"))
 }

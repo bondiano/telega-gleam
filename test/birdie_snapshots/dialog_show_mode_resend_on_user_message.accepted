@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:show_mode:resend_on_user_message
+file: ./test/telega/dialog_test.gleam
+test_name: resend_on_user_message_moves_the_window_down_test
 ---
 1. sendMessage
 {

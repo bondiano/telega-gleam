@@ -82,6 +82,48 @@ is binary, so `request_body` returns `None` and `map_request_body` leaves them
 unchanged; everything else — reading the method, short-circuiting, inspecting
 the result — works exactly as for a JSON call.
 
+### Two transformers you do not have to write
+
+`client.trace_transformer(level)` logs every call at the given level: the
+method and body on the way out, the status and elapsed time on the way back,
+the description on a failure.
+
+```gleam
+import logging
+import telega/client
+
+let api_client =
+  client.new(token:, fetch_client:)
+  |> client.use_transformer(client.trace_transformer(logging.Debug))
+```
+
+```
+telega -> sendMessage {"chat_id":123,"text":"hi"}
+telega <- sendMessage 200 in 84ms {"ok":true,"result":{...}}
+```
+
+Bodies are truncated at 500 characters and anything shaped like a bot token is
+replaced with `<token>` — a fetch error carries the request URL, and the URL
+carries the token. Everything else is logged verbatim, so this is a debugging
+tool rather than something to leave on in production with user data flowing
+through it. Add it first to time the whole chain, last to see the request as it
+actually goes out.
+
+`client.cache_get_me(client)` answers `getMe` from a cache after the first
+successful call:
+
+```gleam
+let api_client =
+  client.new(token:, fetch_client:)
+  |> client.cache_get_me
+```
+
+`getMe` is asked at startup by `telega` itself and again by anything that wants
+`bot_info`. The cache lives in an ETS table of its own, so it survives whichever
+process made the first call, and it is never invalidated — a bot renamed through
+`setMyName` keeps reporting the old name until the node restarts. Only a
+successful response is cached; a failure is retried next time.
+
 ## Default parse mode
 
 Setting `parse_mode` on every call gets old fast. Configure it once on the
@@ -171,6 +213,44 @@ client.new(token:, fetch_client:)
 
 Each retry emits a `telega.api_call.retry` telemetry event carrying the actual
 delay in `retry_after` (milliseconds).
+
+## Reading errors
+
+A failed call comes back as `error.TelegramApiError(error_code:, description:,
+parameters:)`. The Bot API has no error codes beyond the HTTP status —
+everything else is English prose — so `error.classify` does that reading once
+and gives you a constructor to match on:
+
+```gleam
+import telega/error
+
+case error.classify(reason) {
+  error.BotBlocked | error.UserDeactivated -> forget(chat_id)
+  error.ChatMigrated(new_chat_id:) -> resend_to(new_chat_id)
+  error.TooManyRequests(retry_after:) -> retry_in(chat_id, retry_after)
+  error.MessageNotModified -> Ok(Nil)
+  _ -> log(reason)
+}
+```
+
+| Kind | Comes from |
+| --- | --- |
+| `BotBlocked`, `BotKicked`, `UserDeactivated` | 403 + description |
+| `ChatNotFound`, `ChatWriteForbidden` | 400/403 + description |
+| `MessageNotModified`, `MessageNotFound`, `MessageCantBeEdited`, `MessageTooLong` | 400 + description |
+| `TooManyRequests(retry_after:)` | 429, `parameters.retry_after` (`0` if absent) |
+| `ChatMigrated(new_chat_id:)` | `parameters.migrate_to_chat_id` |
+| `Unauthorized`, `Forbidden`, `BadRequest`, `ServerError` | the status alone |
+| `Other` | every non-API error: transport, decode, startup |
+
+Both halves have to agree: a 400 that merely mentions blocking is a
+`BadRequest`, not a `BotBlocked`. The `is_*` predicates (`is_bot_blocked`,
+`is_message_not_modified`, `is_chat_unreachable`, ...) are one-line wrappers
+over `classify` and stay the convenient form for a single check.
+
+`is_chat_unreachable` is the one worth naming: blocked, kicked, deactivated,
+unknown, or a chat the bot may not write in — retrying the same call never
+helps. `telega/broadcast` uses exactly these kinds to fill `report.blocked`.
 
 ## Rate limits: the request queue
 

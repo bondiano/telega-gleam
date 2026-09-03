@@ -329,3 +329,84 @@ pub fn markdown_escapes_code_spans_test() {
   |> format.to_markdown()
   |> should.equal("`a \\` b \\\\ c`")
 }
+
+// Entity rendering
+//
+// The escape-free path: the text goes out verbatim and the formatting travels
+// beside it, positionally. Offsets are UTF-16 code units, which is where this
+// is easy to get wrong.
+
+pub fn entities_of_plain_text_test() {
+  let #(text, entities) =
+    format.build()
+    |> format.text("*not bold* <b>not html</b>")
+    |> format.to_formatted()
+    |> format.entities
+
+  // Nothing is escaped, because with entities nothing is special.
+  text |> should.equal("*not bold* <b>not html</b>")
+  entities |> should.equal([])
+}
+
+pub fn entities_offsets_are_utf16_code_units_test() {
+  // "🤖" is one grapheme, one codepoint — and two UTF-16 code units, which is
+  // the only unit Telegram counts in.
+  let #(text, entities) =
+    format.build()
+    |> format.text("🤖 ")
+    |> format.bold_text("bot")
+    |> format.to_formatted()
+    |> format.entities
+
+  text |> should.equal("🤖 bot")
+
+  let assert [entity] = entities
+  entity.type_ |> should.equal("bold")
+  entity.offset |> should.equal(3)
+  entity.length |> should.equal(3)
+}
+
+pub fn entities_skip_empty_segments_test() {
+  let #(_, entities) =
+    format.build()
+    |> format.bold_text("")
+    |> format.italic_text("real")
+    |> format.to_formatted()
+    |> format.entities
+
+  // Telegram rejects a zero-length entity, so an empty segment contributes
+  // text (none) and nothing else.
+  let assert [entity] = entities
+  entity.type_ |> should.equal("italic")
+}
+
+pub fn entities_carry_link_and_language_test() {
+  let #(_, entities) =
+    format.build()
+    |> format.link_text("docs", "https://gleam.run")
+    |> format.pre_text("let x = 1", Some("gleam"))
+    |> format.to_formatted()
+    |> format.entities
+
+  let assert [link, pre] = entities
+  link.type_ |> should.equal("text_link")
+  link.url |> should.equal(Some("https://gleam.run"))
+  pre.type_ |> should.equal("pre")
+  pre.language |> should.equal(Some("gleam"))
+}
+
+pub fn entities_daily_report_test() {
+  daily_report(format.HTML)
+  |> format.to_formatted()
+  |> render.entities_frame
+  |> birdie.snap(title: "format:daily_report:entities")
+}
+
+pub fn entities_with_user_input_test() {
+  format.build()
+  |> format.text("Search: ")
+  |> format.bold_text("*_[]()~`>#+-=|{}.!<b>&")
+  |> format.to_formatted()
+  |> render.entities_frame
+  |> birdie.snap(title: "format:user_input:entities")
+}

@@ -29,7 +29,8 @@ import gleam/string
 import telega/dialog/types as dialog_types
 import telega/format
 import telega/model/types.{
-  type InlineKeyboardButton, type InlineKeyboardMarkup, InlineKeyboardButton,
+  type InlineKeyboardButton, type InlineKeyboardMarkup, type MessageEntity,
+  InlineKeyboardButton,
 }
 import telega/testing/mock
 
@@ -78,6 +79,53 @@ pub fn keyboard_grid(markup markup: InlineKeyboardMarkup) -> String {
 pub fn formatted_frame(formatted formatted: format.FormattedText) -> String {
   let #(text, parse_mode) = format.render(formatted)
   "parse_mode: " <> format.parse_mode_to_string(parse_mode) <> "\n---\n" <> text
+}
+
+/// Render formatted text the way `format.entities` sends it: the plain text,
+/// then one line per entity with its half-open UTF-16 range.
+///
+/// ```
+/// text: Total: 42
+/// ---
+/// [0..6) bold
+/// [7..9) code
+/// ```
+pub fn entities_frame(formatted formatted: format.FormattedText) -> String {
+  let #(text, entities) = format.entities(formatted)
+
+  "text: "
+  <> text
+  <> "\n---\n"
+  <> {
+    entities
+    |> list.map(entity_row)
+    |> string.join("\n")
+  }
+}
+
+fn entity_row(entity: MessageEntity) -> String {
+  let details =
+    [
+      #("url", entity.url),
+      #("language", entity.language),
+      #("custom_emoji_id", entity.custom_emoji_id),
+    ]
+    |> list.filter_map(fn(detail) {
+      case detail.1 {
+        Some(value) -> Ok(detail.0 <> "=" <> value)
+        None -> Error(Nil)
+      }
+    })
+    |> list.map(fn(detail) { " " <> detail })
+    |> string.join("")
+
+  "["
+  <> int.to_string(entity.offset)
+  <> ".."
+  <> int.to_string(entity.offset + entity.length)
+  <> ") "
+  <> entity.type_
+  <> details
 }
 
 /// Render the full visible "frame" of a dialog window: parse mode, media,

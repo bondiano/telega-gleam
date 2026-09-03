@@ -18,6 +18,7 @@
 import gleam/bit_array
 import gleam/bool
 import gleam/dynamic/decode
+import gleam/erlang/atom.{type Atom}
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
@@ -26,12 +27,15 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/regexp
 import gleam/result
 import gleam/string
+import logging
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
 import telega/format.{type ParseMode}
+import telega/internal/ets_table.{type EtsTable}
 import telega/internal/method_info
 import telega/internal/request_queue.{type RequestQueue}
 import telega/telemetry
@@ -175,6 +179,147 @@ pub fn use_transformer(
     ..client,
     transformers: list.append(client.transformers, [transformer]),
   )
+}
+
+/// A transformer that logs every API call at `level`: the method and request
+/// body on the way out, the status and elapsed time on the way back, the
+/// description on a failure.
+///
+/// ```gleam
+/// let client =
+///   client.new(token:, fetch_client:)
+///   |> client.use_transformer(client.trace_transformer(logging.Debug))
+/// ```
+///
+/// Add it first if you want it to time the whole chain, last to see the
+/// request as it actually goes out. Bodies are truncated and anything shaped
+/// like a bot token is replaced with `<token>` — a fetch error carries the
+/// request URL, and the URL carries the token. Everything else in a body is
+/// logged verbatim, so this is a debugging tool, not something to leave on in
+/// production with user data flowing through it.
+pub fn trace_transformer(
+  level level: logging.LogLevel,
+) -> ApiRequestTransformer {
+  fn(api_request: TelegramApiRequest, next) {
+    let method = request_method(api_request)
+    let started_at = telemetry.monotonic_time()
+
+    logging.log(level, "telega -> " <> method <> traced_body(api_request))
+    let result = next(api_request)
+    let took = elapsed_ms(started_at)
+
+    case result {
+      Ok(response.Response(status:, body:, ..)) ->
+        logging.log(
+          level,
+          "telega <- "
+            <> method
+            <> " "
+            <> int.to_string(status)
+            <> " in "
+            <> took
+            <> traced_text(body),
+        )
+      Error(reason) ->
+        logging.log(
+          level,
+          "telega <- "
+            <> method
+            <> " failed in "
+            <> took
+            <> ": "
+            <> redact_tokens(error.to_string(reason)),
+        )
+    }
+
+    result
+  }
+}
+
+fn traced_body(api_request: TelegramApiRequest) -> String {
+  case api_request {
+    TelegramApiPostRequest(body:, ..) -> traced_text(body)
+    TelegramApiGetRequest(query: Some(query), ..) ->
+      traced_text(string.inspect(query))
+    TelegramApiGetRequest(..) -> ""
+    TelegramApiMultipartRequest(body:, ..) ->
+      " <" <> int.to_string(bit_array.byte_size(body)) <> " bytes>"
+  }
+}
+
+const trace_body_limit = 500
+
+fn traced_text(text: String) -> String {
+  let text = redact_tokens(text)
+  case string.length(text) > trace_body_limit {
+    True -> " " <> string.slice(text, 0, trace_body_limit) <> "…"
+    False -> " " <> text
+  }
+}
+
+fn elapsed_ms(started_at: Int) -> String {
+  let elapsed = telemetry.monotonic_time() - started_at
+  int.to_string(native_to_millisecond(elapsed)) <> "ms"
+}
+
+/// A trace has no client to ask for the token, so it matches the shape
+/// Telegram tokens have: digits, a colon, then 30+ token characters.
+fn redact_tokens(text: String) -> String {
+  case regexp.from_string("[0-9]{5,}:[A-Za-z0-9_-]{30,}") {
+    Ok(token) -> regexp.replace(each: token, in: text, with: "<token>")
+    Error(_) -> text
+  }
+}
+
+/// Answer `getMe` from a cache instead of the network after the first call.
+///
+/// `getMe` is asked once at startup by `telega` itself and then again by
+/// anything that wants `bot_info`; the answer only changes when you rename the
+/// bot. The cache lives in an ETS table of its own, so it survives whichever
+/// process happened to make the first call — and it is never invalidated, so a
+/// bot renamed through `setMyName` keeps reporting the old name until the node
+/// restarts.
+///
+/// Only a successful response is cached; a failure is retried the next time.
+pub fn cache_get_me(client client: TelegramClient) -> TelegramClient {
+  let table = ets_table.create_owned()
+
+  use_transformer(client, fn(api_request, next) {
+    case request_method(api_request) {
+      "getMe" ->
+        case ets_lookup(table, get_me_key) {
+          [#(_, status, body)] ->
+            Ok(response.Response(status:, headers: [], body:))
+          _ -> {
+            let result = next(api_request)
+            case result {
+              Ok(response.Response(status: 200, body:, ..)) -> {
+                ets_insert(table, #(get_me_key, 200, body))
+                Nil
+              }
+              _ -> Nil
+            }
+            result
+          }
+        }
+      _ -> next(api_request)
+    }
+  })
+}
+
+const get_me_key = "getMe"
+
+@external(erlang, "ets", "insert")
+fn ets_insert(table: EtsTable, tuple: #(String, Int, String)) -> Bool
+
+@external(erlang, "ets", "lookup")
+fn ets_lookup(table: EtsTable, key: String) -> List(#(String, Int, String))
+
+@external(erlang, "erlang", "convert_time_unit")
+fn convert_time_unit(time: Int, from: Atom, to: Atom) -> Int
+
+fn native_to_millisecond(time: Int) -> Int {
+  convert_time_unit(time, atom.create("native"), atom.create("millisecond"))
 }
 
 /// Set the default parse mode for `telega/reply` text helpers

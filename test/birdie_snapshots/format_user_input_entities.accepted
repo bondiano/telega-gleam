@@ -1,0 +1,9 @@
+---
+version: 2.0.1
+title: format:user_input:entities
+file: ./test/format_test.gleam
+test_name: entities_with_user_input_test
+---
+text: Search: *_[]()~`>#+-=|{}.!<b>&
+---
+[8..30) bold

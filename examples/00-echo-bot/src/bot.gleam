@@ -7,14 +7,12 @@ import telega_httpc
 
 fn handle_text(ctx, text) {
   use ctx <- telega.log_context(ctx, "echo_text")
-  let assert Ok(_) = reply.with_text(ctx, text)
-  Ok(ctx)
+  reply.text(ctx, text)
 }
 
 fn handle_command(ctx, command: update.Command) {
   use ctx <- telega.log_context(ctx, "echo_command")
-  let assert Ok(_) = reply.with_text(ctx, "Command: " <> command.text)
-  Ok(ctx)
+  reply.text(ctx, "Command: " <> command.text)
 }
 
 pub fn build_router() {

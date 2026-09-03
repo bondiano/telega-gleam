@@ -1,6 +1,8 @@
 ---
 version: 2.0.1
 title: dialog:engine:cancel_removes_keyboard
+file: ./test/telega/dialog_test.gleam
+test_name: cancel_command_removes_the_live_keyboard_test
 ---
 1. sendMessage
 {
