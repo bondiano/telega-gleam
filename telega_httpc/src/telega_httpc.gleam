@@ -53,11 +53,22 @@ pub fn new_with_timeout(
   |> client.set_fetch_bits_client(fetch_bits_adapter_with_timeout(timeout_ms:))
 }
 
+/// Create an httpc client that paces itself by Telegram's documented limits:
+/// 30 requests per second overall, 1 per second to any one private chat and 20
+/// per minute to any one group. See `client.new_with_default_limits`.
+pub fn new_with_default_limits(
+  token token: String,
+) -> Result(client.TelegramClient, TelegaError) {
+  new_with_queue(token:)
+}
+
 /// Create a new Telegram client with httpc and default request queue.
+///
+/// The older name for `new_with_default_limits`; the two are the same call.
 pub fn new_with_queue(
   token token: String,
 ) -> Result(client.TelegramClient, TelegaError) {
-  client.new_with_queue(
+  client.new_with_default_limits(
     token:,
     fetch_client: fetch_adapter_with_timeout(timeout_ms: default_timeout_ms),
   )

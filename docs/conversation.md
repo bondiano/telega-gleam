@@ -288,12 +288,14 @@ it survives for as long as that process does. Two settings bound that:
 
 - The `timeout` of each `wait_*` call (milliseconds): once it passes, the next
   update is routed normally again instead of resuming the conversation.
-- `telega.with_chat_idle_timeout(ms)`: an instance that has received nothing for
-  that long is stopped and its pending conversation is dropped. Only in-memory
-  state is lost — the session is re-read from storage for the next update. Pick
-  an idle timeout comfortably larger than the conversation timeouts you use, or
-  keep long-lived, restart-safe state in a [flow](./conversation-flows.html)
-  instead.
+- The chat instance's idle timeout — **half an hour by default**: an instance
+  that has received nothing for that long is stopped and its pending
+  conversation is dropped. Only in-memory state is lost; the session is re-read
+  from storage for the next update. Change the bound with
+  `telega.with_chat_idle_timeout(ms)`, lift it entirely with
+  `telega.without_chat_idle_timeout()`, or keep long-lived, restart-safe state
+  in a [flow](./conversation-flows.html) instead. A conversation whose timeout
+  is longer than the idle timeout will not outlive the instance.
 
 ## Best Practices
 

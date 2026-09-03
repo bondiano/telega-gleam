@@ -58,6 +58,13 @@ tasks:
     desc: Run tests in root project
     cmd: gleam test
 
+  test:load:
+    desc: >
+      Run the suite with the phase-2 load criterion at full size: 100 000 chat
+      instances evicted after going idle. Holds every instance live at once
+      (~2.8 GB), which is why the default run uses a twentieth of that.
+    cmd: TELEGA_LOAD_CHATS=100000 gleam test
+
   test:all:
     desc: Run tests in root project, all ecosystem packages, and all examples
     cmds:

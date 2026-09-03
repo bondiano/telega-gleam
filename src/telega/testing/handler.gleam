@@ -153,9 +153,12 @@ pub fn with_test_bot_advanced_with_dependencies(
       catch_handler: fn(_ctx, _err) { Ok(Nil) },
       dependencies:,
       chat_factory: chat_factory_started.data,
-      chat_idle_timeout: None,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: None,
     )
 

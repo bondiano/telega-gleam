@@ -93,9 +93,12 @@ fn start_bot_with_sessions(
       catch_handler:,
       dependencies: Nil,
       chat_factory: start_test_factory(),
-      chat_idle_timeout: idle_timeout,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: idle_timeout,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: None,
     )
   #(started.data, reg)
@@ -158,7 +161,9 @@ pub fn c1_failing_persist_answers_the_caller_test() {
       registry: reg,
       config: context.config(),
       bot_info: factory.bot_user(),
-      router_handler: fn(ctx, _update) { Ok(ctx) },
+      // The handler has to actually change the session, or there would be
+      // nothing to write and no storage error to answer for.
+      router_handler: fn(ctx, _update) { bot.next_session(ctx, Sess(1)) },
       pre_handlers: [],
       session_settings: bot.SessionSettings(
         persist_session: fn(_key, _session) { Error(Err("storage down")) },
@@ -168,9 +173,12 @@ pub fn c1_failing_persist_answers_the_caller_test() {
       catch_handler: fn(_ctx, e) { Error(e) },
       dependencies: Nil,
       chat_factory: start_test_factory(),
-      chat_idle_timeout: None,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: None,
     )
 

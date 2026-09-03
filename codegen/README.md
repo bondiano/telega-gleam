@@ -1,6 +1,7 @@
 # codegen
 
 Regenerates Telega's model layer (`src/telega/model/{types,decoder,encoder}.gleam`)
+and the per-method fact table (`src/telega/internal/method_info.gleam`)
 from the machine-readable Telegram Bot API spec
 ([PaulSonOfLars/telegram-bot-api-spec](https://github.com/PaulSonOfLars/telegram-bot-api-spec)).
 
@@ -42,6 +43,16 @@ for optional fields so a missing key decodes to `None` instead of failing.
 Import lists for `decoder.gleam` / `encoder.gleam` are computed by scanning the
 full file body (generated + manual suffix), so they stay correct across the
 manual boundary.
+
+`internal/method_info.gleam` has no manual suffix — it is generated whole. It
+answers one question per method: whether replaying it after a transport error
+or a 5xx is safe, which is what `telega/client`'s `RetryPolicy` reads. The spec
+does not carry that fact, so the generator derives it from two name-prefix
+tables in `codegen.gleam` (`idempotent_prefixes` / `non_idempotent_prefixes`)
+plus a short override list for the ones the name gets wrong (`sendChatAction`
+is safe; `answerWebAppQuery` and `answerGuestQuery` are not). A method matching
+neither table **fails the generation** with its name, so a new API version
+cannot quietly land a new `send`-alike on the retryable side.
 
 ## Bumping the Bot API version
 

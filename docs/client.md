@@ -106,36 +106,105 @@ Calls made directly through `telega/api` with hand-built parameters are also
 unaffected — the default lives in the client but is applied by the reply
 helpers, not by rewriting request bodies.
 
-## Retries and rate limits
+## Retries
 
-The client retries failed calls up to `set_max_retry_attempts` times
-(default 3), whether or not a request queue is configured:
+Every call is repeated according to the client's `RetryPolicy`, whether or not
+a request queue is configured:
+
+```gleam
+pub type RetryPolicy {
+  RetryPolicy(
+    max_attempts: Int,               // 4 — the first attempt counts
+    base_delay_ms: Int,              // 1000, doubling each further attempt
+    max_delay_ms: Int,               // 30_000 — cap on the doubling
+    jitter: Bool,                    // True
+    retry_on_server_errors: RetryOn, // OnlyIdempotent
+    retry_on_transport_errors: RetryOn, // OnlyIdempotent
+    max_retry_after_ms: Int,         // 60_000 — cap on honouring a 429
+  )
+}
+
+pub type RetryOn {
+  Never
+  OnlyIdempotent
+  Always
+}
+```
+
+```gleam
+client.new(token:, fetch_client:)
+|> client.set_retry_policy(
+  client.RetryPolicy(
+    ..client.default_retry_policy(),
+    max_attempts: 6,
+    base_delay_ms: 250,
+    // this caller deduplicates its own sends, so replaying one is safe
+    retry_on_transport_errors: client.Always,
+  ),
+)
+```
 
 - **429 Too Many Requests** — the client reads `parameters.retry_after`
   (seconds) from the response body and sleeps exactly that long before
-  retrying; if the field is missing it falls back to 1 second. Telegram
+  retrying; if the field is missing it falls back to `base_delay_ms`. Telegram
   answers a 429 *instead of* doing the work, so this retry is safe for every
-  method. A `retry_after` longer than `set_max_retry_delay` (default 60 s) is
-  **not** slept off — blocking the calling chat instance for minutes is worse
-  than the failure, so the 429 response is returned to the caller.
-- **Transport errors and 5xx** — retried after a fixed 1 second delay, but
-  only for methods that cannot be duplicated by a replay. A lost response to
-  `sendMessage` says nothing about whether the message was posted, so
-  `send*` (except `sendChatAction`), `forward*`, `copy*`, `create*` and
-  `upload*` are handed back to the caller on the first failure instead of
-  being sent twice.
+  method whatever `retry_on_*` says. A `retry_after` longer than
+  `max_retry_after_ms` is **not** slept off — blocking the calling chat
+  instance for minutes is worse than the failure, so the 429 response is
+  returned to the caller.
+- **Transport errors and 5xx** — repeated according to `retry_on_transport_errors`
+  and `retry_on_server_errors`. The default, `OnlyIdempotent`, repeats a call
+  only when replaying it cannot duplicate anything: a lost response to
+  `sendMessage` says nothing about whether the message was posted. Which
+  methods those are is not guessed from the name at runtime — it is a table
+  generated from the Bot API spec (`telega/internal/method_info`), so every one
+  of the API's 185 methods is classified and a new API version cannot add an
+  unclassified one.
+- **Backoff** — `base_delay_ms`, doubling, capped at `max_delay_ms`. With
+  `jitter` (the default) each delay is spread over the upper half of its
+  window, so a fleet of bots coming back from the same outage does not hit the
+  API in lockstep.
 
-Each retry emits a `telega.api_call.retry` telemetry event carrying the
-actual delay in `retry_after` (milliseconds).
+`set_max_retry_attempts` and `set_max_retry_delay` are shorthands for
+`max_attempts` (which counts the first attempt: `set_max_retry_attempts(0)` is
+`max_attempts: 1`) and `max_retry_after_ms`.
 
-For proactive rate limiting (staying under the limits instead of reacting to
-429s), enable the request queue with `client.set_request_queue` — see the
-docs in `telega/client`. The queue decides *when* a call may run; the call
-itself runs in its own process, so queued calls are concurrent up to
-`overall_limit` and a slow call never stalls the others. A call that still
-fails after the client's own retries is re-queued up to `max_retries` times
-with an exponential backoff (`retry_delay`, doubling each attempt, capped at
-30 seconds).
+Each retry emits a `telega.api_call.retry` telemetry event carrying the actual
+delay in `retry_after` (milliseconds).
+
+## Rate limits: the request queue
+
+For proactive rate limiting — staying under the limits rather than reacting to
+429s — start the client with a queue:
+
+```gleam
+let assert Ok(api_client) =
+  client.new_with_default_limits(token:, fetch_client:)
+```
+
+That configures Telegram's documented limits: 30 requests per second overall,
+**1 per second to any one private chat**, and **20 per minute to any one
+group, supergroup or channel**. The per-chat rules are created as chats appear
+and dropped again after a minute of quiet, so a bot answering many chats does
+not carry a rule for every chat it has ever replied to. Which chat a call is
+addressed to is read off the outgoing request; a `@username` chat and a raw
+upload (whose body is binary, not JSON) have no numeric `chat_id` there and are
+paced by the global rules only.
+
+`client.set_request_queue` takes the whole configuration if you want different
+numbers; `per_chat: None` turns per-chat pacing off and leaves only the global
+rules.
+
+The queue decides *when* a call may run; the call itself runs in its own
+process, so queued calls are concurrent up to `overall_limit` and a slow call
+never stalls the others. A call that still fails after the client's own retries
+is re-queued up to `max_retries` times with an exponential backoff
+(`retry_delay`, doubling each attempt, capped at 30 seconds).
+
+**`getUpdates` never goes through the queue.** A long poll holds its slot for
+the whole polling timeout (30 s by default) while Telegram rate-limits nothing
+about it, so queueing it would spend a concurrency slot the bot needs for its
+replies. Only the polling worker calls it, one call at a time.
 
 ## Keeping a chat action alive (`telega/chat_action`)
 

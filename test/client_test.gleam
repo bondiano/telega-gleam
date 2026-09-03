@@ -1,6 +1,8 @@
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
+import gleam/int
+import gleam/list
 import gleam/option.{None, Some}
 import gleam/otp/actor
 import gleam/string
@@ -12,6 +14,7 @@ import telega/client
 import telega/error
 import telega/format
 import telega/reply
+import telega/telemetry
 import telega/testing/context as testing_context
 import telega/testing/mock
 
@@ -410,6 +413,23 @@ pub fn queued_request_retries_on_429_test() {
 // M2 — retries must not duplicate non-idempotent calls
 // ---------------------------------------------------------------------------
 
+/// The default policy sleeps a second between attempts; these tests only care
+/// about how many attempts there are, so they wait a millisecond instead.
+fn fast_retries(
+  client: client.TelegramClient,
+  attempts: Int,
+) -> client.TelegramClient {
+  client
+  |> client.set_retry_policy(
+    client.RetryPolicy(
+      ..client.default_retry_policy(),
+      max_attempts: attempts,
+      base_delay_ms: 1,
+      jitter: False,
+    ),
+  )
+}
+
 /// A fetch client that counts its calls and always fails the way `how` says.
 fn counting_fetch_client(
   calls: process.Subject(Int),
@@ -430,7 +450,7 @@ pub fn transport_error_is_not_retried_for_send_message_test() {
         Error(error.FetchError("connection closed"))
       }),
     )
-    |> client.set_max_retry_attempts(3)
+    |> fast_retries(4)
 
   client.new_post_request(client, "sendMessage", "{}")
   |> client.fetch(client)
@@ -450,7 +470,7 @@ pub fn transport_error_is_retried_for_idempotent_method_test() {
         Error(error.FetchError("connection closed"))
       }),
     )
-    |> client.set_max_retry_attempts(2)
+    |> fast_retries(3)
 
   client.new_post_request(client, "deleteMessage", "{}")
   |> client.fetch(client)
@@ -468,7 +488,7 @@ pub fn server_error_is_retried_for_idempotent_method_test() {
         Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
       }),
     )
-    |> client.set_max_retry_attempts(2)
+    |> fast_retries(3)
 
   client.new_get_request(client, "getMe", None)
   |> client.fetch(client)
@@ -486,7 +506,7 @@ pub fn server_error_is_not_retried_for_send_message_test() {
         Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
       }),
     )
-    |> client.set_max_retry_attempts(3)
+    |> fast_retries(4)
 
   client.new_post_request(client, "sendMessage", "{}")
   |> client.fetch(client)
@@ -508,7 +528,7 @@ pub fn long_retry_after_is_not_slept_off_test() {
         ))
       }),
     )
-    |> client.set_max_retry_attempts(3)
+    |> fast_retries(4)
     |> client.set_max_retry_delay(50)
 
   // An hour-long `process.sleep` would block the calling chat instance, so the
@@ -519,4 +539,244 @@ pub fn long_retry_after_is_not_slept_off_test() {
   |> fn(r: response.Response(String)) { r.status |> should.equal(429) }
 
   count_messages(calls, 0) |> should.equal(1)
+}
+
+// ---------------------------------------------------------------------------
+// Retry policy as configuration (2d)
+// ---------------------------------------------------------------------------
+
+pub fn retry_on_transport_errors_never_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Error(error.FetchError("connection closed"))
+      }),
+    )
+    |> fast_retries(5)
+    |> client.set_retry_policy(
+      client.RetryPolicy(
+        ..client.get_retry_policy(client.new(
+          token: "",
+          fetch_client: mock_success_fetch_client,
+        )),
+        max_attempts: 5,
+        base_delay_ms: 1,
+        jitter: False,
+        retry_on_transport_errors: client.Never,
+      ),
+    )
+
+  // `deleteMessage` is idempotent, so only the policy stops the retrying.
+  client.new_post_request(client, "deleteMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_error()
+
+  count_messages(calls, 0) |> should.equal(1)
+}
+
+pub fn retry_on_transport_errors_always_replays_a_send_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Error(error.FetchError("connection closed"))
+      }),
+    )
+    |> client.set_retry_policy(
+      client.RetryPolicy(
+        ..client.default_retry_policy(),
+        max_attempts: 3,
+        base_delay_ms: 1,
+        jitter: False,
+        retry_on_transport_errors: client.Always,
+      ),
+    )
+
+  // A caller that deduplicates on its own can ask for this; the default would
+  // hand `sendMessage` back after the first failure.
+  client.new_post_request(client, "sendMessage", "{}")
+  |> client.fetch(client)
+  |> should.be_error()
+
+  count_messages(calls, 0) |> should.equal(3)
+}
+
+pub fn retry_on_server_errors_is_configured_separately_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Ok(response.Response(status: 503, headers: [], body: "unavailable"))
+      }),
+    )
+    |> client.set_retry_policy(
+      client.RetryPolicy(
+        ..client.default_retry_policy(),
+        max_attempts: 4,
+        base_delay_ms: 1,
+        jitter: False,
+        retry_on_server_errors: client.Never,
+        retry_on_transport_errors: client.Always,
+      ),
+    )
+
+  client.new_get_request(client, "getMe", None)
+  |> client.fetch(client)
+  |> should.be_ok()
+
+  count_messages(calls, 0) |> should.equal(1)
+}
+
+pub fn max_attempts_counts_the_first_attempt_test() {
+  let calls = process.new_subject()
+  let client =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Error(error.FetchError("connection closed"))
+      }),
+    )
+    |> fast_retries(1)
+
+  client.new_get_request(client, "getMe", None)
+  |> client.fetch(client)
+  |> should.be_error()
+
+  count_messages(calls, 0) |> should.equal(1)
+}
+
+pub fn set_max_retry_attempts_is_a_shorthand_for_max_attempts_test() {
+  let client =
+    client.new(token: "t", fetch_client: mock_success_fetch_client)
+    |> client.set_max_retry_attempts(0)
+
+  // Zero *retries* is one attempt.
+  client.get_retry_policy(client).max_attempts |> should.equal(1)
+
+  let client = client |> client.set_max_retry_attempts(3)
+  client.get_retry_policy(client).max_attempts |> should.equal(4)
+}
+
+pub fn backoff_grows_and_is_capped_test() {
+  let delays = process.new_subject()
+  let started = telemetry_start(delays)
+
+  let client =
+    client.new(token: "test-token", fetch_client: fn(_req) {
+      Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
+    })
+    |> client.set_retry_policy(
+      client.RetryPolicy(
+        ..client.default_retry_policy(),
+        max_attempts: 5,
+        base_delay_ms: 2,
+        max_delay_ms: 8,
+        jitter: False,
+      ),
+    )
+
+  client.new_get_request(client, "getMe", None)
+  |> client.fetch(client)
+  |> should.be_ok()
+
+  // 2, 4, 8, then capped at 8 rather than 16.
+  drain_ints(delays, []) |> should.equal([2, 4, 8, 8])
+  telemetry.detach(started)
+}
+
+pub fn jitter_keeps_the_delay_in_the_upper_half_of_the_window_test() {
+  let delays = process.new_subject()
+  let started = telemetry_start(delays)
+
+  let client =
+    client.new(token: "test-token", fetch_client: fn(_req) {
+      Ok(response.Response(status: 502, headers: [], body: "bad gateway"))
+    })
+    |> client.set_retry_policy(
+      client.RetryPolicy(
+        ..client.default_retry_policy(),
+        max_attempts: 6,
+        base_delay_ms: 8,
+        max_delay_ms: 8,
+        jitter: True,
+      ),
+    )
+
+  client.new_get_request(client, "getMe", None)
+  |> client.fetch(client)
+  |> should.be_ok()
+
+  // Every delay lands in [4, 8]; a fleet coming back from the same outage
+  // spreads over the window instead of hitting the API in lockstep.
+  let observed = drain_ints(delays, [])
+  list.length(observed) |> should.equal(5)
+  list.all(observed, fn(d) { d >= 4 && d <= 8 }) |> should.be_true
+  telemetry.detach(started)
+}
+
+/// Listen for the delay the client reports on each `telega.api_call.retry`.
+fn telemetry_start(into: process.Subject(Int)) -> String {
+  let id = "client-retry-" <> int.to_string(int.random(1_000_000))
+  telemetry.attach_many(
+    id: id,
+    events: [["telega", "api_call", "retry"]],
+    handler: fn(_event, measurements, _metadata) {
+      case list.key_find(measurements, "retry_after") {
+        Ok(delay) -> process.send(into, delay)
+        Error(Nil) -> Nil
+      }
+    },
+  )
+  id
+}
+
+fn drain_ints(subject: process.Subject(Int), acc: List(Int)) -> List(Int) {
+  case process.receive(subject, 0) {
+    Ok(value) -> drain_ints(subject, [value, ..acc])
+    Error(_) -> list.reverse(acc)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getUpdates has its own lane (2c)
+// ---------------------------------------------------------------------------
+
+pub fn get_updates_does_not_go_through_the_queue_test() {
+  let calls = process.new_subject()
+  let assert Ok(tg_client) =
+    client.new(
+      token: "test-token",
+      fetch_client: counting_fetch_client(calls, fn() {
+        Ok(response.Response(status: 200, headers: [], body: "{\"ok\": true}"))
+      }),
+    )
+    |> client.set_request_queue(
+      // A queue that admits nothing: anything routed through it would block
+      // until the call times out.
+      client.RequestQueueConfig(
+        ..client.default_request_queue_config(),
+        rules: [
+          client.RequestQueueRule(
+            id: "default",
+            rate: 0,
+            limit: 60_000,
+            priority: 5,
+          ),
+        ],
+        per_chat: None,
+      ),
+    )
+
+  // A long poll must never wait behind the bot's own replies, nor spend one of
+  // the queue's concurrency slots for the whole polling timeout.
+  client.new_get_request(tg_client, "getUpdates", None)
+  |> client.fetch(tg_client)
+  |> should.be_ok()
+
+  count_messages(calls, 0) |> should.equal(1)
+  client.shutdown(tg_client)
 }

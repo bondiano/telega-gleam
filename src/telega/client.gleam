@@ -22,6 +22,7 @@ import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -31,17 +32,67 @@ import telega/internal/utils
 
 import telega/error.{type TelegaError}
 import telega/format.{type ParseMode}
+import telega/internal/method_info
 import telega/internal/request_queue.{type RequestQueue}
 import telega/telemetry
 
-const default_retry_delay = 1000
-
-/// Longest `retry_after` (ms) worth sleeping off inside the calling process.
-const default_max_retry_delay = 60_000
-
 const telegram_url = "https://api.telegram.org/bot"
 
-const default_retry_count = 3
+// --- Retry policy -----------------------------------------------------------
+
+/// When a failed attempt may be repeated.
+pub type RetryOn {
+  /// Never repeat — hand the failure back after the first attempt.
+  Never
+  /// Repeat only methods that create nothing, so a replay cannot duplicate a
+  /// message, an invite link or a payment. The list comes from
+  /// `telega/internal/method_info`, generated from the Bot API spec.
+  OnlyIdempotent
+  /// Repeat every method, duplicates included. Pick this only when the caller
+  /// deduplicates on its own.
+  Always
+}
+
+/// How the client repeats a call that did not go through.
+///
+/// A 429 is special: Telegram answers it *instead of* doing the work and says
+/// exactly how long to wait, so it is always retried (up to `max_attempts`)
+/// whatever `retry_on_*` says — but only if the wait fits in
+/// `max_retry_after_ms`, because sleeping it off blocks the calling process.
+pub type RetryPolicy {
+  RetryPolicy(
+    /// Total attempts, the first one included. `1` disables retrying.
+    max_attempts: Int,
+    /// Delay before the first retry; each further one doubles it.
+    base_delay_ms: Int,
+    /// Cap on the doubling.
+    max_delay_ms: Int,
+    /// Spread the delay over `[delay / 2, delay]` so a fleet of bots that hit
+    /// the same outage does not come back in lockstep.
+    jitter: Bool,
+    /// Whether a 5xx may be repeated.
+    retry_on_server_errors: RetryOn,
+    /// Whether a transport failure (no response at all) may be repeated.
+    retry_on_transport_errors: RetryOn,
+    /// Longest 429 `retry_after` worth sleeping off inside the calling process.
+    /// Beyond it the 429 response is returned to the caller.
+    max_retry_after_ms: Int,
+  )
+}
+
+/// Four attempts, one second apart and doubling, and only methods that create
+/// nothing are repeated on a 5xx or a transport failure.
+pub fn default_retry_policy() -> RetryPolicy {
+  RetryPolicy(
+    max_attempts: 4,
+    base_delay_ms: 1000,
+    max_delay_ms: 30_000,
+    jitter: True,
+    retry_on_server_errors: OnlyIdempotent,
+    retry_on_transport_errors: OnlyIdempotent,
+    max_retry_after_ms: 60_000,
+  )
+}
 
 pub type FetchClient =
   fn(Request(String)) -> Result(Response(String), TelegaError)
@@ -74,11 +125,8 @@ pub opaque type TelegramClient {
   TelegramClient(
     /// The Telegram Bot API token.
     token: String,
-    /// The maximum number of times to retry sending a API message. Default is 3.
-    max_retry_attempts: Int,
-    /// Longest 429 `retry_after` (ms) the client waits out before handing the
-    /// response back to the caller. Default is 60_000.
-    max_retry_delay: Int,
+    /// How failed calls are repeated. See `RetryPolicy`.
+    retry_policy: RetryPolicy,
     /// The Telegram Bot API URL. Default is "https://api.telegram.org".
     /// This is useful for running [a local server](https://core.telegram.org/bots/api#using-a-local-bot-api-server).
     tg_api_url: String,
@@ -88,6 +136,9 @@ pub opaque type TelegramClient {
     fetch_bits_client: Option(FetchBitsClient),
     /// Request queue for rate limiting
     request_queue: Option(RequestQueue),
+    /// Whether the queue paces requests per chat, which is the only reason to
+    /// pay for reading a `chat_id` off every outgoing request.
+    per_chat_limits: Bool,
     /// Middleware chain applied around every API call. First added is outermost.
     transformers: List(ApiRequestTransformer),
     /// Default parse mode used by `telega/reply` text helpers when no explicit one is set.
@@ -102,12 +153,12 @@ pub fn new(
 ) -> TelegramClient {
   TelegramClient(
     token:,
-    max_retry_attempts: default_retry_count,
-    max_retry_delay: default_max_retry_delay,
+    retry_policy: default_retry_policy(),
     tg_api_url: telegram_url,
     fetch_client:,
     fetch_bits_client: None,
     request_queue: None,
+    per_chat_limits: False,
     transformers: [],
     default_parse_mode: None,
   )
@@ -144,11 +195,18 @@ pub fn default_parse_mode_string(
   option.map(client.default_parse_mode, format.parse_mode_to_string)
 }
 
-/// Create a new Telegram client with default request queue configuration.
+/// Create a client that paces itself by Telegram's documented limits.
 ///
-/// This is a convenience function that creates a client with sensible
-/// default rate limiting settings for the Telegram Bot API.
-pub fn new_with_queue(
+/// That is 30 requests per second overall, 1 per second to any one private
+/// chat and 20 per minute to any one group, supergroup or channel — see
+/// `default_request_queue_config`. Requests over the limit wait in the queue
+/// instead of coming back as a 429.
+///
+/// ```gleam
+/// let assert Ok(api_client) =
+///   client.new_with_default_limits(token:, fetch_client:)
+/// ```
+pub fn new_with_default_limits(
   token token: String,
   fetch_client fetch_client: FetchClient,
 ) -> Result(TelegramClient, error.TelegaError) {
@@ -156,9 +214,21 @@ pub fn new_with_queue(
   |> set_request_queue(default_request_queue_config())
 }
 
+/// Create a new Telegram client with default request queue configuration.
+///
+/// The older name for `new_with_default_limits`; the two are the same call.
+pub fn new_with_queue(
+  token token: String,
+  fetch_client fetch_client: FetchClient,
+) -> Result(TelegramClient, error.TelegaError) {
+  new_with_default_limits(token:, fetch_client:)
+}
+
 /// Send a request to the Telegram Bot API.
 ///
-/// It uses `default` rule for rate limiting (if request [queue](#set_request_queue) is enabled).
+/// With a request [queue](#set_request_queue) configured, the call is paced by
+/// the rule for the chat it addresses when the queue has per-chat limits, and
+/// by the `default` rule otherwise. `getUpdates` never goes through the queue.
 pub fn fetch(
   request api_request: TelegramApiRequest,
   client client: TelegramClient,
@@ -167,15 +237,52 @@ pub fn fetch(
   use api_request <- apply_transformers(client.transformers, api_request)
 
   let method = api_request.method
+  let chat_id = chat_id_of(client, api_request)
   use api_request <- result.try(api_to_request(api_request))
   // The queued path runs the *same* send-with-retry as the direct one, so a 429
   // honours `parameters.retry_after` whether or not a queue is configured.
-  let send = fn() {
-    send_with_retry(client, method, api_request, client.max_retry_attempts)
-  }
-  case client.request_queue {
-    Some(queue) -> request_queue.execute(queue, send)
+  let send = fn() { send_with_retry(client, method, api_request) }
+  case queue_for(client, method) {
+    Some(queue) -> request_queue.execute_for_chat(queue, chat_id, send)
     None -> send()
+  }
+}
+
+/// The queue a call to `method` goes through, if any.
+///
+/// `getUpdates` never does. It is a long poll that holds its slot for the whole
+/// polling timeout (30 s by default) while Telegram rate-limits nothing about
+/// it, so queueing it would spend a concurrency slot the bot needs for its
+/// replies. Only the polling worker calls it, one call at a time, so it needs
+/// no pacing of its own.
+fn queue_for(client: TelegramClient, method: String) -> Option(RequestQueue) {
+  case method {
+    "getUpdates" -> None
+    _ -> client.request_queue
+  }
+}
+
+/// The `chat_id` a request is addressed to, when the queue paces per chat.
+///
+/// Read straight off the outgoing request — the JSON body for a POST, the query
+/// string for a GET — so no call site has to thread it through. A `@username`
+/// chat has no numeric id and is paced by the global rules only, and so is a
+/// raw upload, whose body is binary rather than JSON.
+fn chat_id_of(
+  client: TelegramClient,
+  api_request: TelegramApiRequest,
+) -> Option(Int) {
+  use <- bool.guard(when: !client.per_chat_limits, return: None)
+
+  case api_request {
+    TelegramApiPostRequest(body:, ..) ->
+      json.parse(body, decode.at(["chat_id"], decode.int))
+      |> option.from_result
+    TelegramApiGetRequest(query: Some(query), ..) ->
+      list.key_find(query, "chat_id")
+      |> result.try(int.parse)
+      |> option.from_result
+    TelegramApiGetRequest(..) | TelegramApiMultipartRequest(..) -> None
   }
 }
 
@@ -239,11 +346,14 @@ pub fn fetch_multipart(
   // share the exact queue and 429-retry path as every JSON call.
   let send = fn() { fetch_bits(bits_req) |> stringify_response }
 
-  let send_with_retries = fn() {
-    do_send_with_retry(client, method, send, client.max_retry_attempts)
-  }
-  case client.request_queue {
-    Some(queue) -> request_queue.execute(queue, send_with_retries)
+  let send_with_retries = fn() { do_send_with_retry(client, method, send, 1) }
+  case queue_for(client, method) {
+    Some(queue) ->
+      request_queue.execute_for_chat(
+        queue,
+        chat_id_of(client, api_request),
+        send_with_retries,
+      )
     None -> send_with_retries()
   }
 }
@@ -297,12 +407,46 @@ pub fn get_fetch_bits_client(
   client.fetch_bits_client
 }
 
-/// Set the maximum number of times to retry sending a API message.
+/// Replace the whole retry policy.
+///
+/// ```gleam
+/// client.new(token:, fetch_client:)
+/// |> client.set_retry_policy(
+///   client.RetryPolicy(
+///     ..client.default_retry_policy(),
+///     max_attempts: 6,
+///     base_delay_ms: 250,
+///     retry_on_transport_errors: client.Always,
+///   ),
+/// )
+/// ```
+pub fn set_retry_policy(
+  client client: TelegramClient,
+  retry_policy retry_policy: RetryPolicy,
+) -> TelegramClient {
+  TelegramClient(..client, retry_policy:)
+}
+
+/// The retry policy this client uses.
+pub fn get_retry_policy(client client: TelegramClient) -> RetryPolicy {
+  client.retry_policy
+}
+
+/// Set the maximum number of *retries* after the first attempt.
+///
+/// A shorthand for `RetryPolicy.max_attempts`, which counts the first attempt
+/// too: `set_max_retry_attempts(0)` means one attempt and no retry.
 pub fn set_max_retry_attempts(
   client client: TelegramClient,
   max_retry_attempts max_retry_attempts: Int,
 ) -> TelegramClient {
-  TelegramClient(..client, max_retry_attempts:)
+  TelegramClient(
+    ..client,
+    retry_policy: RetryPolicy(
+      ..client.retry_policy,
+      max_attempts: int.max(max_retry_attempts + 1, 1),
+    ),
+  )
 }
 
 /// Set the longest 429 `retry_after` the client will wait out.
@@ -310,11 +454,19 @@ pub fn set_max_retry_attempts(
 /// Telegram can ask for minutes; sleeping that off blocks the process that made
 /// the call (a chat instance, the broadcast actor). Beyond this the 429
 /// response is returned to the caller instead. Default is 60_000 ms.
+///
+/// A shorthand for `RetryPolicy.max_retry_after_ms`.
 pub fn set_max_retry_delay(
   client client: TelegramClient,
   max_retry_delay max_retry_delay: Int,
 ) -> TelegramClient {
-  TelegramClient(..client, max_retry_delay:)
+  TelegramClient(
+    ..client,
+    retry_policy: RetryPolicy(
+      ..client.retry_policy,
+      max_retry_after_ms: max_retry_delay,
+    ),
+  )
 }
 
 /// Set the Telegram Bot API URL.
@@ -356,6 +508,37 @@ pub type RequestQueueConfig {
     retry_delay: Int,
     /// Maximum retries
     max_retries: Int,
+    /// Per-chat pacing on top of the global rules. `None` paces by the global
+    /// rules only, which is what a bot busy in one chat will notice first.
+    per_chat: Option(PerChatLimits),
+  )
+}
+
+/// Telegram's per-chat limits, which the global rate does not cover: a bot may
+/// send 30 messages a second overall but only about one a second to the same
+/// private chat, and about 20 a minute to the same group.
+///
+/// The queue tells the two apart by the sign of the `chat_id` — Telegram gives
+/// groups, supergroups and channels negative ids.
+pub type PerChatLimits {
+  PerChatLimits(
+    /// Requests allowed per `private_window_ms` to one private chat.
+    private_rate: Int,
+    private_window_ms: Int,
+    /// Requests allowed per `group_window_ms` to one group/supergroup/channel.
+    group_rate: Int,
+    group_window_ms: Int,
+  )
+}
+
+/// 1 request per second per private chat, 20 per minute per group.
+pub fn default_per_chat_limits() -> PerChatLimits {
+  let limits = request_queue.default_per_chat_limits()
+  PerChatLimits(
+    private_rate: limits.private_rate,
+    private_window_ms: limits.private_window_ms,
+    group_rate: limits.group_rate,
+    group_window_ms: limits.group_window_ms,
   )
 }
 
@@ -391,6 +574,14 @@ pub fn default_request_queue_config() -> RequestQueueConfig {
     overall_limit: default_config.overall_limit,
     retry_delay: default_config.retry_delay,
     max_retries: default_config.max_retries,
+    per_chat: option.map(default_config.per_chat, fn(limits) {
+      PerChatLimits(
+        private_rate: limits.private_rate,
+        private_window_ms: limits.private_window_ms,
+        group_rate: limits.group_rate,
+        group_window_ms: limits.group_window_ms,
+      )
+    }),
   )
 }
 
@@ -406,7 +597,10 @@ pub fn default_request_queue_config() -> RequestQueueConfig {
 /// ```gleam
 /// import telega/client
 ///
+/// // Start from the defaults and change what you need, so a new field in a
+/// // later version does not turn into a compile error here.
 /// let config = client.RequestQueueConfig(
+///   ..client.default_request_queue_config(),
 ///   rules: [
 ///     // Default rule for most requests
 ///     client.RequestQueueRule(
@@ -432,8 +626,9 @@ pub fn default_request_queue_config() -> RequestQueueConfig {
 ///   ],
 ///   overall_rate: Some(30),    // Global limit across all rules
 ///   overall_limit: Some(100),  // Max concurrent requests
-///   retry_delay: 1000,         // Retry after 1 second
-///   max_retries: 3,
+///   // 1/s per private chat, 20/min per group; `None` to pace by the global
+///   // rules only.
+///   per_chat: Some(client.default_per_chat_limits()),
 /// )
 ///
 /// let assert Ok(client) =
@@ -470,13 +665,27 @@ pub fn set_request_queue(
       overall_limit: config.overall_limit,
       retry_delay: config.retry_delay,
       max_retries: config.max_retries,
+      per_chat: option.map(config.per_chat, fn(limits) {
+        request_queue.PerChatLimits(
+          private_rate: limits.private_rate,
+          private_window_ms: limits.private_window_ms,
+          group_rate: limits.group_rate,
+          group_window_ms: limits.group_window_ms,
+        )
+      }),
     ))
     |> result.map_error(fn(_) {
       error.FetchError("Failed to start request queue")
     }),
   )
 
-  Ok(TelegramClient(..client, request_queue: Some(queue)))
+  Ok(
+    TelegramClient(
+      ..client,
+      request_queue: Some(queue),
+      per_chat_limits: config.per_chat != None,
+    ),
+  )
 }
 
 /// Shutdown the client and its request queue
@@ -521,9 +730,7 @@ pub fn fetch_with_rule(
   use api_request <- result.try(api_to_request(api_request))
   let request_id = utils.random_string(32)
 
-  let send = fn() {
-    send_with_retry(client, method, api_request, client.max_retry_attempts)
-  }
+  let send = fn() { send_with_retry(client, method, api_request) }
   case client.request_queue {
     Some(queue) ->
       request_queue.execute_with_rule(queue, request_id, rule_id, send)
@@ -577,69 +784,78 @@ fn emit_api_retry(method: String, attempt: Int, retry_delay: Int) {
 }
 
 /// Extract the delay in milliseconds from a 429 response's
-/// `parameters.retry_after` (seconds), falling back to the default delay.
-fn retry_delay_from_response(response: Response(String)) -> Int {
+/// `parameters.retry_after` (seconds), falling back to the policy's base delay.
+fn retry_delay_from_response(
+  policy: RetryPolicy,
+  response: Response(String),
+) -> Int {
   json.parse(
     response.body,
     decode.at(["parameters", "retry_after"], decode.int),
   )
   |> result.map(fn(retry_after) { retry_after * 1000 })
-  |> result.unwrap(default_retry_delay)
+  |> result.unwrap(policy.base_delay_ms)
+}
+
+/// Exponential backoff for the `attempt`-th failed try (1-based), capped by
+/// `max_delay_ms` and optionally spread over the lower half of the window.
+fn backoff_delay(policy: RetryPolicy, attempt: Int) -> Int {
+  let doublings = int.min(int.max(attempt - 1, 0), 30)
+  let delay =
+    int.min(
+      policy.base_delay_ms * int.bitwise_shift_left(1, doublings),
+      policy.max_delay_ms,
+    )
+  case policy.jitter && delay > 1 {
+    False -> delay
+    True -> {
+      let half = delay / 2
+      half + int.random(delay - half + 1)
+    }
+  }
+}
+
+/// Whether a failure of this kind, for this method, may be repeated.
+fn may_retry(on: RetryOn, method: String) -> Bool {
+  case on {
+    Never -> False
+    Always -> True
+    OnlyIdempotent -> method_info.is_idempotent(method)
+  }
 }
 
 fn send_with_retry(
   client: TelegramClient,
   method: String,
   api_request: Request(String),
-  retries: Int,
 ) -> Result(Response(String), TelegaError) {
   do_send_with_retry(
     client,
     method,
     fn() { client.fetch_client(api_request) },
-    retries,
+    1,
   )
-}
-
-/// Telegram methods that CREATE something. A transport error or a 5xx says
-/// nothing about whether Telegram applied the call, so replaying one of these
-/// risks a duplicate message, invite link or sticker set. They are only
-/// retried when Telegram itself asked for it with a 429, which it only answers
-/// *instead of* doing the work.
-fn is_retry_safe(method: String) -> Bool {
-  case method {
-    // Duplicating a "typing…" is free, and it is the one `send*` a long
-    // handler repeats on purpose anyway.
-    "sendChatAction" -> True
-    _ ->
-      !{
-        string.starts_with(method, "send")
-        || string.starts_with(method, "forward")
-        || string.starts_with(method, "copy")
-        || string.starts_with(method, "create")
-        || string.starts_with(method, "upload")
-      }
-  }
 }
 
 fn do_send_with_retry(
   client: TelegramClient,
   method: String,
   send: fn() -> Result(Response(String), TelegaError),
-  retries: Int,
+  attempt: Int,
 ) -> Result(Response(String), TelegaError) {
+  let policy = client.retry_policy
   let response = send()
 
-  use <- bool.guard(when: retries <= 0, return: response)
+  use <- bool.guard(when: attempt >= policy.max_attempts, return: response)
 
   let again = fn(delay) {
-    emit_api_retry(method, client.max_retry_attempts - retries + 1, delay)
+    emit_api_retry(method, attempt, delay)
     process.sleep(delay)
-    do_send_with_retry(client, method, send, retries - 1)
+    do_send_with_retry(client, method, send, attempt + 1)
   }
-  let retry_if_safe = fn(give_up) {
-    case is_retry_safe(method) {
-      True -> again(default_retry_delay)
+  let retry_if_allowed = fn(on, give_up) {
+    case may_retry(on, method) {
+      True -> again(backoff_delay(policy, attempt))
       False -> give_up
     }
   }
@@ -648,18 +864,19 @@ fn do_send_with_retry(
     Ok(res) ->
       case res.status {
         429 -> {
-          let retry_delay = retry_delay_from_response(res)
-          case retry_delay > client.max_retry_delay {
+          let retry_delay = retry_delay_from_response(policy, res)
+          case retry_delay > policy.max_retry_after_ms {
             // Sleeping this off would block the calling process for minutes;
             // hand the 429 back and let the caller decide.
             True -> Ok(res)
             False -> again(retry_delay)
           }
         }
-        status if status >= 500 -> retry_if_safe(Ok(res))
+        status if status >= 500 ->
+          retry_if_allowed(policy.retry_on_server_errors, Ok(res))
         _ -> Ok(res)
       }
-    Error(e) -> retry_if_safe(Error(e))
+    Error(e) -> retry_if_allowed(policy.retry_on_transport_errors, Error(e))
   }
 }
 

@@ -53,9 +53,12 @@ fn start_named_bot(
       catch_handler:,
       dependencies: Nil,
       chat_factory:,
-      chat_idle_timeout: option.None,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: option.None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: Some(name),
     )
 

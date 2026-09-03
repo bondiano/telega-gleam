@@ -62,9 +62,12 @@ fn start_bot(
       catch_handler: context.catch_handler(),
       dependencies: Nil,
       chat_factory: start_test_factory(),
-      chat_idle_timeout: None,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: None,
     )
   started.data

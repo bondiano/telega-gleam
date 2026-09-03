@@ -84,9 +84,12 @@ fn build_test_bot_with_config(
       catch_handler:,
       dependencies: Nil,
       chat_factory:,
-      chat_idle_timeout: None,
-      chat_init_timeout: 5000,
-      media_group_timeout: option.None,
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
       name: None,
     )
 
@@ -171,21 +174,15 @@ pub fn conversation_with_session_persistence_test() {
     bot.handle_update(bot_subject, factory.command_update(command: "getname"))
   result3 |> should.be_true
 
-  let assert Ok(#("persist", _key1, first_session)) =
+  // `/setname` only arms the wait, and `/getname` only reads: neither changed
+  // the session, so under the default `PersistOnChange` neither is written
+  // back. The only write is the one the continuation actually made.
+  let assert Ok(#("persist", _key, session)) =
     process.receive(session_storage, 3000)
-  let TestSession(name: first_name) = first_session
-  first_name |> should.equal("default")
+  let TestSession(name:) = session
+  name |> should.equal("Alice")
 
-  case process.receive(session_storage, 1000) {
-    Ok(#("persist", _key2, second_session)) -> {
-      let TestSession(name: second_name) = second_session
-      second_name |> should.equal("Alice")
-    }
-    Ok(_other) ->
-      panic as "Got unexpected message format for second persist call"
-    Error(_timeout) ->
-      panic as "No second persist call - continuation was never triggered"
-  }
+  process.receive(session_storage, 200) |> should.be_error
 
   let assert Ok(current_name) = process.receive(name_storage, 1000)
   current_name |> should.equal("Alice")
@@ -260,20 +257,16 @@ pub fn conversation_with_handle_else_test() {
     bot.handle_update(bot_subject, factory.command_update(command: "cancel"))
   result2 |> should.be_true
 
-  let assert Ok(#("persist", _key1, first_session)) =
-    process.receive(session_storage, 3000)
-  let TestSession(name: first_name) = first_session
-  first_name |> should.equal("default")
-
-  case process.receive(session_storage, 1000) {
-    Ok(#("persist", _key2, second_session)) -> {
-      let TestSession(name: second_name) = second_session
-      second_name |> should.equal("cancelled")
+  // `/setname` left the session as it found it, so the only write is the one
+  // `handle_else` made.
+  case process.receive(session_storage, 3000) {
+    Ok(#("persist", _key, session)) -> {
+      let TestSession(name:) = session
+      name |> should.equal("cancelled")
     }
-    Ok(_other) ->
-      panic as "Got unexpected message format for second persist call"
+    Ok(_other) -> panic as "Got unexpected message format for the persist call"
     Error(_timeout) ->
-      panic as "No second persist call - handle_else was never triggered"
+      panic as "No persist call - handle_else was never triggered"
   }
 }
 

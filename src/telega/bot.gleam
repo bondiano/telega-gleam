@@ -29,13 +29,19 @@
 //// ## Chat instance lifetime
 ////
 //// A `ChatInstance` is started on the first update of a `{chat_id}:{from_id}`
-//// pair and, by default, lives as long as the bot does. `telega.with_chat_idle_timeout`
-//// puts a bound on that: an instance that has received nothing for the
-//// configured time asks the `Bot` actor to evict it. The bot — the only process
+//// pair and is evicted after half an hour of silence (`ChatSettings.idle_timeout`,
+//// set with `telega.with_chat_idle_timeout` and lifted with
+//// `telega.without_chat_idle_timeout`): an instance that has received nothing
+//// for that long asks the `Bot` actor to evict it. The bot — the only process
 //// that dispatches updates — deregisters the key first and only then tells the
 //// instance to stop, so an update can never be delivered to an instance on its
 //// way out. The next update simply starts a fresh instance that re-reads the
 //// session from storage; only an in-memory conversation continuation is lost.
+////
+//// Long before that, an instance that has been quiet for `hibernate_after`
+//// compacts itself: one full garbage collection shrinks its heap back to
+//// roughly what a freshly started instance uses, so the memory a burst of
+//// traffic left behind is not held for the rest of the idle window.
 ////
 //// ## Handler pattern
 ////
@@ -124,13 +130,8 @@ pub opaque type Bot(session, error, dependencies) {
     // crashed instance can be answered for and evicted from the registry rather
     // than leaving the poller (or a webhook request) blocked forever.
     instances: Dict(Pid, InstanceWatch),
-    // How long (ms) a chat instance may sit idle before it is stopped and
-    // dropped from the registry. `None` keeps every instance alive forever.
-    chat_idle_timeout: Option(Int),
-    // Init timeout (ms) handed to every chat instance.
-    chat_init_timeout: Int,
-    // Album debounce (ms) handed to every chat instance.
-    media_group_timeout: Option(Int),
+    // Lifetime and persistence knobs handed to every chat instance.
+    chat_settings: ChatSettings,
   )
 }
 
@@ -158,17 +159,73 @@ pub type ChatInstanceArgs(session, error, dependencies) {
     // Subject of the owning `Bot` actor, used to report update completion so
     // the bot can track in-flight work for graceful draining.
     bot_subject: BotSubject,
-    // How long (ms) the instance may sit idle before asking the bot to stop it.
-    // `None` disables idle eviction.
-    idle_timeout: Option(Int),
-    // How long (ms) the instance's initialiser — which loads the session from
-    // storage — may take before the start is considered failed.
-    init_timeout: Int,
-    // Debounce (ms) for gathering the separate messages of an album into one
-    // `MediaGroupUpdate`. `None` delivers them one by one.
-    media_group_timeout: Option(Int),
+    settings: ChatSettings,
   )
 }
+
+/// How a chat instance manages its own lifetime and its session writes.
+///
+/// Built with `default_chat_settings` and overridden field by field; the
+/// `telega` builder (`with_chat_idle_timeout`, `with_media_group_timeout`,
+/// `with_session_persistence`, ...) is the usual way to reach it.
+pub type ChatSettings {
+  /// - `idle_timeout` — how long (ms) an instance may sit idle before asking
+  ///   the bot to stop it. `None` keeps every instance alive for the bot's
+  ///   lifetime.
+  /// - `init_timeout` — how long (ms) the initialiser, which loads the session
+  ///   from storage, may take before the start counts as failed.
+  /// - `media_group_timeout` — debounce (ms) for gathering the separate
+  ///   messages of an album into one `MediaGroupUpdate`. `None` delivers them
+  ///   one by one.
+  /// - `hibernate_after` — how long (ms) an instance may sit idle before it
+  ///   compacts its heap. `None` never compacts.
+  /// - `session_persistence` — whether an unchanged session is written back.
+  ChatSettings(
+    idle_timeout: Option(Int),
+    init_timeout: Int,
+    media_group_timeout: Option(Int),
+    hibernate_after: Option(Int),
+    session_persistence: SessionPersistence,
+  )
+}
+
+/// Whether the session is written back after an update that did not change it.
+pub type SessionPersistence {
+  /// Skip `persist_session` when the handler returned the session it was given.
+  /// A chat that only reads its session — most of them, most of the time —
+  /// then costs no storage write at all.
+  PersistOnChange
+  /// Call `persist_session` after every handled update, changed or not. Pick
+  /// this when writing has a side effect you rely on, such as refreshing an
+  /// expiry or a "last seen" column.
+  PersistAlways
+}
+
+/// Evict a chat instance after half an hour of silence, compact its heap after
+/// a minute of it, and skip writing a session no handler changed.
+pub fn default_chat_settings() -> ChatSettings {
+  ChatSettings(
+    idle_timeout: Some(default_chat_idle_timeout),
+    init_timeout: default_chat_init_timeout,
+    media_group_timeout: None,
+    hibernate_after: Some(default_hibernate_after),
+    session_persistence: PersistOnChange,
+  )
+}
+
+/// One process per `{chat_id}:{from_id}` adds up: a bot with a million users
+/// that never evicts anything runs out of BEAM processes. Half an hour is far
+/// longer than any conversation timeout a bot is likely to use, and a chat that
+/// comes back simply starts a fresh instance from the stored session.
+pub const default_chat_idle_timeout = 1_800_000
+
+/// A minute of silence is long enough that the instance is unlikely to be in
+/// the middle of anything, and short enough that the heap a burst grew is not
+/// carried for the rest of the idle window.
+pub const default_hibernate_after = 60_000
+
+/// How long a chat instance may take to start, session load included.
+pub const default_chat_init_timeout = 10_000
 
 type RouterHandler(session, error, dependencies) =
   fn(Context(session, error, dependencies), Update) ->
@@ -261,9 +318,7 @@ pub fn start(
     ChatInstanceArgs(session, error, dependencies),
     ChatInstanceSubject(session, error, dependencies),
   ),
-  chat_idle_timeout chat_idle_timeout: Option(Int),
-  chat_init_timeout chat_init_timeout: Int,
-  media_group_timeout media_group_timeout: Option(Int),
+  chat_settings chat_settings: ChatSettings,
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
   let builder =
@@ -292,9 +347,7 @@ pub fn start(
         drain_count: 0,
         drain_waiter: None,
         instances: dict.new(),
-        chat_idle_timeout:,
-        chat_init_timeout:,
-        media_group_timeout:,
+        chat_settings:,
       )
       |> actor.initialised
       |> actor.selecting(selector)
@@ -629,9 +682,7 @@ fn handle_update_bot_message(
           bot_info: bot.bot_info,
           registry: bot.registry,
           bot_subject: bot.self,
-          idle_timeout: bot.chat_idle_timeout,
-          init_timeout: bot.chat_init_timeout,
-          media_group_timeout: bot.media_group_timeout,
+          settings: bot.chat_settings,
         )
       // No need to register here — start_chat_instance self-registers
       fsup.start_child(bot.chat_factory, args)
@@ -698,12 +749,16 @@ type ChatInstance(session, error, dependencies) {
     // The registry this instance registered itself in, so it can deregister
     // when it stops for good.
     registry: Registry(ChatInstanceMessage(session, error, dependencies)),
-    // How long (ms) the instance may sit idle before asking the bot to stop it.
-    idle_timeout: Option(Int),
+    settings: ChatSettings,
     // When this instance last received a message of its own.
     last_activity: Timestamp,
-    // Album debounce (ms). `None` — no aggregation.
-    media_group_timeout: Option(Int),
+    // Whether the heap has already been compacted since that last message, so
+    // a long silence pays for one collection rather than one per idle tick.
+    compacted: Bool,
+    // Whether an idle tick is already on its way. Exactly one is ever alive:
+    // the tick re-arms itself while there is still something to wait for, and
+    // the next update re-arms it once there is not.
+    tick_armed: Bool,
     // Albums still being gathered, keyed by `media_group_id`.
     media_groups: Dict(String, MediaGroupBuffer),
   )
@@ -731,7 +786,7 @@ type MediaGroupBuffer {
 pub fn start_chat_instance(
   args: ChatInstanceArgs(session, error, dependencies),
 ) -> actor.StartResult(ChatInstanceSubject(session, error, dependencies)) {
-  actor.new_with_initialiser(args.init_timeout, fn(subject) {
+  actor.new_with_initialiser(args.settings.init_timeout, fn(subject) {
     // A read that *failed* is not the same as "this user has no session yet":
     // starting on a default here would let the first handler persist it over
     // the real, still-stored data. Fail the start instead — the update is
@@ -764,15 +819,15 @@ pub fn start_chat_instance(
         bot_info: args.bot_info,
         bot_subject: args.bot_subject,
         registry: args.registry,
-        idle_timeout: args.idle_timeout,
+        settings: args.settings,
         last_activity: timestamp.system_time(),
-        media_group_timeout: args.media_group_timeout,
+        compacted: False,
+        tick_armed: False,
         media_groups: dict.new(),
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
-    schedule_idle_check(subject, args.idle_timeout)
-    actor.initialised(chat_instance)
+    actor.initialised(arm_tick(chat_instance))
     |> actor.returning(subject)
     |> Ok
   })
@@ -830,35 +885,104 @@ fn loop_chat_instance(
   }
 }
 
-/// Remember that the instance is doing something right now, so the idle clock
-/// starts over.
+/// Remember that the instance is doing something right now, so both the idle
+/// clock and the heap-compaction clock start over — and the tick that watches
+/// them comes back if it had run out of things to wait for.
 fn touch(
   chat: ChatInstance(session, error, dependencies),
 ) -> ChatInstance(session, error, dependencies) {
-  case chat.idle_timeout {
-    None -> chat
-    Some(_) -> ChatInstance(..chat, last_activity: timestamp.system_time())
+  case chat.settings.idle_timeout, chat.settings.hibernate_after {
+    None, None -> chat
+    _, _ ->
+      ChatInstance(
+        ..chat,
+        last_activity: timestamp.system_time(),
+        compacted: False,
+      )
+      |> arm_tick
   }
 }
 
-/// Arm the next idle tick, if idle eviction is enabled at all.
-fn schedule_idle_check(
-  subject: ChatInstanceSubject(session, error, dependencies),
-  delay: Option(Int),
-) -> Nil {
-  case delay {
-    None -> Nil
+/// Arm the next idle tick, unless one is already on its way or there is
+/// nothing left to wait for.
+fn arm_tick(
+  chat: ChatInstance(session, error, dependencies),
+) -> ChatInstance(session, error, dependencies) {
+  use <- bool.guard(when: chat.tick_armed, return: chat)
+
+  case next_idle_check(chat.settings, idle_for(chat), chat.compacted) {
+    None -> chat
     Some(delay) -> {
       let _ =
         process.send_after(
-          subject,
+          chat.self,
           int.max(delay, 1),
           IdleCheckChatInstanceMessage,
         )
-      Nil
+      ChatInstance(..chat, tick_armed: True)
     }
   }
 }
+
+/// When the next idle tick should fire, given how long the instance has been
+/// quiet and whether it has already compacted.
+///
+/// Compaction happens once per quiet spell, so once it has there is nothing
+/// left to wait for on that side. Eviction, on the other hand, has to be asked
+/// for again — the bot declines while an update is still in flight to the
+/// instance — but a whole timeout later rather than on every tick.
+///
+/// `None` means there is nothing to wait for at all; the tick stops until the
+/// next update re-arms it (see `touch`).
+fn next_idle_check(
+  settings: ChatSettings,
+  idle_for: Int,
+  compacted: Bool,
+) -> Option(Int) {
+  let deadlines =
+    [
+      case settings.hibernate_after {
+        Some(after) if !compacted && after > idle_for -> Some(after - idle_for)
+        // Due, but this tick could not do it (an album is still being
+        // gathered): come back a whole period later rather than every
+        // millisecond until it can.
+        Some(after) if !compacted -> Some(after)
+        _ -> None
+      },
+      case settings.idle_timeout {
+        Some(timeout) if timeout > idle_for -> Some(timeout - idle_for)
+        Some(timeout) -> Some(timeout)
+        None -> None
+      },
+    ]
+    |> list.filter_map(option.to_result(_, Nil))
+
+  case deadlines {
+    [] -> None
+    [first, ..rest] -> Some(list.fold(rest, first, int.min))
+  }
+}
+
+/// Give the heap back after a quiet spell.
+///
+/// A chat instance that handled a burst keeps the heap that burst grew for as
+/// long as it lives. `erlang:garbage_collect/0` does a full sweep and shrinks
+/// it back to about what a freshly started instance uses. (BEAM's `hibernate`
+/// proper cannot be reached from inside a `gleam_otp` actor callback — it never
+/// returns to the loop — but the heap reclamation is the part that matters
+/// here, and this is the same collection hibernation would run.)
+fn hibernate(
+  chat: ChatInstance(session, error, dependencies),
+) -> ChatInstance(session, error, dependencies) {
+  garbage_collect()
+  telemetry.execute(["telega", "chat_instance", "hibernate"], [#("count", 1)], [
+    #("key", telemetry.StringValue(chat.key)),
+  ])
+  ChatInstance(..chat, compacted: True)
+}
+
+@external(erlang, "erlang", "garbage_collect")
+fn garbage_collect() -> Bool
 
 /// How long the instance has been doing nothing, in milliseconds.
 fn idle_for(chat: ChatInstance(session, error, dependencies)) -> Int {
@@ -873,31 +997,30 @@ fn idle_for(chat: ChatInstance(session, error, dependencies)) -> Int {
 /// to it. It asks the bot, which owns both the registry and the dispatch, and
 /// stops only when the bot answers with `ShutdownChatInstanceMessage`.
 fn handle_idle_check(chat: ChatInstance(session, error, dependencies)) {
+  let chat = ChatInstance(..chat, tick_armed: False)
+  let idle_for = idle_for(chat)
+
+  // An album still being gathered is work in progress, however quiet the chat
+  // looks: neither evict nor compact until it has been flushed.
   use <- bool.guard(when: !dict.is_empty(chat.media_groups), return: {
-    schedule_idle_check(chat.self, chat.idle_timeout)
-    actor.continue(chat)
+    actor.continue(arm_tick(chat))
   })
-  case chat.idle_timeout {
-    None -> actor.continue(chat)
-    Some(timeout) -> {
-      let idle_for = idle_for(chat)
-      let next_check = case idle_for >= timeout {
-        True -> {
-          process.send(
-            chat.bot_subject,
-            ChatInstanceIdleBotMessage(key: chat.key, pid: process.self()),
-          )
-          // The bot declines while the instance is still busy with an update;
-          // ask again a whole timeout later rather than spinning on the tick.
-          timeout
-        }
-        // Not idle long enough yet — check again when it could be.
-        False -> timeout - idle_for
-      }
-      schedule_idle_check(chat.self, Some(next_check))
-      actor.continue(chat)
-    }
+
+  let chat = case chat.settings.hibernate_after {
+    Some(after) if !chat.compacted && idle_for >= after -> hibernate(chat)
+    _ -> chat
   }
+
+  case chat.settings.idle_timeout {
+    Some(timeout) if idle_for >= timeout ->
+      process.send(
+        chat.bot_subject,
+        ChatInstanceIdleBotMessage(key: chat.key, pid: process.self()),
+      )
+    _ -> Nil
+  }
+
+  actor.continue(arm_tick(chat))
 }
 
 /// The album this update belongs to, when albums are being gathered at all.
@@ -909,7 +1032,10 @@ fn media_group_part(
   chat: ChatInstance(session, error, dependencies),
   update: Update,
 ) -> Option(#(String, Message)) {
-  use <- bool.guard(when: chat.media_group_timeout == None, return: None)
+  use <- bool.guard(
+    when: chat.settings.media_group_timeout == None,
+    return: None,
+  )
   // An album that arrives mid-conversation is left alone: the waiting handler
   // is expecting the individual messages.
   use <- bool.guard(when: chat.continuation != None, return: None)
@@ -966,7 +1092,7 @@ fn buffer_media_group(
       )
   }
 
-  case chat.media_group_timeout {
+  case chat.settings.media_group_timeout {
     Some(timeout) -> {
       process.send_after(
         chat.self,
@@ -1087,26 +1213,15 @@ fn do_handle_update(
           run: fn() { chat.router_handler(context, update) },
         )
       {
-        Ok(Context(session: new_session, ..)) -> {
-          case chat.session_settings.persist_session(chat.key, new_session) {
-            Ok(persisted_session) -> {
-              ack_with(True)
-              actor.continue(ChatInstance(..chat, session: persisted_session))
-            }
-            Error(e) -> {
-              case chat.catch_handler(context, e) {
-                Ok(_) -> {
-                  ack_with(False)
-                  actor.continue(chat)
-                }
-                Error(e) -> {
-                  log.error_d("Error in session persistence: ", e)
-                  stop_chat_instance(chat, ack_with, "session_persist_failed")
-                }
-              }
-            }
-          }
-        }
+        Ok(Context(session: new_session, ..)) ->
+          persist_and_continue(
+            chat:,
+            context:,
+            session: new_session,
+            clear_continuation: False,
+            ack_with:,
+            failure_label: "Error in session persistence: ",
+          )
         Error(e) -> {
           case chat.catch_handler(context, e) {
             Ok(_) -> {
@@ -1129,6 +1244,65 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
     #("chat_id", telemetry.IntValue(upd.chat_id)),
     #("from_id", telemetry.IntValue(upd.from_id)),
   ]
+}
+
+/// Write the session back, answer the update, and carry on.
+///
+/// The write is the one thing every handled-update path has in common, and the
+/// only one that can fail after the handler has already succeeded: a storage
+/// error goes to the bot's catch handler, and an instance whose catch handler
+/// fails too is given up on.
+fn persist_and_continue(
+  chat chat: ChatInstance(session, error, dependencies),
+  context context: Context(session, error, dependencies),
+  session new_session: session,
+  clear_continuation clear_continuation: Bool,
+  ack_with ack_with: fn(Bool) -> Nil,
+  failure_label failure_label: String,
+) {
+  case persist_session(chat, new_session) {
+    Ok(session) -> {
+      ack_with(True)
+      let chat = ChatInstance(..chat, session:)
+      actor.continue(case clear_continuation {
+        True -> ChatInstance(..chat, continuation: None)
+        False -> chat
+      })
+    }
+    Error(e) ->
+      case chat.catch_handler(context, e) {
+        Ok(_) -> {
+          ack_with(False)
+          actor.continue(chat)
+        }
+        Error(e) -> {
+          log.error_d(failure_label, e)
+          stop_chat_instance(chat, ack_with, "session_persist_failed")
+        }
+      }
+  }
+}
+
+/// Store the session, unless it is the one the handler was given and the bot
+/// was not asked to write those back too.
+///
+/// Most updates read the session without changing it, so under the default
+/// `PersistOnChange` most of them cost no storage write at all. Skipping is
+/// safe because the value is unchanged by definition — what is in storage is
+/// already what would be written.
+fn persist_session(
+  chat: ChatInstance(session, error, dependencies),
+  new_session: session,
+) -> Result(session, error) {
+  case chat.settings.session_persistence {
+    PersistAlways ->
+      chat.session_settings.persist_session(chat.key, new_session)
+    PersistOnChange ->
+      case new_session == chat.session {
+        True -> Ok(new_session)
+        False -> chat.session_settings.persist_session(chat.key, new_session)
+      }
+  }
 }
 
 /// Give up on this chat instance.
@@ -1173,32 +1347,16 @@ fn do_handle_continuation(
   case
     do_handle_with_telemetry(context:, update:, handler: continuation.handler)
   {
-    Some(Ok(Context(session: new_session, ..))) -> {
+    Some(Ok(Context(session: new_session, ..))) ->
       // Persist the new session after continuation completes
-      case chat.session_settings.persist_session(chat.key, new_session) {
-        Ok(persisted_session) -> {
-          ack_with(True)
-          actor.continue(
-            ChatInstance(..chat, session: persisted_session, continuation: None),
-          )
-        }
-        Error(e) -> {
-          case chat.catch_handler(context, e) {
-            Ok(_) -> {
-              ack_with(False)
-              actor.continue(chat)
-            }
-            Error(e) -> {
-              log.error_d(
-                "Error in session persistence after continuation: ",
-                e,
-              )
-              stop_chat_instance(chat, ack_with, "session_persist_failed")
-            }
-          }
-        }
-      }
-    }
+      persist_and_continue(
+        chat:,
+        context:,
+        session: new_session,
+        clear_continuation: True,
+        ack_with:,
+        failure_label: "Error in session persistence after continuation: ",
+      )
     Some(Error(e)) -> {
       case chat.catch_handler(context, e) {
         Ok(_) -> {
@@ -1215,37 +1373,15 @@ fn do_handle_continuation(
       case continuation.handle_else {
         Some(handler) ->
           case do_handle(context:, update:, handler:) {
-            Some(Ok(Context(session: new_session, ..))) -> {
-              case
-                chat.session_settings.persist_session(chat.key, new_session)
-              {
-                Ok(persisted_session) -> {
-                  ack_with(True)
-                  actor.continue(
-                    ChatInstance(..chat, session: persisted_session),
-                  )
-                }
-                Error(e) -> {
-                  case chat.catch_handler(context, e) {
-                    Ok(_) -> {
-                      ack_with(False)
-                      actor.continue(chat)
-                    }
-                    Error(e) -> {
-                      log.error_d(
-                        "Error in session persistence after handle_else: ",
-                        e,
-                      )
-                      stop_chat_instance(
-                        chat,
-                        ack_with,
-                        "session_persist_failed",
-                      )
-                    }
-                  }
-                }
-              }
-            }
+            Some(Ok(Context(session: new_session, ..))) ->
+              persist_and_continue(
+                chat:,
+                context:,
+                session: new_session,
+                clear_continuation: False,
+                ack_with:,
+                failure_label: "Error in session persistence after handle_else: ",
+              )
             Some(Error(e)) -> {
               case chat.catch_handler(context, e) {
                 Ok(_) -> {
@@ -1291,13 +1427,14 @@ fn unmatched_while_waiting(
         )
       {
         Ok(Context(session: new_session, ..)) ->
-          case chat.session_settings.persist_session(chat.key, new_session) {
-            Ok(persisted_session) -> {
-              ack_with(True)
-              actor.continue(ChatInstance(..chat, session: persisted_session))
-            }
-            Error(e) -> handle_handler_error(chat, context, e, ack_with)
-          }
+          persist_and_continue(
+            chat:,
+            context:,
+            session: new_session,
+            clear_continuation: False,
+            ack_with:,
+            failure_label: "Error in session persistence: ",
+          )
         Error(e) -> handle_handler_error(chat, context, e, ack_with)
       }
     _ -> {

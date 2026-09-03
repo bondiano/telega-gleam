@@ -14,6 +14,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/result
+import gleam/string
 import telega/internal/utils
 
 import telega/error.{type TelegaError}
@@ -50,6 +51,31 @@ pub type QueueConfig {
     retry_delay: Int,
     /// Maximum retries
     max_retries: Int,
+    /// Per-chat pacing. Rules for individual chats are created as requests for
+    /// them arrive and dropped again once the chat goes quiet, so a bot serving
+    /// many chats does not carry a rule per chat it has ever answered.
+    per_chat: Option(PerChatLimits),
+  )
+}
+
+/// Telegram's per-chat limits, told apart by the sign of the `chat_id`:
+/// groups, supergroups and channels have negative ids.
+pub type PerChatLimits {
+  PerChatLimits(
+    private_rate: Int,
+    private_window_ms: Int,
+    group_rate: Int,
+    group_window_ms: Int,
+  )
+}
+
+/// 1 request per second per private chat, 20 per minute per group.
+pub fn default_per_chat_limits() -> PerChatLimits {
+  PerChatLimits(
+    private_rate: 1,
+    private_window_ms: 1000,
+    group_rate: 20,
+    group_window_ms: 60_000,
   )
 }
 
@@ -61,6 +87,29 @@ pub fn default_config() -> QueueConfig {
     overall_limit: Some(100),
     retry_delay: 1000,
     max_retries: 3,
+    per_chat: Some(default_per_chat_limits()),
+  )
+}
+
+/// Rule id prefix for the per-chat rules created on demand.
+const chat_rule_prefix = "chat:"
+
+/// How long a per-chat rule with an empty queue is kept before it is dropped.
+/// Long enough that a chat being answered steadily keeps its window, short
+/// enough that a burst of one-off chats does not accumulate.
+const chat_rule_idle_ms = 60_000
+
+/// The rule a request for `chat_id` is paced by, created on demand.
+fn chat_rule(limits: PerChatLimits, chat_id: Int) -> Rule {
+  let #(rate, limit) = case chat_id < 0 {
+    True -> #(limits.group_rate, limits.group_window_ms)
+    False -> #(limits.private_rate, limits.private_window_ms)
+  }
+  Rule(
+    id: chat_rule_prefix <> int.to_string(chat_id),
+    rate:,
+    limit:,
+    priority: 5,
   )
 }
 
@@ -127,6 +176,12 @@ type RuleState {
     window_start: Int,
     /// Queue of pending requests for this rule
     queue: List(QueuedRequest),
+    /// Created on demand for one chat, so it may be dropped again when that
+    /// chat goes quiet. Configured rules never are.
+    dynamic: Bool,
+    /// When this rule last admitted or queued a request; only read for dynamic
+    /// rules, to decide when to drop them.
+    last_used: Int,
   )
 }
 
@@ -155,7 +210,14 @@ pub fn start(config: QueueConfig) -> Result(RequestQueue, actor.StartError) {
           dict.insert(
             acc,
             rule.id,
-            RuleState(rule: rule, window_count: 0, window_start: 0, queue: []),
+            RuleState(
+              rule:,
+              window_count: 0,
+              window_start: 0,
+              queue: [],
+              dynamic: False,
+              last_used: 0,
+            ),
           )
         })
 
@@ -238,6 +300,28 @@ pub fn execute(
   execute_with_rule(queue, utils.random_string(32), "default", execute)
 }
 
+/// Execute a request paced by the chat it is addressed to, when the queue was
+/// configured with per-chat limits and the chat is known.
+///
+/// Without either, this is `execute`: the global rules still apply, because a
+/// per-chat rule is an extra bound on top of them, not a way around them.
+pub fn execute_for_chat(
+  queue: RequestQueue,
+  chat_id: Option(Int),
+  run: fn() -> Result(Response(String), TelegaError),
+) -> Result(Response(String), TelegaError) {
+  case chat_id {
+    None -> execute(queue, run)
+    Some(chat_id) ->
+      execute_with_rule(
+        queue,
+        utils.random_string(32),
+        chat_rule_prefix <> int.to_string(chat_id),
+        run,
+      )
+  }
+}
+
 /// Shutdown the queue
 pub fn shutdown(queue: RequestQueue) -> Nil {
   process.send(queue.actor, Shutdown)
@@ -280,7 +364,9 @@ fn handle_message(
     ProcessQueue -> actor.continue(process_all_queues(state))
 
     Tick -> {
-      let new_state = process_all_queues(state)
+      let new_state =
+        process_all_queues(state)
+        |> prune_chat_rules(utils.current_time_ms())
 
       process.send_after(state.self, tick_interval, Tick)
       actor.continue(new_state)
@@ -396,38 +482,91 @@ fn emit_queue_depth(rule: Rule, depth: Int) {
 }
 
 fn add_to_queue(state: State, request: QueuedRequest) -> State {
-  case dict.get(state.rule_states, request.rule_id) {
-    Ok(rule_state) -> {
-      let new_queue = list.append(rule_state.queue, [request])
-      let new_rule_state = RuleState(..rule_state, queue: new_queue)
-      let new_rule_states =
-        dict.insert(state.rule_states, request.rule_id, new_rule_state)
+  let reject = fn() {
+    process.send(request.reply_to, Error(error.FetchError("Invalid rule ID")))
+    state
+  }
 
-      emit_queue_depth(rule_state.rule, list.length(new_queue))
-      State(..state, rule_states: new_rule_states)
-    }
-    Error(_) -> {
-      case dict.get(state.rule_states, "default") {
+  case resolve_rule(state, request.rule_id) {
+    Error(Nil) -> reject()
+    Ok(#(state, rule_id)) ->
+      case dict.get(state.rule_states, rule_id) {
+        Error(Nil) -> reject()
         Ok(rule_state) -> {
-          let updated_request = QueuedRequest(..request, rule_id: "default")
-          let new_queue = list.append(rule_state.queue, [updated_request])
-          let new_rule_state = RuleState(..rule_state, queue: new_queue)
-          let new_rule_states =
-            dict.insert(state.rule_states, "default", new_rule_state)
+          let request = QueuedRequest(..request, rule_id:)
+          let new_queue = list.append(rule_state.queue, [request])
+          let new_rule_state =
+            RuleState(
+              ..rule_state,
+              queue: new_queue,
+              last_used: utils.current_time_ms(),
+            )
 
           emit_queue_depth(rule_state.rule, list.length(new_queue))
-          State(..state, rule_states: new_rule_states)
-        }
-        Error(_) -> {
-          process.send(
-            request.reply_to,
-            Error(error.FetchError("Invalid rule ID")),
+          State(
+            ..state,
+            rule_states: dict.insert(state.rule_states, rule_id, new_rule_state),
           )
-          state
         }
       }
-    }
   }
+}
+
+/// Find the rule a request should be paced by, creating a per-chat rule the
+/// first time that chat is seen and falling back to `default` for a rule id
+/// nothing knows about.
+fn resolve_rule(
+  state: State,
+  rule_id: String,
+) -> Result(#(State, String), Nil) {
+  case dict.has_key(state.rule_states, rule_id) {
+    True -> Ok(#(state, rule_id))
+    False ->
+      case chat_id_of_rule(rule_id), state.config.per_chat {
+        Ok(chat_id), Some(limits) -> {
+          let rule = chat_rule(limits, chat_id)
+          let now = utils.current_time_ms()
+          let rule_states =
+            dict.insert(
+              state.rule_states,
+              rule_id,
+              RuleState(
+                rule:,
+                window_count: 0,
+                window_start: now,
+                queue: [],
+                dynamic: True,
+                last_used: now,
+              ),
+            )
+          Ok(#(State(..state, rule_states:), rule_id))
+        }
+        _, _ ->
+          case dict.has_key(state.rule_states, "default") {
+            True -> Ok(#(state, "default"))
+            False -> Error(Nil)
+          }
+      }
+  }
+}
+
+fn chat_id_of_rule(rule_id: String) -> Result(Int, Nil) {
+  case string.split_once(rule_id, chat_rule_prefix) {
+    Ok(#("", chat_id)) -> int.parse(chat_id)
+    _ -> Error(Nil)
+  }
+}
+
+/// Drop per-chat rules that have nothing queued and have not been used for a
+/// while, so a bot that answers many chats does not grow a rule per chat.
+fn prune_chat_rules(state: State, now: Int) -> State {
+  let rule_states =
+    dict.filter(state.rule_states, fn(_id, rule_state) {
+      !rule_state.dynamic
+      || rule_state.queue != []
+      || now - rule_state.last_used < chat_rule_idle_ms
+    })
+  State(..state, rule_states:)
 }
 
 fn process_all_queues(state: State) -> State {
@@ -469,6 +608,7 @@ fn process_rule_queue(state: State, rule_id: String, now: Int) -> State {
                   ..rule_state,
                   queue: rest,
                   window_count: rule_state.window_count + 1,
+                  last_used: now,
                 )
               let in_flight =
                 dict.insert(

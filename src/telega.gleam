@@ -79,8 +79,19 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     chat_restart_tolerance_period: Option(Int),
     chat_init_timeout: Option(Int),
     /// How long (ms) a chat instance may sit idle before it is stopped.
-    /// `None` (the default) keeps every instance alive for the bot's lifetime.
+    /// `None` falls back to `bot.default_chat_idle_timeout` (30 minutes);
+    /// eviction is turned off entirely by `chat_idle_eviction: False`.
     chat_idle_timeout: Option(Int),
+    /// Whether idle instances are evicted at all. `with_chat_idle_timeout`
+    /// leaves it on; `without_chat_idle_timeout` turns it off.
+    chat_idle_eviction: Bool,
+    /// How long (ms) a chat instance may sit idle before it compacts its heap.
+    /// `None` falls back to `bot.default_hibernate_after`; compaction is turned
+    /// off entirely by `chat_hibernation: False`.
+    chat_hibernate_after: Option(Int),
+    chat_hibernation: Bool,
+    /// Whether a session no handler changed is written back anyway.
+    session_persistence: bot.SessionPersistence,
     media_group_timeout: Option(Int),
     // --- Lifecycle parameters ---
     on_start: Option(
@@ -237,6 +248,10 @@ fn default_builder(
     chat_restart_tolerance_period: None,
     chat_init_timeout: None,
     chat_idle_timeout: None,
+    chat_idle_eviction: True,
+    chat_hibernate_after: None,
+    chat_hibernation: True,
+    session_persistence: bot.PersistOnChange,
     media_group_timeout: None,
     on_start: None,
     on_shutdown: None,
@@ -421,6 +436,10 @@ pub fn with_dependencies(
     chat_restart_tolerance_period: builder.chat_restart_tolerance_period,
     chat_init_timeout: builder.chat_init_timeout,
     chat_idle_timeout: builder.chat_idle_timeout,
+    chat_idle_eviction: builder.chat_idle_eviction,
+    chat_hibernate_after: builder.chat_hibernate_after,
+    chat_hibernation: builder.chat_hibernation,
+    session_persistence: builder.session_persistence,
     media_group_timeout: builder.media_group_timeout,
     on_shutdown: builder.on_shutdown,
     drain_timeout: builder.drain_timeout,
@@ -570,16 +589,16 @@ pub fn with_chat_config(
 
 /// Stop chat instances that have been idle for `timeout` milliseconds.
 ///
-/// One `ChatInstance` process is started per `{chat_id}:{from_id}` and, without
-/// this setting, it lives until the bot stops. A bot that is used by many
-/// distinct users therefore accumulates one process (plus its session and any
-/// suspended conversation) per user forever, and eventually hits the BEAM
-/// process limit.
+/// One `ChatInstance` process is started per `{chat_id}:{from_id}`, so a bot
+/// used by many distinct people accumulates one process (plus its session and
+/// any suspended conversation) per person. They are evicted after half an hour
+/// of silence by default — `bot.default_chat_idle_timeout` — and this changes
+/// that bound.
 ///
-/// With an idle timeout, an instance that has received nothing for that long is
-/// deregistered and stopped by the bot actor. The next update from that user
-/// simply starts a fresh instance, which re-reads the session from storage — so
-/// nothing persisted is lost.
+/// An instance that has received nothing for that long is deregistered and
+/// stopped by the bot actor. The next update from that user simply starts a
+/// fresh instance, which re-reads the session from storage — so nothing
+/// persisted is lost.
 ///
 /// A pending conversation (`wait_*`) lives only in the instance's memory, so it
 /// is dropped along with the instance. Pick an idle timeout comfortably larger
@@ -588,15 +607,76 @@ pub fn with_chat_config(
 /// ```gleam
 /// telega.new_for_polling(api_client:)
 /// |> telega.with_router(router)
-/// // reclaim a user's process after half an hour of silence
-/// |> telega.with_chat_idle_timeout(1000 * 60 * 30)
+/// // reclaim a user's process after five minutes of silence
+/// |> telega.with_chat_idle_timeout(1000 * 60 * 5)
 /// |> telega.init_for_polling()
 /// ```
 pub fn with_chat_idle_timeout(
   builder: TelegaBuilder(session, error, dependencies),
   timeout timeout: Int,
 ) -> TelegaBuilder(session, error, dependencies) {
-  TelegaBuilder(..builder, chat_idle_timeout: Some(timeout))
+  TelegaBuilder(
+    ..builder,
+    chat_idle_timeout: Some(timeout),
+    chat_idle_eviction: True,
+  )
+}
+
+/// Keep every chat instance alive for as long as the bot runs.
+///
+/// This undoes the default half-hour eviction. Only worth it when a bot serves
+/// a small, known set of chats and wants their in-memory conversations to
+/// survive any amount of silence — an open-ended process per user is exactly
+/// how a busy bot runs out of BEAM processes.
+pub fn without_chat_idle_timeout(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, chat_idle_eviction: False)
+}
+
+/// Compact a chat instance's heap once it has been quiet for `after`
+/// milliseconds (default: `bot.default_hibernate_after`, one minute).
+///
+/// An instance that handled a burst of messages keeps the heap that burst grew
+/// until it is evicted. One full garbage collection after the chat goes quiet
+/// gives it back, which for a bot holding many idle instances is the difference
+/// between kilobytes and tens of kilobytes each.
+pub fn with_chat_hibernate_after(
+  builder: TelegaBuilder(session, error, dependencies),
+  after after: Int,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(
+    ..builder,
+    chat_hibernate_after: Some(after),
+    chat_hibernation: True,
+  )
+}
+
+/// Never compact an idle chat instance's heap.
+pub fn without_chat_hibernation(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, chat_hibernation: False)
+}
+
+/// Choose whether a session no handler changed is still written back.
+///
+/// The default is `bot.PersistOnChange`: a handler that returns the session it
+/// was given costs no storage write at all, which for a bot whose handlers
+/// mostly read is most of its writes. Switch to `bot.PersistAlways` when the
+/// write itself does something you rely on — refreshing an expiry, touching a
+/// "last seen" column.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_session_settings(settings)
+/// |> telega.with_session_persistence(bot.PersistAlways)
+/// ```
+pub fn with_session_persistence(
+  builder: TelegaBuilder(session, error, dependencies),
+  persistence persistence: bot.SessionPersistence,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, session_persistence: persistence)
 }
 
 /// Gather the messages of an album into a single `MediaGroupUpdate`.
@@ -870,9 +950,7 @@ pub fn init(
         catch_handler:,
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
-        chat_idle_timeout: builder.chat_idle_timeout,
-        chat_init_timeout: chat_init_timeout(builder),
-        media_group_timeout: builder.media_group_timeout,
+        chat_settings: chat_settings(builder),
         name: Some(bot_name),
       )
     })
@@ -965,9 +1043,7 @@ pub fn init_for_polling(
         catch_handler:,
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
-        chat_idle_timeout: builder.chat_idle_timeout,
-        chat_init_timeout: chat_init_timeout(builder),
-        media_group_timeout: builder.media_group_timeout,
+        chat_settings: chat_settings(builder),
         name: Some(bot_name),
       )
     })
@@ -1975,8 +2051,6 @@ const default_chat_restart_intensity = 5
 
 const default_chat_restart_period = 10
 
-const default_chat_init_timeout = 10_000
-
 // Build the chat factory child spec from builder settings
 fn build_chat_factory_spec(
   builder: TelegaBuilder(session, error, dependencies),
@@ -2003,11 +2077,36 @@ fn build_chat_factory_spec(
   #(spec, name)
 }
 
-// How long a chat instance may take to start, session load included.
-fn chat_init_timeout(
+// The lifetime and persistence knobs handed to every chat instance.
+@internal
+pub fn chat_settings(
   builder: TelegaBuilder(session, error, dependencies),
-) -> Int {
-  option.unwrap(builder.chat_init_timeout, default_chat_init_timeout)
+) -> bot.ChatSettings {
+  let defaults = bot.default_chat_settings()
+  bot.ChatSettings(
+    idle_timeout: case builder.chat_idle_eviction {
+      False -> None
+      True ->
+        Some(option.unwrap(
+          builder.chat_idle_timeout,
+          bot.default_chat_idle_timeout,
+        ))
+    },
+    init_timeout: option.unwrap(
+      builder.chat_init_timeout,
+      defaults.init_timeout,
+    ),
+    media_group_timeout: builder.media_group_timeout,
+    hibernate_after: case builder.chat_hibernation {
+      False -> None
+      True ->
+        Some(option.unwrap(
+          builder.chat_hibernate_after,
+          bot.default_hibernate_after,
+        ))
+    },
+    session_persistence: builder.session_persistence,
+  )
 }
 
 // Generate a unique registry name from the bot token

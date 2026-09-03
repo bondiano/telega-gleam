@@ -35,6 +35,23 @@ A stored value that will not *decode* is a different case: the bridge in
 first with an error log and a `telega.storage.decode_error` telemetry event.
 The next persist overwrites it, which is usually what a schema change wants.
 
+## When the session is written
+
+By default a session is written back only when a handler **changed** it: if the
+handler returns the session it was given, `persist_session` is not called at
+all. Most updates read the session without touching it, so for most bots this
+is most of the storage writes — and skipping them is safe by definition, since
+what is stored is already the value that would be written.
+
+Switch it off when the write itself does something you rely on — refreshing an
+expiry, touching a "last seen" column:
+
+```gleam
+telega.new_for_polling(api_client:)
+|> telega.with_session_settings(settings)
+|> telega.with_session_persistence(bot.PersistAlways)
+```
+
 ## What the key identifies
 
 The key is `"{chat_id}:{from_id}"`, and a few update kinds map onto it in ways

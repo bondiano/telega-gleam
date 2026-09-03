@@ -33,6 +33,8 @@ const decoder_file = "../src/telega/model/decoder.gleam"
 
 const encoder_file = "../src/telega/model/encoder.gleam"
 
+const method_info_file = "../src/telega/internal/method_info.gleam"
+
 /// Everything from this line to EOF in each target file is hand-written and
 /// preserved across regenerations.
 const manual_marker = "// === MANUAL — not regenerated below (codegen) ==="
@@ -47,6 +49,36 @@ const skip_types = ["InputFile"]
 /// `InputMedia` carries Location/Sticker/Venue variants the library relies on,
 /// which the spec assigns to InputPollMedia / InputPollOptionMedia instead.
 const manual_unions = ["InputMedia"]
+
+// --- Method idempotency -----------------------------------------------------
+
+/// Name prefixes of methods that only ever *change* something that is already
+/// identified by the call itself. Replaying one of these after a transport
+/// error or a 5xx converges on the same state, so the retry policy may repeat
+/// them.
+const idempotent_prefixes = [
+  "answer", "approve", "ban", "close", "decline", "delete", "edit", "get",
+  "hide", "leave", "logOut", "pin", "promote", "read", "remove", "reopen",
+  "restrict", "revoke", "set", "stop", "unban", "unhide", "unpin", "verify",
+]
+
+/// Name prefixes of methods that *create* something new — a message, an invite
+/// link, a sticker, a story, a star transaction. A failed attempt says nothing
+/// about whether Telegram applied the call, so replaying one risks a duplicate.
+const non_idempotent_prefixes = [
+  "add", "convert", "copy", "create", "export", "forward", "gift", "post",
+  "refund", "replace", "repost", "save", "send", "transfer", "upgrade", "upload",
+]
+
+/// Methods the prefix rules would classify wrongly.
+///
+/// `sendChatAction` creates nothing — a duplicated "typing…" is free, and it is
+/// the one `send*` a long handler repeats on purpose anyway.
+const idempotent_overrides = ["sendChatAction"]
+
+/// `answer*` queries that answer by *sending* a new message, so a replay is a
+/// second message rather than a second answer to the same query.
+const non_idempotent_overrides = ["answerGuestQuery", "answerWebAppQuery"]
 
 // --- Internal model ---------------------------------------------------------
 
@@ -127,7 +159,11 @@ fn raw_type_decoder() -> decode.Decoder(RawType) {
 }
 
 type Spec {
-  Spec(version: String, types: Dict(String, RawType))
+  Spec(
+    version: String,
+    types: Dict(String, RawType),
+    method_names: List(String),
+  )
 }
 
 fn spec_decoder() -> decode.Decoder(Spec) {
@@ -136,7 +172,80 @@ fn spec_decoder() -> decode.Decoder(Spec) {
     "types",
     decode.dict(decode.string, raw_type_decoder()),
   )
-  decode.success(Spec(version:, types:))
+  use methods <- decode.field(
+    "methods",
+    decode.dict(decode.string, decode.success(Nil)),
+  )
+  decode.success(Spec(
+    version:,
+    types:,
+    method_names: dict.keys(methods) |> list.sort(string.compare),
+  ))
+}
+
+// --- Method idempotency table ------------------------------------------------
+
+/// Decide whether `name` may be replayed, from the prefix tables above.
+///
+/// `Error(Nil)` means the spec has a method neither table knows about: the
+/// generator refuses rather than guessing, so a new Bot API version cannot
+/// silently classify a new `send`-alike as safe to retry.
+fn classify_method(name: String) -> Result(Bool, Nil) {
+  case
+    list.contains(idempotent_overrides, name),
+    list.contains(non_idempotent_overrides, name)
+  {
+    True, _ -> Ok(True)
+    _, True -> Ok(False)
+    False, False ->
+      case
+        list.any(idempotent_prefixes, string.starts_with(name, _)),
+        list.any(non_idempotent_prefixes, string.starts_with(name, _))
+      {
+        True, False -> Ok(True)
+        False, True -> Ok(False)
+        _, _ -> Error(Nil)
+      }
+  }
+}
+
+fn generate_method_info(
+  version: String,
+  classified: List(#(String, Bool)),
+) -> String {
+  let clauses =
+    list.map(classified, fn(entry) {
+      let #(name, idempotent) = entry
+      let verdict = case idempotent {
+        True -> "Ok(True)"
+        False -> "Ok(False)"
+      }
+      "    \"" <> name <> "\" -> " <> verdict
+    })
+    |> string.join("\n")
+
+  method_info_header
+  <> banner(version)
+  <> "/// The Bot API version this table was generated from.\n"
+  <> "pub const bot_api_version = \""
+  <> version
+  <> "\"\n\n"
+  <> "/// How many methods the table covers.\n"
+  <> "pub const method_count = "
+  <> int_to_string(list.length(classified))
+  <> "\n\n"
+  <> "/// Whether replaying `method` is safe, or `Error(Nil)` if this Bot API\n"
+  <> "/// version has no such method.\n"
+  <> "pub fn lookup_idempotent(method method: String) -> Result(Bool, Nil) {\n"
+  <> "  case method {\n"
+  <> clauses
+  <> "\n    _ -> Error(Nil)\n  }\n}\n\n"
+  <> "/// Whether replaying `method` after a failed attempt is safe.\n"
+  <> "///\n"
+  <> "/// A method this Bot API version does not know is treated as unsafe: a\n"
+  <> "/// custom or newer method is more likely to create something than not.\n"
+  <> "pub fn is_idempotent(method method: String) -> Bool {\n"
+  <> "  lookup_idempotent(method) |> result.unwrap(False)\n}\n"
 }
 
 // --- Transform raw spec -> internal model -----------------------------------
@@ -807,6 +916,19 @@ import gleam/option.{None}
 
 "
 
+const method_info_header = "//// Per-method facts derived from the Telegram Bot API spec.
+////
+//// The only fact so far is **idempotency**: whether replaying a method after a
+//// transport error or a 5xx is safe. `telega/client`'s retry policy reads it,
+//// so the list of methods that must not be retried is generated from the spec
+//// and complete, instead of being guessed from a name prefix at runtime.
+////
+//// Generated by `task codegen` — do not edit.
+
+import gleam/result
+
+"
+
 const encoder_header = "//// This module contains all encoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/int
@@ -975,6 +1097,24 @@ fn run() -> Result(String, String) {
     encoder_header <> encoder_imports <> banner(spec.version) <> encoder_body
   use _ <- result.try(write_file(encoder_file, encoder_content))
 
+  // --- internal/method_info.gleam: fully generated, no manual suffix ---
+  use classified <- result.try(
+    list.try_map(spec.method_names, fn(name) {
+      classify_method(name)
+      |> result.map(fn(idempotent) { #(name, idempotent) })
+      |> result.replace_error(
+        "method \""
+        <> name
+        <> "\" matches neither idempotent_prefixes nor non_idempotent_prefixes; "
+        <> "add it to one of them (or to an override list) in codegen.gleam",
+      )
+    }),
+  )
+  use _ <- result.try(write_file(
+    method_info_file,
+    generate_method_info(spec.version, classified),
+  ))
+
   Ok(
     "Generated model layer for "
     <> spec.version
@@ -984,7 +1124,9 @@ fn run() -> Result(String, String) {
     <> int_to_string(list.length(unions))
     <> " unions ("
     <> int_to_string(list.length(decodable_unions))
-    <> " decodable).",
+    <> " decodable), "
+    <> int_to_string(list.length(classified))
+    <> " methods classified.",
   )
 }
 
