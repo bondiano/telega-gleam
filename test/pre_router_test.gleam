@@ -5,7 +5,7 @@ import gleam/otp/supervision
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{Continue, Stop}
+import telega/bot.{Stop}
 import telega/internal/registry
 import telega/testing/context
 import telega/testing/factory
@@ -75,7 +75,7 @@ fn drive(
 }
 
 pub fn continue_lets_update_reach_router_test() {
-  let pass = fn(_pre: bot.PreContext(Nil)) { Continue }
+  let pass = fn(_pre: bot.PreContext(Nil)) { bot.proceed() }
 
   let #(acked, router_ran) =
     drive(registry_name: "pre_router_continue", pre_handlers: [pass])
@@ -101,7 +101,7 @@ pub fn first_stop_short_circuits_the_chain_test() {
   let record = fn(tag) {
     fn(_pre: bot.PreContext(Nil)) {
       process.send(seen, tag)
-      Continue
+      bot.proceed()
     }
   }
   let block = fn(_pre: bot.PreContext(Nil)) { Stop }

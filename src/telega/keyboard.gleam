@@ -1133,6 +1133,20 @@ pub fn set_callback_data_delimiter(
   KeyboardCallbackData(..data, delimiter:)
 }
 
+/// The id a callback data factory tags its payloads with.
+pub fn callback_data_id(callback_data: KeyboardCallbackData(data)) -> String {
+  callback_data.id
+}
+
+/// The literal prefix every payload built by this factory starts with —
+/// `id <> delimiter`. `router.on_callback_data` registers a `Prefix` route on
+/// it, so the two agree on what a factory's payloads look like.
+pub fn callback_data_prefix(
+  callback_data: KeyboardCallbackData(data),
+) -> String {
+  callback_data.id <> callback_data.delimiter
+}
+
 /// Pack callback data into a callback
 pub fn pack_callback(
   callback_data callback_data: KeyboardCallbackData(data),

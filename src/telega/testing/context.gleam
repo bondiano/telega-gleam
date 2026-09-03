@@ -11,6 +11,7 @@
 //// let cfg = context.config()
 //// ```
 
+import gleam/dict
 import gleam/erlang/process
 import gleam/option.{None, Some}
 
@@ -105,6 +106,7 @@ pub fn context_with_all(
     start_time: None,
     log_prefix: None,
     bot_info:,
+    annotations: dict.new(),
   )
 }
 

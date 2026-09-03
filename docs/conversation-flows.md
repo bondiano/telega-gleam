@@ -9,7 +9,7 @@ Use flows when you need:
 - **Persistent state** — flow progress is saved to storage and survives VM restarts
 - **Complex branching** — conditional transitions, parallel execution, subflows
 - **Type-safe navigation** — steps are algebraic data types, not strings
-- **Reusable logic** — compose flows sequentially, conditionally, or in parallel
+- **Reusable logic** — compose flows sequentially or conditionally
 
 For simple multi-message interactions that don't need persistence, the [Conversation API](./conversation.md) may be a better fit. For single-message button UIs (settings panels, wizards that edit one message in place) consider [Dialogs](./dialogs.md) — a declarative layer compiled on top of flows.
 
@@ -742,27 +742,15 @@ let support_flow = compose.compose_conditional(
 )
 ```
 
-### Parallel Composition (deprecated)
+### Parallel Composition
 
-> **Deprecated.** `compose_parallel` starts each flow as an instance of its own
-> and marks the branch complete right away, so the merged results are the
-> parent's data rather than the children's, and a child flow that waits for
-> input is left running with nothing to return to. Build the steps into a single
-> flow, or drive them from a [dialog](./dialogs.md), instead.
+`compose_parallel` has been **removed**. Its branches started each flow as an
+instance of its own and marked the branch complete right away, so the merged
+results were the parent's data rather than the children's, and a child flow that
+waited for input was left running with nothing to return to.
 
-```gleam
-let survey_flow = compose.compose_parallel(
-  "full_survey",
-  [demographics_flow, preferences_flow, feedback_flow],
-  fn(results) {
-    // Merge all results into one dict
-    list.fold(results, dict.new(), fn(acc, result) {
-      dict.merge(acc, result)
-    })
-  },
-  storage,
-)
-```
+Build the steps into a single flow with `builder.parallel(from:, steps:, join:)`,
+or drive them from a [dialog](./dialogs.md), instead.
 
 ## Registry
 
@@ -882,9 +870,11 @@ case instance.from_json_string(db_row.payload) {
 The JSON carries a `schema_version`. A blob written by a newer build of Telega
 fails to decode rather than being read half-populated.
 
-> `instance_to_row` / `instance_from_row` are **deprecated**. A flat row drops
-> `history`, `flow_stack` and `parallel_state`, so `Back`, subflows and
-> parallel execution silently stop working across a restart.
+> `instance_to_row` / `instance_from_row` (and the `FlowInstanceRow` type) have
+> been **removed**. A flat row dropped `history`, `flow_stack` and
+> `parallel_state`, so `Back`, subflows and parallel execution silently stopped
+> working across a restart. Persist `to_json_string` / restore with
+> `from_json_string` instead.
 
 Simpler still: implement the `KeyValueStorage` contract from `telega/storage`
 and let `storage.flow_storage_from_storage` do the serialization — that is what
@@ -1268,4 +1258,4 @@ fn string_to_step(s) {
 | `telega/flow/engine` | Core execution engine (internal) |
 | `telega/flow/handler` | Built-in step handlers (`text_step`, `message_step`, context-aware `text_step_with` / `message_step_with`, resume handlers) |
 | `telega/flow/registry` | Flow registry and router integration (`new_registry`, `register`, `apply_to_router`) |
-| `telega/flow/compose` | Flow composition (`compose_sequential`, `compose_conditional`, `compose_parallel`, `validation_middleware`) |
+| `telega/flow/compose` | Flow composition (`compose_sequential`, `compose_conditional`, `validation_middleware`) |

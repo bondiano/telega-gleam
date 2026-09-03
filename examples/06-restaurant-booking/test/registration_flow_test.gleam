@@ -7,6 +7,7 @@
 //// construction directly. Handler-level behavior that reads `ctx.dependencies` is
 //// covered with `context.context_with_dependencies`.
 
+import gleam/dict
 import gleam/erlang/process
 import gleam/option.{None, Some}
 import sqlight
@@ -85,6 +86,7 @@ fn dependencies_context(
     start_time: None,
     log_prefix: None,
     bot_info: factory.bot_user(),
+    annotations: dict.new(),
   )
 }
 

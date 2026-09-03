@@ -36,7 +36,7 @@
 import gleam/int
 import gleam/option.{None, Some}
 
-import telega/bot.{type PreContext, type PreHandler, Continue, Stop}
+import telega/bot.{type PreContext, type PreHandler, Stop}
 import telega/storage.{type KeyValueStorage}
 import telega/update
 
@@ -61,10 +61,10 @@ pub fn deduplicate(
       // First time we see this id — remember it and let it through.
       Ok(None) -> {
         let _ = storage.set_with_ttl(key, "1", ttl_ms)
-        Continue
+        bot.proceed()
       }
       // Fail-open: never drop a real update because the store hiccuped.
-      Error(_) -> Continue
+      Error(_) -> bot.proceed()
     }
   }
 }

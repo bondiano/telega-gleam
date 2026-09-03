@@ -1,4 +1,5 @@
 import gleam/bool
+import gleam/dict
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
@@ -24,7 +25,7 @@ import telega/client
 import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
-import telega/router.{type Router}
+import telega/router.{type Routable, type Router, type RouterTree}
 import telega/telemetry
 import telega/update
 import telega/webhook_reply
@@ -52,7 +53,7 @@ pub opaque type Telega(session, error, dependencies) {
 pub opaque type TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(
     config: Config,
-    router: Option(Router(session, error, dependencies)),
+    router: Option(Routable(session, error, dependencies)),
     session_settings: Option(SessionSettings(session, error)),
     catch_handler: Option(bot.CatchHandler(session, error, dependencies)),
     // Global pre-router middleware, run once per update before routing.
@@ -211,6 +212,8 @@ pub fn background_context(
     start_time: None,
     log_prefix: None,
     bot_info: telega.bot_info,
+    // No update, so no pre-router middleware ran to annotate one.
+    annotations: dict.new(),
   ))
 }
 
@@ -362,11 +365,32 @@ pub fn new_for_polling_with_dependencies(
 /// Set the router for handling updates.
 /// This is the primary way to handle updates - use router.new() to create a router
 /// and configure it with command handlers, text handlers, middleware, etc.
+///
+/// Takes a leaf `router.Router`. For a composition built with
+/// `router.compose`/`router.branch`, use `with_router_tree`.
 pub fn with_router(
   builder: TelegaBuilder(session, error, dependencies),
-  router: Router(session, error, dependencies),
+  router router_: Router(session, error, dependencies),
 ) -> TelegaBuilder(session, error, dependencies) {
-  TelegaBuilder(..builder, router: Some(router))
+  TelegaBuilder(..builder, router: Some(router.routable(router_)))
+}
+
+/// Set a composed `router.RouterTree` for handling updates.
+///
+/// ```gleam
+/// let tree =
+///   router.tree()
+///   |> router.branch(router.is_private_chat(), private_router)
+///   |> router.branch(router.is_group_chat(), group_router)
+///
+/// telega.new_for_polling(token:)
+/// |> telega.with_router_tree(tree)
+/// ```
+pub fn with_router_tree(
+  builder: TelegaBuilder(session, error, dependencies),
+  tree tree: RouterTree(session, error, dependencies),
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, router: Some(router.tree_routable(tree)))
 }
 
 /// Set session settings for the bot.
@@ -921,9 +945,9 @@ pub fn init(
         "Router is required. Use with_router() to set a router.",
       ),
     )
-  use router <- result.try(router)
+  use routable <- result.try(router)
 
-  let router_handler = fn(ctx, upd) { router.handle(router, ctx, upd) }
+  let router_handler = routable.handle
   let catch_handler =
     option.unwrap(builder.catch_handler, fn(_ctx, err) { Error(err) })
   let config = config.Config(..builder.config, api_client:)
@@ -1013,9 +1037,9 @@ pub fn init_for_polling(
       builder.router,
       error.ActorError("Router is required. Use with_router() to set a router."),
     )
-  use router <- result.try(router)
+  use routable <- result.try(router)
 
-  let router_handler = fn(ctx, upd) { router.handle(router, ctx, upd) }
+  let router_handler = routable.handle
   let catch_handler =
     option.unwrap(builder.catch_handler, fn(_ctx, err) { Error(err) })
   let config = config.Config(..builder.config, api_client:)
@@ -1957,8 +1981,8 @@ fn resolve_allowed_updates(
     Some(_) as manual -> manual
     None ->
       case builder.auto_allowed_updates, builder.router {
-        True, Some(router) ->
-          case router.allowed_updates(router) {
+        True, Some(routable) ->
+          case routable.allowed_updates {
             // Derivation gave up on narrowing; adding extras would turn "send
             // everything" into a narrower list than the router can handle.
             [] -> None
@@ -1984,8 +2008,8 @@ fn maybe_sync_commands(
 
   case builder.router {
     None -> Ok(Nil)
-    Some(router) -> {
-      let described = router.registered_commands(router)
+    Some(routable) -> {
+      let described = routable.registered_commands
       use <- bool.guard(described == [], Ok(Nil))
 
       let client = config.api_client

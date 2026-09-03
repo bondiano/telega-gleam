@@ -319,31 +319,18 @@ pub fn declaration_errors(
   })
 }
 
-/// Add parallel step execution (simplified API).
+/// Run several steps in parallel, joining at `join` once all of them finish.
 pub fn parallel(
   builder: FlowBuilder(step_type, session, error, dependencies),
   from from: step_type,
   steps steps: List(step_type),
   join join: step_type,
 ) -> FlowBuilder(step_type, session, error, dependencies) {
-  add_parallel_steps(builder, from, steps, join)
-}
-
-/// Add parallel step execution.
-///
-/// @deprecated Use `parallel()` instead for cleaner API.
-pub fn add_parallel_steps(
-  builder: FlowBuilder(step_type, session, error, dependencies),
-  trigger_step: step_type,
-  parallel_steps: List(step_type),
-  join_at: step_type,
-) -> FlowBuilder(step_type, session, error, dependencies) {
-  let trigger_str = builder.step_to_string(trigger_step)
   let config =
     ParallelConfig(
-      trigger_step: trigger_str,
-      parallel_steps:,
-      join_step: join_at,
+      trigger_step: builder.step_to_string(from),
+      parallel_steps: steps,
+      join_step: join,
     )
   FlowBuilder(
     ..builder,

@@ -12,11 +12,11 @@ import gleam/result
 import gleam/string
 import telega/bot.{type Context}
 import telega/flow/types.{
-  type Flow, type FlowInstance, type FlowInstanceRow, type FlowStackFrame,
-  type FlowState, type ParallelState, type StepResult, type WaitResult,
-  AudioInput, BoolCallback, CommandInput, DataCallback, FlowInstance,
-  FlowInstanceRow, FlowStackFrame, FlowState, LocationInput, Next, ParallelState,
-  Pending, PhotoInput, TextInput, VideoInput, VoiceInput,
+  type Flow, type FlowInstance, type FlowStackFrame, type FlowState,
+  type ParallelState, type StepResult, type WaitResult, AudioInput, BoolCallback,
+  CommandInput, DataCallback, FlowInstance, FlowStackFrame, FlowState,
+  LocationInput, Next, ParallelState, Pending, PhotoInput, TextInput, VideoInput,
+  VoiceInput,
 }
 import telega/internal/utils
 
@@ -193,50 +193,9 @@ pub fn clear_wait_result(instance: FlowInstance) -> FlowInstance {
   clear_step_data_key(instance, wait_result_key)
 }
 
-/// Convert a FlowInstance to a flat row for database storage
-@deprecated("Lossy: a row drops history, flow_stack and parallel_state, so subflows, `Back` and parallel execution do not survive a restart. Persist `to_json_string` instead.")
-pub fn instance_to_row(instance: FlowInstance) -> FlowInstanceRow {
-  FlowInstanceRow(
-    id: instance.id,
-    flow_name: instance.flow_name,
-    user_id: instance.user_id,
-    chat_id: instance.chat_id,
-    current_step: instance.state.current_step,
-    data: instance.state.data,
-    step_data: instance.step_data,
-    wait_token: instance.wait_token,
-    wait_timeout_at: instance.wait_timeout_at,
-    created_at: instance.created_at,
-    updated_at: instance.updated_at,
-  )
-}
-
-/// Construct a FlowInstance from a flat row
-@deprecated("Lossy: a row drops history, flow_stack and parallel_state, so subflows, `Back` and parallel execution do not survive a restart. Restore with `from_json_string` instead.")
-pub fn instance_from_row(row: FlowInstanceRow) -> FlowInstance {
-  FlowInstance(
-    id: row.id,
-    flow_name: row.flow_name,
-    user_id: row.user_id,
-    chat_id: row.chat_id,
-    state: FlowState(
-      current_step: row.current_step,
-      data: row.data,
-      history: [row.current_step],
-      flow_stack: [],
-      parallel_state: None,
-    ),
-    step_data: row.step_data,
-    wait_token: row.wait_token,
-    wait_timeout_at: row.wait_timeout_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  )
-}
-
 // JSON serialization ---------------------------------------------------------
 //
-// Unlike `instance_to_row`, these encode the *complete* instance — including
+// These encode the *complete* instance — including
 // `history`, `flow_stack`, and `parallel_state` — so any key-value backend can
 // persist and restore subflows and parallel execution across restarts.
 

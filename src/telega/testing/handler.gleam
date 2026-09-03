@@ -30,6 +30,7 @@
 //// }
 //// ```
 
+import gleam/dict
 import gleam/erlang/process.{type Subject}
 import gleam/option.{None}
 import gleam/otp/factory_supervisor as fsup
@@ -66,6 +67,7 @@ pub fn test_handler(
       start_time: None,
       log_prefix: None,
       bot_info: factory.bot_user(),
+      annotations: dict.new(),
     )
   let result = handler(ctx, update)
   #(result, calls)

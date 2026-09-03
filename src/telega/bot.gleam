@@ -61,6 +61,8 @@
 
 import gleam/bool
 import gleam/dict.{type Dict}
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode.{type Decoder}
 import gleam/erlang/process.{type Pid, type Subject}
 import gleam/int
 import gleam/list
@@ -243,17 +245,33 @@ pub type PreContext(dependencies) {
     /// The same injected services available to handlers via `Context`.
     dependencies: dependencies,
     bot_info: User,
+    /// What the pre-handlers before this one annotated the update with.
+    annotations: Dict(String, Dynamic),
   )
 }
 
 /// Decision returned by a `PreHandler`: keep processing the update through the
 /// router, or stop it here (drop it before routing).
 pub type PreRouterResult {
-  /// Continue to the next pre-router middleware and, eventually, the router.
-  Continue
+  /// Continue to the next pre-router middleware and, eventually, the router,
+  /// attaching `annotations` to this update.
+  ///
+  /// Annotations are merged into what earlier pre-handlers set (a repeated key
+  /// takes the newer value) and reach every handler as `ctx.annotations`, read
+  /// back with [`annotation`](#annotation). They live for one update and are
+  /// never persisted — long-lived services belong in `dependencies`, per-user
+  /// state in the session.
+  ///
+  /// Use [`proceed`](#proceed) when there is nothing to annotate.
+  Continue(annotations: Dict(String, Dynamic))
   /// Stop processing this update. The webhook/poller is told the update was
   /// acknowledged (so Telegram does not retry it) but no handler runs.
   Stop
+}
+
+/// Continue without annotating the update — `Continue(dict.new())`.
+pub fn proceed() -> PreRouterResult {
+  Continue(dict.new())
 }
 
 /// Pre-router middleware: a single global pass over every update, run before
@@ -421,9 +439,15 @@ fn bot_loop(
               process.send(reply_with, True)
               actor.continue(bot)
             }
-            Continue ->
+            Continue(annotations) ->
               case
-                handle_update_bot_message(bot:, update:, reply_with:, envelope:)
+                handle_update_bot_message(
+                  bot:,
+                  update:,
+                  reply_with:,
+                  envelope:,
+                  annotations:,
+                )
               {
                 Ok(bot) ->
                   actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
@@ -509,31 +533,34 @@ fn run_pre_handlers(
   update: Update,
 ) -> PreRouterResult {
   case bot.pre_handlers {
-    [] -> Continue
-    handlers -> {
+    [] -> Continue(dict.new())
+    handlers -> do_run_pre_handlers(handlers, bot, update, dict.new())
+  }
+}
+
+fn do_run_pre_handlers(
+  handlers: List(PreHandler(dependencies)),
+  bot: Bot(session, error, dependencies),
+  update: Update,
+  annotations: Dict(String, Dynamic),
+) -> PreRouterResult {
+  case handlers {
+    [] -> Continue(annotations)
+    [handler, ..rest] -> {
       let pre_ctx =
         PreContext(
           update:,
           config: bot.config,
           dependencies: bot.dependencies,
           bot_info: bot.bot_info,
+          annotations:,
         )
-      do_run_pre_handlers(handlers, pre_ctx)
-    }
-  }
-}
-
-fn do_run_pre_handlers(
-  handlers: List(PreHandler(dependencies)),
-  pre_ctx: PreContext(dependencies),
-) -> PreRouterResult {
-  case handlers {
-    [] -> Continue
-    [handler, ..rest] ->
       case handler(pre_ctx) {
         Stop -> Stop
-        Continue -> do_run_pre_handlers(rest, pre_ctx)
+        Continue(added) ->
+          do_run_pre_handlers(rest, bot, update, dict.merge(annotations, added))
       }
+    }
   }
 }
 
@@ -661,6 +688,7 @@ fn handle_update_bot_message(
   update update,
   reply_with reply_with,
   envelope envelope,
+  annotations annotations,
 ) -> Result(Bot(session, error, dependencies), error.TelegaError) {
   let key = build_session_key(update)
 
@@ -693,7 +721,7 @@ fn handle_update_bot_message(
 
   actor.send(
     chat_subject,
-    HandleNewChatInstanceMessage(update:, reply_with:, envelope:),
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotations:),
   )
   Ok(watch_instance(bot, key:, chat_subject:, reply_with:))
 }
@@ -708,6 +736,8 @@ pub opaque type ChatInstanceMessage(session, error, dependencies) {
     update: Update,
     reply_with: Subject(Bool),
     envelope: Option(Envelope),
+    /// What the pre-router middleware attached to this update.
+    annotations: Dict(String, Dynamic),
   )
   WaitHandlerChatInstanceMessage(
     handler: Handler(session, error, dependencies),
@@ -840,14 +870,19 @@ fn loop_chat_instance(
   message,
 ) {
   case message {
-    HandleNewChatInstanceMessage(update:, reply_with:, envelope:) -> {
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotations:) -> {
       let chat = touch(chat)
       case media_group_part(chat, update) {
         Some(#(media_group_id, message)) ->
           buffer_media_group(chat, media_group_id, message, update, reply_with)
         None ->
           do_handle_new_chat_instance_message(
-            context: new_context_with_envelope(chat:, update:, envelope:),
+            context: new_context_with_envelope(
+              chat:,
+              update:,
+              envelope:,
+              annotations:,
+            ),
             chat:,
             update:,
             reply_with:,
@@ -1144,7 +1179,9 @@ fn flush_media_group(
               raw: buffer.raw,
             )
           do_handle_update(
-            context: new_context(chat:, update:),
+            // The album was assembled from several updates over the debounce
+            // window; there is no single set of annotations to carry over.
+            context: new_context(chat:, update:, annotations: dict.new()),
             chat:,
             update:,
             ack_with: fn(_settled) { Nil },
@@ -1481,12 +1518,18 @@ pub type Context(session, error, dependencies) {
     start_time: Option(Timestamp),
     log_prefix: Option(String),
     bot_info: User,
+    /// What the pre-router middleware attached to *this* update, read back
+    /// with [`annotation`](#annotation). Scoped to one update and never
+    /// persisted — unlike `dependencies` (services) and `session` (per-user
+    /// state).
+    annotations: Dict(String, Dynamic),
   )
 }
 
 fn new_context(
   chat chat: ChatInstance(session, error, dependencies),
   update update,
+  annotations annotations: Dict(String, Dynamic),
 ) -> Context(session, error, dependencies) {
   Context(
     update:,
@@ -1498,7 +1541,27 @@ fn new_context(
     start_time: None,
     log_prefix: None,
     bot_info: chat.bot_info,
+    annotations:,
   )
+}
+
+/// Read one pre-router annotation, decoded.
+///
+/// `Error(Nil)` when the key was never set or the value does not decode as
+/// `decoder` expects, so a handler can fall back with `result.unwrap`:
+///
+/// ```gleam
+/// let locale =
+///   bot.annotation(ctx, "locale", decode.string)
+///   |> result.unwrap("en")
+/// ```
+pub fn annotation(
+  ctx: Context(session, error, dependencies),
+  key: String,
+  decoder: Decoder(a),
+) -> Result(a, Nil) {
+  use value <- result.try(dict.get(ctx.annotations, key))
+  decode.run(value, decoder) |> result.replace_error(Nil)
 }
 
 /// Build the update's context; when the update was dispatched with a
@@ -1508,8 +1571,9 @@ fn new_context_with_envelope(
   chat chat: ChatInstance(session, error, dependencies),
   update update,
   envelope envelope: Option(Envelope),
+  annotations annotations: Dict(String, Dynamic),
 ) -> Context(session, error, dependencies) {
-  let context = new_context(chat:, update:)
+  let context = new_context(chat:, update:, annotations:)
   case envelope {
     None -> context
     Some(envelope) -> {

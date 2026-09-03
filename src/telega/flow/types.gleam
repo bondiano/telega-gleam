@@ -88,23 +88,6 @@ pub type WaitResult {
   Pending
 }
 
-/// Flat representation of a FlowInstance for database serialization
-pub type FlowInstanceRow {
-  FlowInstanceRow(
-    id: String,
-    flow_name: String,
-    user_id: Int,
-    chat_id: Int,
-    current_step: String,
-    data: Dict(String, String),
-    step_data: Dict(String, String),
-    wait_token: Option(String),
-    wait_timeout_at: Option(Int),
-    created_at: Int,
-    updated_at: Int,
-  )
-}
-
 /// Storage interface for persistent flows
 pub type FlowStorage(error) {
   FlowStorage(
@@ -312,7 +295,4 @@ pub type InlineStep {
 pub type ComposedStep {
   ComposedFlowStep(Int)
   ComposedSelectFlow
-  ComposedStartParallel
-  ComposedParallelFlow(Int)
-  ComposedMergeResults
 }

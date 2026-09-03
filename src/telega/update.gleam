@@ -576,6 +576,60 @@ pub fn chat(update: Update) -> Option(Chat) {
   }
 }
 
+/// The message an update carries, when it carries one.
+///
+/// `None` for updates that are not about a message at all — callback queries
+/// (the pressed message is `query.message`, which may be inaccessible), inline
+/// queries, polls, chat member changes, boosts. `MediaGroupUpdate` answers with
+/// the album's first message, so content filters read the album's own flags.
+///
+/// This is what the content filters in `telega/router` (`is_reply`,
+/// `is_forwarded`, `has_entity`, …) read.
+pub fn message(update: Update) -> Option(Message) {
+  case update {
+    TextUpdate(message:, ..)
+    | CommandUpdate(message:, ..)
+    | MessageUpdate(message:, ..)
+    | PhotoUpdate(message:, ..)
+    | VideoUpdate(message:, ..)
+    | AudioUpdate(message:, ..)
+    | VoiceUpdate(message:, ..)
+    | WebAppUpdate(message:, ..)
+    | EditedMessageUpdate(message:, ..)
+    | BusinessMessageUpdate(message:, ..)
+    | EditedBusinessMessageUpdate(message:, ..)
+    | GuestMessageUpdate(message:, ..) -> Some(message)
+
+    ChannelPostUpdate(post:, ..) | EditedChannelPostUpdate(post:, ..) ->
+      Some(post)
+
+    MediaGroupUpdate(messages:, ..) ->
+      list.first(messages) |> option.from_result
+
+    BusinessConnectionUpdate(..)
+    | CallbackQueryUpdate(..)
+    | ChatBoostUpdate(..)
+    | ChatJoinRequestUpdate(..)
+    | ChatMemberUpdate(..)
+    | ChosenInlineResultUpdate(..)
+    | DeletedBusinessMessageUpdate(..)
+    | InlineQueryUpdate(..)
+    | ManagedBotUpdate(..)
+    | MessageGenerationStoppedUpdate(..)
+    | MessageReactionCountUpdate(..)
+    | MessageReactionUpdate(..)
+    | MyChatMemberUpdate(..)
+    | PaidMediaPurchaseUpdate(..)
+    | PollAnswerUpdate(..)
+    | PollUpdate(..)
+    | PreCheckoutQueryUpdate(..)
+    | RemovedChatBoost(..)
+    | ShippingQueryUpdate(..)
+    | SubscriptionUpdate(..)
+    | UnknownUpdate(..) -> None
+  }
+}
+
 pub fn to_string(update: Update) -> String {
   case update {
     CommandUpdate(command:, from_id:, ..) ->

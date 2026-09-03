@@ -93,6 +93,26 @@ router
 
 Callback handlers receive the callback query id and the data string.
 
+### Typed callback routes
+
+A `keyboard.KeyboardCallbackData` factory already knows how to build and parse
+its own payloads. `on_callback_data` registers a route for exactly those
+payloads and hands the handler the decoded value:
+
+```gleam
+let page = keyboard.int_callback_data("page")
+
+router
+|> router.on_callback_data(page, fn(ctx, _query, page_number) {
+  // page_number: Int — no unpack_callback, no error handling in the handler
+  reply.with_text(ctx, "Page " <> int.to_string(page_number))
+})
+```
+
+A payload belonging to another factory, or one the factory cannot deserialize,
+never reaches the handler — it leaves the context untouched rather than handing
+you a `0`/`False` stand-in.
+
 ## Media
 
 ```gleam
@@ -130,7 +150,17 @@ Dedicated handlers exist for the rest of the Telegram update types:
   `on_paid_reaction`, `on_reaction_added`, `on_reaction_removed`, `on_reaction_count`
 - **Chat events** — `on_chat_member_updated` (another member's status changed),
   `on_my_chat_member_updated` (the *bot's own* status changed: blocked,
-  unblocked, added to a group, promoted), `on_chat_join_request`
+  unblocked, added to a group, promoted), `on_chat_join_request`,
+  `on_chat_boost`, `on_removed_chat_boost`
+- **Messages that aren't new messages** — `on_edited_message`,
+  `on_channel_post`, `on_edited_channel_post`, `on_business_message`
+  (all receive a `Message`)
+- **Mini Apps** — `on_web_app_data` (`WebAppData` from `sendData`)
+- **Paid media** — `on_paid_media_purchase`
+- **Anything else** — `on_unknown_update` receives an `UnknownUpdate`: a Bot API
+  kind this version does not know, or one whose payload failed to decode. Read
+  the raw payload with `update.raw`. Registering it turns off `allowed_updates`
+  narrowing, since an unknown kind can never be in a derived set.
 
 ```gleam
 router
@@ -176,9 +206,19 @@ router
 Available predicates include message-type filters (`is_text`, `is_command`,
 `has_photo`, `has_video`, `has_media`, `is_media_group`, `is_callback_query`),
 text-content filters (`text_equals`, `text_starts_with`, `text_contains`,
-`command_equals`), and user/chat filters (`from_user`, `from_users`, `in_chat`,
+`command_equals`), user/chat filters (`from_user`, `from_users`, `in_chat`,
 `from_chats`, `is_private_chat`, `is_group_chat`, `chat_type`,
-`callback_data_starts_with`).
+`callback_data_starts_with`), and message-content filters (`is_forwarded`,
+`is_reply`, `in_topic`, `has_entity`, `via_bot`, `via_bot_id`,
+`is_automatic_forward`, `has_media_spoiler`).
+
+The message-content filters read the update's own `Message` through
+`update.message`, which is `None` for updates that are not about a message
+(callback queries, inline queries, polls, member changes) — those match none of
+them. `has_entity` searches both `entities` and `caption_entities`, so a
+captioned photo with a link matches `has_entity("url")` just as a text message
+does. The full table is in the
+[`telega/router` module docs](https://hexdocs.pm/telega/telega/router.html).
 
 `from_user` / `from_users` match on the update's sender whatever its kind.
 `is_private_chat` / `is_group_chat` / `chat_type` read the chat's own `type_`
@@ -254,8 +294,8 @@ import telega/bot
 telega.new_for_polling(api_client:)
 |> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
   case is_banned(pre.update.chat_id) {
-    True -> bot.Stop      // drop before routing
-    False -> bot.Continue // let it through
+    True -> bot.Stop        // drop before routing
+    False -> bot.proceed()  // let it through
   }
 })
 |> telega.with_router(router)
@@ -263,9 +303,40 @@ telega.new_for_polling(api_client:)
 
 Pre-handlers run in registration order; the first `bot.Stop` short-circuits the
 rest and the router. A `PreContext` carries the `update`, `config`,
-`dependencies`, and `bot_info` — but no `session` (it hasn't been loaded yet).
-Because they all run sequentially in the single bot actor, read-then-write logic
-is race-free across concurrent updates.
+`dependencies`, `bot_info`, and the `annotations` earlier pre-handlers set — but
+no `session` (it hasn't been loaded yet). Because they all run sequentially in
+the single bot actor, read-then-write logic is race-free across concurrent
+updates.
+
+### Annotations
+
+A pre-handler can attach per-update facts for the handlers downstream by
+returning `bot.Continue(annotations:)` instead of `bot.proceed()`. Annotations
+from successive pre-handlers are merged (a repeated key takes the newer value)
+and arrive in every handler as `ctx.annotations`, read back with
+`bot.annotation`:
+
+```gleam
+import gleam/dict
+import gleam/dynamic
+import gleam/dynamic/decode
+import gleam/result
+
+telega.new_for_polling(api_client:)
+|> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
+  bot.Continue(annotations: dict.from_list([
+    #("locale", dynamic.string(resolve_locale(pre.update))),
+  ]))
+})
+
+// ... in any handler
+let locale =
+  bot.annotation(ctx, "locale", decode.string)
+  |> result.unwrap("en")
+```
+
+Annotations live for one update and are never persisted — long-lived services
+belong in `dependencies`, per-user state in the session.
 
 ### Webhook idempotency (deduplication)
 
@@ -316,36 +387,56 @@ errors (like session persistence) go to the bot's catch handler configured via
 
 ## Composition
 
-Routers compose, so you can build complex routing from small pieces.
+There are two types, and they do different jobs.
 
-**Merge** combines two routers into one flat router; the first wins on conflicts:
+- `router.Router` is a **leaf**: routes, middleware, a catch handler, a scope.
+  Everything named `on_*` registers on a leaf, and `telega.with_router` takes one.
+- `router.RouterTree` is a **composition**: an ordered list of leaves, some of
+  them guarded by a filter. It has no routes of its own — `on_command` on a tree
+  does not compile — and `telega.with_router_tree` takes one.
+
+**Merge** combines two leaves into one flat leaf; the first wins on conflicts:
 
 ```gleam
 let main = router.merge(admin_router, user_router)
 ```
 
-**Compose** tries each sub-router in sequence, each keeping its own middleware and
-catch handler:
+**A tree** tries each leaf in order, each keeping its own middleware and catch
+handler. `append` adds a leaf that is always consulted; `branch` adds one that is
+only consulted when a filter matches:
 
 ```gleam
-let app = router.compose(private_router, public_router)
-let app = router.compose_many([admin, moderator, user])
+let app =
+  router.tree()
+  |> router.branch(router.is_private_chat(), private_router)
+  |> router.branch(router.is_group_chat(), group_router)
+  |> router.append(shared_router)
+  |> router.tree_fallback(handle_unknown)
+
+telega.new_for_polling(api_client:)
+|> telega.with_router_tree(app)
 ```
 
-Registering on a composed router still works: the route lands in a trailing leaf
-that is tried after every composed branch, as if you had composed one more
-router. Settings that belong to each branch rather than to one of them —
-`use_middleware`, `with_catch_handler`, `scope` — are applied to every branch.
+`compose(a, b)` and `compose_many([a, b, c])` are shorthand for a tree of
+unconditional branches.
+
+A branch whose filter matches but which has no route for the update is skipped,
+so the next branch gets its turn. Routes that used to be registered *on* a
+composition now go into an explicit trailing leaf:
 
 ```gleam
 // `/help` is handled after `private_router` and `public_router` decline it
 let app =
   router.compose(private_router, public_router)
-  |> router.on_command("help", handle_help)
+  |> router.append(router.new("direct") |> router.on_command("help", handle_help))
 ```
 
-**Scope** restricts a router to updates matching a predicate. A scoped router
-declines updates outside its scope, so in a composition the next router gets
+Settings that belong to each branch rather than to one of them have tree-level
+forms: `use_middleware_on_tree` and `with_catch_handler_on_tree` (the latter
+leaves a branch that already has its own catch handler alone).
+
+**Scope** restricts a leaf to updates matching a predicate. A scoped leaf
+declines updates outside its scope, so in a tree the next branch gets
 its turn:
 
 ```gleam
@@ -472,22 +563,36 @@ Route → update type mapping:
 | `on_chat_member_updated` | `chat_member` |
 | `on_my_chat_member_updated` | `my_chat_member` |
 | `on_chat_join_request` | `chat_join_request` |
+| `on_chat_boost` / `on_removed_chat_boost` | `chat_boost` / `removed_chat_boost` |
+| `on_edited_message` | `edited_message` |
+| `on_channel_post` / `on_edited_channel_post` | `channel_post` / `edited_channel_post` |
+| `on_business_message` | `business_message` |
+| `on_web_app_data` | `message` |
+| `on_paid_media_purchase` | `purchased_paid_media` |
 
-`router.allowed_updates(router)` returns the derived list directly.
+`router.allowed_updates(router)` returns the derived list directly;
+`router.tree_allowed_updates(tree)` does the same for a composition (one branch
+that gives up on narrowing gives up for the whole tree).
 
-**Derivation only sees the router.** Updates a *conversation* or a *flow* waits
-for are invisible to it: a bot whose router registers only commands, but whose
-handlers call `wait_callback`, derives `["message"]` and then waits forever for
-a `callback_query` Telegram was never asked to send. Add those explicitly:
+**A narrowed set always admits `callback_query`.** Derivation only sees the
+router, and a handler that parks on `bot.wait_callback` is invisible to it — a
+bot whose router registers only commands used to derive `["message"]` and then
+wait forever. `callback_query` is therefore always in a non-empty derived set;
+allowing it costs nothing when unused, because Telegram only sends callback
+queries for keyboards the bot itself put on screen.
+
+Other kinds a conversation or flow waits for are still invisible. Add them
+explicitly:
 
 ```gleam
 |> telega.with_auto_allowed_updates()
-|> telega.with_extra_allowed_updates(["callback_query"])
+|> telega.with_extra_allowed_updates(["message_reaction"])
 ```
 
 **Escape hatches.** A manual `telega.set_allowed_updates(builder, updates)` always
 wins; auto derivation is skipped entirely. And if the router has a **fallback**,
-**custom**, or **filtered** route — which can match any update — the set can't be
-narrowed safely, so derivation returns the empty list and Telegram falls back to
-its default update set (`with_extra_allowed_updates` is a no-op in that case).
-Use `set_allowed_updates` when you need narrowing alongside catch-all routes.
+**custom**, **filtered**, or **`on_unknown_update`** route — which can match any
+update — the set can't be narrowed safely, so derivation returns the empty list
+and Telegram falls back to its default update set
+(`with_extra_allowed_updates` is a no-op in that case). Use
+`set_allowed_updates` when you need narrowing alongside catch-all routes.
