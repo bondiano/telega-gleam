@@ -1,5 +1,9 @@
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
+import gleam/erlang/atom.{type Atom}
 import gleam/erlang/process.{type Subject}
 import gleam/option.{type Option}
+import gleam/result
 
 import telega/error
 import telega/internal/ets_table
@@ -56,6 +60,13 @@ pub fn unregister_owned_by(
   }
 }
 
+/// How many keys the registry holds — the number of live chat instances.
+pub fn size(registry: Registry(message)) -> Int {
+  ets_info(registry.table, atom.create("size"))
+  |> decode.run(decode.int)
+  |> result.unwrap(0)
+}
+
 pub fn get(
   registry: Registry(message),
   key key: String,
@@ -65,6 +76,9 @@ pub fn get(
     [#(_, subject), ..] -> option.Some(subject)
   }
 }
+
+@external(erlang, "ets", "info")
+fn ets_info(table: EtsTable, key: Atom) -> Dynamic
 
 @external(erlang, "ets", "insert")
 fn ets_insert(table: EtsTable, tuple: #(String, Subject(message))) -> Bool

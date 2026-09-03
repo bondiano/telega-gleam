@@ -1,6 +1,7 @@
 import gleam/bool
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/process
+import gleam/http
 import gleam/http/request
 import gleam/result
 import gleam/string
@@ -79,11 +80,68 @@ pub fn handle_bot_with_reply(
   }
 }
 
+/// The path `handle_health` answers on by default.
+pub const default_health_path = "healthz"
+
+/// Answer a health probe on `path` (no leading slash), and let every other
+/// request through to `next`.
+///
+/// `GET /healthz` answers `200` with
+/// `{"status":"healthy","in_flight":3,"chat_instances":41}` while the bot
+/// actor is alive, accepting updates, and below the cap set by
+/// `telega.with_max_in_flight`; `503` with the same shape (`draining`,
+/// `overloaded`, `unavailable`) otherwise. That is what a load balancer, a
+/// Kubernetes readiness probe or a fly.io health check wants: a deploy drains
+/// out of rotation instead of black-holing updates.
+///
+/// ```gleam
+/// fn handle_request(bot: Telega(s, e, d), req: Request) -> Response {
+///   use <- telega_wisp.handle_health(telega: bot, req:, path: telega_wisp.default_health_path)
+///   use <- telega_wisp.handle_bot(telega: bot, req:)
+///   // ... your own routes
+/// }
+/// ```
+pub fn handle_health(
+  telega telega: Telega(session, error, dependencies),
+  req req: WispRequest,
+  path path: String,
+  next handler: fn() -> WispResponse,
+) -> WispResponse {
+  use <- bool.lazy_guard(!is_health_request(req, path), handler)
+
+  let health = telega.health(telega)
+  wisp.json_response(
+    telega.health_to_json(health),
+    telega.health_status_code(health),
+  )
+}
+
+fn is_health_request(req: WispRequest, path: String) -> Bool {
+  req.method == http.Get
+  && wisp.path_segments(req) == string.split(normalize_path(path), "/")
+}
+
+fn normalize_path(path: String) -> String {
+  path |> string.trim |> trim_slashes
+}
+
+fn trim_slashes(path: String) -> String {
+  case string.starts_with(path, "/") {
+    True -> trim_slashes(string.drop_start(path, 1))
+    False ->
+      case string.ends_with(path, "/") {
+        True -> trim_slashes(string.drop_end(path, 1))
+        False -> path
+      }
+  }
+}
+
 /// Common webhook gate shared by `handle_bot` and `handle_bot_with_reply`:
 /// non-webhook paths go to `next`, then the JSON body is required, the secret
-/// token validated (401), and updates are rejected with 503 while the bot is
-/// draining (graceful shutdown) so Telegram retries them after the deploy
-/// instead of losing them.
+/// token validated (401), and updates are rejected with 503 unless the bot is
+/// healthy — draining (graceful shutdown), over the `with_max_in_flight` cap,
+/// or not answering at all — so Telegram retries them after the deploy or the
+/// spike instead of them being lost.
 fn accept_bot_request(
   telega: Telega(session, error, dependencies),
   req: WispRequest,
@@ -95,7 +153,9 @@ fn accept_bot_request(
   use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
     wisp.response(401)
   })
-  use <- bool.lazy_guard(telega.is_draining(telega), fn() { wisp.response(503) })
+  use <- bool.lazy_guard(!telega.is_healthy(telega.health(telega)), fn() {
+    wisp.response(503)
+  })
 
   run(json)
 }

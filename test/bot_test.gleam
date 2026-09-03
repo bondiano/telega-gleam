@@ -56,6 +56,7 @@ pub fn bot_start_test() {
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 
@@ -93,6 +94,7 @@ pub fn bot_handle_update_test() {
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 
@@ -205,6 +207,7 @@ pub fn get_session_error_fallback_test() {
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 

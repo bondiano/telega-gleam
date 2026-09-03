@@ -59,6 +59,7 @@ fn start_named_bot(
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: option.None,
       name: Some(name),
     )
 

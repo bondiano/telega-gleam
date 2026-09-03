@@ -76,9 +76,11 @@ import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp.{type Timestamp}
 
+import telega/dead_letter
 import telega/internal/config.{type Config}
 import telega/internal/log
 import telega/internal/registry.{type Registry}
+import telega/internal/routing
 
 import telega/client
 import telega/error
@@ -135,6 +137,8 @@ pub opaque type Bot(session, error, dependencies) {
     instances: Dict(Pid, InstanceWatch),
     // Lifetime and persistence knobs handed to every chat instance.
     chat_settings: ChatSettings,
+    // Where updates whose instance crashed are written, if anywhere.
+    dead_letters: Option(dead_letter.DeadLetters),
   )
 }
 
@@ -143,8 +147,9 @@ type InstanceWatch {
   InstanceWatch(
     key: String,
     monitor: process.Monitor,
-    /// Reply subjects of dispatched-but-unfinished updates, oldest first.
-    pending: List(Subject(Bool)),
+    /// Dispatched-but-unfinished updates, oldest first: the caller waiting on
+    /// each, and the update itself so a crash can dead-letter it.
+    pending: List(#(Subject(Bool), Update)),
   )
 }
 
@@ -341,9 +346,23 @@ pub opaque type BotMessage {
   // `reply_with` with the number of drained updates once all in-flight work
   // completes.
   StartDrainBotMessage(reply_with: Subject(Int))
-  // Query whether the bot is currently draining (used by webhook adapters to
-  // return 503 and let Telegram retry).
-  IsDrainingBotMessage(reply_with: Subject(Bool))
+  // Ask the bot actor how it is doing: draining, in-flight work, live chat
+  // instances. Answering it at all is what proves the actor is alive, which is
+  // why the health endpoint of a webhook adapter is a call and not a lookup.
+  HealthBotMessage(reply_with: Subject(BotHealth))
+}
+
+/// What the bot actor reports about itself.
+///
+/// - `draining` — a graceful shutdown has started; the bot no longer accepts
+///   updates.
+/// - `in_flight` — updates currently being handled by chat instances.
+/// - `chat_instances` — chat instances registered right now.
+///
+/// Read it with [`health`](#health); `telega.health` wraps it with the
+/// liveness of the actor itself.
+pub type BotHealth {
+  BotHealth(draining: Bool, in_flight: Int, chat_instances: Int)
 }
 
 /// Handler called when an error occurs in handler
@@ -366,6 +385,7 @@ pub fn start(
     ChatInstanceSubject(session, error, dependencies),
   ),
   chat_settings chat_settings: ChatSettings,
+  dead_letters dead_letters: Option(dead_letter.DeadLetters),
   name name: Option(process.Name(BotMessage)),
 ) -> actor.StartResult(BotSubject) {
   let builder =
@@ -395,6 +415,7 @@ pub fn start(
         drain_waiter: None,
         instances: dict.new(),
         chat_settings:,
+        dead_letters:,
       )
       |> actor.initialised
       |> actor.selecting(selector)
@@ -509,8 +530,15 @@ fn bot_loop(
         _ -> actor.continue(Bot(..bot, drain_waiter: Some(reply_with)))
       }
     }
-    IsDrainingBotMessage(reply_with:) -> {
-      process.send(reply_with, bot.draining)
+    HealthBotMessage(reply_with:) -> {
+      process.send(
+        reply_with,
+        BotHealth(
+          draining: bot.draining,
+          in_flight: bot.in_flight,
+          chat_instances: registry.size(bot.registry),
+        ),
+      )
       actor.continue(bot)
     }
     CancelConversationBotMessage(key:) -> {
@@ -547,11 +575,33 @@ pub fn drain(bot_subject bot_subject: BotSubject, timeout timeout: Int) -> Int {
 /// Webhook adapters use this to answer `503` so Telegram retries the update
 /// after the deploy instead of dropping it.
 pub fn is_draining(bot_subject bot_subject: BotSubject) -> Bool {
+  case health(bot_subject:, timeout: health_timeout) {
+    Some(BotHealth(draining:, ..)) -> draining
+    // An actor that cannot answer is not draining — it is gone, which the
+    // health endpoint reports as unavailable rather than as a drain.
+    None -> False
+  }
+}
+
+/// Default time (ms) a health query waits for the bot actor.
+pub const health_timeout = 1000
+
+/// Ask the bot actor for its current state. `None` when it does not answer
+/// within `timeout` — it is dead, wedged, or too busy to reply, all of which
+/// a load balancer should read as "do not send traffic here".
+///
+/// Unlike every other query in this module this one is answered from the bot
+/// actor's own mailbox, so a bot whose actor is blocked reports unhealthy
+/// instead of reporting stale numbers.
+pub fn health(
+  bot_subject bot_subject: BotSubject,
+  timeout timeout: Int,
+) -> Option(BotHealth) {
   let reply = process.new_subject()
-  process.send(bot_subject, IsDrainingBotMessage(reply))
-  case process.receive(reply, 1000) {
-    Ok(draining) -> draining
-    Error(_) -> False
+  process.send(bot_subject, HealthBotMessage(reply))
+  case process.receive(reply, timeout) {
+    Ok(health) -> Some(health)
+    Error(Nil) -> None
   }
 }
 
@@ -638,18 +688,64 @@ fn handle_instance_down(
       case dict.get(bot.instances, pid) {
         Error(Nil) -> actor.continue(bot)
         Ok(watch) -> {
-          list.each(watch.pending, process.send(_, False))
+          list.each(watch.pending, fn(entry) { process.send(entry.0, False) })
           registry.unregister_owned_by(bot.registry, key: watch.key, pid:)
           telemetry.execute(
             ["telega", "chat_instance", "down"],
             [#("unanswered", list.length(watch.pending))],
             [#("key", telemetry.StringValue(watch.key))],
           )
+          dead_letter_all(bot, watch, down)
           Bot(..bot, instances: dict.delete(bot.instances, pid))
           |> settle_in_flight(finished: list.length(watch.pending))
         }
       }
     process.PortDown(..) -> actor.continue(bot)
+  }
+}
+
+/// Write the updates a crashed instance never finished to the dead-letter
+/// queue, if the bot has one.
+///
+/// The write happens in a spawned process: the bot actor is the only
+/// dispatcher the bot has, and a storage backend that has stopped answering
+/// must not be able to stop it too.
+fn dead_letter_all(
+  bot: Bot(session, error, dependencies),
+  watch: InstanceWatch,
+  down: process.Down,
+) -> Nil {
+  use <- bool.guard(when: watch.pending == [], return: Nil)
+  case bot.dead_letters {
+    None -> Nil
+    Some(letters) -> {
+      let reason = down_reason(down)
+      let updates = list.map(watch.pending, fn(entry) { update.raw(entry.1) })
+      process.spawn_unlinked(fn() {
+        list.each(updates, fn(raw) {
+          case dead_letter.record(letters:, update: raw, reason:) {
+            Ok(Nil) ->
+              telemetry.execute(
+                ["telega", "dead_letter", "recorded"],
+                [#("count", 1)],
+                [
+                  #("key", telemetry.StringValue(watch.key)),
+                  #("update_id", telemetry.IntValue(raw.update_id)),
+                ],
+              )
+            Error(error) -> log.error_d("Failed to store dead letter: ", error)
+          }
+        })
+      })
+      Nil
+    }
+  }
+}
+
+fn down_reason(down: process.Down) -> String {
+  case down {
+    process.ProcessDown(reason:, ..) -> string.inspect(reason)
+    process.PortDown(reason:, ..) -> string.inspect(reason)
   }
 }
 
@@ -692,20 +788,17 @@ fn watch_instance(
   key key: String,
   chat_subject chat_subject: ChatInstanceSubject(session, error, dependencies),
   reply_with reply_with: Subject(Bool),
+  update update: Update,
 ) -> Bot(session, error, dependencies) {
   case process.subject_owner(chat_subject) {
     Error(Nil) -> bot
     Ok(pid) -> {
+      let entry = #(reply_with, update)
       let watch = case dict.get(bot.instances, pid) {
         Ok(watch) ->
-          InstanceWatch(
-            ..watch,
-            pending: list.append(watch.pending, [reply_with]),
-          )
+          InstanceWatch(..watch, pending: list.append(watch.pending, [entry]))
         Error(Nil) ->
-          InstanceWatch(key:, monitor: process.monitor(pid), pending: [
-            reply_with,
-          ])
+          InstanceWatch(key:, monitor: process.monitor(pid), pending: [entry])
       }
       Bot(..bot, instances: dict.insert(bot.instances, pid, watch))
     }
@@ -752,7 +845,7 @@ fn handle_update_bot_message(
     chat_subject,
     HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotations:),
   )
-  Ok(watch_instance(bot, key:, chat_subject:, reply_with:))
+  Ok(watch_instance(bot, key:, chat_subject:, reply_with:, update:))
 }
 
 // Chat Instance --------------------------------------------------------------------
@@ -1313,11 +1406,9 @@ fn route_update(
       }
     None ->
       case
-        telemetry.span(
-          event: ["telega", "update"],
-          metadata: update_telemetry_metadata(update),
-          run: fn() { chat.router_handler(context, update) },
-        )
+        update_span(context, update, fn() {
+          chat.router_handler(context, update)
+        })
       {
         Ok(Context(session: new_session, ..)) ->
           persist_and_continue(
@@ -1349,7 +1440,67 @@ fn update_telemetry_metadata(upd: Update) -> List(#(String, telemetry.Value)) {
     #("update_type", telemetry.StringValue(update.type_to_string(upd))),
     #("chat_id", telemetry.IntValue(upd.chat_id)),
     #("from_id", telemetry.IntValue(upd.from_id)),
+    #("update_id", telemetry.IntValue(update.raw(upd).update_id)),
   ]
+}
+
+/// What the router recorded about this update while dispatching it: which
+/// route claimed it and which leaf router that route belonged to.
+///
+/// Only known *after* the handler ran, which is why `stop`/`exception` carry
+/// richer metadata than `start` — a `start` handler that needs the route can
+/// correlate on `update_id`.
+fn route_telemetry_metadata(
+  ctx: Context(session, error, dependencies),
+) -> List(#(String, telemetry.Value)) {
+  let route = case scope.get(ctx.scope, routing.route_slot) {
+    Ok(route) -> [#("route", telemetry.StringValue(route))]
+    Error(Nil) -> []
+  }
+  case scope.get(ctx.scope, routing.router_slot) {
+    Ok(name) -> [#("router", telemetry.StringValue(name)), ..route]
+    Error(Nil) -> route
+  }
+}
+
+/// The `telega.update` span around routing.
+///
+/// Not `telemetry.span`: the `route` metadata does not exist until the router
+/// has picked a handler, so `stop` and `exception` are emitted with metadata
+/// gathered after the run rather than the metadata `start` was given.
+fn update_span(
+  context: Context(session, error, dependencies),
+  upd: Update,
+  run: fn() -> Result(a, e),
+) -> Result(a, e) {
+  let metadata = update_telemetry_metadata(upd)
+  let started_at = telemetry.monotonic_time()
+  telemetry.execute(
+    ["telega", "update", "start"],
+    [#("system_time", telemetry.system_time())],
+    metadata,
+  )
+
+  let result = run()
+
+  let duration = telemetry.monotonic_time() - started_at
+  let metadata = list.append(route_telemetry_metadata(context), metadata)
+  case result {
+    Ok(_) ->
+      telemetry.execute(
+        ["telega", "update", "stop"],
+        [#("duration", duration)],
+        metadata,
+      )
+    Error(error) ->
+      telemetry.execute(
+        ["telega", "update", "exception"],
+        [#("duration", duration)],
+        [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
+      )
+  }
+
+  result
 }
 
 /// Write the session back, answer the update, and carry on.
@@ -1561,11 +1712,9 @@ fn unmatched_while_waiting(
   case update {
     CommandUpdate(..) ->
       case
-        telemetry.span(
-          event: ["telega", "update"],
-          metadata: update_telemetry_metadata(update),
-          run: fn() { chat.router_handler(context, update) },
-        )
+        update_span(context, update, fn() {
+          chat.router_handler(context, update)
+        })
       {
         Ok(Context(session: new_session, ..)) ->
           persist_and_continue(
@@ -2021,7 +2170,10 @@ fn do_handle_with_telemetry(
   update upd: Update,
   handler handler: Handler(session, error, dependencies),
 ) {
-  let metadata = update_telemetry_metadata(upd)
+  let metadata = [
+    #("route", telemetry.StringValue("conversation")),
+    ..update_telemetry_metadata(upd)
+  ]
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
     ["telega", "update", "start"],

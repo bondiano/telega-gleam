@@ -163,6 +163,7 @@ pub fn with_test_bot_advanced_with_dependencies(
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 

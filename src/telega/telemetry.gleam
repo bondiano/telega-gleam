@@ -10,9 +10,9 @@
 ////
 //// | Event | Measurements | Metadata |
 //// |---|---|---|
-//// | `telega.update.start` | `system_time` | `update_type`, `chat_id`, `from_id` |
-//// | `telega.update.stop` | `duration` | `update_type`, `chat_id`, `from_id` |
-//// | `telega.update.exception` | `duration` | `error`, `update_type`, `chat_id`, `from_id` |
+//// | `telega.update.start` | `system_time` | `update_type`, `chat_id`, `from_id`, `update_id` |
+//// | `telega.update.stop` | `duration` | `update_type`, `chat_id`, `from_id`, `update_id`, `route`, `router` |
+//// | `telega.update.exception` | `duration` | `error`, `update_type`, `chat_id`, `from_id`, `update_id`, `route`, `router` |
 //// | `telega.api_call.start` | `system_time` | `method` |
 //// | `telega.api_call.stop` | `duration` | `method`, `status` |
 //// | `telega.api_call.exception` | `duration` | `method`, `error` |
@@ -21,6 +21,8 @@
 //// | `telega.rate_limit.hit` | `count` | `update_type`, `chat_id`, `from_id` |
 //// | `telega.chat_instance.spawn` | `count` | `chat_id`, `from_id` |
 //// | `telega.chat_instance.terminate` | `count` | `key`, `reason` |
+//// | `telega.chat_instance.down` | `unanswered` | `key` |
+//// | `telega.dead_letter.recorded` | `count` | `key`, `update_id` |
 //// | `telega.flow.step` | `duration` | `flow_name`, `step` |
 //// | `telega.flow.timeout` | `count` | `flow_name`, `step` |
 //// | `telega.flow.cancel` | `count` | `flow_name`, `step` |
@@ -36,6 +38,19 @@
 ////   before your `catch_handler` runs.
 //// - `telega.chat_instance.terminate` fires only for abnormal stops;
 ////   `reason` tells you which.
+//// - `telega.chat_instance.down` fires when a monitored instance exits with
+////   updates still unanswered; `unanswered` is how many the bot answered
+////   `False` on its behalf.
+//// - `telega.dead_letter.recorded` fires once per update stored by the
+////   [dead-letter queue](dead_letter.html), which only exists if the bot was
+////   built with `telega.with_dead_letters`.
+//// - `route` names the route that claimed the update — `"command:/start"`,
+////   `"callback:prefix:menu:"`, `"text:exact:hi"`, `"photo"`, `"fallback"`,
+////   `"unmatched"`, or `"conversation"` for an update a pending `wait_*`
+////   consumed — and `router` names the leaf router (the tree branch) it came
+////   from. Both are absent from `start`, which is emitted before the router
+////   has picked anything; correlate on `update_id`. Read them from inside a
+////   handler with `router.matched_route`/`router.matched_router`.
 //// - `telega.rate_limit.hit` fires for every update rejected by
 ////   `router.with_rate_limit`.
 //// - `telega.shutdown.start`/`stop` wrap `telega.shutdown`'s graceful drain;

@@ -99,6 +99,7 @@ fn start_bot_with_sessions(
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
   #(started.data, reg)
@@ -179,6 +180,7 @@ pub fn c1_failing_persist_answers_the_caller_test() {
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 

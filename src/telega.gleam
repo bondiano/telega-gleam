@@ -3,6 +3,7 @@ import gleam/dict
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
@@ -23,6 +24,7 @@ import telega/internal/utils
 import telega/api
 import telega/bot.{type BotSubject, type Context, type SessionSettings}
 import telega/client
+import telega/dead_letter
 import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
@@ -54,6 +56,11 @@ pub opaque type Telega(session, error, dependencies) {
     /// a chat instance start does.
     session_load_error: bot.SessionLoadError,
     dependencies: dependencies,
+    /// In-flight updates above which a webhook adapter answers `503`.
+    /// `None` (the default) never reports overload.
+    max_in_flight: Option(Int),
+    /// Where updates whose chat instance crashed are kept, if anywhere.
+    dead_letters: Option(dead_letter.DeadLetters),
   )
 }
 
@@ -143,6 +150,10 @@ pub opaque type TelegaBuilder(session, error, dependencies, state) {
     /// When `True` and `allowed_updates` was not set manually, derive the
     /// requested update types from the router's registered routes.
     auto_allowed_updates: Bool,
+    /// In-flight updates above which `health` reports overload.
+    max_in_flight: Option(Int),
+    /// Where updates whose chat instance crashed are kept.
+    dead_letters: Option(dead_letter.DeadLetters),
   )
 }
 
@@ -329,6 +340,8 @@ pub fn new(
     command_translate: None,
     extra_allowed_updates: [],
     auto_allowed_updates: False,
+    max_in_flight: None,
+    dead_letters: None,
   )
 }
 
@@ -389,6 +402,8 @@ pub fn dependencies(
     command_translate: builder.command_translate,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
+    max_in_flight: builder.max_in_flight,
+    dead_letters: builder.dead_letters,
   )
 }
 
@@ -451,6 +466,8 @@ pub fn session(
     command_translate: builder.command_translate,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
+    max_in_flight: builder.max_in_flight,
+    dead_letters: builder.dead_letters,
   )
 }
 
@@ -493,6 +510,8 @@ fn configured(
     command_translate: builder.command_translate,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
+    max_in_flight: builder.max_in_flight,
+    dead_letters: builder.dead_letters,
   )
 }
 
@@ -938,6 +957,54 @@ pub fn with_drain_timeout(
   TelegaBuilder(..builder, drain_timeout: Some(timeout))
 }
 
+/// Cap how much work the bot admits to before it reports itself overloaded.
+///
+/// The bot actor counts updates currently being handled by chat instances.
+/// Once that count reaches `limit`, [`health`](#health) answers `Overloaded`
+/// and the webhook adapters (`telega_wisp`, `telega_mist`) answer `503` — so
+/// Telegram backs off and redelivers instead of piling more work onto a bot
+/// that is already behind. Long polling needs no such cap: its worker already
+/// stops fetching while `limit` updates are in flight.
+///
+/// Pick it from what the bot can actually keep up with; there is no useful
+/// default, so without this call overload is never reported.
+///
+/// ```gleam
+/// telega.new(api_client)
+/// |> telega.router(router)
+/// |> telega.webhook(url:, path:, secret_token:)
+/// |> telega.with_max_in_flight(500)
+/// |> telega.start()
+/// ```
+pub fn with_max_in_flight(
+  builder: TelegaBuilder(session, error, dependencies, state),
+  limit limit: Int,
+) -> TelegaBuilder(session, error, dependencies, state) {
+  TelegaBuilder(..builder, max_in_flight: Some(limit))
+}
+
+/// Keep updates whose chat instance crashed, so a panic costs a log line and
+/// a stored update instead of the update itself.
+///
+/// See [`telega/dead_letter`](dead_letter.html) for what is stored and
+/// [`replay_dead_letters`](#replay_dead_letters) for feeding them back in.
+///
+/// ```gleam
+/// telega.new(api_client)
+/// |> telega.router(router)
+/// |> telega.with_dead_letters(storage.dead_letters_from_storage(
+///   storage,
+///   retention_ms: Some(7 * 24 * 60 * 60 * 1000),
+/// ))
+/// |> telega.start()
+/// ```
+pub fn with_dead_letters(
+  builder: TelegaBuilder(session, error, dependencies, state),
+  letters letters: dead_letter.DeadLetters,
+) -> TelegaBuilder(session, error, dependencies, state) {
+  TelegaBuilder(..builder, dead_letters: Some(letters))
+}
+
 /// Install an OS signal handler (SIGTERM) that runs a graceful `shutdown` and
 /// then halts the VM.
 ///
@@ -1167,6 +1234,7 @@ fn boot(
         dependencies: builder.dependencies,
         chat_factory: chat_factory_ref,
         chat_settings: chat_settings(builder),
+        dead_letters: builder.dead_letters,
         name: Some(bot_name),
       )
     })
@@ -1369,7 +1437,31 @@ pub fn get_dependencies(
   ctx.dependencies
 }
 
-/// Add logging context to the current context.
+/// Run `fun` with a logging context: every log line it writes is prefixed
+/// with `prefix` and carries the update's identifiers as **structured logger
+/// metadata**.
+///
+/// The metadata fields are `telega_prefix`, `chat_id`, `from_id`, `update_id`
+/// and `session_key`. They are set as Erlang `logger` process metadata, so
+/// they reach any handler or formatter that reads it — including log lines
+/// written by libraries that know nothing about telega:
+///
+/// ```erlang
+/// %% sys.config
+/// {kernel, [{logger, [{handler, default, logger_std_h,
+///   #{formatter => {logger_formatter,
+///     #{template => [time," ",level," chat=",chat_id," upd=",update_id," ",msg,"\n"],
+///       single_line => true}}}}]}]}
+/// ```
+///
+/// The previous metadata is restored when `fun` returns, so nested contexts
+/// stack and unwind.
+///
+/// ```gleam
+/// use ctx <- telega.log_context(ctx, "checkout")
+/// telega.log_info(ctx, "starting")
+/// reply.text(ctx, "One moment…")
+/// ```
 pub fn log_context(
   ctx: Context(session, error, dependencies),
   prefix: String,
@@ -1377,7 +1469,24 @@ pub fn log_context(
     Result(Context(session, error, dependencies), error),
 ) -> Result(Context(session, error, dependencies), error) {
   let ctx_with_log = bot.Context(..ctx, log_prefix: Some(prefix))
+  use <- log.with_metadata(log_metadata(ctx_with_log, prefix))
   fun(ctx_with_log)
+}
+
+/// The structured fields [`log_context`](#log_context) attaches. Everything
+/// here is already known to the runtime, so a handler never has to thread
+/// identifiers through its own log messages.
+fn log_metadata(
+  ctx: Context(session, error, dependencies),
+  prefix: String,
+) -> List(#(String, String)) {
+  [
+    #("telega_prefix", prefix),
+    #("chat_id", int.to_string(ctx.update.chat_id)),
+    #("from_id", int.to_string(ctx.update.from_id)),
+    #("update_id", int.to_string(update.raw(ctx.update).update_id)),
+    #("session_key", ctx.key),
+  ]
 }
 
 /// Context helpers for logging
@@ -2001,6 +2110,183 @@ pub fn is_draining(telega: Telega(session, error, dependencies)) -> Bool {
   bot.is_draining(telega.bot_subject)
 }
 
+/// What the bot reports about itself, for a `/healthz` endpoint or a
+/// readiness probe.
+///
+/// The three healthy-ish variants carry the same two numbers so a probe can
+/// log them whatever the verdict; `Unavailable` carries none because the bot
+/// actor did not answer, which is the whole finding.
+pub type Health {
+  /// The bot answered and is accepting updates.
+  Healthy(in_flight: Int, chat_instances: Int)
+  /// A graceful shutdown is under way — updates are being drained, not taken.
+  Draining(in_flight: Int, chat_instances: Int)
+  /// In-flight work has reached the cap set by
+  /// [`with_max_in_flight`](#with_max_in_flight).
+  Overloaded(in_flight: Int, chat_instances: Int, max_in_flight: Int)
+  /// The bot actor did not answer within the timeout: dead, wedged, or too
+  /// busy to reply. All three mean "do not send traffic here".
+  Unavailable
+}
+
+/// Default time (ms) [`health`](#health) waits for the bot actor to answer.
+pub const default_health_timeout = bot.health_timeout
+
+/// Ask the running bot how it is doing.
+///
+/// The answer comes from the bot actor's own mailbox, so an actor that has
+/// died or wedged reports `Unavailable` rather than a stale snapshot — which
+/// is exactly what a load balancer needs to know.
+///
+/// ```gleam
+/// case telega.health(bot) {
+///   telega.Healthy(..) -> wisp.ok()
+///   _ -> wisp.response(503)
+/// }
+/// ```
+///
+/// The webhook adapters (`telega_wisp.handle_health`, `telega_mist.handle_health`)
+/// wrap this into a ready-made `/healthz` endpoint.
+pub fn health(telega: Telega(session, error, dependencies)) -> Health {
+  health_within(telega, default_health_timeout)
+}
+
+/// Like [`health`](#health), with an explicit timeout (ms) for the actor's
+/// reply.
+pub fn health_within(
+  telega: Telega(session, error, dependencies),
+  timeout: Int,
+) -> Health {
+  case bot.health(bot_subject: telega.bot_subject, timeout:) {
+    None -> Unavailable
+    Some(bot.BotHealth(draining:, in_flight:, chat_instances:)) ->
+      case draining, telega.max_in_flight {
+        True, _ -> Draining(in_flight:, chat_instances:)
+        False, Some(max) if in_flight >= max ->
+          Overloaded(in_flight:, chat_instances:, max_in_flight: max)
+        False, _ -> Healthy(in_flight:, chat_instances:)
+      }
+  }
+}
+
+/// Whether the bot is ready to take another update.
+pub fn is_healthy(health: Health) -> Bool {
+  case health {
+    Healthy(..) -> True
+    Draining(..) | Overloaded(..) | Unavailable -> False
+  }
+}
+
+/// The HTTP status a health endpoint should answer with: `200` when healthy,
+/// `503` otherwise.
+pub fn health_status_code(health: Health) -> Int {
+  case is_healthy(health) {
+    True -> 200
+    False -> 503
+  }
+}
+
+/// A JSON body for a health endpoint:
+/// `{"status":"healthy","in_flight":3,"chat_instances":41}`.
+///
+/// `status` is one of `healthy`, `draining`, `overloaded`, `unavailable`.
+pub fn health_to_json(health: Health) -> String {
+  let fields = case health {
+    Healthy(in_flight:, chat_instances:) -> [
+      #("status", json.string("healthy")),
+      #("in_flight", json.int(in_flight)),
+      #("chat_instances", json.int(chat_instances)),
+    ]
+    Draining(in_flight:, chat_instances:) -> [
+      #("status", json.string("draining")),
+      #("in_flight", json.int(in_flight)),
+      #("chat_instances", json.int(chat_instances)),
+    ]
+    Overloaded(in_flight:, chat_instances:, max_in_flight:) -> [
+      #("status", json.string("overloaded")),
+      #("in_flight", json.int(in_flight)),
+      #("chat_instances", json.int(chat_instances)),
+      #("max_in_flight", json.int(max_in_flight)),
+    ]
+    Unavailable -> [#("status", json.string("unavailable"))]
+  }
+  json.object(fields) |> json.to_string
+}
+
+/// What [`replay_dead_letters`](#replay_dead_letters) did.
+pub type ReplayReport {
+  ReplayReport(
+    /// Updates re-dispatched and handled; their entries were dropped.
+    replayed: Int,
+    /// Keys the bot declined or failed again, left in the queue.
+    failed: List(String),
+    /// Keys whose stored payload could not be read back, left in the queue.
+    unreadable: List(String),
+  )
+}
+
+/// Read the [dead-letter queue](dead_letter.html) without touching it.
+///
+/// `Error` when the bot has no queue configured or the backend could not be
+/// read; the second element of the pair lists entries that would not decode.
+pub fn dead_letters(
+  telega: Telega(session, error, dependencies),
+) -> Result(#(List(dead_letter.DeadLetter), List(String)), String) {
+  use letters <- result.try(configured_dead_letters(telega))
+  dead_letter.list(letters)
+}
+
+/// Feed every stored dead letter back through the bot, dropping each entry the
+/// bot handles.
+///
+/// Run it once the bug that crashed the handler is fixed — a replayed update
+/// that crashes again is dead-lettered afresh under the same key, so the queue
+/// does not grow. Updates are replayed oldest `update_id` first, one at a
+/// time, and each is dispatched exactly like an update arriving from Telegram
+/// (the same routing, the same session, the same pre-router middleware). An
+/// update the bot declines (`False`) keeps its entry.
+///
+/// This is deliberately a manual operation: replaying a queue full of updates
+/// the users have long since moved past is rarely what you want automatically.
+pub fn replay_dead_letters(
+  telega: Telega(session, error, dependencies),
+) -> Result(ReplayReport, String) {
+  use letters <- result.try(configured_dead_letters(telega))
+  use #(found, unreadable) <- result.try(dead_letter.list(letters))
+
+  let #(replayed, failed) =
+    list.fold(found, #(0, []), fn(acc, letter) {
+      let #(replayed, failed) = acc
+      case handle_update(telega, letter.update) {
+        True -> {
+          let _ = dead_letter.drop(letters:, key: letter.key)
+          #(replayed + 1, failed)
+        }
+        False -> #(replayed, [letter.key, ..failed])
+      }
+    })
+
+  Ok(ReplayReport(replayed:, failed: list.reverse(failed), unreadable:))
+}
+
+/// Forget one dead letter by its storage key, without replaying it.
+pub fn drop_dead_letter(
+  telega: Telega(session, error, dependencies),
+  key key: String,
+) -> Result(Nil, String) {
+  use letters <- result.try(configured_dead_letters(telega))
+  dead_letter.drop(letters:, key:)
+}
+
+fn configured_dead_letters(
+  telega: Telega(session, error, dependencies),
+) -> Result(dead_letter.DeadLetters, String) {
+  option.to_result(
+    telega.dead_letters,
+    "No dead-letter queue configured. Add one with `telega.with_dead_letters`.",
+  )
+}
+
 /// Get the supervisor PID for the running bot instance.
 pub fn get_supervisor_pid(
   telega: Telega(session, error, dependencies),
@@ -2034,6 +2320,8 @@ fn finalize(
       session_key: session_key(builder),
       session_load_error: builder.session_load_error,
       dependencies: builder.dependencies,
+      max_in_flight: builder.max_in_flight,
+      dead_letters: builder.dead_letters,
     )
 
   // Auto-publish commands first, then run the user hook. Either failing tears

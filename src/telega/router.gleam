@@ -294,6 +294,7 @@ import telega/bot.{type Context}
 
 import telega/internal/log
 import telega/internal/rate_limiter
+import telega/internal/routing
 import telega/keyboard.{type KeyboardCallbackData}
 import telega/model/types.{
   type Audio, type CallbackQuery, type ChatBoostRemoved, type ChatBoostUpdated,
@@ -305,6 +306,7 @@ import telega/model/types.{
   type Voice, type WebAppData, ReactionTypeEmojiReactionType,
   ReactionTypePaidReactionType,
 }
+import telega/scope
 import telega/telemetry
 import telega/update.{type Command, type Update}
 
@@ -601,6 +603,40 @@ pub fn new(name: String) -> Router(session, error, dependencies) {
 /// `scope` and `merge`).
 pub fn name(router: Router(session, error, dependencies)) -> String {
   router.name
+}
+
+/// The label of the route that handled the current update, as recorded by
+/// [`handle`](#handle) — `"command:/start"`, `"callback:exact:menu"`,
+/// `"text:exact:hi"`, `"photo"`, `"fallback"`, or `"unmatched"` when no route
+/// (and no fallback) claimed it.
+///
+/// This is what the `route` metadata of the `telega.update.stop` telemetry
+/// event carries; read it from a middleware or a catch handler to log or
+/// count by route. `None` outside of routing (a `wait_*` continuation, a
+/// background context).
+pub fn matched_route(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  scope.get(ctx.scope, routing.route_slot) |> option.from_result
+}
+
+/// The name of the leaf router whose route claimed the current update — the
+/// tree branch, for a bot built with `router_tree`.
+pub fn matched_router(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  scope.get(ctx.scope, routing.router_slot) |> option.from_result
+}
+
+/// Record which route claimed the update, for telemetry and for
+/// [`matched_route`](#matched_route).
+fn record_match(
+  ctx: Context(session, error, dependencies),
+  router_name: String,
+  route: String,
+) -> Nil {
+  scope.put(ctx.scope, routing.route_slot, route)
+  scope.put(ctx.scope, routing.router_slot, router_name)
 }
 
 /// Routes are prepended, so the newest registration is tried first.
@@ -1433,9 +1469,9 @@ pub fn handle(
 ) -> Result(Context(session, error, dependencies), error) {
   use <- bool.guard(when: !in_scope(router, update), return: Ok(ctx))
 
-  let handler =
-    find_handler(router, update, ctx)
-    |> apply_middleware(router.middleware)
+  let #(route, found) = find_handler(router, update, ctx)
+  record_match(ctx, router.name, route)
+  let handler = apply_middleware(found, router.middleware)
 
   case router.catch_handler {
     Some(catch_fn) ->
@@ -1834,19 +1870,21 @@ fn can_handle_update(
 }
 
 /// Find the appropriate handler for an update
+/// The handler for an update, together with the label of the route it came
+/// from. The label is what `telega.update.stop` reports as `route`.
 fn find_handler(
   router: Router(session, error, dependencies),
   update: Update,
   context: Context(session, error, dependencies),
-) -> Handler(session, error, dependencies) {
+) -> #(String, Handler(session, error, dependencies)) {
   case update {
     update.CommandUpdate(..) ->
       find_command_handler(router, update, context)
-      |> option.unwrap(find_route_or_fallback(router, update))
+      |> option.lazy_unwrap(fn() { find_route_or_fallback(router, update) })
 
     update.CallbackQueryUpdate(..) ->
       find_callback_handler(router, update)
-      |> option.unwrap(find_route_or_fallback(router, update))
+      |> option.lazy_unwrap(fn() { find_route_or_fallback(router, update) })
 
     _ -> find_route_or_fallback(router, update)
   }
@@ -1879,14 +1917,14 @@ fn find_command_handler(
   router: Router(session, error, dependencies),
   update: Update,
   context: Context(session, error, dependencies),
-) -> Option(Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
   case router, update {
-    Router(commands:, ..), update.CommandUpdate(command:, ..) ->
-      dict.get(
-        commands,
-        command_lookup_key(context.bot_info.username, command.command),
-      )
+    Router(commands:, ..), update.CommandUpdate(command:, ..) -> {
+      let key = command_lookup_key(context.bot_info.username, command.command)
+      dict.get(commands, key)
+      |> result.map(fn(handler) { #("command:/" <> key, handler) })
       |> option.from_result
+    }
     _, _ -> None
   }
 }
@@ -1895,7 +1933,7 @@ fn find_command_handler(
 fn find_callback_handler(
   router: Router(session, error, dependencies),
   update: Update,
-) -> Option(Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
   case router, update {
     Router(callbacks:, ..), update.CallbackQueryUpdate(query:, ..) ->
       case query.data {
@@ -1910,10 +1948,11 @@ fn find_callback_handler(
 fn find_callback_by_data(
   callbacks: Dict(String, Handler(session, error, dependencies)),
   data: String,
-) -> Option(Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
   // Try exact match first
-  case dict.get(callbacks, callback_key(Exact(data))) {
-    Ok(handler) -> Some(handler)
+  let key = callback_key(Exact(data))
+  case dict.get(callbacks, key) {
+    Ok(handler) -> Some(#("callback:" <> key, handler))
     Error(_) -> find_callback_by_pattern(callbacks, data)
   }
 }
@@ -1930,7 +1969,7 @@ fn find_callback_by_data(
 fn find_callback_by_pattern(
   callbacks: Dict(String, Handler(session, error, dependencies)),
   data: String,
-) -> Option(Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
   dict.to_list(callbacks)
   |> list.filter(fn(entry) {
     let #(key, _) = entry
@@ -1946,8 +1985,8 @@ fn find_callback_by_pattern(
   })
   |> list.first
   |> result.map(fn(entry) {
-    let #(_, handler) = entry
-    handler
+    let #(key, handler) = entry
+    #("callback:" <> key, handler)
   })
   |> option.from_result
 }
@@ -1998,13 +2037,13 @@ fn matches_callback_pattern(key: String, data: String) -> Bool {
 fn find_route_or_fallback(
   router: Router(session, error, dependencies),
   update: Update,
-) -> Handler(session, error, dependencies) {
+) -> #(String, Handler(session, error, dependencies)) {
   case find_matching_route(router.routes, update) {
-    Some(handler) -> handler
+    Some(labelled) -> labelled
     None ->
       case router.fallback {
-        Some(handler) -> handler
-        None -> fn(ctx, _) { Ok(ctx) }
+        Some(handler) -> #("fallback", handler)
+        None -> #("unmatched", fn(ctx, _) { Ok(ctx) })
       }
   }
 }
@@ -2013,10 +2052,57 @@ fn find_route_or_fallback(
 fn find_matching_route(
   routes: List(Route(session, error, dependencies)),
   update: Update,
-) -> Option(Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
   case list.filter(routes, route_matches(_, update)) {
     [] -> None
-    [first, ..rest] -> Some(handler_for_route(pick_route(first, rest), update))
+    [first, ..rest] -> {
+      let route = pick_route(first, rest)
+      Some(#(route_label(route), handler_for_route(route, update)))
+    }
+  }
+}
+
+/// A stable, low-cardinality name for a route — what `telega.update.stop`
+/// reports as `route` and what [`matched_route`](#matched_route) returns.
+///
+/// Names come from the route's own registration (a text pattern's payload, a
+/// reaction route's emojis), never from the update, so the set of values a
+/// running bot can emit is bounded by the routes it registered.
+fn route_label(route: Route(session, error, dependencies)) -> String {
+  case route {
+    TextPatternRoute(pattern:, ..) -> "text:" <> callback_key(pattern)
+    PhotoRoute(..) -> "photo"
+    VideoRoute(..) -> "video"
+    VoiceRoute(..) -> "voice"
+    AudioRoute(..) -> "audio"
+    MediaGroupRoute(..) -> "media_group"
+    WebAppDataRoute(..) -> "web_app_data"
+    EditedMessageRoute(..) -> "edited_message"
+    ChannelPostRoute(..) -> "channel_post"
+    EditedChannelPostRoute(..) -> "edited_channel_post"
+    BusinessMessageRoute(..) -> "business_message"
+    InlineQueryRoute(..) -> "inline_query"
+    ChosenInlineResultRoute(..) -> "chosen_inline_result"
+    ShippingQueryRoute(..) -> "shipping_query"
+    PreCheckoutQueryRoute(..) -> "pre_checkout_query"
+    PaidMediaPurchaseRoute(..) -> "paid_media_purchase"
+    PollRoute(..) -> "poll"
+    PollAnswerRoute(..) -> "poll_answer"
+    MessageReactionRoute(..) -> "message_reaction"
+    MessageReactionEmojiRoute(emojis:, ..) ->
+      "message_reaction:emoji:" <> string.join(emojis, ",")
+    MessageReactionPaidRoute(..) -> "message_reaction:paid"
+    MessageReactionAddedRoute(..) -> "message_reaction:added"
+    MessageReactionRemovedRoute(..) -> "message_reaction:removed"
+    MessageReactionCountRoute(..) -> "message_reaction_count"
+    ChatMemberUpdatedRoute(..) -> "chat_member"
+    MyChatMemberUpdatedRoute(..) -> "my_chat_member"
+    ChatJoinRequestRoute(..) -> "chat_join_request"
+    ChatBoostRoute(..) -> "chat_boost"
+    RemovedChatBoostRoute(..) -> "removed_chat_boost"
+    UnknownUpdateRoute(..) -> "unknown_update"
+    CustomRoute(..) -> "custom"
+    FilteredRoute(..) -> "filtered"
   }
 }
 

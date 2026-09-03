@@ -61,6 +61,7 @@ fn start_bot(
         init_timeout: 5000,
         media_group_timeout:,
       ),
+      dead_letters: None,
       name: None,
     )
   started.data

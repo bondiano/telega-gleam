@@ -56,6 +56,7 @@ fn start_bot(
       dependencies: Nil,
       chat_factory: start_test_factory(),
       chat_settings: settings,
+      dead_letters: None,
       name: None,
     )
   #(started.data, reg)

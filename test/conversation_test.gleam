@@ -90,6 +90,7 @@ fn build_test_bot_with_config(
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 

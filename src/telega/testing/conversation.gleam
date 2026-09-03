@@ -342,6 +342,7 @@ pub fn run_with_client_with_dependencies(
         init_timeout: 5000,
         media_group_timeout: option.None,
       ),
+      dead_letters: None,
       name: None,
     )
 

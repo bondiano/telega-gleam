@@ -17,6 +17,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import telega/bot.{type SessionSettings, SessionSettings}
+import telega/dead_letter
 import telega/flow/instance
 import telega/flow/types.{type FlowInstance, type FlowStorage, FlowStorage}
 import telega/internal/log
@@ -282,4 +283,42 @@ fn report_decode_error(kind: String, key: String, reason: String) -> Nil {
     #("kind", telemetry.StringValue(kind)),
     #("key", telemetry.StringValue(key)),
   ])
+}
+
+/// Derive a [dead-letter queue](dead_letter.html) from a `KeyValueStorage`.
+///
+/// Letters live under the `dlq:` prefix, alongside sessions (`session:`) and
+/// flows (`flow:`), so one backend covers all three. The backend's error type
+/// is flattened to a `String` — a dead letter is written from the bot actor's
+/// crash path, where nothing matches on it.
+///
+/// `retention_ms` bounds how long a letter is kept. `None` keeps letters until
+/// they are replayed or dropped, which is what you want while debugging and
+/// not what you want unattended: a bot crashing in a loop writes one entry per
+/// distinct `update_id`.
+///
+/// ```gleam
+/// telega.with_dead_letters(
+///   builder,
+///   storage.dead_letters_from_storage(storage, retention_ms: Some(604_800_000)),
+/// )
+/// ```
+pub fn dead_letters_from_storage(
+  storage storage: KeyValueStorage(error),
+  retention_ms retention_ms: Option(Int),
+) -> dead_letter.DeadLetters {
+  dead_letter.new(
+    put: fn(key, payload) {
+      case retention_ms {
+        Some(ttl) -> storage.set_with_ttl(key, payload, ttl)
+        None -> storage.set(key, payload)
+      }
+      |> result.map_error(string.inspect)
+    },
+    keys: fn() {
+      storage.scan(dead_letter.prefix) |> result.map_error(string.inspect)
+    },
+    read: fn(key) { storage.get(key) |> result.map_error(string.inspect) },
+    drop: fn(key) { storage.delete(key) |> result.map_error(string.inspect) },
+  )
 }
