@@ -1,0 +1,21 @@
+---
+version: 2.0.2
+title: menu:dialog:graph
+file: ./test/menu_dialog_test.gleam
+test_name: menu_dialog_graph_snapshot_test
+---
+flowchart LR
+  n0(["menu"])
+  n1["categories"]
+  n2["item"]
+  n3["items"]
+  n4(["back"])
+  n5(["done"])
+  n0 -->|"start"| n1
+  n1 -->|"book, bookings"| n5
+  n1 -->|"cat"| n3
+  n2 -.->|"back"| n4
+  n3 -.->|"back"| n4
+  n3 -->|"list:pick"| n2
+  n3 -->|"widget:list"| n3
+

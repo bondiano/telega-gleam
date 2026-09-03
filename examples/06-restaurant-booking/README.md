@@ -10,7 +10,7 @@ A complete restaurant table booking system demonstrating Telega's persistent flo
 - 🔄 **Flow resumption** - Continue conversations after interruptions and across restarts
 - ✅ **Input validation** - Robust error handling and user feedback
 - 🗄️ **Real-time data** - Live table availability checking
-- 🏗️ **Interactive Menus** - Advanced menu system using menu_builder with categories and pagination
+- 🏗️ **Interactive Menus** - The `/menu` browser is a second `telega/dialog` dialog: categories, a paged dish list, one dish
 - 🔭 **Observability** - `telega/telemetry` events turned into logs, plus custom spans around database queries
 - 🌍 **Internationalization** - English/Russian via `telega_i18n`; locale auto-selected from the user's Telegram language and switchable with `/language`
 
@@ -243,13 +243,17 @@ The bot guides users through multi-step flows that persist across bot restarts a
 
 ### Menu System
 
-The new `/menu` command demonstrates the `menu_builder` module capabilities:
+The `/menu` command is a second dialog (`flows/menu.gleam`), smaller than the
+booking one and worth reading first:
 
-- **Categorized browsing** - Browse by food categories (Appetizers, Main Courses, Pizza, etc.)
-- **Pagination** - Large item lists automatically paginated
-- **Navigation** - Smooth back/forward navigation between menu levels
-- **Rich formatting** - Emojis, pricing, and item counts for better UX
-- **Integration** - Seamlessly integrated with existing flows and database
+- **Categorized browsing** - one window per level: categories → dishes → a dish
+- **Pagination** - the dish list is a `widget.paged_select`, six per page; the
+  page is the widget's own persisted state
+- **Navigation** - `Back` is the dialog engine's history, not hand-written
+- **Callback payloads** - generated (`dlg:menu:categories:cat:Pasta`) and
+  measured against Telegram's 64-byte limit at `build()` time
+- **One live message** - each press edits the message in place instead of
+  sending the menu again
 
 Example menu structure:
 ```

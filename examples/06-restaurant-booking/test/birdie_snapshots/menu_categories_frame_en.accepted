@@ -1,0 +1,18 @@
+---
+version: 2.0.2
+title: menu:categories:frame_en
+file: ./test/menu_dialog_test.gleam
+test_name: categories_window_frame_test
+---
+parse_mode: HTML
+---
+<b>🍽️ Bella Vista Restaurant Menu</b>
+
+🍽️ Food Categories
+---
+[ 🥗 Appetizers (8 items) ](cat:Appetizers) | [ 🍖 Main Courses (12 items) ](cat:Main Courses)
+[ 🍝 Pasta (10 items) ](cat:Pasta) | [ 🍕 Pizza (15 items) ](cat:Pizza)
+[ 🍰 Desserts (6 items) ](cat:Desserts) | [ 🥤 Beverages (20 items) ](cat:Beverages)
+[ 📋 Reservations ](noop)
+[ 🍽️ Make Reservation ](book)
+[ 📋 My Bookings ](bookings)

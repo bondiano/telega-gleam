@@ -95,12 +95,10 @@ my_bookings = "📋 My Bookings"
 category_menu = "🍽️ {category} Menu"
 prev = "◀️ Previous"
 next = "Next ▶️"
-page = "Page {current} of {total}"
 back = "← Back to Categories"
-item_info = "📋 Item ID: {id}\n\n🍽️ Use /book to reserve a table and enjoy our food!"
+item_gone = "This dish is no longer on the menu."
 use_book = "📋 Use /book to make a table reservation!"
 use_my_bookings = "📋 Use /my_bookings to view your reservations!"
-error = "❌ Menu error: {error}"
 
 [menu.items]
 one = "{count} item"

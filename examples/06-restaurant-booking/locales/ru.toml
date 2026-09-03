@@ -95,12 +95,10 @@ my_bookings = "📋 Мои брони"
 category_menu = "🍽️ {category} — меню"
 prev = "◀️ Назад"
 next = "Вперёд ▶️"
-page = "Страница {current} из {total}"
 back = "← К категориям"
-item_info = "📋 ID блюда: {id}\n\n🍽️ Отправьте /book, чтобы забронировать столик и насладиться нашей кухней!"
+item_gone = "Этого блюда больше нет в меню."
 use_book = "📋 Отправьте /book, чтобы забронировать столик!"
 use_my_bookings = "📋 Отправьте /my_bookings, чтобы посмотреть свои брони!"
-error = "❌ Ошибка меню: {error}"
 
 [menu.items]
 one = "{count} блюдо"

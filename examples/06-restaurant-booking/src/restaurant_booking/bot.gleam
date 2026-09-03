@@ -62,7 +62,7 @@ pub fn build_router(
   // here only to build each flow's *persistence backend* — that storage is
   // created at init, before any update arrives, so it can't come from `ctx`.
   let registration_flow = registration.create_registration_flow(db)
-  let menu_flow = menu.create_menu_flow(db)
+  let menu_dialog = menu.create_menu_dialog(db)
   // Booking is a declarative dialog (`telega/dialog`) compiled onto the same
   // flow machinery — registered without a trigger and started from the
   // `/book` handler after the registration check.
@@ -71,7 +71,7 @@ pub fn build_router(
   let flow_registry =
     registry.new_registry()
     |> registry.register(types.OnCommand("/start"), registration_flow)
-    |> registry.register(types.OnCommand("/menu"), menu_flow)
+    |> dialog.attach_on_command(command: "/menu", dialog: menu_dialog)
     |> dialog.attach(booking_dialog)
     |> registry.register_cancel_command_with("/cancel", fn(ctx, _cancelled) {
       let _ = reply.with_text(ctx, i18n.t(ctx, "common.cancelled", []))

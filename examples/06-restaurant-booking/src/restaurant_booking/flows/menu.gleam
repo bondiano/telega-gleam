@@ -1,25 +1,32 @@
+//// The restaurant menu as a **declarative dialog** (`telega/dialog`).
+////
+//// One live message the user browses in place: categories → a paged list of
+//// dishes → one dish. The paging comes from `widget.paged_select`, the
+//// callback payloads are generated and size-checked at build time, and going
+//// `Back` is the engine's own history — none of which this file has to spell
+//// out. It replaced a `menu_builder` flow that re-sent the whole menu on
+//// every press.
+
+import gleam/dynamic/decode
 import gleam/int
-import gleam/option.{None, Some}
-import gleam/string
+import gleam/json
+import gleam/list
+import gleam/option.{type Option, None, Some}
 import sqlight
 
 import telega/bot.{type Context}
-import telega/flow/action
-import telega/flow/builder
-import telega/flow/instance
-import telega/flow/types
-import telega/keyboard
-import telega/menu_builder
+import telega/dialog
+import telega/dialog/types.{type ActionEvent, type DialogAction} as dtypes
+import telega/dialog/widget.{type SelectItem, SelectItem}
+import telega/format as fmt
 import telega/reply
 
 import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 import restaurant_booking/util
 
-pub type MenuStep {
-  ShowCategories
-  ShowItems
-}
+type Ctx =
+  Context(Nil, String, Dependencies)
 
 pub type MenuItem {
   MenuItem(
@@ -35,137 +42,233 @@ pub type MenuCategory {
   MenuCategory(name: String, emoji: String, item_count: Int)
 }
 
-fn step_to_string(step: MenuStep) -> String {
-  case step {
-    ShowCategories -> "categories"
-    ShowItems -> "items"
-  }
+/// What the user is looking at: a category, and inside it a dish. The page of
+/// the dish list is the `paged_select` widget's own state, persisted beside
+/// this one.
+pub type MenuState {
+  MenuState(category: String, item: Option(Int))
 }
 
-fn string_to_step(name: String) -> Result(MenuStep, Nil) {
-  case name {
-    "categories" -> Ok(ShowCategories)
-    "items" -> Ok(ShowItems)
-    _ -> Error(Nil)
-  }
+fn menu_codec() -> #(
+  fn(MenuState) -> String,
+  fn(String) -> Result(MenuState, Nil),
+) {
+  dialog.json_codec(
+    encoder: fn(state: MenuState) {
+      json.object([
+        #("category", json.string(state.category)),
+        #("item", json.nullable(state.item, json.int)),
+      ])
+    },
+    decoder: {
+      use category <- decode.field("category", decode.string)
+      use item <- decode.field("item", decode.optional(decode.int))
+      decode.success(MenuState(category:, item:))
+    },
+  )
 }
 
-pub fn create_menu_flow(
+pub fn create_menu_dialog(
   db: sqlight.Connection,
-) -> types.Flow(MenuStep, Nil, String, Dependencies) {
-  // `db` builds the flow's persistence backend at init. The menu steps use mock
-  // data and don't query the db, so they take no db at all.
+) -> dialog.Dialog(MenuState, Nil, String, Dependencies) {
+  // `db` builds the dialog's persistence backend at init. The windows use
+  // mock data and don't query the db at all.
   let storage = util.create_database_storage(db)
+  let #(encode_state, decode_state) = menu_codec()
 
-  builder.new("menu", storage, step_to_string, string_to_step)
-  |> builder.add_step(ShowCategories, show_categories_step)
-  |> builder.add_step(ShowItems, show_items_step)
-  |> builder.on_error(fn(ctx, _, error) {
-    let error_msg = option.unwrap(error, "Unknown error")
-    util.log_error("Menu flow error: " <> error_msg)
-    let _ =
-      reply.with_text(
-        ctx,
-        i18n.t(ctx, "menu.error", [#("error", i18n.t(ctx, error_msg, []))]),
-      )
-    Ok(ctx)
-  })
-  |> builder.build(initial: ShowCategories)
+  let assert Ok(menu_dialog) =
+    dialog.new(
+      id: "menu",
+      storage:,
+      initial_state: fn(_ctx) { MenuState(category: "", item: None) },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "categories",
+      render: render_categories,
+      on_action: handle_categories,
+    )
+    |> dialog.window_with_widgets(
+      id: "items",
+      render: render_items,
+      on_action: back_or_stay,
+      widgets: [items_widget()],
+    )
+    |> dialog.window(id: "item", render: render_item, on_action: back_or_stay)
+    |> dialog.initial("categories")
+    |> dialog.with_labels(dialog_labels)
+    |> dialog.build()
+
+  menu_dialog
 }
 
-fn show_categories_step(
-  ctx: Context(Nil, String, Dependencies),
-  instance: types.FlowInstance,
-) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
-  let categories = get_menu_categories()
+// Windows ----------------------------------------------------------------------------
 
-  let menu =
-    menu_builder.new("categories")
-    |> menu_builder.title(
+pub fn render_categories(_state: MenuState, ctx: Ctx) -> dtypes.RenderedWindow {
+  let text =
+    fmt.build()
+    |> fmt.with_mode(fmt.HTML)
+    |> fmt.bold_text(
       i18n.t(ctx, "menu.title", [#("restaurant", util.get_restaurant_name())]),
     )
-    |> menu_builder.section(Some(i18n.t(ctx, "menu.food_categories", [])))
-    |> menu_builder.add_items_from_list(categories, fn(category, _index) {
-      #(
-        category.emoji
-          <> " "
-          <> category.name
-          <> " ("
-          <> i18n.tn(ctx, "menu.items", category.item_count, [])
-          <> ")",
-        "category:" <> category.name,
-      )
-    })
-    |> menu_builder.section(Some(i18n.t(ctx, "menu.reservations", [])))
-    |> menu_builder.add_item(
-      i18n.t(ctx, "menu.make_reservation", []),
-      "book_table",
+    |> fmt.line_break()
+    |> fmt.line_break()
+    |> fmt.text(i18n.t(ctx, "menu.food_categories", []))
+    |> fmt.to_formatted()
+
+  dtypes.RenderedWindow(
+    text:,
+    buttons: list.append(category_rows(ctx), [
+      // A section header, the way an inline keyboard spells one.
+      [dtypes.NoopButton(i18n.t(ctx, "menu.reservations", []))],
+      [dtypes.ActionButton(i18n.t(ctx, "menu.make_reservation", []), "book")],
+      [dtypes.ActionButton(i18n.t(ctx, "menu.my_bookings", []), "bookings")],
+    ]),
+    media: None,
+  )
+}
+
+/// Categories two to a row; the category name travels in the button's
+/// argument, so one action id serves all of them.
+fn category_rows(ctx: Ctx) -> List(List(dtypes.DialogButton)) {
+  get_menu_categories()
+  |> list.map(fn(category) {
+    dtypes.ActionArgButton(
+      category.emoji
+        <> " "
+        <> category.name
+        <> " ("
+        <> i18n.tn(ctx, "menu.items", category.item_count, [])
+        <> ")",
+      "cat",
+      category.name,
     )
-    |> menu_builder.add_item(i18n.t(ctx, "menu.my_bookings", []), "my_bookings")
-    |> menu_builder.layout(2, None, True)
-    |> menu_builder.build()
+  })
+  |> list.sized_chunk(into: 2)
+}
 
-  case menu_builder.to_keyboard(menu) {
-    Ok(keyboard) -> {
-      let markup = keyboard.to_inline_markup(keyboard)
-      case reply.with_markup(ctx, menu_builder.get_title(menu), markup) {
-        Ok(_) -> action.wait_callback(ctx, instance)
-        Error(_) -> Error("Failed to send menu")
-      }
+fn handle_categories(
+  state: MenuState,
+  event: ActionEvent,
+  ctx: Ctx,
+) -> Result(DialogAction(MenuState), String) {
+  case event.action_id, event.arg {
+    "cat", Some(category) ->
+      Ok(dtypes.Goto("items", MenuState(category:, item: None)))
+    "book", _ -> {
+      let _ = reply.with_text(ctx, i18n.t(ctx, "menu.use_book", []))
+      Ok(dtypes.Done(state))
     }
-    Error(msg) -> Error("Failed to create menu: " <> msg)
+    "bookings", _ -> {
+      let _ = reply.with_text(ctx, i18n.t(ctx, "menu.use_my_bookings", []))
+      Ok(dtypes.Done(state))
+    }
+    _, _ -> Ok(dtypes.Stay(state))
   }
 }
 
-/// Show items in selected category
-fn show_items_step(
-  ctx: Context(Nil, String, Dependencies),
-  instance: types.FlowInstance,
-) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
-  // Get category from flow data
-  case instance.get_data(instance, "selected_category") {
-    Some(category) -> {
-      let items = get_menu_items(category)
+pub fn render_items(state: MenuState, ctx: Ctx) -> dtypes.RenderedWindow {
+  let text =
+    fmt.build()
+    |> fmt.with_mode(fmt.HTML)
+    |> fmt.bold_text(
+      i18n.t(ctx, "menu.category_menu", [#("category", state.category)]),
+    )
+    |> fmt.to_formatted()
 
-      let menu =
-        menu_builder.new("items")
-        |> menu_builder.title(
-          i18n.t(ctx, "menu.category_menu", [#("category", category)]),
-        )
-        |> menu_builder.add_items_from_list(items, fn(item, _index) {
-          #(item.name <> " - " <> item.price, "item:" <> int.to_string(item.id))
-        })
-        |> menu_builder.paginate_with_text(
-          6,
-          True,
-          i18n.t(ctx, "menu.prev", []),
-          i18n.t(ctx, "menu.next", []),
-          // {current}/{total} are filled by menu_builder, not i18n.
-          i18n.t(ctx, "menu.page", []),
-        )
-        |> menu_builder.with_back_button_text(
-          "back_to_categories",
-          i18n.t(ctx, "menu.back", []),
-        )
-        |> menu_builder.layout(1, None, False)
-        |> menu_builder.build()
+  // The dish buttons and the pager are the widget's rows, appended after
+  // these by the engine.
+  dtypes.RenderedWindow(text:, buttons: [[back_button(ctx)]], media: None)
+}
 
-      case menu_builder.to_keyboard(menu) {
-        Ok(keyboard) -> {
-          let markup = keyboard.to_inline_markup(keyboard)
-          case reply.with_markup(ctx, menu_builder.get_title(menu), markup) {
-            Ok(_) -> action.wait_callback(ctx, instance)
-            Error(_) -> Error("Failed to send items menu")
-          }
-        }
-        Error(msg) -> Error("Failed to create items menu: " <> msg)
-      }
-    }
-    None -> Error("No category selected")
+fn items_widget() -> dtypes.KeyboardWidget(MenuState, Nil, String, Dependencies) {
+  widget.paged_select(
+    id: "list",
+    items: item_options,
+    page_size: 6,
+    columns: 1,
+    on_selected: fn(state: MenuState, id, _ctx) {
+      Ok(dtypes.Goto(
+        "item",
+        MenuState(..state, item: int.parse(id) |> option.from_result),
+      ))
+    },
+  )
+}
+
+fn item_options(state: MenuState, _ctx: Ctx) -> List(SelectItem) {
+  get_menu_items(state.category)
+  |> list.map(fn(item) {
+    SelectItem(
+      id: int.to_string(item.id),
+      label: item.name <> " — " <> item.price,
+    )
+  })
+}
+
+pub fn render_item(state: MenuState, ctx: Ctx) -> dtypes.RenderedWindow {
+  let builder = fmt.build() |> fmt.with_mode(fmt.HTML)
+  let text = case selected_item(state) {
+    Some(item) ->
+      builder
+      |> fmt.bold_text(item.name)
+      |> fmt.line_break()
+      |> fmt.text(item.description)
+      |> fmt.line_break()
+      |> fmt.line_break()
+      |> fmt.text("💰 " <> item.price)
+      |> fmt.line_break()
+      |> fmt.line_break()
+      |> fmt.text(i18n.t(ctx, "menu.use_book", []))
+      |> fmt.to_formatted()
+    // The dish went away between the render that offered it and the press.
+    None ->
+      builder
+      |> fmt.text(i18n.t(ctx, "menu.item_gone", []))
+      |> fmt.to_formatted()
+  }
+
+  dtypes.RenderedWindow(text:, buttons: [[back_button(ctx)]], media: None)
+}
+
+fn selected_item(state: MenuState) -> Option(MenuItem) {
+  use id <- option.then(state.item)
+  get_menu_items(state.category)
+  |> list.find(fn(item) { item.id == id })
+  |> option.from_result
+}
+
+// Shared bits ------------------------------------------------------------------------
+
+fn back_button(ctx: Ctx) -> dtypes.DialogButton {
+  dtypes.ActionButton(i18n.t(ctx, "menu.back", []), "back")
+}
+
+fn back_or_stay(
+  state: MenuState,
+  event: ActionEvent,
+  _ctx: Ctx,
+) -> Result(DialogAction(MenuState), String) {
+  case event.action_id {
+    "back" -> Ok(dtypes.Back(state))
+    _ -> Ok(dtypes.Stay(state))
   }
 }
 
-// Helper Functions ------------------------------------------------------------------------------------
+/// Localized engine labels: the pager arrows and the stale-button notice come
+/// from the i18n catalog instead of the wordless unicode defaults.
+fn dialog_labels(ctx: Ctx) -> dtypes.Labels {
+  let defaults = dtypes.default_labels()
+  dtypes.Labels(
+    ..defaults,
+    prev: i18n.t(ctx, "menu.prev", []),
+    next: i18n.t(ctx, "menu.next", []),
+    stale: i18n.t(ctx, "common.stale", []),
+  )
+}
+
+// Mock data --------------------------------------------------------------------------
 
 /// Get menu categories (mock data)
 fn get_menu_categories() -> List(MenuCategory) {
@@ -307,55 +410,5 @@ fn get_menu_items(category: String) -> List(MenuItem) {
       MenuItem(26, "Tea Selection", "Various tea options", "$3.99", category),
     ]
     _ -> []
-  }
-}
-
-/// Handle menu navigation callbacks
-pub fn handle_menu_callback(
-  ctx: Context(Nil, String, Dependencies),
-  instance: types.FlowInstance,
-  callback_data: String,
-) -> types.StepResult(MenuStep, Nil, String, Dependencies) {
-  case string.starts_with(callback_data, "category:") {
-    True -> {
-      let category = string.drop_start(callback_data, 9)
-      // Store selected category in flow data
-      let updated_instance =
-        instance.store_data(instance, "selected_category", category)
-      action.next(ctx, updated_instance, ShowItems)
-    }
-    False -> {
-      case string.starts_with(callback_data, "item:") {
-        True -> {
-          let item_id_str = string.drop_start(callback_data, 5)
-          case int.parse(item_id_str) {
-            Ok(item_id) -> {
-              let item_info =
-                i18n.t(ctx, "menu.item_info", [
-                  #("id", int.to_string(item_id)),
-                ])
-              let _ = reply.with_text(ctx, item_info)
-              action.complete(ctx, instance)
-            }
-            Error(_) -> Error("Invalid item ID")
-          }
-        }
-        False -> {
-          case callback_data {
-            "back_to_categories" -> action.next(ctx, instance, ShowCategories)
-            "book_table" -> {
-              let _ = reply.with_text(ctx, i18n.t(ctx, "menu.use_book", []))
-              action.complete(ctx, instance)
-            }
-            "my_bookings" -> {
-              let _ =
-                reply.with_text(ctx, i18n.t(ctx, "menu.use_my_bookings", []))
-              action.complete(ctx, instance)
-            }
-            _ -> Error("Unknown menu action: " <> callback_data)
-          }
-        }
-      }
-    }
   }
 }

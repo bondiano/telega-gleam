@@ -1,0 +1,11 @@
+---
+version: 2.0.2
+title: menu:items:frame_en
+file: ./test/menu_dialog_test.gleam
+test_name: items_window_frame_test
+---
+parse_mode: HTML
+---
+<b>🍽️ Appetizers Menu</b>
+---
+[ ← Back to Categories ](back)
