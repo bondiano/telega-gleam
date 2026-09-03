@@ -100,17 +100,26 @@ const chat_rule_prefix = "chat:"
 const chat_rule_idle_ms = 60_000
 
 /// The rule a request for `chat_id` is paced by, created on demand.
-fn chat_rule(limits: PerChatLimits, chat_id: Int) -> Rule {
+///
+/// It carries the `default` rule's priority, because a per-chat rule is an
+/// extra bound on the lane `fetch` already uses — not a lane of its own. Giving
+/// it a priority of its own would quietly move every ordinary reply out of
+/// whatever tier the bot put `default` in.
+fn chat_rule(limits: PerChatLimits, chat_id: Int, priority: Int) -> Rule {
   let #(rate, limit) = case chat_id < 0 {
     True -> #(limits.group_rate, limits.group_window_ms)
     False -> #(limits.private_rate, limits.private_window_ms)
   }
-  Rule(
-    id: chat_rule_prefix <> int.to_string(chat_id),
-    rate:,
-    limit:,
-    priority: 5,
-  )
+  Rule(id: chat_rule_prefix <> int.to_string(chat_id), rate:, limit:, priority:)
+}
+
+/// The priority ordinary replies ride at: the `default` rule's, when the bot
+/// configured one.
+fn default_priority(config: QueueConfig) -> Int {
+  case list.find(config.rules, fn(rule) { rule.id == "default" }) {
+    Ok(rule) -> rule.priority
+    Error(Nil) -> 5
+  }
 }
 
 /// How often the queue re-checks its rule windows. Exactly one such timer is
@@ -190,10 +199,21 @@ type State {
     config: QueueConfig,
     /// Rule states by rule ID
     rule_states: Dict(String, RuleState),
-    /// Overall request count
-    overall_count: Int,
-    /// Overall window start
-    overall_window_start: Int,
+    /// When each of the requests admitted inside the last overall window was
+    /// let through. The ceiling Telegram enforces is any second, not the one a
+    /// counter happens to be resetting on, so this is a log rather than a
+    /// count: a fixed window admits its whole rate in the tail of one and again
+    /// in the head of the next. It is also what makes the reserve below worth
+    /// having — slots come back one at a time as they age out, instead of the
+    /// budget reopening all at once for whoever is queued at that instant.
+    overall_admissions: List(Int),
+    /// The best (lowest) priority any configured rule has. The lane that holds
+    /// it is the one the reserve is kept for.
+    top_priority: Int,
+    /// How much of the overall rate no lower-priority rule may spend. Derived
+    /// once from the config; `0` when every rule shares one priority, because
+    /// then there is no lane to keep it for.
+    reserve: Int,
     /// Requests being executed right now, by request ID
     in_flight: Dict(String, InFlight),
     /// Self reference
@@ -221,12 +241,15 @@ pub fn start(config: QueueConfig) -> Result(RequestQueue, actor.StartError) {
           )
         })
 
+      let top_priority = top_priority_of(config)
+
       let initial_state =
         State(
           config: config,
           rule_states: rule_states,
-          overall_count: 0,
-          overall_window_start: 0,
+          overall_admissions: [],
+          top_priority:,
+          reserve: reserve_of(config, top_priority),
           in_flight: dict.new(),
           self: self,
         )
@@ -524,7 +547,7 @@ fn resolve_rule(
     False ->
       case chat_id_of_rule(rule_id), state.config.per_chat {
         Ok(chat_id), Some(limits) -> {
-          let rule = chat_rule(limits, chat_id)
+          let rule = chat_rule(limits, chat_id, default_priority(state.config))
           let now = utils.current_time_ms()
           let rule_states =
             dict.insert(
@@ -630,7 +653,7 @@ fn process_rule_queue(state: State, rule_id: String, now: Int) -> State {
                   new_rule_state,
                 ),
                 in_flight:,
-                overall_count: state.overall_count + 1,
+                overall_admissions: [now, ..state.overall_admissions],
               )
               |> process_rule_queue(rule_id, now)
             }
@@ -639,11 +662,61 @@ fn process_rule_queue(state: State, rule_id: String, now: Int) -> State {
   }
 }
 
+/// The bot-wide ceiling is expressed per second, and it is that second the
+/// admission log is pruned against.
+const overall_window_ms = 1000
+
+/// How much of the overall rate is held back for the best-priority lane, as a
+/// fraction: a fifth of it, and never less than one request.
+const reserve_divisor = 5
+
+fn top_priority_of(config: QueueConfig) -> Int {
+  case config.rules {
+    [] -> 0
+    [first, ..rest] ->
+      list.fold(rest, first.priority, fn(best, rule) {
+        int.min(best, rule.priority)
+      })
+  }
+}
+
+/// Priority decides who goes FIRST among the requests queued right now — which
+/// is worth nothing to a lane that is empty at the moment the budget opens and
+/// arrives a beat later to find it spent. A bulk sender pacing itself at the
+/// overall rate does exactly that, every window, and starves the interactive
+/// lane for a full window at a time while the sort dutifully puts it first.
+///
+/// So a slice of the overall rate is not for sale: rules outside the
+/// best-priority lane may spend the budget only down to the reserve, and what
+/// is left is there for whoever is being answered right now. It costs the bulk
+/// lane a fifth of its throughput while it is saturating the bot, and nothing
+/// at all otherwise.
+fn reserve_of(config: QueueConfig, top_priority: Int) -> Int {
+  let has_lower_lane =
+    list.any(config.rules, fn(rule) { rule.priority > top_priority })
+
+  case config.overall_rate, has_lower_lane {
+    Some(rate), True -> int.max(1, rate / reserve_divisor)
+    _, _ -> 0
+  }
+}
+
+/// The share of `limit` this rule may spend. Never below one, so a reserve
+/// wider than the rate slows the lower lanes down instead of stopping them.
+fn budget_for(limit: Int, reserve: Int, rule: Rule, top_priority: Int) -> Int {
+  case rule.priority <= top_priority {
+    True -> limit
+    False -> int.max(1, limit - reserve)
+  }
+}
+
 fn can_process(state: State, rule_state: RuleState, _now: Int) -> Bool {
   let rule_ok = rule_state.window_count < rule_state.rule.rate
 
   let overall_ok = case state.config.overall_rate {
-    Some(limit) -> state.overall_count < limit
+    Some(limit) ->
+      list.length(state.overall_admissions)
+      < budget_for(limit, state.reserve, rule_state.rule, state.top_priority)
     None -> True
   }
 
@@ -656,10 +729,13 @@ fn can_process(state: State, rule_state: RuleState, _now: Int) -> Bool {
 }
 
 fn reset_windows(state: State, now: Int) -> State {
-  let state = case now - state.overall_window_start > 1000 {
-    True -> State(..state, overall_count: 0, overall_window_start: now)
-    False -> state
-  }
+  let state =
+    State(
+      ..state,
+      overall_admissions: list.filter(state.overall_admissions, fn(at) {
+        now - at < overall_window_ms
+      }),
+    )
 
   let new_rule_states =
     dict.map_values(state.rule_states, fn(_, rule_state) {

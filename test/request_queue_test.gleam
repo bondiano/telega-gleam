@@ -1,5 +1,6 @@
 import gleam/erlang/process
 import gleam/http/response
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
@@ -422,4 +423,132 @@ fn chat_ids(n: Int, acc: List(Int)) -> List(Int) {
     0 -> acc
     _ -> chat_ids(n - 1, [n, ..acc])
   }
+}
+
+// ---------------------------------------------------------------------------
+// Priority under load
+// ---------------------------------------------------------------------------
+
+fn ok_response() -> Result(response.Response(String), error.TelegaError) {
+  Ok(response.Response(status: 200, headers: [], body: "ok"))
+}
+
+/// A lane with a backlog big enough to keep the queue saturated for the whole
+/// measurement. Each request blocks its own process, which is what a bulk
+/// sender actually looks like.
+fn saturate(q: queue.RequestQueue, rule_id: String, count: Int) -> Nil {
+  list.each(list.repeat(Nil, count), fn(_) {
+    process.spawn_unlinked(fn() {
+      let _ =
+        queue.execute_with_rule(
+          q,
+          utils.random_string(16),
+          rule_id,
+          ok_response,
+        )
+      Nil
+    })
+    Nil
+  })
+}
+
+/// Sorting the queues by priority only decides who goes first among what is
+/// *already queued*. A bulk lane pacing itself at the overall rate spends the
+/// whole budget before anybody types, so the top lane used to arrive at a spent
+/// window and wait one out — every time. The reserve is what makes the promise
+/// true: some of the rate is never for sale to the lower lane.
+pub fn a_saturating_bulk_lane_leaves_room_for_the_interactive_one_test() {
+  let config =
+    queue.QueueConfig(
+      rules: [
+        queue.Rule(id: "default", rate: 30, limit: 1000, priority: 1),
+        queue.Rule(id: "bulk", rate: 30, limit: 1000, priority: 7),
+      ],
+      overall_rate: Some(10),
+      overall_limit: None,
+      retry_delay: 100,
+      max_retries: 0,
+      per_chat: None,
+    )
+  let assert Ok(q) = queue.start(config)
+
+  saturate(q, "bulk", 40)
+  // Long enough for the bulk lane to take everything it is allowed to take.
+  process.sleep(400)
+
+  // Probes spaced inside the reserve (10 / 5 = 2 per second): somebody typing
+  // a command while the wave runs.
+  let latencies =
+    list.index_map(list.repeat(Nil, 4), fn(_, index) {
+      let started = utils.current_time_ms()
+      let _ =
+        queue.execute_with_rule(
+          q,
+          "probe-" <> int.to_string(index),
+          "default",
+          ok_response,
+        )
+      let took = utils.current_time_ms() - started
+      process.sleep(500)
+      took
+    })
+
+  // Before the reserve every one of these sat out the remainder of a fixed
+  // window — half a second on average, a full one at worst.
+  let worst = list.fold(latencies, 0, int.max)
+  case worst < 300 {
+    True -> Nil
+    False ->
+      panic as {
+        "an interactive request waited "
+        <> int.to_string(worst)
+        <> " ms behind a saturating bulk lane"
+      }
+  }
+
+  queue.shutdown(q)
+}
+
+/// Per-chat pacing is an extra bound on the lane `fetch` already uses, so a
+/// reply paced by its chat must not lose the `default` rule's priority — the
+/// reserve is kept for that lane, and a chat rule with a priority of its own
+/// would sit outside it.
+pub fn a_per_chat_rule_keeps_the_default_lanes_priority_test() {
+  let config =
+    queue.QueueConfig(
+      rules: [
+        queue.Rule(id: "default", rate: 30, limit: 1000, priority: 1),
+        queue.Rule(id: "bulk", rate: 30, limit: 1000, priority: 7),
+      ],
+      overall_rate: Some(10),
+      overall_limit: None,
+      retry_delay: 100,
+      max_retries: 0,
+      per_chat: Some(queue.PerChatLimits(
+        private_rate: 10,
+        private_window_ms: 1000,
+        group_rate: 10,
+        group_window_ms: 1000,
+      )),
+    )
+  let assert Ok(q) = queue.start(config)
+
+  saturate(q, "bulk", 40)
+  process.sleep(400)
+
+  let started = utils.current_time_ms()
+  let _ = queue.execute_for_chat(q, Some(4242), ok_response)
+  let took = utils.current_time_ms() - started
+
+  case took < 300 {
+    True -> Nil
+    False ->
+      panic as {
+        "a reply paced by its chat waited "
+        <> int.to_string(took)
+        <> " ms behind a saturating bulk lane"
+      }
+  }
+
+  queue.shutdown(q)
 }
