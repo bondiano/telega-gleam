@@ -88,7 +88,6 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
-import gleam/erlang/atom.{type Atom}
 import gleam/float
 import gleam/int
 import gleam/json
@@ -103,6 +102,7 @@ import telega
 import telega/bot.{type Context}
 import telega/model/types.{type Update as ModelUpdate, type User}
 import telega/router.{type Middleware}
+import telega/scope
 import telega/update.{type Update}
 
 // Types ----------------------------------------------------------------------
@@ -443,46 +443,53 @@ fn first_user(candidates: List(Option(User))) -> Option(User) {
   |> option.from_result
 }
 
-// Process-dictionary state ---------------------------------------------------
+// Active catalog and locale --------------------------------------------------
+//
+// The resolved locale has to reach `t(ctx, ...)` calls nested anywhere below
+// the middleware, which never sees their return values. It therefore lives in
+// the update's `Scope` — created per update and dropped with it, so a locale
+// resolved for one update can never answer for the next.
+
+const state_key: scope.Key(State) = scope.Key("i18n/state")
 
 type State {
   State(catalog: Catalog, locale: String)
 }
 
-/// Store the active catalog and locale for the current process. The
-/// [`middleware`](#middleware) calls this before each handler; call it yourself
-/// only if you resolve locales outside the router.
-pub fn enter(catalog catalog: Catalog, locale locale: String) -> Nil {
-  let _ = erlang_put(state_key(), to_dynamic(State(catalog:, locale:)))
-  Nil
+/// Make `catalog` and `locale` the ones [`t`](#t)/[`tn`](#tn) translate
+/// against for this update. The [`middleware`](#middleware) calls this before
+/// each handler; call it yourself only if you resolve locales outside the
+/// router.
+pub fn enter(
+  ctx: Context(session, error, dependencies),
+  catalog catalog: Catalog,
+  locale locale: String,
+) -> Nil {
+  scope.put(ctx.scope, state_key, State(catalog:, locale:))
 }
 
-/// Clear the i18n state for the current process.
-pub fn leave() -> Nil {
-  let _ = erlang_erase(state_key())
-  Nil
+/// Forget the active catalog and locale for this update, so [`t`](#t) falls
+/// back to returning keys unchanged. The runtime drops the whole scope when
+/// the update is handled; this is for narrowing the window by hand.
+pub fn leave(ctx: Context(session, error, dependencies)) -> Nil {
+  scope.erase(ctx.scope, state_key)
 }
 
-/// The locale active in the current process, if [`enter`](#enter) (or the
+/// The locale active for this update, if [`enter`](#enter) (or the
 /// middleware) has run.
-pub fn current_locale() -> Option(String) {
-  case read_state() {
+pub fn current_locale(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  case read_state(ctx) {
     Ok(State(locale:, ..)) -> Some(locale)
     Error(_) -> None
   }
 }
 
-fn read_state() -> Result(State, Nil) {
-  let value = erlang_get(state_key())
-  // `erlang:get/1` returns the atom `undefined` when the key is unset.
-  case value == to_dynamic(atom.create("undefined")) {
-    True -> Error(Nil)
-    False -> Ok(from_dynamic(value))
-  }
-}
-
-fn state_key() -> Atom {
-  atom.create("telega_i18n_state")
+fn read_state(
+  ctx: Context(session, error, dependencies),
+) -> Result(State, Nil) {
+  scope.get(ctx.scope, state_key)
 }
 
 // Handler-facing API ---------------------------------------------------------
@@ -491,35 +498,26 @@ fn state_key() -> Atom {
 /// `{placeholder}` values from `args`. Requires the [`middleware`](#middleware)
 /// (or a manual [`enter`](#enter)); otherwise returns the key unchanged.
 pub fn t(
-  ctx _ctx: Context(session, error, dependencies),
+  ctx ctx: Context(session, error, dependencies),
   key key: String,
   args args: List(#(String, String)),
 ) -> String {
-  translate_current(key, args)
-}
-
-/// Pluralizing variant of [`t`](#t). See [`translate_count`](#translate_count).
-pub fn tn(
-  ctx _ctx: Context(session, error, dependencies),
-  key key: String,
-  count count: Int,
-  args args: List(#(String, String)),
-) -> String {
-  case read_state() {
-    Ok(State(catalog:, locale:)) ->
-      translate_count(catalog, locale, key, count, args)
+  case read_state(ctx) {
+    Ok(State(catalog:, locale:)) -> translate(catalog, locale, key, args)
     Error(_) -> key
   }
 }
 
-/// Translate using the active process locale without a context. [`t`](#t)
-/// delegates here.
-pub fn translate_current(
+/// Pluralizing variant of [`t`](#t). See [`translate_count`](#translate_count).
+pub fn tn(
+  ctx ctx: Context(session, error, dependencies),
   key key: String,
+  count count: Int,
   args args: List(#(String, String)),
 ) -> String {
-  case read_state() {
-    Ok(State(catalog:, locale:)) -> translate(catalog, locale, key, args)
+  case read_state(ctx) {
+    Ok(State(catalog:, locale:)) ->
+      translate_count(catalog, locale, key, count, args)
     Error(_) -> key
   }
 }
@@ -541,7 +539,7 @@ pub fn middleware(
       let session_locale = from(ctx.session)
       let update_locale = user_language_code(update.raw(ctx.update))
       let locale = resolve_locale(catalog, session_locale, update_locale)
-      enter(catalog:, locale:)
+      enter(ctx, catalog:, locale:)
       handler(ctx, update)
     }
   }
@@ -629,20 +627,3 @@ fn bool_to_string(value: Bool) -> String {
     False -> "false"
   }
 }
-
-// FFI ------------------------------------------------------------------------
-
-@external(erlang, "erlang", "put")
-fn erlang_put(key: Atom, value: Dynamic) -> Dynamic
-
-@external(erlang, "erlang", "get")
-fn erlang_get(key: Atom) -> Dynamic
-
-@external(erlang, "erlang", "erase")
-fn erlang_erase(key: Atom) -> Dynamic
-
-@external(erlang, "gleam_stdlib", "identity")
-fn to_dynamic(value: a) -> Dynamic
-
-@external(erlang, "gleam_stdlib", "identity")
-fn from_dynamic(value: Dynamic) -> a

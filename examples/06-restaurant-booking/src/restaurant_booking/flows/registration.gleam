@@ -331,7 +331,7 @@ fn ask_for_confirmation(
           #("email", email_display),
         ])
 
-      let keyboard = util.yes_no_keyboard("reg_confirm")
+      let keyboard = util.yes_no_keyboard(ctx, "reg_confirm")
 
       case
         reply.with_markup(ctx, message, keyboard.to_inline_markup(keyboard))

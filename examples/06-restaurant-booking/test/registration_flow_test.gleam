@@ -13,6 +13,7 @@ import gleam/option.{None, Some}
 import sqlight
 
 import telega/bot as telega_bot
+import telega/scope
 import telega/testing/context
 import telega/testing/factory
 import telega/testing/mock
@@ -87,6 +88,7 @@ fn dependencies_context(
     log_prefix: None,
     bot_info: factory.bot_user(),
     annotations: dict.new(),
+    scope: scope.new(),
   )
 }
 

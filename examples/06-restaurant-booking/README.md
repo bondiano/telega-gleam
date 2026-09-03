@@ -201,7 +201,7 @@ the flows' catch-all callback handler:
 // settings.gleam — persist, acknowledge, then confirm in the new language
 use _ <- result.try(i18n.set_user_language(db, chat_id, from_id, locale))
 let _ = reply.answer_callback_query(ctx, types.new_answer_callback_query_parameters(query_id))
-telega_i18n.enter(catalog:, locale:)
+telega_i18n.enter(ctx, catalog:, locale:)
 reply.with_text(ctx, i18n.t(ctx, "settings.language_set", []))
 ```
 

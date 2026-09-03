@@ -97,7 +97,6 @@
 //// string.contains(body, "\"method\":\"answerCallbackQuery\"")
 //// ```
 
-import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/process.{type Subject}
 import gleam/http/response.{type Response}
@@ -108,6 +107,7 @@ import gleam/result
 import gleam/string
 
 import telega/client
+import telega/scope.{type Scope}
 
 /// How long (ms) a claiming API call waits for the webhook HTTP process to
 /// grant the claim before falling back to a regular HTTP request.
@@ -136,6 +136,7 @@ pub type Envelope =
 /// added manually.
 pub fn transformer(
   envelope envelope: Envelope,
+  scope update_scope: Scope,
 ) -> client.ApiRequestTransformer {
   // One claim attempt per update: the first eligible call flips the flag,
   // every later call skips straight to HTTP without waiting.
@@ -144,7 +145,7 @@ pub fn transformer(
   fn(request, next) {
     let method = client.request_method(request)
     case
-      is_claimable(method) && !claim_suppressed(),
+      is_claimable(method) && !claim_suppressed(update_scope),
       client.request_body(request)
     {
       True, Some(params_json) ->
@@ -172,35 +173,31 @@ pub fn transformer(
 // A claimed call resolves to a synthetic stub — `sendMessage` in particular
 // yields a fake `message_id: -1`. Callers that need the real result (the
 // dialog engine tracks the sent message's id to edit it later) opt their
-// calls out via `without_claim`. The transformer runs in the calling process,
-// so a process-dictionary flag is race-free.
+// calls out via `without_claim`. The flag lives in the update's `Scope`, the
+// same one the transformer was built with, so it is scoped to the update and
+// to the process handling it.
 
-const suppress_key = "__telega_webhook_reply_suppress"
+const suppress_key: scope.Key(Bool) = scope.Key("webhook_reply/suppress")
 
-/// Run `work` with webhook-reply claiming disabled for the calling process.
-/// Use around API calls whose real result you need — a claimed call would
-/// resolve to a synthetic stub instead (see the module doc).
-pub fn without_claim(work work: fn() -> a) -> a {
-  let _ = pdict_put(suppress_key, "1")
+/// Run `work` with webhook-reply claiming disabled for this update. Use it
+/// around API calls whose real result you need — a claimed call would resolve
+/// to a synthetic stub instead (see the module doc):
+///
+/// ```gleam
+/// use <- webhook_reply.without_claim(ctx.scope)
+/// api.send_message(ctx.config.api_client, parameters)
+/// ```
+pub fn without_claim(scope update_scope: Scope, work work: fn() -> a) -> a {
+  scope.put(update_scope, suppress_key, True)
   let result = work()
-  let _ = pdict_erase(suppress_key)
+  scope.erase(update_scope, suppress_key)
   result
 }
 
-fn claim_suppressed() -> Bool {
-  pdict_get(suppress_key)
-  |> decode.run(decode.string)
-  |> result.is_ok
+fn claim_suppressed(update_scope: Scope) -> Bool {
+  scope.get(update_scope, suppress_key)
+  |> result.unwrap(False)
 }
-
-@external(erlang, "erlang", "put")
-fn pdict_put(key: String, value: String) -> Dynamic
-
-@external(erlang, "erlang", "get")
-fn pdict_get(key: String) -> Dynamic
-
-@external(erlang, "erlang", "erase")
-fn pdict_erase(key: String) -> Dynamic
 
 /// Whether a method may be answered in the webhook response body.
 /// Only methods whose synthetic result is honest (`True` for boolean methods)

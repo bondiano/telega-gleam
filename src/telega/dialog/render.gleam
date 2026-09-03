@@ -18,8 +18,6 @@
 //// (`is_not_modified` & co) — the latter are useful outside dialogs too.
 
 import gleam/bool
-import gleam/dynamic.{type Dynamic}
-import gleam/dynamic/decode
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -41,6 +39,7 @@ import telega/model/types.{
   SendMessageReplyInlineKeyboardMarkupParameters, SendPhotoParameters,
   SendVideoParameters,
 }
+import telega/scope
 import telega/update
 import telega/webhook_reply
 
@@ -206,7 +205,7 @@ fn send_window(
 ) -> Result(Int, RenderError) {
   // The engine tracks the sent message's id to edit it later, so this call
   // must not be claimed by webhook reply (a claim yields a fake stub id).
-  use <- webhook_reply.without_claim()
+  use <- webhook_reply.without_claim(ctx.scope)
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
@@ -268,7 +267,7 @@ fn send_media_window(
   markup: Option(InlineKeyboardMarkup),
 ) -> Result(Int, RenderError) {
   // See `send_window`: the real message id is required for later edits.
-  use <- webhook_reply.without_claim()
+  use <- webhook_reply.without_claim(ctx.scope)
   let chat_id = types.Int(chat_id)
   let caption = caption_for(text)
   let parse_mode = option.map(caption, fn(_) { parse_mode })
@@ -648,11 +647,11 @@ pub fn toast(
 pub fn auto_answer(ctx: Context(session, error, dependencies)) -> Nil {
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) ->
-      case answered_query() == Some(query.id) {
+      case answered_query(ctx) == Some(query.id) {
         True -> Nil
         False -> {
           let _ = do_answer(ctx, query.id, None, False)
-          mark_answered(query.id)
+          mark_answered(ctx, query.id)
           Nil
         }
       }
@@ -668,7 +667,7 @@ fn answer_with(
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) -> {
       use _ <- result.try(do_answer(ctx, query.id, text, show_alert))
-      mark_answered(query.id)
+      mark_answered(ctx, query.id)
       Ok(Nil)
     }
     _ -> Ok(Nil)
@@ -705,7 +704,7 @@ pub fn answer_quietly(
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) -> {
       let _ = do_answer(ctx, query.id, text, False)
-      mark_answered(query.id)
+      mark_answered(ctx, query.id)
       Nil
     }
     _ -> Nil
@@ -715,21 +714,24 @@ pub fn answer_quietly(
 // "Already answered" flag ----------------------------------------------------
 //
 // alert/toast run inside the user's `on_action`, so the engine can't see
-// their effect through the return value. The chat instance is a single
-// process, so a process-dictionary flag keyed by query id is race-free.
+// their effect through the return value. The flag lives in the update's
+// `Scope`, which the whole update shares and nothing outside it can read.
 
-const answered_key = "__telega_dialog_answered"
+const answered_key: scope.Key(String) = scope.Key("dialog/answered")
 
-fn mark_answered(query_id: String) -> Nil {
-  let _ = pdict_put(answered_key, query_id)
-  Nil
+fn mark_answered(
+  ctx: Context(session, error, dependencies),
+  query_id: String,
+) -> Nil {
+  scope.put(ctx.scope, answered_key, query_id)
 }
 
 /// The query already answered, if any. Peeks rather than consumes, so several
 /// `auto_answer` calls within one update stay a single answer.
-fn answered_query() -> Option(String) {
-  pdict_get(answered_key)
-  |> decode.run(decode.string)
+fn answered_query(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  scope.get(ctx.scope, answered_key)
   |> option.from_result
 }
 
@@ -745,8 +747,8 @@ pub fn begin_callback_answer(
   case ctx.update {
     update.CallbackQueryUpdate(query:, ..) -> {
       let current = query.id
-      case answered_query() {
-        Some(id) if id != current -> reset_answered()
+      case answered_query(ctx) {
+        Some(id) if id != current -> reset_answered(ctx)
         _ -> Nil
       }
     }
@@ -754,22 +756,13 @@ pub fn begin_callback_answer(
   }
 }
 
-/// Forget which query was answered. Used between updates; tests that replay
-/// one query id need it too.
+/// Forget which query was answered. The runtime drops the whole scope between
+/// updates; a test driver that replays one query id against a single context
+/// needs this.
 @internal
-pub fn reset_answered() -> Nil {
-  let _ = pdict_erase(answered_key)
-  Nil
+pub fn reset_answered(ctx: Context(session, error, dependencies)) -> Nil {
+  scope.erase(ctx.scope, answered_key)
 }
-
-@external(erlang, "erlang", "put")
-fn pdict_put(key: String, value: String) -> Dynamic
-
-@external(erlang, "erlang", "get")
-fn pdict_get(key: String) -> Dynamic
-
-@external(erlang, "erlang", "erase")
-fn pdict_erase(key: String) -> Dynamic
 
 /// Human-readable description of a render error, for logs.
 @internal

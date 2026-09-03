@@ -620,14 +620,26 @@ pub fn reset_stores_drops_earlier_seeds_test() {
   let ctx = context.context(session: Nil)
   let radio = types.store_set(types.new_store(), key: "value", value: "blue")
 
-  widget.seed_store(window_id: "w", widget_id: "r", store: radio)
+  widget.seed_store(ctx, window_id: "w", widget_id: "r", store: radio)
   dialog.widget_store(ctx, window_id: "w", widget_id: "r")
   |> widget.radio_value
   |> should.equal(Some("blue"))
 
-  // Tests share one process, so without this the next test still sees "blue".
-  widget.reset_stores()
+  widget.reset_stores(ctx)
   dialog.widget_store(ctx, window_id: "w", widget_id: "r")
+  |> widget.radio_value
+  |> should.equal(None)
+}
+
+/// Seeds belong to the context they were made against: a second context, like
+/// a second update, starts with empty stores whatever an earlier test seeded.
+pub fn seeded_stores_do_not_leak_across_contexts_test() {
+  let seeded = context.context(session: Nil)
+  let radio = types.store_set(types.new_store(), key: "value", value: "blue")
+  widget.seed_store(seeded, window_id: "w", widget_id: "r", store: radio)
+
+  let fresh = context.context(session: Nil)
+  dialog.widget_store(fresh, window_id: "w", widget_id: "r")
   |> widget.radio_value
   |> should.equal(None)
 }

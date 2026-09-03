@@ -58,7 +58,7 @@ pub fn set_language(
     )
 
   // Re-resolve for this update so the confirmation is in the new language.
-  telega_i18n.enter(catalog:, locale:)
+  telega_i18n.enter(ctx, catalog:, locale:)
 
   case reply.with_text(ctx, i18n.t(ctx, "settings.language_set", [])) {
     Ok(_) -> Ok(ctx)

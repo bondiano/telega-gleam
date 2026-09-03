@@ -39,6 +39,7 @@ import gleam/otp/supervision
 import telega/bot
 import telega/internal/registry
 import telega/router
+import telega/scope
 import telega/testing/context as test_context
 import telega/testing/factory
 import telega/testing/mock
@@ -68,6 +69,7 @@ pub fn test_handler(
       log_prefix: None,
       bot_info: factory.bot_user(),
       annotations: dict.new(),
+      scope: scope.new(),
     )
   let result = handler(ctx, update)
   #(result, calls)

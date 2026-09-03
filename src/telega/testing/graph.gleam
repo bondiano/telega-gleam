@@ -181,7 +181,7 @@ pub fn of_dialog_probing(
   let result_transitions =
     probe_sub_results(compiled, ctx, own_windows, own_transitions)
 
-  widget.clear_stash()
+  widget.clear_stash(ctx.scope)
 
   let transitions =
     own_transitions
@@ -254,7 +254,7 @@ fn probe_window(
 ) -> List(Transition) {
   list.flat_map(states, fn(state) {
     // Widget stores start empty: a graph shows the dialog as a new user meets it.
-    widget.stash_stores(dict.new())
+    widget.stash_stores(ctx.scope, dict.new())
     let rendered = window.render(state, ctx)
     let widget_rows =
       list.flat_map(window.widgets, fn(item) {

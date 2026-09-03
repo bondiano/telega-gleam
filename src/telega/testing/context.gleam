@@ -22,6 +22,7 @@ import telega/client
 import telega/error
 import telega/internal/config
 import telega/model/types
+import telega/scope
 import telega/testing/factory
 import telega/update
 
@@ -107,6 +108,7 @@ pub fn context_with_all(
     log_prefix: None,
     bot_info:,
     annotations: dict.new(),
+    scope: scope.new(),
   )
 }
 

@@ -26,6 +26,7 @@ import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
 import telega/router.{type Routable, type Router, type RouterTree}
+import telega/scope
 import telega/telemetry
 import telega/update
 import telega/webhook_reply
@@ -232,6 +233,7 @@ pub fn background_context(
     bot_info: telega.bot_info,
     // No update, so no pre-router middleware ran to annotate one.
     annotations: dict.new(),
+    scope: scope.new(),
   ))
 }
 

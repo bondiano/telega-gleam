@@ -61,6 +61,7 @@ import telega/flow/builder as flow_builder
 import telega/flow/instance
 import telega/flow/types as flow_types
 import telega/model/types as model_types
+import telega/scope
 import telega/telemetry
 import telega/update
 
@@ -237,12 +238,12 @@ pub fn compile(
     flow_builder.on_complete(builder, fn(ctx, inst) {
       // `on_done` may still read widget selections; clear the stash after so
       // later non-dialog handlers don't see the finished dialog's stores.
-      widget.stash_stores(inst.state.data)
+      widget.stash_stores(ctx.scope, inst.state.data)
       let result = case dialog.on_done {
         Some(on_done) -> on_done(load_state(dialog, ctx, inst), ctx)
         None -> Ok(ctx)
       }
-      widget.clear_stash()
+      widget.clear_stash(ctx.scope)
       result
     })
 
@@ -295,9 +296,9 @@ fn answering_callback(
 }
 
 /// Run `body`, then drop the widget stash whatever it returned.
-fn clearing_widget_stash(body: fn() -> a) -> a {
+fn clearing_widget_stash(update_scope: scope.Scope, body: fn() -> a) -> a {
   let result = body()
-  widget.clear_stash()
+  widget.clear_stash(update_scope)
   result
 }
 
@@ -305,13 +306,13 @@ fn window_step(
   dialog: CompiledDialog(session, error, dependencies),
   window: Window(String, session, error, dependencies),
 ) -> flow_types.StepHandler(String, session, error, dependencies) {
-  fn(ctx, inst: flow_types.FlowInstance) {
+  fn(ctx: Context(session, error, dependencies), inst: flow_types.FlowInstance) {
     // Make widget stores readable from user renders/handlers via
     // `dialog.widget_store` — the chat instance is a single process. Cleared
     // on the way out: the same process serves this chat's non-dialog handlers
     // too, and they must not read a finished step's stores.
-    widget.stash_stores(inst.state.data)
-    use <- clearing_widget_stash()
+    widget.stash_stores(ctx.scope, inst.state.data)
+    use <- clearing_widget_stash(ctx.scope)
     // Whatever path the step takes, the press it is handling gets exactly one
     // answer — unless user code already gave it one with `alert`/`toast`.
     use <- answering_callback(ctx)
@@ -702,7 +703,7 @@ fn finish_sub(
     None -> jump_and_render(dialog, ctx, inst, return_window)
     Some(handler) -> {
       // Parent widget stores are visible again in the handler.
-      widget.stash_stores(inst.state.data)
+      widget.stash_stores(ctx.scope, inst.state.data)
       case handler(parent_state, result, ctx) {
         Error(error) -> Error(error)
         Ok(action) ->
@@ -871,7 +872,7 @@ fn render_window(
   state: String,
 ) -> Result(flow_types.FlowInstance, render.RenderError) {
   // Re-stash so a render following a widget-store update sees fresh values.
-  widget.stash_stores(inst.state.data)
+  widget.stash_stores(ctx.scope, inst.state.data)
   let rendered = window.render(state, ctx)
   let rendered = append_widget_rows(dialog, window, ctx, inst, state, rendered)
   let started_at = telemetry.monotonic_time()

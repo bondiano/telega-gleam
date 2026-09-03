@@ -86,6 +86,7 @@ import telega/model/types.{
   type Audio, type ChatMemberUpdated, type Message, type PhotoSize,
   type Update as RawUpdate, type User, type Video, type Voice, type WebAppData,
 }
+import telega/scope.{type Scope}
 import telega/telemetry
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
@@ -1256,7 +1257,22 @@ fn do_handle_new_chat_instance_message(
 /// The routing path, with the way this update is answered left to the caller:
 /// an album's messages are answered as they are buffered, so the aggregated
 /// update they turn into must not answer for them a second time.
+///
+/// The update's [`Scope`](scope.html) is dropped on the way out — a chat
+/// instance outlives thousands of updates, so each one's scratch space has to
+/// go with it.
 fn do_handle_update(
+  context context: Context(session, error, dependencies),
+  chat chat: ChatInstance(session, error, dependencies),
+  update update,
+  ack_with ack_with: fn(Bool) -> Nil,
+) {
+  let next = route_update(context:, chat:, update:, ack_with:)
+  scope.clear(context.scope)
+  next
+}
+
+fn route_update(
   context context: Context(session, error, dependencies),
   chat chat: ChatInstance(session, error, dependencies),
   update update,
@@ -1270,7 +1286,7 @@ fn do_handle_update(
           case timestamp.compare(ttl, timestamp.system_time()) {
             // When ttl is expired, handle update without continuation
             order.Lt ->
-              do_handle_update(
+              route_update(
                 context:,
                 chat: ChatInstance(..chat, continuation: None),
                 update:,
@@ -1611,6 +1627,12 @@ pub type Context(session, error, dependencies) {
     /// persisted — unlike `dependencies` (services) and `session` (per-user
     /// state).
     annotations: Dict(String, Dynamic),
+    /// Scratch space for *this* update, shared by every copy of the context
+    /// and dropped once the update is handled. Where the dialog engine keeps
+    /// its "callback already answered" flag and its widget stash, and where a
+    /// middleware can hand a resolved locale to handlers nested below it. See
+    /// [`telega/scope`](scope.html).
+    scope: Scope,
   )
 }
 
@@ -1630,6 +1652,7 @@ fn new_context(
     log_prefix: None,
     bot_info: chat.bot_info,
     annotations:,
+    scope: scope.new(),
   )
 }
 
@@ -1668,7 +1691,7 @@ fn new_context_with_envelope(
       let api_client =
         client.use_transformer(
           context.config.api_client,
-          webhook_reply.transformer(envelope),
+          webhook_reply.transformer(envelope:, scope: context.scope),
         )
       Context(..context, config: config.Config(..context.config, api_client:))
     }

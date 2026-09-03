@@ -17,6 +17,7 @@ import telega/error.{type TelegaError}
 import telega/model/encoder
 import telega/model/types
 import telega/router
+import telega/scope
 import telega/testing/factory
 import telega/testing/mock.{type ApiCall, ApiCall}
 import telega/webhook_reply
@@ -55,12 +56,21 @@ fn send_message_params(
 /// fresh envelope owned by the test process.
 fn enveloped_client(
   routes routes: List(mock.MockRoute),
-) -> #(client.TelegramClient, process.Subject(ApiCall), webhook_reply.Envelope) {
+) -> #(
+  client.TelegramClient,
+  process.Subject(ApiCall),
+  webhook_reply.Envelope,
+  scope.Scope,
+) {
   let #(base_client, calls) = mock.routed_client(routes:)
   let envelope: webhook_reply.Envelope = process.new_subject()
+  let update_scope = scope.new()
   let client =
-    client.use_transformer(base_client, webhook_reply.transformer(envelope:))
-  #(client, calls, envelope)
+    client.use_transformer(
+      base_client,
+      webhook_reply.transformer(envelope:, scope: update_scope),
+    )
+  #(client, calls, envelope, update_scope)
 }
 
 fn bool_routes() -> List(mock.MockRoute) {
@@ -73,7 +83,8 @@ fn bool_routes() -> List(mock.MockRoute) {
 // --- Transformer-level tests -------------------------------------------------
 
 pub fn granted_claim_skips_http_test() {
-  let #(client, calls, envelope) = enveloped_client(routes: bool_routes())
+  let #(client, calls, envelope, _update_scope) =
+    enveloped_client(routes: bool_routes())
 
   let results = process.new_subject()
   process.spawn(fn() {
@@ -97,7 +108,8 @@ pub fn granted_claim_skips_http_test() {
 }
 
 pub fn second_call_goes_over_http_test() {
-  let #(client, calls, envelope) = enveloped_client(routes: bool_routes())
+  let #(client, calls, envelope, _update_scope) =
+    enveloped_client(routes: bool_routes())
 
   let results = process.new_subject()
   process.spawn(fn() {
@@ -121,7 +133,8 @@ pub fn second_call_goes_over_http_test() {
 pub fn unanswered_claim_falls_back_to_http_test() {
   // Envelope exists but nobody grants — as when the webhook HTTP process
   // already timed out and returned an empty 200.
-  let #(client, calls, _envelope) = enveloped_client(routes: bool_routes())
+  let #(client, calls, _envelope, _scope) =
+    enveloped_client(routes: bool_routes())
 
   api.answer_callback_query(client, answer_params("cb-timeout"))
   |> should.equal(Ok(True))
@@ -133,7 +146,8 @@ pub fn unanswered_claim_falls_back_to_http_test() {
 }
 
 pub fn non_allowlisted_method_is_not_claimed_test() {
-  let #(client, calls, envelope) = enveloped_client(routes: bool_routes())
+  let #(client, calls, envelope, _update_scope) =
+    enveloped_client(routes: bool_routes())
 
   api.set_my_commands(
     client:,
@@ -154,7 +168,7 @@ pub fn non_allowlisted_method_is_not_claimed_test() {
 }
 
 pub fn send_message_stub_decodes_test() {
-  let #(client, calls, envelope) = enveloped_client(routes: [])
+  let #(client, calls, envelope, _update_scope) = enveloped_client(routes: [])
 
   let results = process.new_subject()
   process.spawn(fn() {
@@ -178,13 +192,14 @@ pub fn send_message_stub_decodes_test() {
 }
 
 pub fn without_claim_suppresses_claiming_test() {
-  let #(client, calls, envelope) = enveloped_client(routes: bool_routes())
+  let #(client, calls, envelope, update_scope) =
+    enveloped_client(routes: bool_routes())
 
   let results = process.new_subject()
   process.spawn(fn() {
     // Inside without_claim: no claim is attempted, the call goes over HTTP.
     let inside =
-      webhook_reply.without_claim(fn() {
+      webhook_reply.without_claim(update_scope, fn() {
         api.answer_callback_query(client, answer_params("quiet"))
       })
     // Outside: claiming works again (the suppressed call did not consume the

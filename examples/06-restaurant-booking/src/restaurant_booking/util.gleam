@@ -5,11 +5,13 @@ import gleam/string
 import logging
 import sqlight
 
+import telega/bot.{type Context}
 import telega/flow/types
 import telega/keyboard
 import telega/storage
 import telega_storage_sqlite as sqlite
 
+import restaurant_booking/dependencies.{type Dependencies}
 import restaurant_booking/i18n
 
 /// Log an info message
@@ -69,18 +71,21 @@ pub fn get_restaurant_name() -> String {
 }
 
 /// Create a confirmation keyboard with Yes/No buttons
-pub fn yes_no_keyboard(id: String) -> keyboard.InlineKeyboard {
+pub fn yes_no_keyboard(
+  ctx: Context(Nil, String, Dependencies),
+  id: String,
+) -> keyboard.InlineKeyboard {
   let callback_data = keyboard.bool_callback_data(id)
 
   let assert Ok(yes_button) =
     keyboard.inline_button(
-      i18n.tr("common.yes", []),
+      i18n.t(ctx, "common.yes", []),
       keyboard.pack_callback(callback_data, True),
     )
 
   let assert Ok(no_button) =
     keyboard.inline_button(
-      i18n.tr("common.no", []),
+      i18n.t(ctx, "common.no", []),
       keyboard.pack_callback(callback_data, False),
     )
 

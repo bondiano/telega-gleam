@@ -1133,7 +1133,7 @@ fn stream(
   // answered through the webhook response itself and comes back as a stub with
   // `message_id: -1` — every edit after it would target a message that does
   // not exist.
-  use <- webhook_reply.without_claim
+  use <- webhook_reply.without_claim(ctx.scope)
 
   use stream <- result.try(
     yielder.try_fold(over: chunks, from: initial, with: fn(stream, chunk) {

@@ -46,12 +46,14 @@ fn with_locale(
   test_fn: fn(telega_bot.Context(Nil, String, Dependencies)) -> Nil,
 ) -> Nil {
   let catalog = i18n.catalog()
-  telega_i18n.enter(catalog:, locale:)
-  test_fn(context.context_with_dependencies(
-    session: Nil,
-    dependencies: Dependencies(db:, catalog:),
-  ))
-  telega_i18n.leave()
+  let ctx =
+    context.context_with_dependencies(
+      session: Nil,
+      dependencies: Dependencies(db:, catalog:),
+    )
+  telega_i18n.enter(ctx, catalog:, locale:)
+  test_fn(ctx)
+  telega_i18n.leave(ctx)
 }
 
 fn empty_state() -> booking.BookingState {
@@ -119,14 +121,15 @@ pub fn confirm_window_localized_frame_test() {
       error: None,
       confirmation: None,
     )
-  // Widget stores are read from a per-process stash: reset them so this
-  // frame shows the defaults regardless of test order.
+  // Seed both prefs widgets empty, so the frame shows the defaults.
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "zone",
     store: types.new_store(),
   )
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "extras",
     store: types.new_store(),
@@ -147,11 +150,13 @@ pub fn confirm_window_reads_widget_selections_test() {
   use ctx <- with_locale("en", db)
 
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "zone",
     store: types.new_store() |> types.store_set("value", "terrace"),
   )
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "extras",
     store: types.new_store()
@@ -249,13 +254,17 @@ fn filled_state() -> booking.BookingState {
   )
 }
 
-fn seed_prefs_stores() -> Nil {
+fn seed_prefs_stores(
+  ctx: telega_bot.Context(Nil, String, Dependencies),
+) -> Nil {
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "zone",
     store: types.new_store() |> types.store_set("value", "terrace"),
   )
   widget.seed_store(
+    ctx,
     window_id: "prefs",
     widget_id: "extras",
     store: types.new_store()
@@ -266,7 +275,7 @@ fn seed_prefs_stores() -> Nil {
 pub fn confirm_frame_en_snapshot_test() {
   use db <- run_with_db
   use ctx <- with_locale("en", db)
-  seed_prefs_stores()
+  seed_prefs_stores(ctx)
 
   render.window_frame(booking.render_confirm(filled_state(), ctx))
   |> birdie.snap(title: "booking:confirm:frame_en")
@@ -275,7 +284,7 @@ pub fn confirm_frame_en_snapshot_test() {
 pub fn confirm_frame_ru_snapshot_test() {
   use db <- run_with_db
   use ctx <- with_locale("ru", db)
-  seed_prefs_stores()
+  seed_prefs_stores(ctx)
 
   render.window_frame(booking.render_confirm(filled_state(), ctx))
   |> birdie.snap(title: "booking:confirm:frame_ru")

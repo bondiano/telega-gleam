@@ -70,7 +70,7 @@ fn show_user_bookings(
       }
     }
     Ok(bookings) -> {
-      let bookings_text = format_bookings_list(bookings)
+      let bookings_text = format_bookings_list(ctx, bookings)
       case reply.with_formatted(ctx, bookings_text) {
         Ok(_) -> Ok(ctx)
         Error(error) ->
@@ -92,20 +92,21 @@ fn send_registration_required_message(
 }
 
 fn format_bookings_list(
+  ctx: Context(Nil, String, Dependencies),
   bookings: List(sql.UserBookingRow),
 ) -> fmt.FormattedText {
   let builder =
     fmt.build()
     |> fmt.with_mode(fmt.HTML)
     |> fmt.text("📋 ")
-    |> fmt.bold_text(i18n.tr("bookings.header", []))
+    |> fmt.bold_text(i18n.t(ctx, "bookings.header", []))
     |> fmt.line_break()
     |> fmt.line_break()
 
   bookings
   |> list.fold(builder, fn(b, booking) {
     b
-    |> format_single_booking(booking)
+    |> format_single_booking(ctx, booking)
     |> fmt.text("\n━━━━━━━━━━━━━━━━━━━━━\n")
   })
   |> fmt.to_formatted()
@@ -113,21 +114,22 @@ fn format_bookings_list(
 
 fn format_single_booking(
   builder: fmt.FormatBuilder,
+  ctx: Context(Nil, String, Dependencies),
   booking: sql.UserBookingRow,
 ) -> fmt.FormatBuilder {
   let status_emoji = get_status_emoji(booking.status)
-  let status_text = format_status(booking.status)
+  let status_text = format_status(ctx, booking.status)
 
   let single_booking_builder =
     builder
     |> fmt.text(status_emoji <> " ")
-    |> fmt.bold_text(i18n.tr("bookings.reservation", []) <> status_text)
+    |> fmt.bold_text(i18n.t(ctx, "bookings.reservation", []) <> status_text)
     |> fmt.line_break()
     |> fmt.text(
       "📅 "
       <> booking.booking_date
       <> " "
-      <> i18n.tr("bookings.at", [])
+      <> i18n.t(ctx, "bookings.at", [])
       <> " "
       <> booking.booking_time,
     )
@@ -136,16 +138,16 @@ fn format_single_booking(
       "👥 "
       <> int.to_string(booking.guests)
       <> " "
-      <> i18n.tr("bookings.guests", []),
+      <> i18n.t(ctx, "bookings.guests", []),
     )
     |> fmt.line_break()
     |> fmt.text(
       "🪑 "
-      <> i18n.tr("bookings.table", [])
+      <> i18n.t(ctx, "bookings.table", [])
       <> " "
       <> int.to_string(booking.table_number)
       <> " ("
-      <> i18n.tr("bookings.capacity", [])
+      <> i18n.t(ctx, "bookings.capacity", [])
       <> ": "
       <> int.to_string(booking.capacity)
       <> ")",
@@ -161,7 +163,7 @@ fn format_single_booking(
       single_booking_builder
       |> fmt.line_break()
       |> fmt.text(
-        "💬 " <> i18n.tr("bookings.special_requests", []) <> ": " <> req,
+        "💬 " <> i18n.t(ctx, "bookings.special_requests", []) <> ": " <> req,
       )
     _ -> single_booking_builder
   }
@@ -170,7 +172,9 @@ fn format_single_booking(
     Some(code) ->
       single_booking_builder
       |> fmt.line_break()
-      |> fmt.text("🎫 " <> i18n.tr("bookings.confirmation", []) <> ": " <> code)
+      |> fmt.text(
+        "🎫 " <> i18n.t(ctx, "bookings.confirmation", []) <> ": " <> code,
+      )
     _ -> single_booking_builder
   }
 }
@@ -184,11 +188,14 @@ fn get_status_emoji(status: option.Option(String)) -> String {
   }
 }
 
-fn format_status(status: option.Option(String)) -> String {
+fn format_status(
+  ctx: Context(Nil, String, Dependencies),
+  status: option.Option(String),
+) -> String {
   case status {
-    Some("confirmed") -> i18n.tr("bookings.confirmed", [])
-    Some("pending") -> i18n.tr("bookings.pending", [])
-    Some("cancelled") -> i18n.tr("bookings.cancelled", [])
+    Some("confirmed") -> i18n.t(ctx, "bookings.confirmed", [])
+    Some("pending") -> i18n.t(ctx, "bookings.pending", [])
+    Some("cancelled") -> i18n.t(ctx, "bookings.cancelled", [])
     _ -> ""
   }
 }

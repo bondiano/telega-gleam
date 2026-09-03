@@ -58,7 +58,7 @@ pub fn middleware() -> Middleware(Nil, String, Dependencies) {
       let stored = get_user_language(db, ctx.update.chat_id, ctx.update.from_id)
       let from_telegram = telega_i18n.user_language_code(update.raw(ctx.update))
       let locale = telega_i18n.resolve_locale(catalog, stored, from_telegram)
-      telega_i18n.enter(catalog:, locale:)
+      telega_i18n.enter(ctx, catalog:, locale:)
       handler(ctx, upd)
     }
   }
@@ -100,12 +100,6 @@ pub fn t(
   args: List(#(String, String)),
 ) -> String {
   telega_i18n.t(ctx, key, args)
-}
-
-/// Translate without a `Context`, using the per-process locale set by the
-/// middleware. Handy inside formatting helpers.
-pub fn tr(key: String, args: List(#(String, String))) -> String {
-  telega_i18n.translate_current(key, args)
 }
 
 /// Pluralizing translate for the active handler's locale.

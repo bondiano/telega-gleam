@@ -3,6 +3,7 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 
+import telega/testing/context
 import telega_i18n
 
 pub fn main() {
@@ -198,22 +199,37 @@ pub fn add_toml_invalid_test() {
   }
 }
 
-// process-dictionary state ---------------------------------------------------
+// Active catalog and locale --------------------------------------------------
 
-pub fn enter_and_translate_current_test() {
+pub fn enter_and_translate_test() {
   let catalog = sample_catalog()
-  telega_i18n.leave()
+  let ctx = context.context(session: Nil)
+
   // No state yet: returns the key unchanged.
-  telega_i18n.translate_current("greeting", [#("name", "X")])
+  telega_i18n.t(ctx, "greeting", [#("name", "X")])
   |> should.equal("greeting")
 
-  telega_i18n.enter(catalog:, locale: "ru")
-  telega_i18n.current_locale()
+  telega_i18n.enter(ctx, catalog:, locale: "ru")
+  telega_i18n.current_locale(ctx)
   |> should.equal(Some("ru"))
-  telega_i18n.translate_current("greeting", [#("name", "Лена")])
+  telega_i18n.t(ctx, "greeting", [#("name", "Лена")])
   |> should.equal("Привет, Лена!")
 
-  telega_i18n.leave()
-  telega_i18n.current_locale()
+  telega_i18n.leave(ctx)
+  telega_i18n.current_locale(ctx)
   |> should.equal(None)
+}
+
+/// The locale belongs to the update, not to the process: a context built
+/// afterwards — as the next update's would be — starts without one.
+pub fn locale_does_not_outlive_its_context_test() {
+  let catalog = sample_catalog()
+  let entered = context.context(session: Nil)
+  telega_i18n.enter(entered, catalog:, locale: "ru")
+
+  let next = context.context(session: Nil)
+  telega_i18n.current_locale(next)
+  |> should.equal(None)
+  telega_i18n.t(next, "greeting", [#("name", "Лена")])
+  |> should.equal("greeting")
 }

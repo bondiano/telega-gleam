@@ -35,7 +35,6 @@ import gleam/string
 import telega/bot.{type Context}
 import telega/client.{type TelegramClient}
 import telega/dialog/engine as dialog_engine
-import telega/dialog/render
 import telega/flow/engine as flow_engine
 import telega/flow/instance
 import telega/flow/storage as flow_storage
@@ -295,10 +294,10 @@ fn resume_with_callback(
   data: String,
   upd: update.Update,
 ) -> Nil {
-  // Every press here reuses one query id, which Telegram never does. Forget
-  // the "already answered" mark so each simulated press behaves like the
-  // fresh update it stands for.
-  render.reset_answered()
+  // Every press here reuses one query id, which Telegram never does. Each
+  // press gets its own `Context` — and so its own `Scope` — so the previous
+  // press's "already answered" mark is out of reach, exactly as it would be
+  // between two real updates.
   resume(driver, context_for(driver, upd), [
     #("callback_data", data),
     #(instance.wait_result_key, instance.encode_callback_wait_result(data)),

@@ -435,7 +435,7 @@ pub fn menu_keyboard_test() {
 - Keep snapshots deterministic: use `telega/testing/factory` data (fixed ids and dates) and the mock client (token never reaches the transcript).
 - Localized bots: pin the same frame once per locale (suffix the title:
   `booking:confirm:frame_en` / `frame_ru`). With `telega_i18n`, wrap the
-  render in `telega_i18n.enter(catalog:, locale:)` / `leave()` — see
+  render in `telega_i18n.enter(ctx, catalog:, locale:)` / `leave(ctx)` — see
   `examples/06-restaurant-booking/test/booking_dialog_test.gleam`.
 - CI: `gleam test` fails on unaccepted snapshots, so a snapshot diff can't slip through unreviewed.
 

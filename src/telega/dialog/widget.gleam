@@ -40,7 +40,6 @@
 //// dialog's `Labels` — override them with `dialog.with_labels` for i18n.
 
 import gleam/dict.{type Dict}
-import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/int
 import gleam/json
@@ -56,6 +55,7 @@ import telega/dialog/types.{
   type DialogAction, type DialogButton, type KeyboardWidget, type Labels,
   type WidgetCtx, type WidgetResult, type WidgetStore, KeyboardWidget,
 }
+import telega/scope.{type Scope}
 
 /// An item offered by `select`/`radio`/`multiselect`/`paged_select`. The `id`
 /// travels in callback data — keep it short (the 64-byte limit is validated
@@ -511,12 +511,13 @@ fn pager_row(
 //
 // Window renders and handlers receive only `(state, ctx)`, while widget
 // stores live in the flow instance. The engine stashes the instance's widget
-// entries in the process dictionary before invoking any user code (the chat
-// instance is a single process, so this is race-free — same precedent as the
-// answered-callback flag in `dialog/render`), and `widget_store` reads from
-// that stash.
+// entries in the update's `Scope` before invoking any user code, and
+// `widget_store` reads them back out of `ctx.scope` — the same scope, since
+// every copy of a context shares it.
 
-const stores_pdict_key = "__telega_dialog_widget_stores"
+const stores_key: scope.Key(Dict(String, String)) = scope.Key(
+  "dialog/widget_stores",
+)
 
 const store_data_prefix = "__dialog_widget:"
 
@@ -531,74 +532,62 @@ pub fn store_data_key(window_id: String, widget_id: String) -> String {
 /// stashed as-is (an O(1) reference on the BEAM) — `widget_store` looks up
 /// its `__dialog_widget:` key directly.
 @internal
-pub fn stash_stores(data: Dict(String, String)) -> Nil {
-  let _ = pdict_put(stores_pdict_key, data)
-  Nil
+pub fn stash_stores(update_scope: Scope, data: Dict(String, String)) -> Nil {
+  scope.put(update_scope, stores_key, data)
 }
 
 /// Drop the stash — called by the engine when the dialog finishes, so later
 /// non-dialog handlers don't read the finished dialog's stores.
 @internal
-pub fn clear_stash() -> Nil {
-  let _ = pdict_erase(stores_pdict_key)
-  Nil
+pub fn clear_stash(update_scope: Scope) -> Nil {
+  scope.erase(update_scope, stores_key)
 }
 
 /// Read a widget's store from inside a window render or handler. Returns an
 /// empty store when the widget has no state yet. Prefer the typed readers on
 /// top: `radio_value`, `multiselect_values`, `current_page`.
 pub fn widget_store(
-  _ctx: Context(session, error, dependencies),
+  ctx: Context(session, error, dependencies),
   window_id window_id: String,
   widget_id widget_id: String,
 ) -> WidgetStore {
-  stashed_stores()
+  stashed_stores(ctx.scope)
   |> dict.get(store_data_key(window_id, widget_id))
   |> result.try(fn(raw) { types.decode_store(raw) })
   |> result.unwrap(types.new_store())
 }
 
 /// Seed a widget store for pure render tests — the runtime equivalent is the
-/// engine's automatic stash before user code.
+/// engine's automatic stash before user code. Seeds live in the context's
+/// scope, so pass the very `ctx` the render is about to receive.
 ///
-/// **Merges** into the current stash, so several widgets can be seeded for one
-/// render. Tests in the same process therefore inherit each other's seeds:
-/// call `reset_stores` first when that matters.
+/// **Merges** into that scope's stash, so several widgets can be seeded for
+/// one render. A context built afresh starts empty; `reset_stores` clears one
+/// you keep reusing.
 pub fn seed_store(
+  ctx: Context(session, error, dependencies),
   window_id window_id: String,
   widget_id widget_id: String,
   store store: WidgetStore,
 ) -> Nil {
   let stores =
     dict.insert(
-      stashed_stores(),
+      stashed_stores(ctx.scope),
       store_data_key(window_id, widget_id),
       types.encode_store(store),
     )
-  let _ = pdict_put(stores_pdict_key, stores)
-  Nil
+  scope.put(ctx.scope, stores_key, stores)
 }
 
-/// Drop everything `seed_store` put in place. Tests run in one process, so a
-/// seed from an earlier test is still visible without this.
-pub fn reset_stores() -> Nil {
-  clear_stash()
+/// Drop everything `seed_store` put in this context's scope.
+pub fn reset_stores(ctx: Context(session, error, dependencies)) -> Nil {
+  clear_stash(ctx.scope)
 }
 
-fn stashed_stores() -> Dict(String, String) {
-  pdict_get(stores_pdict_key)
-  |> decode.run(decode.dict(decode.string, decode.string))
+fn stashed_stores(update_scope: Scope) -> Dict(String, String) {
+  scope.get(update_scope, stores_key)
   |> result.unwrap(dict.new())
 }
-
-@external(erlang, "erlang", "put")
-fn pdict_put(key: String, value: Dict(String, String)) -> Dynamic
-
-@external(erlang, "erlang", "get")
-fn pdict_get(key: String) -> Dynamic
-
-@external(erlang, "erlang", "erase")
-fn pdict_erase(key: String) -> Dynamic
 
 // Counter -------------------------------------------------------------------------
 

@@ -516,16 +516,19 @@ render_confirm(filled_state(), ctx)
 ```
 
 For windows that read widget stores, seed them first with
-`widget.seed_store(window_id:, widget_id:, store:)`.
+`widget.seed_store(ctx, window_id:, widget_id:, store:)` — seeds live in the
+context's `Scope` (`telega/scope`), the same per-update scratch space the
+engine stashes real stores in, so pass the `ctx` the render is about to
+receive.
 
 **Per-locale frames**: pin the same frame once per locale — with
 `telega_i18n` set the locale around the render:
 
 ```gleam
-telega_i18n.enter(catalog:, locale: "ru")
+telega_i18n.enter(ctx, catalog:, locale: "ru")
 render.window_frame(booking.render_confirm(state, ctx))
 |> birdie.snap(title: "booking:confirm:frame_ru")
-telega_i18n.leave()
+telega_i18n.leave(ctx)
 ```
 
 **Level 2 — engine transcripts.** Drive the compiled flow with
