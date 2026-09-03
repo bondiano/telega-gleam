@@ -9,9 +9,9 @@
 //// pub fn main() {
 ////   let client = telega_hackney.new("BOT_TOKEN")
 ////   let assert Ok(_bot) =
-////     telega.new_for_polling(client)
-////     |> telega.with_router(router)
-////     |> telega.init_for_polling_nil_session()
+////     telega.new(client)
+////     |> telega.router(router)
+////     |> telega.start()
 //// }
 //// ```
 
@@ -51,7 +51,7 @@ pub fn new(token token: String) -> client.TelegramClient {
 /// `new` with an explicit response timeout (milliseconds).
 ///
 /// Raise it above `default_timeout_ms` if you long-poll with a
-/// `telega.set_polling_timeout` longer than ~55 seconds.
+/// a `polling.PollingSettings(timeout:)` longer than ~55 seconds.
 pub fn new_with_timeout(
   token token: String,
   timeout_ms timeout_ms: Int,

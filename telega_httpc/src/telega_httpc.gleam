@@ -9,9 +9,9 @@
 //// pub fn main() {
 ////   let client = telega_httpc.new("BOT_TOKEN")
 ////   let assert Ok(_bot) =
-////     telega.new_for_polling(client)
-////     |> telega.with_router(router)
-////     |> telega.init_for_polling_nil_session()
+////     telega.new(client)
+////     |> telega.router(router)
+////     |> telega.start()
 //// }
 //// ```
 
@@ -43,7 +43,7 @@ pub fn new(token token: String) -> client.TelegramClient {
 /// `new` with an explicit per-call HTTP timeout (milliseconds).
 ///
 /// Raise it above `default_timeout_ms` if you long-poll with a
-/// `telega.set_polling_timeout` longer than ~55 seconds; lower it only for
+/// a `polling.PollingSettings(timeout:)` longer than ~55 seconds; lower it only for
 /// bots that never poll.
 pub fn new_with_timeout(
   token token: String,

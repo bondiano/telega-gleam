@@ -29,7 +29,6 @@ pub type TelegaError {
   /// Returned if the bot failed to convert API request to HTTP request
   ApiToRequestConvertError
   SetWebhookError
-  NoSessionSettingsError
 
   // Start errors
   RegistryStartError(reason: String)
@@ -61,7 +60,6 @@ pub fn to_string(error: TelegaError) -> String {
     ApiToRequestConvertError -> "Failed to convert API request to HTTP request"
     FetchError(error) -> "Failed to send request: " <> string.inspect(error)
     SetWebhookError -> "Failed to set webhook"
-    NoSessionSettingsError -> "Session settings not initialized"
     RegistryStartError(reason) -> "Failed to start registry: " <> reason
     BotStartError(reason) -> "Failed to start bot: " <> string.inspect(reason)
     ChatInstanceStartError(reason) ->

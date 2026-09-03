@@ -150,9 +150,9 @@ pub fn main() {
     |> client.cache_get_me
 
   let assert Ok(_bot) =
-    telega.new_for_polling(api_client:)
-    |> telega.with_router(build_router())
-    |> telega.init_for_polling_nil_session()
+    telega.new(api_client)
+    |> telega.router(build_router())
+    |> telega.start()
 
   process.sleep_forever()
 }

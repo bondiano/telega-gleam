@@ -1,6 +1,6 @@
-//// Tests for `telega.supervised` / `telega.supervised_for_polling`: the bot
-//// as a child of the user's own supervision tree. Uses routed mock clients
-//// (no network); the parent tree is torn down at the end of each test.
+//// Tests for `telega.supervised`: the bot as a child of the user's own
+//// supervision tree. Uses routed mock clients (no network); the parent tree
+//// is torn down at the end of each test.
 
 import gleam/erlang/process.{type Subject}
 import gleam/list
@@ -55,14 +55,13 @@ fn webhook_builder(
   client,
   ready: Subject(telega.Telega(Nil, TelegaError, Nil)),
 ) {
-  telega.new(
-    api_client: client,
+  telega.new(client)
+  |> telega.webhook(
     url: "https://example.com",
-    webhook_path: "/hook",
+    path: "/hook",
     secret_token: None,
   )
-  |> telega.with_router(build_router())
-  |> telega.with_nil_session()
+  |> telega.router(build_router())
   |> telega.with_on_start(fn(bot) { Ok(process.send(ready, bot)) })
 }
 
@@ -130,19 +129,18 @@ pub fn supervised_restarts_bot_after_crash_test() {
   stop_tree(parent.pid)
 }
 
-pub fn supervised_for_polling_starts_under_parent_tree_test() {
+pub fn supervised_polling_bot_starts_under_parent_tree_test() {
   let #(client, calls) = mock.routed_client(polling_routes())
   let ready = process.new_subject()
 
   let builder =
-    telega.new_for_polling(api_client: client)
-    |> telega.with_router(build_router())
-    |> telega.with_nil_session()
+    telega.new(client)
+    |> telega.router(build_router())
     |> telega.with_on_start(fn(bot) { Ok(process.send(ready, bot)) })
 
   let assert Ok(parent) =
     sup.new(sup.OneForOne)
-    |> sup.add(telega.supervised_for_polling(builder))
+    |> sup.add(telega.supervised(builder))
     |> sup.start
 
   let assert Ok(bot) = process.receive(ready, 1000)

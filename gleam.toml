@@ -20,6 +20,7 @@ pages = [
     { title = "Session Serialization", path="docs/session-serialization.html", source="docs/session-serialization.md" },
     { title = "Dependency Injection", path="docs/dependency-injection.html", source="docs/dependency-injection.md" },
     { title = "Testing", path="docs/testing.html", source="docs/testing.md" },
+    { title = "Migration to v3", path="docs/migration-v3.html", source="docs/migration-v3.md" },
 ]
 
 gleam = ">= 1.12.0"

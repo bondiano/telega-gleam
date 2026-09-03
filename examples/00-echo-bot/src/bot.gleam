@@ -28,9 +28,9 @@ pub fn main() {
     telega_httpc.new("8442380256:AAG0sVX3zmGZUCEjAGutcVBcVtB-XLYuvWY")
 
   let assert Ok(_bot) =
-    telega.new_for_polling(api_client:)
-    |> telega.with_router(router)
-    |> telega.init_for_polling_nil_session()
+    telega.new(api_client)
+    |> telega.router(router)
+    |> telega.start()
 
   process.sleep_forever()
 }

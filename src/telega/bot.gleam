@@ -7,7 +7,7 @@
 //// ## Supervision tree
 ////
 //// Both the `Bot` actor and `ChatInstance` actors run inside a supervision tree
-//// created by `telega.init()` or `telega.init_for_polling()`:
+//// created by `telega.start()` or `telega.start()`:
 ////
 //// ```text
 //// TelegaRootSupervisor (static_supervisor, OneForOne)

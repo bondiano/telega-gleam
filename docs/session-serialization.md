@@ -47,8 +47,8 @@ Switch it off when the write itself does something you rely on — refreshing an
 expiry, touching a "last seen" column:
 
 ```gleam
-telega.new_for_polling(api_client:)
-|> telega.with_session_settings(settings)
+telega.new(api_client)
+|> telega.session(settings)
 |> telega.with_session_persistence(bot.PersistAlways)
 ```
 
@@ -61,8 +61,8 @@ session would let the first handler persist that default over the real,
 still-stored data.
 
 ```gleam
-telega.new_for_polling(api_client:)
-|> telega.with_session_settings(settings)
+telega.new(api_client)
+|> telega.session(settings)
 |> telega.with_session_load_error(bot.ReadOnly)
 ```
 
@@ -107,7 +107,7 @@ one process and one session, so the key decides both isolation and
 concurrency.
 
 ```gleam
-telega.new_for_polling(api_client:)
+telega.new(api_client)
 |> telega.with_session_key(bot.chat_session_key)
 ```
 
@@ -283,7 +283,7 @@ Wiring:
 ```gleam
 let assert Ok(storage) = storage.start()
 
-telega.with_session_settings(
+telega.session(
   builder,
   bot.SessionSettings(
     default_session: fn() { MySession(count: 0) },

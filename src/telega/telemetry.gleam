@@ -79,8 +79,8 @@
 //// }
 //// ```
 ////
-//// Call it once at startup, before `telega.init_for_polling()` /
-//// `telega.init()`. Detach with `telemetry.detach("my-bot-slow-updates")`.
+//// Call it once at startup, before `telega.start()` /
+//// `telega.start()`. Detach with `telemetry.detach("my-bot-slow-updates")`.
 ////
 //// **Handlers run synchronously in the process that emitted the event.**
 //// Keep them fast, never call the Telegram API from a handler, and offload

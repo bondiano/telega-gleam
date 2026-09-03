@@ -34,8 +34,7 @@ storage backend, complicate (de)serialization, and make handlers hard to test.
 
 ## Defining and injecting dependencies
 
-Declare a type for your services and inject it at construction with
-`new_for_polling_with_dependencies` (or `new_with_dependencies` for webhook bots):
+Declare a type for your services and inject it with `telega.dependencies`:
 
 ```gleam
 import telega
@@ -45,26 +44,31 @@ pub type Dependencies {
 }
 
 pub fn start(client: TelegramClient, db: Connection, catalog: Catalog) {
-  telega.new_for_polling_with_dependencies(api_client: client, dependencies: Dependencies(db:, catalog:))
-  |> telega.with_router(router)
-  |> telega.init_for_polling()
+  telega.new(client)
+  |> telega.dependencies(Dependencies(db:, catalog:))
+  |> telega.router(router)
+  |> telega.start()
 }
 ```
 
-Injecting at construction fixes the builder's `dependencies` type from the start, so
-the steps that follow (`with_router`, `with_catch_handler`, `on_start`) can be
-called in any order.
+`dependencies` fixes the builder's `dependencies` type, which the router and the
+other handlers are typed against — so it has to come **before** them. That is not
+a convention you have to remember: the builder carries a state type parameter
+(`telega.Fresh` until a handler is registered, `telega.Configured` afterwards)
+and `dependencies` only accepts a `Fresh` builder. Calling it after
+`telega.router` is a compile error:
 
-> **Avoid the `with_dependencies` footgun.** There is also `telega.with_dependencies(builder, dependencies)`,
-> which sets `dependencies` on an existing builder. Because it changes the builder's
-> `dependencies` type, it **resets** the `dependencies`-typed fields (`router`, `catch_handler`,
-> `on_start`) to their defaults. If you call it *after* `with_router`, your
-> router is silently dropped and the bot runs with no routes — with no compile
-> error. So if you use `with_dependencies`, call it *first*; otherwise prefer
-> `new_for_polling_with_dependencies` / `new_with_dependencies`, which have no reset behaviour.
+```
+Expected type:
+    telega.TelegaBuilder(Nil, e, Nil, telega.Fresh)
+Found type:
+    telega.TelegaBuilder(Nil, e, Nil, telega.Configured)
+```
 
-A bot that needs no services doesn't have to do anything: `dependencies` defaults to
-`Nil`, so `new_for_polling`/`new` produce a `dependencies`-of-`Nil` builder and your
+`telega.session` works the same way, and for the same reason.
+
+A bot that needs no services doesn't have to do anything: `dependencies` defaults
+to `Nil`, so `telega.new` produces a `dependencies`-of-`Nil` builder and your
 handlers see `Context(session, error, Nil)`.
 
 ## Reading dependencies in handlers
@@ -134,8 +138,7 @@ dependencies-aware lower-level runners: `conversation.run_with_mock_with_depende
 
 ## Reference
 
-- `telega.new_for_polling_with_dependencies(api_client:, dependencies:)` / `telega.new_with_dependencies(...)` — inject dependencies at construction (preferred).
-- `telega.with_dependencies(builder, dependencies)` — inject dependencies on an existing builder (resets `dependencies`-typed fields; call first).
+- `telega.dependencies(builder, dependencies)` — inject dependencies; only compiles before `telega.router` (see `telega.Fresh`).
 - `telega.get_dependencies(ctx)` — read dependencies (same as `ctx.dependencies`).
 - `telega/testing/context.context_with_dependencies(session:, dependencies:)` — build a test
   context with mock services.

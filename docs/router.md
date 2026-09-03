@@ -2,7 +2,7 @@
 
 The router is how Telega decides which handler runs for each incoming update. You
 build one with `router.new`, attach handlers for the update types you care about,
-and pass it to the bot with `telega.with_router`.
+and pass it to the bot with `telega.router`.
 
 ```gleam
 import telega/router
@@ -128,8 +128,8 @@ Telegram delivers an album as separate messages sharing a `media_group_id`, so
 `on_media_group` only fires when the bot asks for them to be gathered:
 
 ```gleam
-telega.new_for_polling(api_client:)
-|> telega.with_router(router)
+telega.new(api_client)
+|> telega.router(router)
 // hold an album's messages until 1s passes without another one
 |> telega.with_media_group_timeout(1000)
 ```
@@ -291,14 +291,14 @@ cheaper and can drop an update outright:
 import telega
 import telega/bot
 
-telega.new_for_polling(api_client:)
+telega.new(api_client)
 |> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
   case is_banned(pre.update.chat_id) {
     True -> bot.Stop        // drop before routing
     False -> bot.proceed()  // let it through
   }
 })
-|> telega.with_router(router)
+|> telega.router(router)
 ```
 
 Pre-handlers run in registration order; the first `bot.Stop` short-circuits the
@@ -322,7 +322,7 @@ import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/result
 
-telega.new_for_polling(api_client:)
+telega.new(api_client)
 |> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
   bot.Continue(annotations: dict.from_list([
     #("locale", dynamic.string(resolve_locale(pre.update))),
@@ -354,9 +354,10 @@ import telega/storage/ets
 
 let assert Ok(store) = ets.new(name: "telega_dedup")
 
-telega.new(token:, url:, webhook_path:, secret_token:)
+telega.new(api_client)
+|> telega.webhook(url:, path:, secret_token:)
 |> telega.use_pre_handler(idempotency.deduplicate(storage: store, ttl_ms: 3600_000))
-|> telega.with_router(router)
+|> telega.router(router)
 ```
 
 Use a persistent backend (Postgres/SQLite/Redis) when running more than one node
@@ -390,10 +391,10 @@ errors (like session persistence) go to the bot's catch handler configured via
 There are two types, and they do different jobs.
 
 - `router.Router` is a **leaf**: routes, middleware, a catch handler, a scope.
-  Everything named `on_*` registers on a leaf, and `telega.with_router` takes one.
+  Everything named `on_*` registers on a leaf, and `telega.router` takes one.
 - `router.RouterTree` is a **composition**: an ordered list of leaves, some of
   them guarded by a filter. It has no routes of its own — `on_command` on a tree
-  does not compile — and `telega.with_router_tree` takes one.
+  does not compile — and `telega.router_tree` takes one.
 
 **Merge** combines two leaves into one flat leaf; the first wins on conflicts:
 
@@ -413,8 +414,8 @@ let app =
   |> router.append(shared_router)
   |> router.tree_fallback(handle_unknown)
 
-telega.new_for_polling(api_client:)
-|> telega.with_router_tree(app)
+telega.new(api_client)
+|> telega.router_tree(app)
 ```
 
 `compose(a, b)` and `compose_many([a, b, c])` are shorthand for a tree of
@@ -473,10 +474,10 @@ let router =
   |> router.on_command("secret", handle_secret)
   // ^ no description → still routed, but not published
 
-telega.new_for_polling(api_client:)
-|> telega.with_router(router)
+telega.new(api_client)
+|> telega.router(router)
 |> telega.with_auto_commands()
-|> telega.init_for_polling()
+|> telega.start()
 ```
 
 Commands added with plain `on_command` are skipped. If nothing has a description,
@@ -512,10 +513,10 @@ let assert Ok(catalog) =
   i18n.new("en")
   |> i18n.load_toml_dir("locales")
 
-telega.new_for_polling(api_client:)
-|> telega.with_router(router)
+telega.new(api_client)
+|> telega.router(router)
 |> i18n.with_command_translations(catalog, prefix: "commands.")
-|> telega.init_for_polling()
+|> telega.start()
 ```
 
 The description for command `start` is looked up at `commands.start`, honoring the
@@ -541,10 +542,10 @@ Enable `telega.with_auto_allowed_updates` and Telega requests only the update
 types the router can handle, cutting traffic for everything else:
 
 ```gleam
-telega.new_for_polling(api_client:)
-|> telega.with_router(router)
+telega.new(api_client)
+|> telega.router(router)
 |> telega.with_auto_allowed_updates()
-|> telega.init_for_polling()
+|> telega.start()
 ```
 
 Route → update type mapping:
@@ -589,10 +590,10 @@ explicitly:
 |> telega.with_extra_allowed_updates(["message_reaction"])
 ```
 
-**Escape hatches.** A manual `telega.set_allowed_updates(builder, updates)` always
+**Escape hatches.** A manual `telega.with_allowed_updates(builder, updates)` always
 wins; auto derivation is skipped entirely. And if the router has a **fallback**,
 **custom**, **filtered**, or **`on_unknown_update`** route — which can match any
 update — the set can't be narrowed safely, so derivation returns the empty list
 and Telegram falls back to its default update set
 (`with_extra_allowed_updates` is a no-op in that case). Use
-`set_allowed_updates` when you need narrowing alongside catch-all routes.
+`with_allowed_updates` when you need narrowing alongside catch-all routes.

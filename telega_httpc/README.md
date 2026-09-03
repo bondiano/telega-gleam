@@ -12,9 +12,9 @@ pub fn main() {
   let client = telega_httpc.new("BOT_TOKEN")
 
   let assert Ok(_bot) =
-    telega.new_for_polling(client)
+    telega.new(client)
     |> telega.with_router(router)
-    |> telega.init_for_polling_nil_session()
+    |> telega.start()
 }
 ```
 
@@ -25,7 +25,7 @@ than the 30-second long poll Telega opens for `getUpdates` — a shorter timeout
 aborts every empty poll and quietly degrades the bot to polling at whatever
 rate the timeout allows.
 
-If you raise `telega.set_polling_timeout` past ~55 seconds, raise this to
+If you raise the polling timeout (`polling.PollingSettings(timeout:)`) past ~55 seconds, raise this to
 match:
 
 ```gleam

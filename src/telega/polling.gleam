@@ -6,20 +6,20 @@
 ////
 //// ## Supervised mode (recommended)
 ////
-//// When using `telega.init_for_polling()`, the polling worker is automatically started
+//// When using `telega.start()`, the polling worker is automatically started
 //// inside the supervision tree as a `Permanent` child. No manual setup is needed:
 ////
 //// ```gleam
 //// let assert Ok(_bot) =
-////   telega.new_for_polling(token: "BOT_TOKEN")
-////   |> telega.with_router(router)
-////   |> telega.init_for_polling_nil_session()
+////   telega.new(api_client)
+////   |> telega.router(router)
+////   |> telega.start()
 ////
 //// process.sleep_forever()
 //// ```
 ////
-//// Use `telega.with_polling_config()` on the builder to customize timeout, limit,
-//// and poll interval before calling `init_for_polling()`.
+//// Use `telega.polling(settings)` on the builder to customize timeout, limit
+//// and poll interval before calling `telega.start()`.
 ////
 //// ## Manual mode
 ////
@@ -45,7 +45,7 @@
 //// To keep a burst from piling up without bound, the worker stops fetching
 //// once `limit` updates are in flight and resumes as soon as one settles —
 //// i.e. at most one `getUpdates` batch is being handled at a time. Tune it
-//// with `telega.with_polling_config(limit:)`.
+//// with `telega.polling(PollingSettings(..default_settings(), limit:))`.
 ////
 //// ## Error handling
 ////
@@ -93,6 +93,41 @@ type PollingConfig {
     poll_interval: Int,
     on_stop: Option(fn(TelegaError) -> Nil),
   )
+}
+
+/// How the supervised polling worker fetches updates.
+///
+/// Build it with `default_settings()` and override what you need:
+///
+/// ```gleam
+/// telega.new(api_client)
+/// |> telega.polling(polling.PollingSettings(
+///   ..polling.default_settings(),
+///   limit: 10,
+/// ))
+/// ```
+///
+/// - `timeout` — long-poll timeout in **seconds** sent to `getUpdates`.
+/// - `limit` — how many updates one `getUpdates` may return, which also bounds
+///   how many are in flight at once (the worker stops fetching until the bot
+///   acks them).
+/// - `poll_interval` — pause in **milliseconds** between polls.
+/// - `on_stop` — called when polling stops for good (an invalid token, a
+///   deleted bot); everything else is retried forever.
+pub type PollingSettings {
+  PollingSettings(
+    timeout: Int,
+    limit: Int,
+    poll_interval: Int,
+    on_stop: Option(fn(TelegaError) -> Nil),
+  )
+}
+
+/// The polling settings a bot uses when it does not ask for others:
+/// a 30 second long poll, 100 updates per batch, a 1 second interval and no
+/// `on_stop` hook.
+pub fn default_settings() -> PollingSettings {
+  PollingSettings(timeout: 30, limit: 100, poll_interval: 1000, on_stop: None)
 }
 
 /// Opaque type representing a running poller instance.
@@ -180,7 +215,7 @@ type PollingState {
 /// How many updates the poller keeps in flight before it stops fetching more.
 ///
 /// Bounded by the batch size, so at most one `getUpdates` batch is being
-/// handled at a time — tune it with `telega.with_polling_config(limit:)`.
+/// handled at a time — tune it with `telega.polling(PollingSettings(..))`.
 fn max_in_flight(config: PollingConfig) -> Int {
   int.max(1, config.limit)
 }

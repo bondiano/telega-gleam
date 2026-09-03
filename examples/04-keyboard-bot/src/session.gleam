@@ -19,7 +19,7 @@ fn default_session() {
 pub fn attach(builder) {
   let assert Ok(session_storage) = storage.start()
 
-  telega.with_session_settings(
+  telega.session(
     builder,
     bot.SessionSettings(
       default_session:,

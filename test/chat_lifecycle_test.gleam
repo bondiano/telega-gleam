@@ -293,7 +293,7 @@ pub fn the_builder_can_turn_eviction_off_test() {
     client.new(token: "test_token", fetch_client: fn(_req) {
       Ok(response.new(200) |> response.set_body("{\"ok\":true}"))
     })
-  let builder = telega.new_for_polling(api_client:)
+  let builder = telega.new(api_client)
 
   telega.chat_settings(builder).idle_timeout
   |> should.equal(Some(bot.default_chat_idle_timeout))

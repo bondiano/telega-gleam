@@ -13,7 +13,7 @@
 ////   routes of its own, so `on_command` on a tree does not compile — the
 ////   registration that a composed router used to swallow is now a type error.
 ////
-//// `telega.with_router` takes a `Router`; `telega.with_router_tree` takes a
+//// `telega.router` takes a `Router`; `telega.router_tree` takes a
 //// `RouterTree`. Both are converted to a [`Routable`](#Routable) internally.
 ////
 //// ## Basic Usage
@@ -155,8 +155,8 @@
 ////   |> router.append(shared_router)
 ////   |> router.tree_fallback(handle_unknown)
 ////
-//// telega.new_for_polling(token:)
-//// |> telega.with_router_tree(tree)
+//// telega.new(api_client)
+//// |> telega.router_tree(tree)
 //// ```
 ////
 //// `compose(a, b)` and `compose_many([a, b, c])` are shorthand for a tree of

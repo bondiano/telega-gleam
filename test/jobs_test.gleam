@@ -34,10 +34,9 @@ fn start_bot() -> telega.Telega(Nil, TelegaError, Nil) {
     ])
 
   let assert Ok(bot) =
-    telega.new_for_polling(api_client: client)
-    |> telega.with_router(router.new("jobs"))
-    |> telega.with_nil_session()
-    |> telega.init_for_polling()
+    telega.new(client)
+    |> telega.router(router.new("jobs"))
+    |> telega.start()
   bot
 }
 

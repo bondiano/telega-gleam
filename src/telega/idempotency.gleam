@@ -19,14 +19,15 @@
 ////
 //// let assert Ok(store) = ets.new(name: "telega_dedup")
 ////
-//// telega.new(token:, url:, webhook_path:, secret_token:)
+//// telega.new(api_client)
+//// |> telega.webhook(url:, path:, secret_token:)
 //// |> telega.use_pre_handler(idempotency.deduplicate(
 ////   storage: store,
 ////   // Keep ids for an hour — comfortably longer than Telegram's retry window.
 ////   ttl_ms: 3600_000,
 //// ))
-//// |> telega.with_router(router)
-//// |> telega.init()
+//// |> telega.router(router)
+//// |> telega.start()
 //// ```
 ////
 //// Use a persistent backend (Postgres/SQLite/Redis) when you run more than one

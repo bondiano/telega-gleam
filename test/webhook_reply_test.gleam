@@ -257,17 +257,14 @@ fn start_webhook_bot(
   let #(client, calls) = mock.routed_client(routes: start_routes())
 
   let assert Ok(bot) =
-    telega.new(
-      api_client: client,
+    telega.new(client)
+    |> telega.webhook(
       url: "https://example.com",
-      webhook_path: "/hook",
+      path: "/hook",
       secret_token: None,
     )
-    |> telega.with_router(
-      router.new("webhook_reply") |> router.on_any_text(handler),
-    )
-    |> telega.with_nil_session()
-    |> telega.init()
+    |> telega.router(router.new("webhook_reply") |> router.on_any_text(handler))
+    |> telega.start()
 
   // Drop the setWebhook/getMe calls made on start.
   let _ = mock.get_calls(from: calls)

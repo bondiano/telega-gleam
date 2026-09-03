@@ -186,16 +186,16 @@ pub fn locales(catalog: Catalog) -> List(String) {
 ///   |> i18n.add_toml("en", en_toml)
 ///   |> i18n.add_toml("ru", ru_toml)
 ///
-/// telega.new_for_polling(api_client:)
-/// |> telega.with_router(router)
+/// telega.new(api_client)
+/// |> telega.router(router)
 /// |> i18n.with_command_translations(catalog, prefix: "commands.")
-/// |> telega.init_for_polling()
+/// |> telega.start()
 /// ```
 pub fn with_command_translations(
-  builder: telega.TelegaBuilder(session, error, dependencies),
+  builder: telega.TelegaBuilder(session, error, dependencies, state),
   catalog catalog: Catalog,
   prefix prefix: String,
-) -> telega.TelegaBuilder(session, error, dependencies) {
+) -> telega.TelegaBuilder(session, error, dependencies, state) {
   telega.with_command_translations(
     builder,
     locales: locales(catalog),

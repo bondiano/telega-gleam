@@ -133,9 +133,9 @@ pub fn main() {
   let client = telega_httpc.new(token)
 
   let assert Ok(_bot) =
-    telega.new_for_polling(api_client: client)
-    |> telega.with_router(router)
-    |> telega.init_for_polling_nil_session()
+    telega.new(client)
+    |> telega.router(router)
+    |> telega.start()
 
   io.println("✨ Image URL Bot started!")
   io.println("📷 Send me image URLs to upload them to Telegram")

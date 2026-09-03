@@ -44,14 +44,13 @@ fn build_router() {
 }
 
 fn new_builder(client) {
-  telega.new(
-    api_client: client,
+  telega.new(client)
+  |> telega.webhook(
     url: "https://example.com",
-    webhook_path: "/hook",
+    path: "/hook",
     secret_token: None,
   )
-  |> telega.with_router(build_router())
-  |> telega.with_nil_session()
+  |> telega.router(build_router())
 }
 
 /// `mock.get_calls` drains the subject, so collect once and query the snapshot.
@@ -80,7 +79,7 @@ pub fn auto_commands_published_on_start_test() {
   let assert Ok(bot) =
     new_builder(client)
     |> telega.with_auto_commands()
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   // Both described commands are published via setMyCommands.
@@ -104,7 +103,7 @@ pub fn auto_commands_localized_per_language_test() {
   let assert Ok(bot) =
     new_builder(client)
     |> telega.with_command_translations(locales: ["ru"], translate:)
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   // Default-language menu...
@@ -122,7 +121,7 @@ pub fn auto_allowed_updates_passed_to_set_webhook_test() {
   let assert Ok(bot) =
     new_builder(client)
     |> telega.with_auto_allowed_updates()
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   // Router handles commands (message) and inline queries only.
@@ -137,7 +136,7 @@ pub fn no_commands_published_without_opt_in_test() {
 
   let assert Ok(bot) =
     new_builder(client)
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   // setWebhook + getMe happen, but no setMyCommands without with_auto_commands.
@@ -158,7 +157,7 @@ pub fn extra_allowed_updates_are_added_to_the_derived_set_test() {
     new_builder(client)
     |> telega.with_auto_allowed_updates()
     |> telega.with_extra_allowed_updates(["callback_query"])
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   seen(calls, "setWebhook", "callback_query") |> should.be_true
@@ -174,13 +173,13 @@ pub fn extra_allowed_updates_do_not_narrow_a_wildcard_router_test() {
   // returns "do not restrict". Extras must not turn that into a narrow list.
   let assert Ok(bot) =
     new_builder(client)
-    |> telega.with_router(
+    |> telega.router(
       router.new("wildcard")
       |> router.fallback(fn(ctx, _upd) { Ok(ctx) }),
     )
     |> telega.with_auto_allowed_updates()
     |> telega.with_extra_allowed_updates(["callback_query"])
-    |> telega.init()
+    |> telega.start()
 
   let calls = drain(calls)
   seen(calls, "setWebhook", "allowed_updates") |> should.be_false

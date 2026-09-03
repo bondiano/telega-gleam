@@ -74,19 +74,14 @@ fn build_bot() {
   let client = telega_hackney.new(token)
   let router = build_router()
 
-  telega.new(
-    api_client: client,
-    url:,
-    webhook_path:,
-    secret_token: Some(secret_token),
-  )
-  |> telega.with_router(router)
-  |> telega.with_nil_session()
+  telega.new(client)
+  |> telega.webhook(url:, path: webhook_path, secret_token: Some(secret_token))
+  |> telega.router(router)
   // Publish the router's commands to the Telegram menu on start, and request
   // only the update types the router actually handles.
   |> telega.with_auto_commands()
   |> telega.with_auto_allowed_updates()
-  |> telega.init()
+  |> telega.start()
 }
 
 pub fn main() {

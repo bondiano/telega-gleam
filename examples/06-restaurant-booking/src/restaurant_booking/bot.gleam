@@ -37,14 +37,14 @@ pub fn start(cfg: config.Config) -> Result(Nil, String) {
   let client = telega_httpc.new(cfg.bot_token)
 
   let bot =
-    telega.new_for_polling(api_client: client)
-    // Inject services once. `with_dependencies` must come before `with_router`:
-    // it changes the builder's `dependencies` type and resets `dependencies`-typed fields.
-    |> telega.with_dependencies(Dependencies(db:, catalog:))
-    |> telega.with_router(build_router(cfg, db))
+    telega.new(client)
+    // Inject services once. `dependencies` fixes the builder's `dependencies`
+    // type, so it only compiles before `router` — the compiler enforces it.
+    |> telega.dependencies(Dependencies(db:, catalog:))
+    |> telega.router(build_router(cfg, db))
 
   use _telega_instance <- result.try(
-    telega.init_for_polling_nil_session(bot) |> result.map_error(string.inspect),
+    telega.start(bot) |> result.map_error(string.inspect),
   )
 
   util.log("Bot started! Send /start to begin")

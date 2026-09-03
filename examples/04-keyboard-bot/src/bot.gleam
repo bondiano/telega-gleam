@@ -367,20 +367,16 @@ fn build_bot() {
   let assert Ok(client) = telega_httpc.new_with_queue(token)
   let router = build_router()
 
-  telega.new(
-    api_client: client,
-    url:,
-    webhook_path:,
-    secret_token: Some(secret_token),
-  )
-  |> telega.with_router(router)
-  |> telega.set_drop_pending_updates(True)
+  telega.new(client)
+  |> telega.webhook(url:, path: webhook_path, secret_token: Some(secret_token))
   |> session.attach()
+  |> telega.router(router)
+  |> telega.with_drop_pending_updates(True)
   // Publish the router's commands to the Telegram menu on start, and request
   // only the update types the router actually handles.
   |> telega.with_auto_commands()
   |> telega.with_auto_allowed_updates()
-  |> telega.init()
+  |> telega.start()
 }
 
 pub fn main() {

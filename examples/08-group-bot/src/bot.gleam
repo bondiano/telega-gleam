@@ -235,17 +235,15 @@ pub fn main() {
     )
 
   let assert Ok(bot) =
-    telega.new_for_polling_with_dependencies(
-      api_client: telega_httpc.new(token),
-      dependencies:,
-    )
-    |> telega.with_router(build_router())
-    |> telega.with_session_settings(session_settings(kv))
+    telega.new(telega_httpc.new(token))
+    |> telega.dependencies(dependencies)
+    |> telega.session(session_settings(kv))
+    |> telega.router(build_router())
     // A database that is briefly unreadable should not take the bot with it:
     // handlers keep answering, and nothing overwrites the stored session.
     |> telega.with_session_load_error(bot.ReadOnly)
     |> telega.with_auto_commands()
-    |> telega.init_for_polling()
+    |> telega.start()
 
   let assert Ok(_scheduler) =
     jobs.new(bot)

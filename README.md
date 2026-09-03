@@ -73,9 +73,9 @@ pub fn main() {
     telega_httpc.new("BOT_TOKEN")
 
   let assert Ok(_bot) =
-    telega.new_for_polling(api_client: client)
-    |> telega.with_router(router)
-    |> telega.init_for_polling_nil_session()
+    telega.new(client)
+    |> telega.router(router)
+    |> telega.start()
 
   process.sleep_forever()
 }
@@ -91,9 +91,16 @@ And it will echo all received text messages.
 
 Congratulations! You just wrote a Telegram bot :)
 
+The builder is one constructor plus a mode step: `telega.new(api_client)`, then
+`telega.polling(...)` (the default) or `telega.webhook(url:, path:, secret_token:)`,
+then `telega.start()`. Optional services and session go in before the router
+(`telega.dependencies`, `telega.session`), and everything else is a `with_*`
+setting. Coming from 2.x? See the
+[v3 migration guide](https://hexdocs.pm/telega/docs/migration-v3.html).
+
 ## Architecture
 
-Calling `telega.init_for_polling()` (or `telega.init()` for webhooks) starts an OTP supervision tree:
+Calling `telega.start()` starts an OTP supervision tree:
 
 ```text
 TelegaRootSupervisor (OneForOne)
@@ -109,11 +116,11 @@ TelegaRootSupervisor (OneForOne)
 - **ChatInstance** — one per user-chat combination; holds session state and conversation continuations. Transient restart strategy means it restarts only on abnormal exit and re-registers itself in the ETS registry automatically.
 - **Polling worker** — long-polls the Telegram API with exponential backoff on errors.
 
-Each `telega.init*` call creates an independent tree with its own ETS registry, so multiple bot instances don't conflict.
+Each `telega.start()` call creates an independent tree with its own ETS registry, so multiple bot instances don't conflict.
 
 ### Running under your own supervision tree
 
-`telega.supervised` (webhook) and `telega.supervised_for_polling` (polling) wrap the corresponding `init` into a `ChildSpecification`, so the bot's tree becomes a child of your application's supervisor — a crashed bot is re-initialized by your tree, and ordering against the resources it needs (a database pool, caches) is expressed as child order:
+`telega.supervised` wraps `telega.start` into a `ChildSpecification`, so the bot's tree becomes a child of your application's supervisor — a crashed bot is re-initialized by your tree, and ordering against the resources it needs (a database pool, caches) is expressed as child order:
 
 ```gleam
 import gleam/otp/static_supervisor as supervisor
@@ -122,10 +129,9 @@ let assert Ok(_) =
   supervisor.new(supervisor.RestForOne)
   |> supervisor.add(db_pool_child)
   |> supervisor.add(
-    telega.new_for_polling(api_client:)
-    |> telega.with_router(router)
-    |> telega.with_nil_session()
-    |> telega.supervised_for_polling(),
+    telega.new(api_client)
+    |> telega.router(router)
+    |> telega.supervised(),
   )
   |> supervisor.start
 ```
@@ -193,16 +199,17 @@ when it sees one. Park the step instead — `action.wait` in a flow,
 
 ## Dependency injection
 
-Handlers reach shared services — a database pool, an HTTP client, an i18n catalog — through the typed, non-persisted `dependencies` slot on `Context`. It is set once at init and is never serialized, unlike `session` (which holds per-user state):
+Handlers reach shared services — a database pool, an HTTP client, an i18n catalog — through the typed, non-persisted `dependencies` slot on `Context`. It is set once at startup and is never serialized, unlike `session` (which holds per-user state):
 
 ```gleam
 pub type Dependencies {
   Dependencies(db: Connection, catalog: Catalog)
 }
 
-telega.new_for_polling_with_dependencies(api_client: client, dependencies: Dependencies(db:, catalog:))
-|> telega.with_router(router)
-|> telega.init_for_polling()
+telega.new(client)
+|> telega.dependencies(Dependencies(db:, catalog:))
+|> telega.router(router)
+|> telega.start()
 
 // in any handler / flow step / middleware:
 fn my_bookings(ctx: Context(Nil, String, Dependencies), _cmd) {
