@@ -5,6 +5,8 @@
 
 A [Gleam](https://gleam.run/) library for the Telegram Bot API on BEAM.
 
+**Bot API version:** Bot API 10.3 (the model layer, the per-method retry table and the update-kind table are generated from the vendored spec `codegen/api.json`).
+
 <a href="#" target="blank">
   <img src="https://raw.githubusercontent.com/bondiano/telega-gleam/refs/heads/master/docs/logo.png" alt="Telega" width="254" style="display: block; margin: 0 auto;" />
 </a>

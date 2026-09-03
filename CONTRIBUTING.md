@@ -91,6 +91,10 @@ gleam test
 | `task codegen:fetch` | Download the latest Telegram Bot API spec into `codegen/` |
 | `task codegen` | Regenerate the model layer, then `gleam format` + `gleam check` |
 | `task codegen:diff` | Show what the last codegen run changed under `src/telega/model` |
+| `task codegen:check` | Fail if the checked-in generated code has drifted from the spec (CI) |
+| `task api:check` | Fail if the Bot API version disagrees across spec, tables and README (CI) |
+| `task api:latest` | Report whether a newer Bot API spec is published upstream |
+| `task lint:totality` | Fail on `panic`/`let assert` anywhere on the update decode path (CI) |
 | `task publish` | Publish the core + all ecosystem packages (maintainers — see below) |
 
 The package and example lists live once in the `vars` block of `Taskfile.yml`.
@@ -120,12 +124,20 @@ Ecosystem packages depend on the **local** core via a path dependency
 immediately. See [Releasing](#releasing-maintainers) for how that interacts with
 publishing.
 
-## The model layer is generated
+## What is generated from the API spec
 
-`src/telega/model/{types,decoder,encoder}.gleam` are **generated** from the
-machine-readable Bot API spec — do not hand-edit the generated region.
+Anything the machine-readable Bot API spec already states is generated from it,
+so a new API version cannot leave a hole nobody notices:
 
-Each file is split by a marker line:
+| File | Shape |
+|---|---|
+| `src/telega/model/{types,decoder,encoder}.gleam` | generated prefix + manual suffix |
+| `src/telega/internal/method_info.gleam` | whole file — the method list and per-method idempotency |
+| `src/telega/internal/update_info.gleam` | whole file — the update kinds, i.e. the `allowed_updates` names |
+| `src/telega/update.gleam` | one generated block — the `raw_to_update` dispatch chain |
+| `src/telega/api.gleam` | **checked, not generated** — one wrapper per spec method, no more, no less |
+
+The three model files are split by a marker line:
 
 ```gleam
 // === MANUAL — not regenerated below (codegen) ===
@@ -133,8 +145,16 @@ Each file is split by a marker line:
 
 Everything **above** the marker is overwritten by the generator; everything from
 the marker to EOF (method-parameter types, generics, hand-tuned helpers) is
-preserved verbatim. To change generated output, edit the generator in
-`codegen/`; to add things the spec can't express, put them in the manual suffix.
+preserved verbatim. In `update.gleam` the generator instead owns exactly what
+sits between
+
+```gleam
+// === GENERATED — do not edit (codegen) ===
+// === END GENERATED (codegen) ===
+```
+
+To change generated output, edit the generator in `codegen/`; to add things the
+spec can't express, put them in the manual suffix.
 
 Bumping to a new Bot API version:
 
@@ -143,6 +163,12 @@ task codegen:fetch   # pull the latest api.json
 task codegen         # regenerate + format + check
 task codegen:diff    # review the diff
 ```
+
+Expect `gleam check` to fail after a bump that adds an update kind or a method:
+the generated dispatch chain will call a `new_*_update` you have not written
+yet, and codegen itself refuses until `api.gleam` wraps every method. That is
+the point. Finish by updating the `**Bot API version:**` line in `README.md`
+(and `CLAUDE.md`) and running `task api:check`.
 
 See `codegen/README.md` for details.
 

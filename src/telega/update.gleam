@@ -267,19 +267,19 @@ pub fn decode_raw(json: Dynamic) -> Result(ModelUpdate, error.TelegaError) {
   })
 }
 
+// === GENERATED — do not edit (codegen) ===
 /// Decode a update from the Telegram API to `Update` instance.
+///
+/// One `on_field` line per field of the spec's `Update` type, `message`
+/// last because it dispatches further on the message's own content. The
+/// chain is generated, so a new update kind cannot be forgotten here.
 pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
-  use <- on_field(
-    raw_update.callback_query,
-    raw_update,
-    new_callback_query_update,
-  )
-  use <- on_field(raw_update.channel_post, raw_update, new_channel_post_update)
   use <- on_field(
     raw_update.edited_message,
     raw_update,
     new_edited_message_update,
   )
+  use <- on_field(raw_update.channel_post, raw_update, new_channel_post_update)
   use <- on_field(
     raw_update.edited_channel_post,
     raw_update,
@@ -306,6 +306,11 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
     new_deleted_business_message_update,
   )
   use <- on_field(
+    raw_update.guest_message,
+    raw_update,
+    new_guest_message_update,
+  )
+  use <- on_field(
     raw_update.message_reaction,
     raw_update,
     new_message_reaction_update,
@@ -320,6 +325,11 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
     raw_update.chosen_inline_result,
     raw_update,
     new_chosen_inline_result_update,
+  )
+  use <- on_field(
+    raw_update.callback_query,
+    raw_update,
+    new_callback_query_update,
   )
   use <- on_field(
     raw_update.shipping_query,
@@ -356,11 +366,6 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
     new_removed_chat_boost_update,
   )
   use <- on_field(raw_update.managed_bot, raw_update, new_managed_bot_update)
-  use <- on_field(
-    raw_update.guest_message,
-    raw_update,
-    new_guest_message_update,
-  )
   use <- on_field(raw_update.subscription, raw_update, new_subscription_update)
   use <- on_field(
     raw_update.stopped_message_generation,
@@ -372,6 +377,8 @@ pub fn raw_to_update(raw_update: ModelUpdate) -> Update {
   log.warning("Unknown update: " <> string.inspect(raw_update))
   UnknownUpdate(raw: raw_update, from_id: -1, chat_id: -1)
 }
+
+// === END GENERATED (codegen) ===
 
 /// Dispatch on the first update field Telegram filled in. The value comes out
 /// of the same `case` that tests it, so the chain is total by construction —

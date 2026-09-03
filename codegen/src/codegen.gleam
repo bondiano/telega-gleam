@@ -35,9 +35,25 @@ const encoder_file = "../src/telega/model/encoder.gleam"
 
 const method_info_file = "../src/telega/internal/method_info.gleam"
 
+const update_info_file = "../src/telega/internal/update_info.gleam"
+
+/// Hand-written module with one generated block: the `raw_to_update` dispatch
+/// chain, which must cover every field of the spec's `Update` type.
+const update_file = "../src/telega/update.gleam"
+
+/// Hand-written module the generator only *checks*: every spec method must have
+/// a wrapper, and every wrapper must name a method the spec still has.
+const api_file = "../src/telega/api.gleam"
+
 /// Everything from this line to EOF in each target file is hand-written and
 /// preserved across regenerations.
 const manual_marker = "// === MANUAL — not regenerated below (codegen) ==="
+
+/// In a file that is hand-written apart from one generated section, the
+/// generator owns everything between these two lines and nothing else.
+const generated_block_begin = "// === GENERATED — do not edit (codegen) ==="
+
+const generated_block_end = "// === END GENERATED (codegen) ==="
 
 // --- Spec types not represented as a real Gleam struct ----------------------
 
@@ -79,6 +95,21 @@ const idempotent_overrides = ["sendChatAction"]
 /// `answer*` queries that answer by *sending* a new message, so a replay is a
 /// second message rather than a second answer to the same query.
 const non_idempotent_overrides = ["answerGuestQuery", "answerWebAppQuery"]
+
+// --- Update dispatch --------------------------------------------------------
+
+/// Update fields whose builder in `telega/update` is not named
+/// `new_<field>_update`.
+///
+/// `message` is the odd one out on purpose: it dispatches further on the
+/// message's own content (photo / video / text / command / …), so the generated
+/// chain sends it to `decode_message_update` and puts it last.
+const update_builder_overrides = [
+  #("deleted_business_messages", "new_deleted_business_message_update"),
+  #("purchased_paid_media", "new_paid_media_purchase_update"),
+  #("stopped_message_generation", "new_message_generation_stopped_update"),
+  #("message", "decode_message_update"),
+]
 
 // --- Internal model ---------------------------------------------------------
 
@@ -213,6 +244,9 @@ fn generate_method_info(
   version: String,
   classified: List(#(String, Bool)),
 ) -> String {
+  let names =
+    list.map(classified, fn(entry) { "    \"" <> entry.0 <> "\"," })
+    |> string.join("\n")
   let clauses =
     list.map(classified, fn(entry) {
       let #(name, idempotent) = entry
@@ -225,7 +259,7 @@ fn generate_method_info(
     |> string.join("\n")
 
   method_info_header
-  <> banner(version)
+  <> whole_file_banner(version)
   <> "/// The Bot API version this table was generated from.\n"
   <> "pub const bot_api_version = \""
   <> version
@@ -245,7 +279,173 @@ fn generate_method_info(
   <> "/// A method this Bot API version does not know is treated as unsafe: a\n"
   <> "/// custom or newer method is more likely to create something than not.\n"
   <> "pub fn is_idempotent(method method: String) -> Bool {\n"
-  <> "  lookup_idempotent(method) |> result.unwrap(False)\n}\n"
+  <> "  lookup_idempotent(method) |> result.unwrap(False)\n}\n\n"
+  <> "/// Every method this Bot API version has, sorted by name.\n"
+  <> "pub fn methods() -> List(String) {\n  [\n"
+  <> names
+  <> "\n  ]\n}\n\n"
+  <> "/// Whether `method` is a method of this Bot API version.\n"
+  <> "pub fn is_method(method method: String) -> Bool {\n"
+  <> "  lookup_idempotent(method) |> result.is_ok\n}\n"
+}
+
+// --- Update-kind table -------------------------------------------------------
+
+/// The optional fields of the spec's `Update` type, paired with the type each
+/// one carries. These are exactly the names `allowed_updates` accepts and
+/// exactly the cases `update.raw_to_update` has to dispatch on.
+fn update_type_fields(
+  types: Dict(String, RawType),
+) -> Result(List(#(String, String)), String) {
+  case dict.get(types, "Update") {
+    Error(_) -> Error("the spec has no `Update` type")
+    Ok(RawType(fields: None, ..)) ->
+      Error("the spec's `Update` type carries no fields")
+    Ok(RawType(fields: Some(fields), ..)) ->
+      // The one required field is `update_id`; the rest are the update kinds,
+      // "at most one of" which any given update carries.
+      fields
+      |> list.filter(fn(f) { !f.required })
+      |> list.map(fn(f) {
+        #(f.name, list.first(f.types) |> result.unwrap("Unknown"))
+      })
+      |> Ok
+  }
+}
+
+fn generate_update_info(
+  version: String,
+  fields: List(#(String, String)),
+) -> String {
+  let names =
+    list.map(fields, fn(f) { "    \"" <> f.0 <> "\"," })
+    |> string.join("\n")
+  let known =
+    list.map(fields, fn(f) { "    \"" <> f.0 <> "\" -> True" })
+    |> string.join("\n")
+  let carried =
+    list.map(fields, fn(f) { "    \"" <> f.0 <> "\" -> Ok(\"" <> f.1 <> "\")" })
+    |> string.join("\n")
+
+  update_info_header
+  <> whole_file_banner(version)
+  <> "/// The Bot API version this table was generated from.\n"
+  <> "pub const bot_api_version = \""
+  <> version
+  <> "\"\n\n"
+  <> "/// How many update kinds this Bot API version has.\n"
+  <> "pub const update_kind_count = "
+  <> int_to_string(list.length(fields))
+  <> "\n\n"
+  <> "/// Every optional field of the spec's `Update` type, in spec order —\n"
+  <> "/// exactly the names Telegram accepts in `allowed_updates`.\n"
+  <> "pub fn update_fields() -> List(String) {\n  [\n"
+  <> names
+  <> "\n  ]\n}\n\n"
+  <> "/// Whether `name` is an update kind this Bot API version knows, i.e. a\n"
+  <> "/// name Telegram accepts in `allowed_updates`.\n"
+  <> "pub fn is_update_field(name name: String) -> Bool {\n  case name {\n"
+  <> known
+  <> "\n    _ -> False\n  }\n}\n\n"
+  <> "/// The spec type an update field carries (`\"message\"` -> `\"Message\"`),\n"
+  <> "/// or `Error(Nil)` for a name this Bot API version does not know.\n"
+  <> "pub fn update_field_type(field field: String) -> Result(String, Nil) {\n"
+  <> "  case field {\n"
+  <> carried
+  <> "\n    _ -> Error(Nil)\n  }\n}\n"
+}
+
+/// The builder `telega/update` names for an update field.
+fn update_builder_name(field: String) -> String {
+  case list.key_find(update_builder_overrides, field) {
+    Ok(name) -> name
+    Error(_) -> "new_" <> field <> "_update"
+  }
+}
+
+/// The `raw_to_update` dispatch chain: one line per update field, `message`
+/// last. A new field in the spec becomes a call to a builder that does not
+/// exist yet, so the update kind lands as a compile error in `update.gleam`
+/// rather than as a silently ignored update.
+fn generate_raw_to_update(fields: List(#(String, String))) -> String {
+  let #(message_field, rest) =
+    list.partition(fields, fn(f) { f.0 == "message" })
+  let clauses =
+    list.append(rest, message_field)
+    |> list.map(fn(f) {
+      "  use <- on_field(raw_update."
+      <> f.0
+      <> ", raw_update, "
+      <> update_builder_name(f.0)
+      <> ")\n"
+    })
+    |> string.concat
+
+  "/// Decode a update from the Telegram API to `Update` instance.\n"
+  <> "///\n"
+  <> "/// One `on_field` line per field of the spec's `Update` type, `message`\n"
+  <> "/// last because it dispatches further on the message's own content. The\n"
+  <> "/// chain is generated, so a new update kind cannot be forgotten here.\n"
+  <> "pub fn raw_to_update(raw_update: ModelUpdate) -> Update {\n"
+  <> clauses
+  <> "\n"
+  <> "  log.warning(\"Unknown update: \" <> string.inspect(raw_update))\n"
+  <> "  UnknownUpdate(raw: raw_update, from_id: -1, chat_id: -1)\n"
+  <> "}\n"
+}
+
+// --- Method coverage ---------------------------------------------------------
+
+/// Check that `api.gleam` wraps exactly the spec's methods.
+///
+/// The wrappers are hand-written (each has its own parameter record and result
+/// type), but *which* methods exist is a spec fact, so the generator refuses
+/// when the two drift apart in either direction.
+fn check_api_coverage(method_names: List(String)) -> Result(Int, String) {
+  use content <- result.try(
+    simplifile.read(api_file)
+    |> result.replace_error("cannot read " <> api_file),
+  )
+  use re <- result.try(
+    regexp.from_string("path:\\s*\"([A-Za-z]+)\"")
+    |> result.replace_error("bad method-path pattern"),
+  )
+  let wrapped =
+    regexp.scan(re, content)
+    |> list.filter_map(fn(m) {
+      case m.submatches {
+        [Some(name)] -> Ok(name)
+        _ -> Error(Nil)
+      }
+    })
+    |> set.from_list
+  let spec = set.from_list(method_names)
+  let missing = sorted_difference(spec, wrapped)
+  let stale = sorted_difference(wrapped, spec)
+
+  case missing, stale {
+    [], [] -> Ok(set.size(wrapped))
+    _, _ ->
+      Error(
+        "api.gleam does not wrap exactly the spec's methods."
+        <> name_list("\n  no wrapper for: ", missing)
+        <> name_list(
+          "\n  wrapper for a method this spec does not have: ",
+          stale,
+        ),
+      )
+  }
+}
+
+fn sorted_difference(from: Set(String), remove: Set(String)) -> List(String) {
+  set.difference(from, remove) |> set.to_list |> list.sort(string.compare)
+}
+
+fn name_list(label: String, names: List(String)) -> String {
+  case names {
+    [] -> ""
+    _ -> label <> string.join(names, ", ")
+  }
 }
 
 // --- Transform raw spec -> internal model -----------------------------------
@@ -897,6 +1097,44 @@ fn read_manual_suffix(path: String) -> Result(String, String) {
   }
 }
 
+/// Rewrite the generated block of an otherwise hand-written file, leaving
+/// everything outside the two marker lines untouched.
+fn replace_generated_block(path: String, body: String) -> Result(Nil, String) {
+  use content <- result.try(
+    simplifile.read(path)
+    |> result.replace_error("cannot read " <> path),
+  )
+  use #(before, rest) <- result.try(
+    string.split_once(content, generated_block_begin)
+    |> result.replace_error(
+      "generated-block start marker not found in "
+      <> path
+      <> " — add the line `"
+      <> generated_block_begin
+      <> "`.",
+    ),
+  )
+  use #(_, after) <- result.try(
+    string.split_once(rest, generated_block_end)
+    |> result.replace_error(
+      "generated-block end marker not found in "
+      <> path
+      <> " — add the line `"
+      <> generated_block_end
+      <> "` after the generated section.",
+    ),
+  )
+  write_file(
+    path,
+    before
+      <> generated_block_begin
+      <> "\n"
+      <> body
+      <> generated_block_end
+      <> after,
+  )
+}
+
 // --- File assembly ----------------------------------------------------------
 
 const types_header = "//// This module contains all types from [Telegram Bot API](https://core.telegram.org/bots/api).
@@ -929,6 +1167,17 @@ import gleam/result
 
 "
 
+const update_info_header = "//// Per-update-kind facts derived from the Telegram Bot API spec.
+////
+//// The optional fields of the spec's `Update` type are three things at once:
+//// the names Telegram accepts in `allowed_updates`, the payloads
+//// `telega/update` has to dispatch on, and the kinds a router can ask for. All
+//// of them come from this one table, so an update kind cannot be half-known.
+////
+//// Generated by `task codegen` — do not edit.
+
+"
+
 const encoder_header = "//// This module contains all encoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/int
@@ -938,6 +1187,14 @@ import gleam/option.{None, Some}
 import telega/internal/utils.{json_object_filter_nulls}
 
 "
+
+/// Banner for a file the generator owns end to end.
+fn whole_file_banner(version: String) -> String {
+  "// This file is auto-generated for "
+  <> version
+  <> " from the Telegram Bot API spec.\n"
+  <> "// Do not edit — run `task codegen` to regenerate.\n\n"
+}
 
 fn banner(version: String) -> String {
   "// This file is auto-generated for "
@@ -1115,6 +1372,22 @@ fn run() -> Result(String, String) {
     generate_method_info(spec.version, classified),
   ))
 
+  // --- internal/update_info.gleam: fully generated, no manual suffix ---
+  use update_fields <- result.try(update_type_fields(spec.types))
+  use _ <- result.try(write_file(
+    update_info_file,
+    generate_update_info(spec.version, update_fields),
+  ))
+
+  // --- update.gleam: only the `raw_to_update` dispatch chain ---
+  use _ <- result.try(replace_generated_block(
+    update_file,
+    generate_raw_to_update(update_fields),
+  ))
+
+  // --- api.gleam: checked, not generated ---
+  use wrapped <- result.try(check_api_coverage(spec.method_names))
+
   Ok(
     "Generated model layer for "
     <> spec.version
@@ -1126,7 +1399,11 @@ fn run() -> Result(String, String) {
     <> int_to_string(list.length(decodable_unions))
     <> " decodable), "
     <> int_to_string(list.length(classified))
-    <> " methods classified.",
+    <> " methods classified, "
+    <> int_to_string(list.length(update_fields))
+    <> " update kinds, "
+    <> int_to_string(wrapped)
+    <> " method wrappers checked.",
   )
 }
 

@@ -41,14 +41,100 @@ tasks:
     desc: Show what the last codegen run changed in the model layer
     cmd: git --no-pager diff --stat -- src/telega/model
 
+  codegen:check:
+    desc: >
+      Fail if the checked-in generated code does not match `codegen/api.json`.
+      Hashes every generated file, regenerates in place, and compares — so a
+      hand edit to a generated file, or a spec bump nobody regenerated, cannot
+      pass CI. Also runs the generator's own checks: every spec method has a
+      wrapper in `api.gleam`, and every method is classified as (non-)idempotent.
+    vars:
+      GENERATED: >-
+        src/telega/model/types.gleam src/telega/model/decoder.gleam
+        src/telega/model/encoder.gleam src/telega/internal/method_info.gleam
+        src/telega/internal/update_info.gleam src/telega/update.gleam
+    cmd: |
+      set -eu
+      BEFORE=$(shasum {{.GENERATED}})
+      ( cd codegen && gleam run )
+      gleam format src
+      AFTER=$(shasum {{.GENERATED}})
+      if [ "${BEFORE}" != "${AFTER}" ]; then
+        echo ""
+        echo "Generated code is out of date. Files that changed when regenerating:"
+        diff <(echo "${BEFORE}") <(echo "${AFTER}") | sed -nE 's/^> [0-9a-f]+  (.*)/  \1/p'
+        echo ""
+        echo "Run 'task codegen' and commit the result."
+        exit 1
+      fi
+      echo "Generated code matches codegen/api.json."
+
+  api:check:
+    desc: >
+      Fail if the Bot API version is not the same in every place that states
+      it: the vendored spec, the two generated tables, and README.md (plus
+      CLAUDE.md when the checkout has one — it is not tracked).
+    cmd: |
+      set -u
+      version_of() { sed -nE 's/^\*\*Bot API version:\*\* (Bot API [0-9.]+).*/\1/p' "$1" | head -1; }
+      SPEC=$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' codegen/api.json | head -1)
+      if [ -z "${SPEC}" ]; then
+        echo "Could not read a version out of codegen/api.json."
+        exit 1
+      fi
+      echo "codegen/api.json: ${SPEC}"
+      failed=0
+      for table in method_info update_info; do
+        HAVE=$(sed -nE 's/^pub const bot_api_version = "(.+)"$/\1/p' "src/telega/internal/${table}.gleam")
+        if [ "${SPEC}" != "${HAVE}" ]; then
+          echo "  ${table}.gleam says '${HAVE}' — run 'task codegen'"
+          failed=1
+        fi
+      done
+      for doc in README.md CLAUDE.md; do
+        [ -f "${doc}" ] || continue
+        HAVE=$(version_of "${doc}")
+        if [ -z "${HAVE}" ]; then
+          echo "  ${doc} has no '**Bot API version:**' line"
+          failed=1
+        elif [ "${SPEC}" != "${HAVE}" ]; then
+          echo "  ${doc} says '${HAVE}'"
+          failed=1
+        fi
+      done
+      if [ "${failed}" -ne 0 ]; then
+        echo ""
+        echo "Bot API version disagrees with codegen/api.json."
+        exit 1
+      fi
+      echo "Bot API version agrees everywhere."
+
+  api:latest:
+    desc: >
+      Report whether a newer Bot API spec is published upstream than the one
+      vendored in codegen/api.json. Informational — never fails on being behind.
+    cmd: |
+      set -u
+      SPEC=$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' codegen/api.json | head -1)
+      LATEST=$(curl -fsSL https://raw.githubusercontent.com/PaulSonOfLars/telegram-bot-api-spec/main/api.json \
+        | sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)
+      echo "vendored: ${SPEC}"
+      echo "upstream: ${LATEST}"
+      if [ "${SPEC}" = "${LATEST}" ]; then
+        echo "Up to date."
+      else
+        echo "A newer spec is out — 'task codegen:fetch && task codegen'."
+      fi
+
   lint:totality:
     desc: >
       Guard the decode boundary: no `panic` and no `let assert` in
-      `update.gleam` or the generated model layer. A malformed update must
-      decode to `UnknownUpdate`, never take the poller down.
+      `update.gleam` or in anything the generator writes. A malformed update
+      must decode to `UnknownUpdate`, never take the poller down.
     cmd: |
       set -u
-      if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/; then
+      if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/ \
+        src/telega/internal/method_info.gleam src/telega/internal/update_info.gleam; then
         echo ""
         echo "Totality lint failed: rewrite the matches above as a total 'case'."
         exit 1

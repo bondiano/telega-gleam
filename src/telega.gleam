@@ -17,6 +17,7 @@ import telega/internal/config.{type Config}
 import telega/internal/log
 import telega/internal/registry
 import telega/internal/signal
+import telega/internal/update_info
 import telega/internal/utils
 
 import telega/api
@@ -658,12 +659,37 @@ pub fn with_ip_address(
 /// Restrict the update types Telegram sends, by hand.
 ///
 /// Always wins over `with_auto_allowed_updates` — this is the escape hatch for
-/// when derivation is not what you want.
+/// when derivation is not what you want. A name this Bot API version does not
+/// have is kept (Telegram is the authority) but logged, since the usual reason
+/// for one is a typo that quietly costs the bot an update kind.
 pub fn with_allowed_updates(
   builder: TelegaBuilder(session, error, dependencies, state),
   updates updates: List(String),
 ) -> TelegaBuilder(session, error, dependencies, state) {
+  warn_unknown_update_kinds(updates)
   TelegaBuilder(..builder, allowed_updates: Some(updates))
+}
+
+/// Log every name that is not an update kind of the Bot API version this build
+/// was generated for.
+///
+/// The list of valid names is generated from the spec
+/// (`telega/internal/update_info`), so it is the same list `raw_to_update`
+/// dispatches on rather than a second hand-written copy.
+fn warn_unknown_update_kinds(updates: List(String)) -> Nil {
+  list.each(updates, fn(name) {
+    case update_info.is_update_field(name) {
+      True -> Nil
+      False ->
+        log.warning(
+          "allowed_updates: \""
+          <> name
+          <> "\" is not an update kind of "
+          <> update_info.bot_api_version
+          <> " — check the spelling, or ignore this if you are on a newer Bot API.",
+        )
+    }
+  })
 }
 
 /// Upload a self-signed certificate along with the webhook.
@@ -1014,6 +1040,7 @@ pub fn with_extra_allowed_updates(
   builder: TelegaBuilder(session, error, dependencies, state),
   updates updates: List(String),
 ) -> TelegaBuilder(session, error, dependencies, state) {
+  warn_unknown_update_kinds(updates)
   TelegaBuilder(
     ..builder,
     extra_allowed_updates: list.append(builder.extra_allowed_updates, updates),

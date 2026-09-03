@@ -29,11 +29,46 @@ jobs:
 
       - name: Totality Lint
         run: |
-          if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/; then
+          if grep -rnE 'panic|let assert' src/telega/update.gleam src/telega/model/ \
+            src/telega/internal/method_info.gleam src/telega/internal/update_info.gleam; then
             echo ""
             echo "Totality lint failed: rewrite the matches above as a total 'case'."
             exit 1
           fi
+
+      # Mirrors `task codegen:check`. The checkout is clean, so asking git
+      # whether regenerating moved anything is the same question.
+      - name: Codegen Up To Date
+        run: |
+          (cd codegen && gleam deps download && gleam run)
+          gleam format src
+          if ! git diff --exit-code -- \
+            src/telega/model \
+            src/telega/internal/method_info.gleam \
+            src/telega/internal/update_info.gleam \
+            src/telega/update.gleam; then
+            echo ""
+            echo "Generated code is out of date: run 'task codegen' and commit the diff above."
+            exit 1
+          fi
+
+      # Mirrors `task api:check`.
+      - name: Bot API Version
+        run: |
+          SPEC=$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' codegen/api.json | head -1)
+          DOCS=$(sed -nE 's/^\*\*Bot API version:\*\* (Bot API [0-9.]+).*/\1/p' README.md | head -1)
+          for table in method_info update_info; do
+            HAVE=$(sed -nE 's/^pub const bot_api_version = "(.+)"$/\1/p' "src/telega/internal/${table}.gleam")
+            if [ "${SPEC}" != "${HAVE}" ]; then
+              echo "${table}.gleam is generated from ${HAVE}, the spec says ${SPEC}"
+              exit 1
+            fi
+          done
+          if [ "${SPEC}" != "${DOCS}" ]; then
+            echo "README.md documents ${DOCS}, the spec says ${SPEC}"
+            exit 1
+          fi
+          echo "Bot API version agrees everywhere: ${SPEC}"
 
       - name: Test
         run: GLEAM_LOG=trace gleam test
