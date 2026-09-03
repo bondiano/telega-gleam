@@ -185,6 +185,7 @@ A handler returns a `DialogAction`:
 | `Back(state)` | save state, one step back in the history |
 | `Done(state)` | save state, run `on_done`, remove the keyboard, delete the instance |
 | `StartSub(sub_id, args, state)` | start a sub-dialog (§ Sub-dialogs) |
+| `Shown(mode, action)` | carry out `action`, showing whatever window it lands on with `mode` (§ Errors and Robustness) |
 
 Buttons in `RenderedWindow.buttons`:
 
@@ -196,6 +197,31 @@ Buttons in `RenderedWindow.buttons`:
 
 `on_action` receives an already-parsed `ActionEvent(action_id, arg)`, never a
 raw payload string.
+
+### Data a window does not hold
+
+A window sometimes renders things that do not belong in its state: the
+user's open orders, today's price, a row that another handler may have
+changed since. `window_with_data` splits that in two — `load` reads the
+world, `render` stays a pure function of `(state, data)`:
+
+```gleam
+|> dialog.window_with_data(
+  id: "orders",
+  load: fn(_state, ctx) { db.open_orders(ctx.dependencies.db, ctx.update.from_id) },
+  render: fn(_state, orders, _ctx) { order_list(orders) },
+  on_action:,
+)
+```
+
+`load` runs on **every** render of the window — the opening one and each
+re-render after a press — which is what keeps the screen from going stale;
+keep it to one cheap read and put anything expensive in the state or in
+`dependencies`. `render` is still snapshot-testable on its own: hand it data
+you made up.
+
+For a window that also takes text or carries widgets, pass the same pairing
+as its `render`: `dialog.with_data(load:, render:)`.
 
 ### Text input
 
@@ -473,6 +499,12 @@ filter:
   wants `ResendOnUserMessage`: after the user types, an edited window is
   scrolled *above* their own message and easy to miss, so the window is
   deleted and resent below it. `AlwaysResend` never edits.
+  The mode can be narrowed twice over, most specific winning:
+  `dialog.with_window_show_mode(builder, window:, mode:)` sets it for one
+  window (the one window that asks the user to type, in a dialog that
+  otherwise edits in place — `build()` rejects an unknown window id), and
+  `types.Shown(mode, action)` sets it for one action, covering every render
+  that action leads to and nothing after it.
 - `dialog.on_message(builder, window:, handler:)` accepts a photo, video,
   voice note, audio or location sent while `window` is open, classified as a
   `MessageInput` (the raw update stays on `ctx.update`). Without it those

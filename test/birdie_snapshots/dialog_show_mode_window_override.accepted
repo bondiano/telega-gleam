@@ -1,0 +1,25 @@
+---
+version: 2.0.1
+title: dialog:show_mode:window_override
+file: ./test/telega/dialog_test.gleam
+test_name: window_show_mode_overrides_the_dialog_test
+---
+1. sendMessage
+{
+  "chat_id": 252,
+  "parse_mode": "HTML",
+  "text": "Name? ()"
+}
+
+2. deleteMessage
+{
+  "chat_id": 252,
+  "message_id": 1
+}
+
+3. sendMessage
+{
+  "chat_id": 252,
+  "parse_mode": "HTML",
+  "text": "Name? (Alice)"
+}

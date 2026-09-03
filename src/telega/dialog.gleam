@@ -181,6 +181,7 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
           Result(DialogAction(state), error),
       ),
     ),
+    show_mode_overrides: List(#(String, types.ShowMode)),
     storage: flow_types.FlowStorage(error),
     ttl_ms: Option(Int),
     labels: fn(Context(session, error, dependencies)) -> Labels,
@@ -214,6 +215,7 @@ pub fn new(
     subs: [],
     sub_result_hooks: [],
     message_hooks: [],
+    show_mode_overrides: [],
     storage:,
     ttl_ms: None,
     labels: fn(_ctx) { types.default_labels() },
@@ -264,6 +266,7 @@ pub fn window(
       on_message: None,
       widgets: [],
       on_sub_result: None,
+      show_mode: None,
     ),
   )
 }
@@ -292,6 +295,7 @@ pub fn window_with_input(
       on_message: None,
       widgets: [],
       on_sub_result: None,
+      show_mode: None,
     ),
   )
 }
@@ -330,8 +334,67 @@ pub fn window_with_widgets(
       on_message: None,
       widgets:,
       on_sub_result: None,
+      show_mode: None,
     ),
   )
+}
+
+/// Add a window that renders from data it does not keep in state — the
+/// getter pattern.
+///
+/// `load` is the half that reads the world (a booking row, the user's open
+/// orders, a price from an injected service); `render` stays a pure function
+/// of `(state, data)` and can be snapshot-tested by handing it data made up
+/// on the spot. Together they are exactly the `render` of
+/// [`window`](#window), so nothing else about the window changes.
+///
+/// `load` runs on **every** render of the window — the first one and each
+/// re-render after a press — so keep it to one cheap read, and put anything
+/// expensive in `state` or `dependencies` instead.
+///
+/// ```gleam
+/// |> dialog.window_with_data(
+///   id: "orders",
+///   load: fn(_state, ctx) { db.open_orders(ctx.dependencies.db, ctx.update.from_id) },
+///   render: fn(_state, orders, _ctx) { order_list(orders) },
+///   on_action:,
+/// )
+/// ```
+///
+/// To give a window with text input or widgets the same treatment, pass
+/// [`with_data`](#with_data) as their `render`.
+pub fn window_with_data(
+  builder builder: DialogBuilder(state, session, error, dependencies),
+  id id: String,
+  load load: fn(state, Context(session, error, dependencies)) -> data,
+  render render: fn(state, data, Context(session, error, dependencies)) ->
+    RenderedWindow,
+  on_action on_action: fn(
+    state,
+    ActionEvent,
+    Context(session, error, dependencies),
+  ) -> Result(DialogAction(state), error),
+) -> DialogBuilder(state, session, error, dependencies) {
+  window(builder, id:, render: with_data(load:, render:), on_action:)
+}
+
+/// The getter pattern as a plain render function, for the window constructors
+/// that take other handlers too:
+///
+/// ```gleam
+/// |> dialog.window_with_input(
+///   id: "search",
+///   render: dialog.with_data(load: recent_queries, render: search_window),
+///   on_action:,
+///   on_text:,
+/// )
+/// ```
+pub fn with_data(
+  load load: fn(state, Context(session, error, dependencies)) -> data,
+  render render: fn(state, data, Context(session, error, dependencies)) ->
+    RenderedWindow,
+) -> fn(state, Context(session, error, dependencies)) -> RenderedWindow {
+  fn(state, ctx) { render(state, load(state, ctx), ctx) }
 }
 
 fn add_window(
@@ -446,6 +509,31 @@ pub fn with_show_mode(
   DialogBuilder(..builder, show_mode: mode)
 }
 
+/// Override the dialog's show mode for one window.
+///
+/// A dialog that edits in place is usually right, but a single window that
+/// asks the user to type wants its answer resent below what they typed:
+///
+/// ```gleam
+/// |> dialog.with_window_show_mode(
+///   window: "name",
+///   mode: types.ResendOnUserMessage,
+/// )
+/// ```
+///
+/// `build()` rejects an unknown window id. For one render only, a handler can
+/// override both with `types.Shown(mode, action)`.
+pub fn with_window_show_mode(
+  builder builder: DialogBuilder(state, session, error, dependencies),
+  window window: String,
+  mode mode: types.ShowMode,
+) -> DialogBuilder(state, session, error, dependencies) {
+  DialogBuilder(..builder, show_mode_overrides: [
+    #(window, mode),
+    ..builder.show_mode_overrides
+  ])
+}
+
 /// Set the window the dialog opens with.
 pub fn initial(
   builder builder: DialogBuilder(state, session, error, dependencies),
@@ -509,6 +597,10 @@ pub fn build(
   use windows <- result.try(attach_message_hooks(
     windows,
     list.reverse(builder.message_hooks),
+  ))
+  use windows <- result.try(attach_show_modes(
+    windows,
+    list.reverse(builder.show_mode_overrides),
   ))
   use Nil <- result.try(validate_windows(builder.id, windows))
   use Nil <- result.try(validate_widget_targets(windows))
@@ -628,6 +720,27 @@ fn attach_message_hooks(
       list.map(windows, fn(window) {
         case window.id == window_id {
           True -> Window(..window, on_message: Some(handler))
+          False -> window
+        }
+      }),
+    )
+  })
+}
+
+fn attach_show_modes(
+  windows: List(Window(state, session, error, dependencies)),
+  overrides: List(#(String, types.ShowMode)),
+) -> Result(List(Window(state, session, error, dependencies)), DialogBuildError) {
+  list.try_fold(overrides, windows, fn(windows, override) {
+    let #(window_id, mode) = override
+    use <- require(
+      list.any(windows, fn(window) { window.id == window_id }),
+      types.UnknownWindowReference(from: "with_window_show_mode", to: window_id),
+    )
+    Ok(
+      list.map(windows, fn(window) {
+        case window.id == window_id {
+          True -> Window(..window, show_mode: Some(mode))
           False -> window
         }
       }),
@@ -808,6 +921,7 @@ fn erase_window(
         |> result.map(erase_action(_, encode))
       }
     }),
+    show_mode: window.show_mode,
   )
 }
 
@@ -823,6 +937,8 @@ fn erase_action(
     types.Done(state) -> types.Done(encode(state))
     types.StartSub(sub_id:, args:, state:) ->
       types.StartSub(sub_id:, args:, state: encode(state))
+    types.Shown(mode:, action:) ->
+      types.Shown(mode:, action: erase_action(action, encode))
   }
 }
 
@@ -904,21 +1020,28 @@ fn namespaced_id(sub_id: String, window_id: String) -> String {
 
 /// Re-key an (already erased) sub-dialog window under the sub namespace and
 /// map its navigation targets into it.
+fn namespace_action(
+  namespace: String,
+  action: DialogAction(String),
+) -> DialogAction(String) {
+  case action {
+    types.Goto(window_id:, state:) ->
+      types.Goto(window_id: namespaced_id(namespace, window_id), state:)
+    // A sub of a sub is addressed by the same path the compiled `subs` map
+    // is keyed with, so `StartSub` moves into the namespace as well.
+    types.StartSub(sub_id:, args:, state:) ->
+      types.StartSub(sub_id: namespaced_id(namespace, sub_id), args:, state:)
+    types.Shown(mode:, action:) ->
+      types.Shown(mode:, action: namespace_action(namespace, action))
+    other -> other
+  }
+}
+
 fn namespace_window(
   namespace: String,
   window: Window(String, session, error, dependencies),
 ) -> Window(String, session, error, dependencies) {
-  let map_action = fn(action: DialogAction(String)) {
-    case action {
-      types.Goto(window_id:, state:) ->
-        types.Goto(window_id: namespaced_id(namespace, window_id), state:)
-      // A sub of a sub is addressed by the same path the compiled `subs` map
-      // is keyed with, so `StartSub` moves into the namespace as well.
-      types.StartSub(sub_id:, args:, state:) ->
-        types.StartSub(sub_id: namespaced_id(namespace, sub_id), args:, state:)
-      other -> other
-    }
-  }
+  let map_action = namespace_action(namespace, _)
   Window(
     id: namespaced_id(namespace, window.id),
     render: window.render,
@@ -956,6 +1079,7 @@ fn namespace_window(
         handler(raw, sub_result, ctx) |> result.map(map_action)
       }
     }),
+    show_mode: window.show_mode,
   )
 }
 

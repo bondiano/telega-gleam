@@ -542,6 +542,11 @@ fn handle_text(
 
 // DialogAction → FlowAction ------------------------------------------------------
 
+/// Where a `Shown` action parks the mode it asked for. It lives in the
+/// update's scope, so it covers every render this action leads to — a `Goto`
+/// renders the next window in the same update — and is gone by the next one.
+const show_mode_key: scope.Key(types.ShowMode) = scope.Key("dialog/show_mode")
+
 fn apply_action(
   dialog: CompiledDialog(session, error, dependencies),
   ctx: Context(session, error, dependencies),
@@ -607,6 +612,11 @@ fn apply_action(
       start_sub(dialog, ctx, inst, sub_id, args, state, when_unknown: fn() {
         apply_action(dialog, ctx, inst, types.Stay(state))
       })
+
+    types.Shown(mode:, action:) -> {
+      scope.put(ctx.scope, show_mode_key, mode)
+      apply_action(dialog, ctx, inst, action)
+    }
   }
 }
 
@@ -764,6 +774,11 @@ fn apply_sub_return_action(
         jump_and_render(dialog, ctx, save_state(inst, state), return_window)
       })
     }
+
+    types.Shown(mode:, action:) -> {
+      scope.put(ctx.scope, show_mode_key, mode)
+      apply_sub_return_action(dialog, ctx, inst, return_window, action)
+    }
   }
 }
 
@@ -884,7 +899,7 @@ fn render_window(
       dialog_id: dialog.id,
       window_id: window.id,
       window: rendered,
-      resend: should_resend(dialog, ctx),
+      resend: should_resend(dialog, window, ctx),
     )
   {
     Ok(#(message_id, kind)) -> {
@@ -904,11 +919,20 @@ fn render_window(
 ///
 /// An edit after the user typed something leaves the window scrolled above
 /// their message; a press leaves it exactly where they are looking.
+///
+/// Most specific wins: what the action asked for (`Shown`, recorded in the
+/// update's scope), else what the window asks for, else the dialog's mode.
 fn should_resend(
   dialog: CompiledDialog(session, error, dependencies),
+  window: Window(String, session, error, dependencies),
   ctx: Context(session, error, dependencies),
 ) -> Bool {
-  case dialog.show_mode {
+  let mode =
+    scope.get(ctx.scope, show_mode_key)
+    |> result.lazy_unwrap(fn() {
+      option.unwrap(window.show_mode, dialog.show_mode)
+    })
+  case mode {
     types.EditLive -> False
     types.AlwaysResend -> True
     types.ResendOnUserMessage ->

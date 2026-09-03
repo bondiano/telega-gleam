@@ -1,0 +1,25 @@
+---
+version: 2.0.1
+title: dialog:show_mode:shown_action
+file: ./test/telega/dialog_test.gleam
+test_name: shown_action_overrides_window_and_dialog_test
+---
+1. sendMessage
+{
+  "chat_id": 253,
+  "parse_mode": "HTML",
+  "text": "Name? ()"
+}
+
+2. deleteMessage
+{
+  "chat_id": 253,
+  "message_id": 1
+}
+
+3. sendMessage
+{
+  "chat_id": 253,
+  "parse_mode": "HTML",
+  "text": "Name? (Alice)"
+}

@@ -68,6 +68,14 @@ pub type DialogAction(state) {
   /// to the sub-dialog's `init`. One level of nesting only: `StartSub` from
   /// inside a sub-dialog is rejected at runtime (logged, window re-rendered).
   StartSub(sub_id: String, args: Dict(String, String), state: state)
+  /// Carry out `action`, but show whatever window it lands on with `mode`
+  /// instead of the window's (or the dialog's) usual one.
+  ///
+  /// Scoped to the update the action was returned from: `Shown(AlwaysResend,
+  /// Goto("summary", state))` resends the summary window once, and the next
+  /// press on it edits again. Wrapping a `Shown` in another takes the
+  /// innermost mode — the one closest to the action it describes.
+  Shown(mode: ShowMode, action: DialogAction(state))
 }
 
 /// When the dialog replaces its live message instead of editing it.
@@ -122,6 +130,10 @@ pub type MessageInput {
 ///   `StartSub`) finishes: it receives the window's state and the result
 ///   dict exported by the `subdialog` attachment, and decides where to go
 ///   next (`Stay` re-renders this window). `None` just re-renders.
+/// - `show_mode: Some(mode)` overrides the dialog's show mode for this window
+///   alone (`dialog.with_window_show_mode`) — a window that asks for typed
+///   input wants `ResendOnUserMessage` even in a dialog that otherwise edits
+///   in place. `None` follows the dialog.
 pub type Window(state, session, error, dependencies) {
   Window(
     id: String,
@@ -141,6 +153,7 @@ pub type Window(state, session, error, dependencies) {
       fn(state, Dict(String, String), Context(session, error, dependencies)) ->
         Result(DialogAction(state), error),
     ),
+    show_mode: Option(ShowMode),
   )
 }
 

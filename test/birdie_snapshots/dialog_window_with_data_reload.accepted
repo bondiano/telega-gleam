@@ -1,0 +1,46 @@
+---
+version: 2.0.1
+title: dialog:window_with_data:reload
+file: ./test/telega/dialog_test.gleam
+test_name: window_with_data_reloads_on_every_render_test
+---
+1. sendMessage
+{
+  "chat_id": 254,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:orders:list:refresh",
+          "text": "Refresh"
+        }
+      ]
+    ]
+  },
+  "text": "Orders: 2 open"
+}
+
+2. editMessageText
+{
+  "chat_id": 254,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:orders:list:refresh",
+          "text": "Refresh"
+        }
+      ]
+    ]
+  },
+  "text": "Orders: 2 open"
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}

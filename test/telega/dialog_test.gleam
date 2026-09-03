@@ -1,5 +1,6 @@
 import birdie
 import gleam/dynamic/decode
+import gleam/erlang/process
 import gleam/http/response
 import gleam/json
 import gleam/option.{None, Some}
@@ -1364,6 +1365,183 @@ pub fn resend_on_user_message_moves_the_window_down_test() {
   mock.get_calls(calls)
   |> testing_render.calls_transcript
   |> birdie.snap(title: "dialog:show_mode:resend_on_user_message")
+}
+
+/// The same dialog as `naming_dialog`, but the show mode may be set on the
+/// window, and the action returned for typed text may carry one of its own.
+fn naming_dialog_with(
+  storage,
+  dialog_mode: types.ShowMode,
+  window_mode: option.Option(types.ShowMode),
+  on_text_action: fn(String) -> types.DialogAction(String),
+) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let built =
+    dialog.new(
+      id: "naming",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window_with_input(
+      id: "ask",
+      render: fn(state, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Name? (" <> state <> ")")
+            |> format.to_formatted(),
+          buttons: [],
+          media: None,
+        )
+      },
+      on_action: fn(state, _event, _ctx) { Ok(types.Stay(state)) },
+      on_text: fn(_state, text, _ctx) { Ok(on_text_action(text)) },
+    )
+    |> dialog.with_show_mode(dialog_mode)
+    |> dialog.initial("ask")
+
+  let built = case window_mode {
+    Some(mode) -> dialog.with_window_show_mode(built, window: "ask", mode:)
+    None -> built
+  }
+
+  let assert Ok(built) = dialog.build(built)
+  dialog_engine.compile(dialog.compiled(built))
+}
+
+pub fn window_show_mode_overrides_the_dialog_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  // The dialog edits in place; this one window asks for typed input, so it
+  // resends below what the user typed.
+  let flow =
+    naming_dialog_with(
+      storage,
+      types.EditLive,
+      Some(types.ResendOnUserMessage),
+      types.Stay,
+    )
+  let #(client, calls) = driver.media_mock_client()
+  let chat_id = 252
+
+  driver.start_dialog(flow, client, chat_id, command: "/naming")
+  driver.send_text(flow, client, storage, chat_id, "naming", "Alice")
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:show_mode:window_override")
+}
+
+pub fn shown_action_overrides_window_and_dialog_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  // Both the dialog and the window edit in place; the action asks for a
+  // resend just this once.
+  let flow =
+    naming_dialog_with(storage, types.EditLive, Some(types.EditLive), fn(text) {
+      types.Shown(types.AlwaysResend, types.Stay(text))
+    })
+  let #(client, calls) = driver.media_mock_client()
+  let chat_id = 253
+
+  driver.start_dialog(flow, client, chat_id, command: "/naming")
+  driver.send_text(flow, client, storage, chat_id, "naming", "Alice")
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:show_mode:shown_action")
+}
+
+pub fn with_window_show_mode_rejects_an_unknown_window_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let #(encode_state, decode_state) = dialog.string_codec()
+
+  dialog.new(
+    id: "naming",
+    storage:,
+    initial_state: fn(_ctx) { "" },
+    encode_state:,
+    decode_state:,
+  )
+  |> dialog.window(
+    id: "ask",
+    render: fn(_state, _ctx) {
+      RenderedWindow(
+        text: format.build() |> format.text("?") |> format.to_formatted(),
+        buttons: [],
+        media: None,
+      )
+    },
+    on_action: fn(state, _event, _ctx) { Ok(types.Stay(state)) },
+  )
+  |> dialog.with_window_show_mode(window: "nope", mode: types.AlwaysResend)
+  |> dialog.initial("ask")
+  |> dialog.build()
+  |> should.equal(
+    Error(types.UnknownWindowReference(
+      from: "with_window_show_mode",
+      to: "nope",
+    )),
+  )
+}
+
+// The getter pattern: data a window renders but does not keep in state ------
+
+pub fn window_with_data_reloads_on_every_render_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  // `load` is the only half that reads the world, so a spy in it says
+  // exactly when the window went looking for fresh data.
+  let loads = process.new_subject()
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "orders",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window_with_data(
+      id: "list",
+      load: fn(_state, ctx) {
+        process.send(loads, ctx.update.chat_id)
+        "2 open"
+      },
+      render: fn(_state, data, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Orders: " <> data)
+            |> format.to_formatted(),
+          buttons: [[types.ActionButton("Refresh", "refresh")]],
+          media: None,
+        )
+      },
+      on_action: fn(state, _event, _ctx) { Ok(types.Stay(state)) },
+    )
+    |> dialog.initial("list")
+    |> dialog.build()
+  let flow = dialog_engine.compile(dialog.compiled(built))
+  let #(client, calls) = driver.dialog_mock_client()
+  let chat_id = 254
+
+  driver.start_dialog(flow, client, chat_id, command: "/orders")
+  driver.press(
+    flow,
+    client,
+    storage,
+    chat_id,
+    "orders",
+    "dlg:orders:list:refresh",
+  )
+
+  // Once for the opening render, once for the re-render the press caused:
+  // stale data is the whole thing a getter is there to avoid.
+  process.receive(loads, 0) |> should.equal(Ok(chat_id))
+  process.receive(loads, 0) |> should.equal(Ok(chat_id))
+  process.receive(loads, 0) |> should.equal(Error(Nil))
+
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:window_with_data:reload")
 }
 
 // bg — refreshing a dialog from outside the update cycle ---------------------

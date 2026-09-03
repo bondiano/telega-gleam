@@ -370,6 +370,8 @@ fn transitions_of(
     dialog_types.StartSub(sub_id:, args:, state:) -> [
       ToSub(from:, sub_id:, label:, args:, state:),
     ]
+    // How the window is *shown* is not where it goes: the wrapped action is.
+    dialog_types.Shown(action:, ..) -> transitions_of(from, label, action)
   }
 }
 
