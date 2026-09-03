@@ -522,6 +522,43 @@ filter:
   sub-dialog is `Done` — still gets to be the answer instead of a second one
   Telegram would reject.
 
+### Several dialogs at once
+
+Dialogs are independent: two of them open for the same user are two
+instances, two live messages and two callback prefixes, and each resumes on
+its own presses. Nothing is suspended when one starts another — which is what
+makes this different from a [sub-dialog](#sub-dialogs), where the sub takes
+over the parent's message and returns into its window.
+
+What they do share is a **way back**. `dialog.start` called from inside
+another dialog's handler records who opened the new one, and the new one can
+hand the screen back when it finishes:
+
+```gleam
+// menu dialog
+"settings" -> {
+  let _ = dialog.start(ctx, registry, "settings")
+  Ok(types.Stay(state))
+}
+
+// settings dialog
+|> dialog.on_done(fn(_state, ctx) {
+  use #(ctx, _returned) <- result.map(dialog.return_to_caller(ctx, registry))
+  ctx
+})
+```
+
+`return_to_caller` re-renders the caller in place and answers `False` if
+nothing opened this dialog or the caller has since finished — it never
+*starts* anything. `dialog.caller(ctx)` is the same answer as a value, and is
+readable from window handlers as well as `on_done`. The caller is recorded
+when a dialog is started; a `start` that only resumes an already-open dialog
+leaves the way back it already had.
+
+Reach for a sub-dialog when the second screen is a step of the first (an
+address inside a booking); reach for two dialogs when they are two things the
+user can have open at once (a catalog and its settings).
+
 ## Lifecycle
 
 - **One live instance** per `(dialog, chat, user)`: a repeated start command

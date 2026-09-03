@@ -1181,6 +1181,29 @@ fn with_dialog_routing(
 }
 
 /// Start (or resume) an attached dialog from any handler.
+///
+/// Dialogs are independent: the one this is called from stays open on its own
+/// message, and the new one gets a message of its own. What the two share is
+/// a **way back** — when `start` is called from inside another dialog's
+/// handler, the new dialog remembers which dialog opened it, so its `on_done`
+/// can hand control back with [`return_to_caller`](#return_to_caller):
+///
+/// ```gleam
+/// // in the menu dialog's on_action
+/// "settings" -> {
+///   let _ = dialog.start(ctx, registry, "settings")
+///   Ok(types.Stay(state))
+/// }
+///
+/// // in the settings dialog
+/// |> dialog.on_done(fn(_state, ctx) {
+///   use #(ctx, _returned) <- result.map(dialog.return_to_caller(ctx, registry))
+///   ctx
+/// })
+/// ```
+///
+/// The caller is recorded when the dialog is *started*; a `start` that only
+/// resumes an already-open dialog leaves the way back it already had.
 pub fn start(
   ctx ctx: Context(session, error, dependencies),
   registry registry: flow_registry.FlowRegistry(session, error, dependencies),
@@ -1190,8 +1213,51 @@ pub fn start(
     ctx,
     registry,
     name: engine.flow_name_prefix <> dialog_id,
-    initial: dict.new(),
+    initial: case calling_dialog(ctx) {
+      Some(caller) -> dict.from_list([#(engine.caller_key, caller)])
+      None -> dict.new()
+    },
   )
+}
+
+/// The dialog whose handler is running right now, if any — the one that is
+/// about to become the caller of whatever `start` opens.
+fn calling_dialog(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  use flow_name <- option.then(bot.current_flow_step(ctx))
+  case string.starts_with(flow_name, engine.flow_name_prefix) {
+    True ->
+      Some(string.drop_start(flow_name, string.length(engine.flow_name_prefix)))
+    False -> None
+  }
+}
+
+/// Which dialog opened the one being handled, if it was opened from another
+/// dialog rather than from a command or a plain handler.
+///
+/// Readable from a window's handlers and from `on_done` — the answer belongs
+/// to the update, so it survives the instance being deleted on the way out.
+pub fn caller(
+  ctx ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  engine.stashed_caller(ctx)
+}
+
+/// Re-render the dialog that opened this one, if there is one and it is still
+/// open. `False` comes back when nothing opened this dialog, or the caller
+/// has since finished — either way nothing is started.
+///
+/// Put it at the end of `on_done` to give the user back the screen they came
+/// from.
+pub fn return_to_caller(
+  ctx ctx: Context(session, error, dependencies),
+  registry registry: flow_registry.FlowRegistry(session, error, dependencies),
+) -> Result(#(Context(session, error, dependencies), Bool), error) {
+  case caller(ctx) {
+    None -> Ok(#(ctx, False))
+    Some(caller) -> refresh(ctx, registry, caller)
+  }
 }
 
 /// Re-render a user's **open** dialog without advancing it.

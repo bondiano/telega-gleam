@@ -1961,6 +1961,15 @@ pub fn in_flow_step(
   result
 }
 
+/// The flow whose step is running right now, if user code is inside one.
+/// Lets `dialog.start` record which dialog opened the one it starts.
+@internal
+pub fn current_flow_step(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  scope.get(ctx.scope, flow_step_key) |> option.from_result
+}
+
 /// Pass any handler to start waiting
 ///
 /// `or` - calls if there are any other updates

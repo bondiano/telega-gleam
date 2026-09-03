@@ -83,6 +83,34 @@ const message_kind_key = "__dialog_message_kind"
 /// hold one frame's worth of this, which is what capped nesting at one level.
 const sub_stack_key = "__dialog_sub_stack"
 
+/// The dialog this one was opened from, recorded by `dialog.start` when it is
+/// called from inside another dialog's handler.
+pub const caller_key = "__dialog_caller"
+
+/// Where the caller is put for the rest of the update, so `on_done` can still
+/// read it after the instance it lived in has been deleted.
+const caller_scope_key: scope.Key(String) = scope.Key("dialog/caller")
+
+/// Make the instance's caller readable through `dialog.caller` for the rest
+/// of this update. Called wherever user code is about to run.
+fn stash_caller(
+  ctx: Context(session, error, dependencies),
+  inst: flow_types.FlowInstance,
+) -> Nil {
+  case instance.get_data(inst, caller_key) {
+    Some(caller) -> scope.put(ctx.scope, caller_scope_key, caller)
+    None -> Nil
+  }
+}
+
+/// The dialog that opened the one being handled, if any.
+@internal
+pub fn stashed_caller(
+  ctx: Context(session, error, dependencies),
+) -> Option(String) {
+  scope.get(ctx.scope, caller_scope_key) |> option.from_result
+}
+
 // The pre-stack keys. Still read, so a dialog that was inside a sub-dialog
 // when the bot was redeployed keeps working.
 const legacy_sub_key = "__dialog_sub"
@@ -238,6 +266,7 @@ pub fn compile(
       // `on_done` may still read widget selections; clear the stash after so
       // later non-dialog handlers don't see the finished dialog's stores.
       widget.stash_stores(ctx.scope, inst.state.data)
+      stash_caller(ctx, inst)
       let result = case dialog.on_done {
         Some(on_done) -> on_done(load_state(dialog, ctx, inst), ctx)
         None -> Ok(ctx)
@@ -311,6 +340,7 @@ fn window_step(
     // on the way out: the same process serves this chat's non-dialog handlers
     // too, and they must not read a finished step's stores.
     widget.stash_stores(ctx.scope, inst.state.data)
+    stash_caller(ctx, inst)
     use <- clearing_widget_stash(ctx.scope)
     // Whatever path the step takes, the press it is handling gets exactly one
     // answer — unless user code already gave it one with `alert`/`toast`.

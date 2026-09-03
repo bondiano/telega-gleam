@@ -1613,3 +1613,177 @@ pub fn refresh_does_not_open_a_closed_dialog_test() {
   mock.get_calls(calls) |> should.equal([])
   let assert Ok(None) = storage.load(driver.flow_id(chat_id, "alpha"))
 }
+
+// Independent dialogs, with a way back ---------------------------------------
+//
+// Two dialogs are two live messages and two instances — starting one from
+// inside the other does not suspend anything. What they share is a way back:
+// the one that was started remembers who started it, and hands the screen
+// back on the way out.
+
+fn caller_menu_dialog(
+  storage: flow_types.FlowStorage(error.TelegaError),
+) -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "menu",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "home",
+      render: fn(state, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Menu " <> state)
+            |> format.to_formatted(),
+          buttons: [[ActionButton("Settings", "settings")]],
+          media: None,
+        )
+      },
+      on_action: fn(state, event: ActionEvent, ctx) {
+        case event.action_id {
+          "settings" -> {
+            // The registry is rebuilt here rather than captured: a dialog
+            // that starts another one is part of the registry that holds it.
+            let _ = dialog.start(ctx, two_dialog_registry(storage), "settings")
+            Ok(types.Stay(state))
+          }
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.initial("home")
+    |> dialog.build()
+  built
+}
+
+fn caller_settings_dialog(
+  storage: flow_types.FlowStorage(error.TelegaError),
+) -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
+  let #(encode_state, decode_state) = dialog.string_codec()
+  let assert Ok(built) =
+    dialog.new(
+      id: "settings",
+      storage:,
+      initial_state: fn(_ctx) { "" },
+      encode_state:,
+      decode_state:,
+    )
+    |> dialog.window(
+      id: "main",
+      render: fn(_state, _ctx) {
+        RenderedWindow(
+          text: format.build()
+            |> format.text("Settings")
+            |> format.to_formatted(),
+          buttons: [[ActionButton("Done", "done")]],
+          media: None,
+        )
+      },
+      on_action: fn(state, event: ActionEvent, _ctx) {
+        case event.action_id {
+          "done" -> Ok(types.Done(state))
+          _ -> Ok(types.Stay(state))
+        }
+      },
+    )
+    |> dialog.initial("main")
+    |> dialog.on_done(fn(_state, ctx) {
+      use #(ctx, _returned) <- result.map(dialog.return_to_caller(
+        ctx,
+        two_dialog_registry(storage),
+      ))
+      ctx
+    })
+    |> dialog.build()
+  built
+}
+
+fn two_dialog_registry(storage: flow_types.FlowStorage(error.TelegaError)) {
+  flow_registry.new_registry()
+  |> dialog.attach_on_command(
+    command: "menu",
+    dialog: caller_menu_dialog(storage),
+  )
+  |> dialog.attach(dialog: caller_settings_dialog(storage))
+}
+
+pub fn a_dialog_started_from_another_remembers_its_caller_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let registry = two_dialog_registry(storage)
+  let r = flow_registry.apply_to_router(router.new("dialogs"), registry)
+  let #(client, calls) = dialog_mock_client()
+  let chat_id = 262
+
+  route_update(
+    r,
+    client,
+    factory.command_update_with(
+      command: "menu",
+      payload: None,
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+  route_update(
+    r,
+    client,
+    factory.callback_query_update_with(
+      data: "dlg:menu:home:settings",
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+
+  // Both are open, each on its own message, and the new one knows who
+  // opened it.
+  let assert Ok(Some(menu)) = storage.load(driver.flow_id(chat_id, "menu"))
+  menu.state.current_step |> should.equal("home")
+  let assert Ok(Some(settings)) =
+    storage.load(driver.flow_id(chat_id, "settings"))
+  instance.get_data(settings, "__dialog_caller") |> should.equal(Some("menu"))
+
+  // Finishing the settings dialog re-renders the menu it came from.
+  route_update(
+    r,
+    client,
+    factory.callback_query_update_with(
+      data: "dlg:settings:main:done",
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+  let assert Ok(None) = storage.load(driver.flow_id(chat_id, "settings"))
+
+  // The mock answers every send with `message_id: 1`, so the two live
+  // messages are told apart by their text and callback data, not their ids.
+  mock.get_calls(calls)
+  |> testing_render.calls_transcript
+  |> birdie.snap(title: "dialog:caller:start_and_return")
+}
+
+pub fn a_dialog_started_on_its_own_has_no_caller_test() {
+  let assert Ok(storage) = flow_storage.create_ets_storage()
+  let registry = two_dialog_registry(storage)
+  let r = flow_registry.apply_to_router(router.new("dialogs"), registry)
+  let #(client, _calls) = dialog_mock_client()
+  let chat_id = 263
+
+  route_update(
+    r,
+    client,
+    factory.command_update_with(
+      command: "menu",
+      payload: None,
+      from_id: driver.user_id,
+      chat_id:,
+    ),
+  )
+
+  let assert Ok(Some(menu)) = storage.load(driver.flow_id(chat_id, "menu"))
+  instance.get_data(menu, "__dialog_caller") |> should.equal(None)
+}

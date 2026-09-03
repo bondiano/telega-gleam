@@ -1,0 +1,93 @@
+---
+version: 2.0.1
+title: dialog:caller:start_and_return
+file: ./test/telega/dialog_test.gleam
+test_name: a_dialog_started_from_another_remembers_its_caller_test
+---
+1. sendMessage
+{
+  "chat_id": 262,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:menu:home:settings",
+          "text": "Settings"
+        }
+      ]
+    ]
+  },
+  "text": "Menu "
+}
+
+2. sendMessage
+{
+  "chat_id": 262,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:settings:main:done",
+          "text": "Done"
+        }
+      ]
+    ]
+  },
+  "text": "Settings"
+}
+
+3. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+4. editMessageText
+{
+  "chat_id": 262,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:menu:home:settings",
+          "text": "Settings"
+        }
+      ]
+    ]
+  },
+  "text": "Menu "
+}
+
+5. answerCallbackQuery
+{
+  "callback_query_id": "test_callback_query",
+  "show_alert": false
+}
+
+6. editMessageText
+{
+  "chat_id": 262,
+  "message_id": 1,
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "callback_data": "dlg:menu:home:settings",
+          "text": "Settings"
+        }
+      ]
+    ]
+  },
+  "text": "Menu "
+}
+
+7. editMessageReplyMarkup
+{
+  "chat_id": 262,
+  "message_id": 1
+}
