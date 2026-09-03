@@ -127,9 +127,11 @@ pub type MessageInput {
 ///   the engine appends their button rows after `render`'s own buttons and
 ///   routes their events to `KeyboardWidget.on_event`, bypassing `on_action`.
 /// - `on_sub_result` runs when a sub-dialog started from this window (via
-///   `StartSub`) finishes: it receives the window's state and the result
-///   dict exported by the `subdialog` attachment, and decides where to go
-///   next (`Stay` re-renders this window). `None` just re-renders.
+///   `StartSub`) finishes, keyed by the id of the sub that finished. The
+///   handler receives the window's state and the sub's final state — already
+///   decoded by the sub's own codec, since `dialog.on_sub_result` is given
+///   the sub itself — and decides where to go next (`Stay` re-renders this
+///   window). A sub with no entry here just re-renders the window.
 /// - `show_mode: Some(mode)` overrides the dialog's show mode for this window
 ///   alone (`dialog.with_window_show_mode`) — a window that asks for typed
 ///   input wants `ResendOnUserMessage` even in a dialog that otherwise edits
@@ -149,8 +151,9 @@ pub type Window(state, session, error, dependencies) {
         Result(DialogAction(state), error),
     ),
     widgets: List(KeyboardWidget(state, session, error, dependencies)),
-    on_sub_result: Option(
-      fn(state, Dict(String, String), Context(session, error, dependencies)) ->
+    on_sub_result: Dict(
+      String,
+      fn(state, String, Context(session, error, dependencies)) ->
         Result(DialogAction(state), error),
     ),
     show_mode: Option(ShowMode),
@@ -310,4 +313,7 @@ pub type DialogBuildError {
   /// additionally forbidden in dialog and window ids.
   ReservedIdCharacter(kind: String, id: String)
   DuplicateSubDialogId(id: String)
+  /// An `on_sub_result` names a sub-dialog that is not attached to this
+  /// dialog, so it could never run.
+  UnattachedSubDialog(window: String, sub: String)
 }

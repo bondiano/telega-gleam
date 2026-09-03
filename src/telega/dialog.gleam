@@ -143,8 +143,6 @@ type SubAttachment(session, error, dependencies) {
       String,
       dict.Dict(String, String),
     ) -> String,
-    result: fn(Context(session, error, dependencies), String) ->
-      dict.Dict(String, String),
     /// The sub's *own* sub-dialogs, already compiled. They are re-keyed under
     /// this sub's namespace so nesting is transitive.
     nested: List(#(String, engine.CompiledSub(session, error, dependencies))),
@@ -164,14 +162,15 @@ pub opaque type DialogBuilder(state, session, error, dependencies) {
         Result(Context(session, error, dependencies), error),
     ),
     subs: List(SubAttachment(session, error, dependencies)),
+    /// `#(window id, sub id, handler)`. The handler takes the sub's final
+    /// state still encoded — `on_sub_result` closed over the sub's decoder
+    /// when it was registered.
     sub_result_hooks: List(
       #(
         String,
-        fn(
-          state,
-          dict.Dict(String, String),
-          Context(session, error, dependencies),
-        ) -> Result(DialogAction(state), error),
+        String,
+        fn(state, String, Context(session, error, dependencies)) ->
+          Result(DialogAction(state), error),
       ),
     ),
     message_hooks: List(
@@ -265,7 +264,7 @@ pub fn window(
       on_text: None,
       on_message: None,
       widgets: [],
-      on_sub_result: None,
+      on_sub_result: dict.new(),
       show_mode: None,
     ),
   )
@@ -294,7 +293,7 @@ pub fn window_with_input(
       on_text: Some(on_text),
       on_message: None,
       widgets: [],
-      on_sub_result: None,
+      on_sub_result: dict.new(),
       show_mode: None,
     ),
   )
@@ -333,7 +332,7 @@ pub fn window_with_widgets(
       on_text: None,
       on_message: None,
       widgets:,
-      on_sub_result: None,
+      on_sub_result: dict.new(),
       show_mode: None,
     ),
   )
@@ -427,7 +426,6 @@ pub fn subdialog(
   builder builder: DialogBuilder(state, session, error, dependencies),
   sub sub: Dialog(sub_state, session, error, dependencies),
   init init: fn(state, dict.Dict(String, String)) -> sub_state,
-  result result: fn(sub_state) -> dict.Dict(String, String),
 ) -> DialogBuilder(state, session, error, dependencies) {
   let parent_decode = decode_or_initial(builder)
   let attachment =
@@ -438,28 +436,42 @@ pub fn subdialog(
       init: fn(ctx, parent_raw, args) {
         sub.encode_state(init(parent_decode(ctx, parent_raw), args))
       },
-      result: fn(ctx, sub_raw) { result(sub.decode_or_initial(ctx, sub_raw)) },
       nested: dict.to_list(sub.compiled.subs),
     )
   DialogBuilder(..builder, subs: [attachment, ..builder.subs])
 }
 
-/// Handle the result of a sub-dialog started from `window`: the handler
-/// receives the window's state and the result dict exported by the
-/// `subdialog` attachment, and returns the next action (`Stay` re-renders
-/// the window with the updated state). Without a handler the window is
-/// simply re-rendered.
+/// Handle what a sub-dialog started from `window` came back with.
+///
+/// The handler receives the window's state and `sub`'s **final state, in
+/// `sub`'s own type** — passing the sub itself is what lets the decoding
+/// happen here rather than in a hand-written codec. It returns the next
+/// action, `Stay` re-rendering the window with whatever it learned:
+///
+/// ```gleam
+/// |> dialog.on_sub_result(window: "confirm", sub: address_dialog, handler:
+///   fn(state, address: Address, _ctx) {
+///     Ok(types.Stay(State(..state, address: Some(address.line))))
+///   })
+/// ```
+///
+/// Registered per `#(window, sub)`: one window can start several sub-dialogs
+/// and react to each in its own type. A sub with no handler for the window it
+/// returned to simply re-renders that window. `build()` rejects a handler for
+/// an unknown window or for a sub that is not attached — either way it could
+/// never run.
 pub fn on_sub_result(
   builder builder: DialogBuilder(state, session, error, dependencies),
   window window: String,
-  handler handler: fn(
-    state,
-    dict.Dict(String, String),
-    Context(session, error, dependencies),
-  ) -> Result(DialogAction(state), error),
+  sub sub: Dialog(sub_state, session, error, dependencies),
+  handler handler: fn(state, sub_state, Context(session, error, dependencies)) ->
+    Result(DialogAction(state), error),
 ) -> DialogBuilder(state, session, error, dependencies) {
+  let decode_sub = sub.decode_or_initial
   DialogBuilder(..builder, sub_result_hooks: [
-    #(window, handler),
+    #(window, sub.compiled.id, fn(state, sub_raw, ctx) {
+      handler(state, decode_sub(ctx, sub_raw), ctx)
+    }),
     ..builder.sub_result_hooks
   ])
 }
@@ -593,6 +605,7 @@ pub fn build(
   use windows <- result.try(attach_sub_result_hooks(
     windows,
     list.reverse(builder.sub_result_hooks),
+    list.map(subs, fn(sub) { sub.id }),
   ))
   use windows <- result.try(attach_message_hooks(
     windows,
@@ -675,24 +688,31 @@ fn attach_sub_result_hooks(
   hooks: List(
     #(
       String,
-      fn(
-        state,
-        dict.Dict(String, String),
-        Context(session, error, dependencies),
-      ) -> Result(DialogAction(state), error),
+      String,
+      fn(state, String, Context(session, error, dependencies)) ->
+        Result(DialogAction(state), error),
     ),
   ),
+  attached_subs: List(String),
 ) -> Result(List(Window(state, session, error, dependencies)), DialogBuildError) {
   list.try_fold(hooks, windows, fn(windows, hook) {
-    let #(window_id, handler) = hook
+    let #(window_id, sub_id, handler) = hook
     use <- require(
       list.any(windows, fn(window) { window.id == window_id }),
       types.UnknownWindowReference(from: "on_sub_result", to: window_id),
     )
+    use <- require(
+      list.contains(attached_subs, sub_id),
+      types.UnattachedSubDialog(window: window_id, sub: sub_id),
+    )
     Ok(
       list.map(windows, fn(window) {
         case window.id == window_id {
-          True -> Window(..window, on_sub_result: Some(handler))
+          True ->
+            Window(
+              ..window,
+              on_sub_result: dict.insert(window.on_sub_result, sub_id, handler),
+            )
           False -> window
         }
       }),
@@ -915,9 +935,9 @@ fn erase_window(
       }
     }),
     widgets: list.map(window.widgets, erase_widget(_, encode, decode)),
-    on_sub_result: option.map(window.on_sub_result, fn(handler) {
-      fn(raw, sub_result, ctx) {
-        handler(decode(ctx, raw), sub_result, ctx)
+    on_sub_result: dict.map_values(window.on_sub_result, fn(_sub_id, handler) {
+      fn(raw, sub_raw, ctx) {
+        handler(decode(ctx, raw), sub_raw, ctx)
         |> result.map(erase_action(_, encode))
       }
     }),
@@ -991,7 +1011,6 @@ fn namespaced_subs(
       id: sub.id,
       initial: namespaced_id(sub.id, sub.initial),
       init: sub.init,
-      result: sub.result,
     ),
   )
 
@@ -1006,7 +1025,6 @@ fn namespaced_subs(
           // Already namespaced inside the sub, so this only adds our level.
           initial: namespaced_id(sub.id, compiled.initial),
           init: compiled.init,
-          result: compiled.result,
         ),
       )
     })
@@ -1074,11 +1092,17 @@ fn namespace_window(
         )),
       )
     }),
-    on_sub_result: option.map(window.on_sub_result, fn(handler) {
-      fn(raw, sub_result, ctx) {
-        handler(raw, sub_result, ctx) |> result.map(map_action)
-      }
-    }),
+    // A nested sub is addressed by the path the compiled `subs` map is keyed
+    // with, so the handler for it moves into the namespace as well.
+    on_sub_result: window.on_sub_result
+      |> dict.to_list
+      |> list.map(fn(entry) {
+        let #(sub_id, handler) = entry
+        #(namespaced_id(namespace, sub_id), fn(raw, sub_raw, ctx) {
+          handler(raw, sub_raw, ctx) |> result.map(map_action)
+        })
+      })
+      |> dict.from_list,
     show_mode: window.show_mode,
   )
 }

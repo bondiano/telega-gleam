@@ -175,6 +175,7 @@ fn address_dialog() -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
 
 fn booking_dialog() -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
   let #(encode_state, decode_state) = dialog.string_codec()
+  let address = address_dialog()
   let assert Ok(built) =
     dialog.new(
       id: "booking",
@@ -195,18 +196,12 @@ fn booking_dialog() -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
       on_action: handle_confirm,
     )
     |> dialog.initial("menu")
-    |> dialog.subdialog(
-      sub: address_dialog(),
-      init: fn(_state, _args) { "" },
-      result: fn(city) { dict.from_list([#("address.city", city)]) },
+    |> dialog.subdialog(sub: address, init: fn(_state, _args) { "" })
+    |> dialog.on_sub_result(
+      window: "menu",
+      sub: address,
+      handler: fn(_state, city, _ctx) { Ok(dialog_types.Goto("confirm", city)) },
     )
-    |> dialog.on_sub_result(window: "menu", handler: fn(_state, result, _ctx) {
-      let city =
-        dict.get(result, "address.city")
-        |> option.from_result
-        |> option.unwrap("")
-      Ok(dialog_types.Goto("confirm", city))
-    })
     |> dialog.build()
   built
 }

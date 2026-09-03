@@ -196,8 +196,10 @@ pub type CompiledDialog(session, error, dependencies) {
   )
 }
 
-/// A sub-dialog attachment: how to build its starting state and how to turn
-/// its final state into the result dict for `on_sub_result`.
+/// A sub-dialog attachment: how to build its starting state from the
+/// parent's. What its *final* state means to the parent is decided by the
+/// parent window's `on_sub_result`, which was handed the sub itself and so
+/// knows how to decode it.
 pub type CompiledSub(session, error, dependencies) {
   CompiledSub(
     id: String,
@@ -209,9 +211,6 @@ pub type CompiledSub(session, error, dependencies) {
       String,
       Dict(String, String),
     ) -> String,
-    /// `fn(ctx, sub_encoded_state) -> result dict`
-    result: fn(Context(session, error, dependencies), String) ->
-      Dict(String, String),
   )
 }
 
@@ -696,25 +695,22 @@ fn finish_sub(
   emit_dialog_event(dialog, "sub_done", inst.state.current_step, [
     #("count", 1),
   ])
-  let result = case dict.get(dialog.subs, sub_id) {
-    Ok(sub) -> sub.result(ctx, sub_state)
-    Error(Nil) -> dict.new()
-  }
   let return_window = return_window_of(dialog, inst)
   let inst = leave_sub(dialog, ctx, inst, sub_id)
   let parent_state = load_state(dialog, ctx, inst)
 
+  // The handler is keyed by the sub that finished: one window can start
+  // several, and each hands back a different kind of thing.
   let on_sub_result =
     dict.get(dialog.windows, return_window)
-    |> option.from_result
-    |> option.then(fn(window) { window.on_sub_result })
+    |> result.try(fn(window) { dict.get(window.on_sub_result, sub_id) })
 
   case on_sub_result {
-    None -> jump_and_render(dialog, ctx, inst, return_window)
-    Some(handler) -> {
+    Error(Nil) -> jump_and_render(dialog, ctx, inst, return_window)
+    Ok(handler) -> {
       // Parent widget stores are visible again in the handler.
       widget.stash_stores(ctx.scope, inst.state.data)
-      case handler(parent_state, result, ctx) {
+      case handler(parent_state, sub_state, ctx) {
         Error(error) -> Error(error)
         Ok(action) ->
           apply_sub_return_action(dialog, ctx, inst, return_window, action)

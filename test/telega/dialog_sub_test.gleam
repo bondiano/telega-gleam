@@ -108,11 +108,12 @@ fn address_dialog(
   address
 }
 
-fn address_result(sub_state: String) -> dict.Dict(String, String) {
+/// The sub's final state as the parent wants to show it. With the typed
+/// hand-back this is the parent's own business — no exported dict in between.
+fn address_summary(sub_state: String) -> String {
   case string.split(sub_state, "|") {
-    [city, street] ->
-      dict.from_list([#("address.city", city), #("address.street", street)])
-    _ -> dict.new()
+    [city, street] -> city <> ", " <> street
+    _ -> "?, ?"
   }
 }
 
@@ -153,6 +154,7 @@ fn profile_dialog(
   storage: flow_types.FlowStorage(error.TelegaError),
 ) -> dialog.Dialog(String, Nil, error.TelegaError, Nil) {
   let #(encode_state, decode_state) = dialog.string_codec()
+  let address = address_dialog(storage)
   let assert Ok(profile) =
     dialog.new(
       id: "profile",
@@ -162,21 +164,18 @@ fn profile_dialog(
       decode_state:,
     )
     |> dialog.window(id: "menu", render: render_menu, on_action: handle_menu)
-    |> dialog.subdialog(
-      sub: address_dialog(storage),
-      init: fn(_parent_state, args) {
-        // The StartSub args pre-fill the city.
-        option.unwrap(option.from_result(dict.get(args, "prefill")), "") <> "|"
-      },
-      result: address_result,
-    )
-    |> dialog.on_sub_result(window: "menu", handler: fn(_state, result, _ctx) {
-      let city = option.from_result(dict.get(result, "address.city"))
-      let street = option.from_result(dict.get(result, "address.street"))
-      Ok(types.Stay(
-        option.unwrap(city, "?") <> ", " <> option.unwrap(street, "?"),
-      ))
+    |> dialog.subdialog(sub: address, init: fn(_parent_state, args) {
+      // The StartSub args pre-fill the city.
+      option.unwrap(option.from_result(dict.get(args, "prefill")), "") <> "|"
     })
+    // The handler is handed the sub's final state in the sub's own type.
+    |> dialog.on_sub_result(
+      window: "menu",
+      sub: address,
+      handler: fn(_state, sub_state, _ctx) {
+        Ok(types.Stay(address_summary(sub_state)))
+      },
+    )
     |> dialog.initial("menu")
     |> dialog.build()
   profile
@@ -442,17 +441,14 @@ pub fn sub_nested_two_levels_test() {
         }
       },
     )
-    |> dialog.subdialog(
+    |> dialog.subdialog(sub: inner, init: fn(_state, _args) { "" })
+    |> dialog.on_sub_result(
+      window: "main",
       sub: inner,
-      init: fn(_state, _args) { "" },
-      result: fn(sub_state) { dict.from_list([#("inner", sub_state)]) },
+      handler: fn(_state, sub_state, _ctx) {
+        Ok(types.Stay("got:" <> sub_state))
+      },
     )
-    |> dialog.on_sub_result(window: "main", handler: fn(_state, result, _ctx) {
-      Ok(types.Stay(
-        "got:"
-        <> option.unwrap(option.from_result(dict.get(result, "inner")), "?"),
-      ))
-    })
     |> dialog.initial("main")
     |> dialog.build()
 
@@ -476,19 +472,12 @@ pub fn sub_nested_two_levels_test() {
         }
       },
     )
-    |> dialog.subdialog(
+    |> dialog.subdialog(sub: middle, init: fn(_state, _args) { "" })
+    |> dialog.on_sub_result(
+      window: "menu",
       sub: middle,
-      init: fn(_state, _args) { "" },
-      result: fn(sub_state) { dict.from_list([#("middle", sub_state)]) },
+      handler: fn(_state, sub_state, _ctx) { Ok(types.Stay(sub_state)) },
     )
-    |> dialog.on_sub_result(window: "menu", handler: fn(_state, result, _ctx) {
-      Ok(
-        types.Stay(option.unwrap(
-          option.from_result(dict.get(result, "middle")),
-          "?",
-        )),
-      )
-    })
     |> dialog.initial("menu")
     |> dialog.build()
 
@@ -645,11 +634,7 @@ fn nested_back_flow(storage) {
         }
       },
     )
-    |> dialog.subdialog(
-      sub: inner,
-      init: fn(_state, _args) { "" },
-      result: fn(_state) { dict.new() },
-    )
+    |> dialog.subdialog(sub: inner, init: fn(_state, _args) { "" })
     |> dialog.initial("main")
     |> dialog.build()
 
@@ -673,11 +658,7 @@ fn nested_back_flow(storage) {
         }
       },
     )
-    |> dialog.subdialog(
-      sub: middle,
-      init: fn(_state, _args) { "" },
-      result: fn(_state) { dict.new() },
-    )
+    |> dialog.subdialog(sub: middle, init: fn(_state, _args) { "" })
     |> dialog.initial("menu")
     |> dialog.build()
 
@@ -753,11 +734,7 @@ pub fn sub_widget_store_resets_on_reenter_test() {
         }
       },
     )
-    |> dialog.subdialog(
-      sub: picker,
-      init: fn(_state, _args) { "" },
-      result: fn(_state) { dict.new() },
-    )
+    |> dialog.subdialog(sub: picker, init: fn(_state, _args) { "" })
     |> dialog.initial("menu")
     |> dialog.build()
 
@@ -814,12 +791,8 @@ pub fn build_duplicate_sub_id_test() {
   let assert Ok(sub) = minimal_string_dialog("addr") |> dialog.build()
   let assert Ok(sub2) = minimal_string_dialog("addr") |> dialog.build()
   minimal_string_dialog("parent")
-  |> dialog.subdialog(sub:, init: fn(_s, _a) { "" }, result: fn(_s) {
-    dict.new()
-  })
-  |> dialog.subdialog(sub: sub2, init: fn(_s, _a) { "" }, result: fn(_s) {
-    dict.new()
-  })
+  |> dialog.subdialog(sub:, init: fn(_s, _a) { "" })
+  |> dialog.subdialog(sub: sub2, init: fn(_s, _a) { "" })
   |> dialog.build()
   |> should.equal(Error(types.DuplicateSubDialogId(id: "addr")))
 }
@@ -828,15 +801,11 @@ pub fn build_nests_sub_windows_transitively_test() {
   let assert Ok(inner) = minimal_string_dialog("inner") |> dialog.build()
   let assert Ok(middle) =
     minimal_string_dialog("middle")
-    |> dialog.subdialog(sub: inner, init: fn(_s, _a) { "" }, result: fn(_s) {
-      dict.new()
-    })
+    |> dialog.subdialog(sub: inner, init: fn(_s, _a) { "" })
     |> dialog.build()
   let assert Ok(outer) =
     minimal_string_dialog("outer")
-    |> dialog.subdialog(sub: middle, init: fn(_s, _a) { "" }, result: fn(_s) {
-      dict.new()
-    })
+    |> dialog.subdialog(sub: middle, init: fn(_s, _a) { "" })
     |> dialog.build()
 
   // Every level's windows are flattened into one namespace, so the innermost
@@ -880,13 +849,32 @@ pub fn build_dot_in_dialog_id_test() {
 }
 
 pub fn build_on_sub_result_unknown_window_test() {
+  let assert Ok(sub) = minimal_string_dialog("sub") |> dialog.build()
   minimal_string_dialog("ok")
-  |> dialog.on_sub_result(window: "nope", handler: fn(state, _result, _ctx) {
-    Ok(types.Stay(state))
-  })
+  |> dialog.subdialog(sub:, init: fn(_s, _a) { "" })
+  |> dialog.on_sub_result(
+    window: "nope",
+    sub:,
+    handler: fn(state, _result, _ctx) { Ok(types.Stay(state)) },
+  )
   |> dialog.build()
   |> should.equal(
     Error(types.UnknownWindowReference(from: "on_sub_result", to: "nope")),
+  )
+}
+
+/// A handler for a sub that was never attached could only ever be dead code.
+pub fn build_on_sub_result_unattached_sub_test() {
+  let assert Ok(stranger) = minimal_string_dialog("stranger") |> dialog.build()
+  minimal_string_dialog("ok")
+  |> dialog.on_sub_result(
+    window: "main",
+    sub: stranger,
+    handler: fn(state, _result, _ctx) { Ok(types.Stay(state)) },
+  )
+  |> dialog.build()
+  |> should.equal(
+    Error(types.UnattachedSubDialog(window: "main", sub: "stranger")),
   )
 }
 
@@ -913,9 +901,7 @@ pub fn build_sub_window_budget_includes_namespace_test() {
   // prefix ("dlg:parent:sub.<52>:" + 1 = 68).
   let result =
     minimal_string_dialog("parent")
-    |> dialog.subdialog(sub:, init: fn(_s, _a) { "" }, result: fn(_s) {
-      dict.new()
-    })
+    |> dialog.subdialog(sub:, init: fn(_s, _a) { "" })
     |> dialog.build()
   let assert Error(types.CallbackDataTooLong(window:, ..)) = result
   window |> should.equal("sub." <> long_id)
@@ -954,6 +940,7 @@ fn button_sub(storage) {
 
 fn alerting_parent(storage) {
   let #(encode_state, decode_state) = dialog.string_codec()
+  let confirm = button_sub(storage)
   let assert Ok(built) =
     dialog.new(
       id: "alerting",
@@ -974,15 +961,15 @@ fn alerting_parent(storage) {
         }
       },
     )
-    |> dialog.subdialog(
-      sub: button_sub(storage),
-      init: fn(_parent_state, _args) { "" },
-      result: fn(sub_state) { dict.from_list([#("answer", sub_state)]) },
+    |> dialog.subdialog(sub: confirm, init: fn(_parent_state, _args) { "" })
+    |> dialog.on_sub_result(
+      window: "menu",
+      sub: confirm,
+      handler: fn(state, _sub_state, ctx) {
+        let _ = dialog.toast(ctx, "Saved")
+        Ok(types.Stay(state))
+      },
     )
-    |> dialog.on_sub_result(window: "menu", handler: fn(state, _result, ctx) {
-      let _ = dialog.toast(ctx, "Saved")
-      Ok(types.Stay(state))
-    })
     |> dialog.initial("menu")
     |> dialog.build()
   dialog_engine.compile(dialog.compiled(built))

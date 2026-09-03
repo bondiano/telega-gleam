@@ -338,24 +338,20 @@ pub fn create_address_dialog(storage) -> dialog.Dialog(AddressState, s, e, d) {
 }
 
 // Attach to the parent and handle the result:
-|> dialog.subdialog(
-  sub: create_address_dialog(storage),
-  init: fn(_parent_state, _args) { AddressState(city: "", street: "") },
-  result: fn(address) {
-    dict.from_list([
-      #("address.city", address.city),
-      #("address.street", address.street),
-    ])
-  },
-)
-|> dialog.on_sub_result(window: "confirm", handler: fn(state, result, _ctx) {
-  let address = case dict.get(result, "address.city"), dict.get(result, "address.street") {
-    Ok(city), Ok(street) -> Some(city <> ", " <> street)
-    _, _ -> None
-  }
-  Ok(types.Stay(BookingState(..state, address:)))
+let address_dialog = create_address_dialog(storage)
+
+|> dialog.subdialog(sub: address_dialog, init: fn(_parent_state, _args) {
+  AddressState(city: "", street: "")
 })
+|> dialog.on_sub_result(window: "confirm", sub: address_dialog, handler:
+  fn(state, address: AddressState, _ctx) {
+    Ok(types.Stay(BookingState(..state, address: Some(address.city <> ", " <> address.street))))
+  })
 ```
+
+The handler is handed the sub's **final state in the sub's own type** —
+passing `sub` to `on_sub_result` is what lets the decoding happen there, so
+neither side writes a codec or agrees on dict keys by hand.
 
 Start it from any window handler:
 
@@ -370,10 +366,11 @@ Semantics:
 - The sub edits the **same live message**; message id/kind, waits, TTL and
   persistence are shared with the parent. A half-entered sub survives
   restarts like everything else.
-- The sub's `Done(sub_state)` → `result(sub_state)` dict → the starting
-  window's `on_sub_result` (default: just re-render that window). Prefix the
-  result keys with the sub id by convention (`"address.city"`) to keep them
-  collision-free.
+- The sub's `Done(sub_state)` goes to the starting window's `on_sub_result`
+  **for that sub** (default, and for any sub with no handler there: just
+  re-render the window). Handlers are registered per `#(window, sub)`, so one
+  window can start several sub-dialogs and read each back in its own type;
+  `build()` rejects a handler for an unknown window or an unattached sub.
 - `Back` on the sub's **first** window cancels the sub: the parent window is
   re-rendered, `on_sub_result` is **not** called.
 - A sub cannot `Goto` parent windows (its navigation is namespaced), and the

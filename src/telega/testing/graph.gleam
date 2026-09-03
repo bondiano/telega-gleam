@@ -415,8 +415,10 @@ fn fallback_states(
   }
 }
 
-/// Feed each `StartSub` back through the sub's `result` into the starting
-/// window's `on_sub_result`, so the return path shows up in the graph too.
+/// Feed each `StartSub` back into the starting window's `on_sub_result`, so
+/// the return path shows up in the graph too. A sub's *final* state is
+/// whatever its own windows made of it, which no probe can know: the sub's
+/// starting state stands in for it.
 fn probe_sub_results(
   compiled: dialog_engine.CompiledDialog(session, error, dependencies),
   ctx: Context(session, error, dependencies),
@@ -430,16 +432,14 @@ fn probe_sub_results(
       ToSub(from:, sub_id:, args:, state:, ..) ->
         case dict.get(compiled.subs, sub_id), list.key_find(windows, from) {
           Ok(sub), Ok(window) ->
-            case window.on_sub_result {
-              None -> []
-              Some(handler) -> {
-                let result = sub.result(ctx, sub.init(ctx, state, args))
-                case handler(state, result, ctx) {
+            case dict.get(window.on_sub_result, sub_id) {
+              Error(Nil) -> []
+              Ok(handler) ->
+                case handler(state, sub.init(ctx, state, args), ctx) {
                   Ok(action) ->
                     transitions_of(from, sub_id <> " result", action)
                   Error(_) -> []
                 }
-              }
             }
           _, _ -> []
         }

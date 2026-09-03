@@ -317,26 +317,18 @@ pub fn create_address_dialog(
   address
 }
 
-fn address_result(state: AddressState) -> dict.Dict(String, String) {
-  dict.from_list([
-    #("address.city", state.city),
-    #("address.street", state.street),
-  ])
-}
-
 /// Applied when the sub-dialog finishes: store the formatted address in the
-/// booking state and re-render the confirm window.
+/// booking state and re-render the confirm window. The sub's final state
+/// arrives as an `AddressState`, not as a dict — `dialog.on_sub_result` was
+/// given the sub-dialog itself, so it knows how to decode it.
 fn confirm_sub_result(
   state: BookingState,
-  result: dict.Dict(String, String),
+  address: AddressState,
   _ctx: Ctx,
 ) -> Result(DialogAction(BookingState), String) {
-  let address = case
-    dict.get(result, "address.city"),
-    dict.get(result, "address.street")
-  {
-    Ok(city), Ok(street) -> Some(city <> ", " <> street)
-    _, _ -> None
+  let address = case address {
+    AddressState(city: "", ..) | AddressState(street: "", ..) -> None
+    AddressState(city:, street:) -> Some(city <> ", " <> street)
   }
   Ok(dtypes.Stay(BookingState(..state, address:)))
 }
@@ -588,6 +580,7 @@ pub fn create_booking_dialog(
 ) -> dialog.Dialog(BookingState, Nil, String, Dependencies) {
   let storage = util.create_database_storage(db)
   let #(encode_state, decode_state) = booking_codec()
+  let address_dialog = create_address_dialog(storage)
 
   let assert Ok(booking_dialog) =
     dialog.new(
@@ -655,12 +648,14 @@ pub fn create_booking_dialog(
       render: render_photo,
       on_action: go_back_or(buttons_only),
     )
-    |> dialog.subdialog(
-      sub: create_address_dialog(storage),
-      init: fn(_booking_state, _args) { AddressState(city: "", street: "") },
-      result: address_result,
+    |> dialog.subdialog(sub: address_dialog, init: fn(_booking_state, _args) {
+      AddressState(city: "", street: "")
+    })
+    |> dialog.on_sub_result(
+      window: "confirm",
+      sub: address_dialog,
+      handler: confirm_sub_result,
     )
-    |> dialog.on_sub_result(window: "confirm", handler: confirm_sub_result)
     |> dialog.initial("date")
     |> dialog.on_done(booking_done)
     |> dialog.with_labels(dialog_labels)
