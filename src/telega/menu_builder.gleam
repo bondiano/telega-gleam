@@ -1,5 +1,17 @@
 //// # Menu Builder Module
 ////
+//// > **Deprecated — use [`telega/dialog`](dialog.html) instead.**
+//// >
+//// > A dialog window with a `widget.select` / `widget.paged_select` /
+//// > `widget.list_group` keyboard does everything a menu does and then some:
+//// > the screen survives a restart, `Back` navigation and the callback-data
+//// > budget are handled for you, payloads are validated at build time, and
+//// > the same message is edited in place instead of being rebuilt by hand.
+//// > See [docs/dialogs.md](https://github.com/bondiano/telega-gleam/blob/master/docs/dialogs.md).
+//// >
+//// > This module still works and is not going anywhere without a major
+//// > release, but it will not grow.
+////
 //// This module provides an advanced menu system for Telegram bots, extending beyond basic keyboards
 //// to create rich, interactive menu experiences with state management, navigation, and pagination.
 ////
@@ -156,7 +168,13 @@ pub opaque type MenuBuilder(state) {
 // Core Functions --------------------------------------------------------------------------------------
 
 /// Create a new stateless menu builder
+@deprecated("Use telega/dialog: a dialog window with widget.select/paged_select gives the same menu with persistence, Back navigation and validated callback data. See docs/dialogs.md.")
 pub fn new(id: String) -> MenuBuilder(Nil) {
+  empty_builder(id)
+}
+
+/// The undeprecated body, so the presets below don't warn at themselves.
+fn empty_builder(id: String) -> MenuBuilder(Nil) {
   MenuBuilder(
     id: id,
     title: None,
@@ -181,6 +199,7 @@ pub fn new(id: String) -> MenuBuilder(Nil) {
 }
 
 /// Create a new stateful menu builder
+@deprecated("Use telega/dialog: a dialog window with widget.select/paged_select gives the same menu with persistence, Back navigation and validated callback data. See docs/dialogs.md.")
 pub fn new_stateful(id: String, initial_state: state) -> MenuBuilder(state) {
   let state =
     MenuState(
@@ -665,6 +684,7 @@ pub fn get_title(menu: Menu(state)) -> String {
 }
 
 /// Create a confirmation menu
+@deprecated("Use telega/dialog: a dialog window with widget.select/paged_select gives the same menu with persistence, Back navigation and validated callback data. See docs/dialogs.md.")
 pub fn confirmation(
   id: String,
   message: String,
@@ -673,7 +693,7 @@ pub fn confirmation(
   confirm_text: String,
   cancel_text: String,
 ) -> Menu(Nil) {
-  new(id)
+  empty_builder(id)
   |> title(message)
   |> add_item(confirm_text, confirm_action)
   |> add_item(cancel_text, cancel_action)
@@ -682,12 +702,13 @@ pub fn confirmation(
 }
 
 /// Create a settings menu with toggles
+@deprecated("Use telega/dialog: a dialog window with widget.select/paged_select gives the same menu with persistence, Back navigation and validated callback data. See docs/dialogs.md.")
 pub fn settings_menu(
   id: String,
   menu_title: String,
   settings: List(#(String, String, Bool)),
 ) -> Menu(Nil) {
-  let initial_builder = new(id) |> title(menu_title)
+  let initial_builder = empty_builder(id) |> title(menu_title)
 
   list.fold(settings, initial_builder, fn(builder, setting) {
     let #(name, action, value) = setting

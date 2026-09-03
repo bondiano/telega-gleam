@@ -140,6 +140,57 @@ telega.shutdown(bot)
 
 Sends an OTP `shutdown` signal to the root supervisor, which stops children in reverse start order (polling → bot → chat factory).
 
+## Multi-step interactions
+
+Four layers, from "ask one question" to "a screen the user navigates":
+
+| | [Conversations](./docs/conversation.md) | [Flows](./docs/conversation-flows.md) | [Dialogs](./docs/dialogs.md) | Menu builder |
+|---|---|---|---|---|
+| **What it is** | a handler that pauses mid-run | a persistent state machine | a set of windows compiled into a flow | a keyboard builder *(deprecated)* |
+| **UI model** | the bot sends messages | you send and edit them yourself | one live message, auto edit-or-send | one menu message |
+| **Survives a restart** | no (in-memory continuation) | yes (storage backend) | yes (via flow) | no |
+| **Back navigation** | no | `Back` action, by hand | built in | built in |
+| **Callback data** | manual | manual | generated and validated (64 bytes) | generated |
+| **Reusable selects / pagination** | no | no | widgets (pager, radio, multiselect, calendar, …) | pagination |
+| **Composition** | nested calls | subflows | sub-dialogs, typed results | nested menus |
+| **Reach for it when** | a quick Q&A: "what is your name?" | a branchy process with hand-written messages | a screen-like UI: settings, wizards, catalogs | — use a dialog |
+
+```gleam
+// Conversation: pause inside a handler.
+use ctx, name <- bot.wait_text(ctx, or: None, timeout: None)
+
+// Flow: a named step that parks until the next update.
+builder.add_step(AskName, fn(ctx, instance) { action.wait(ctx, instance) })
+
+// Dialog: a window that renders itself and reacts to presses.
+dialog.window(id: "menu", render: render_menu, on_action: handle_menu)
+```
+
+`menu_builder` is deprecated: a dialog window with `widget.select` or
+`widget.paged_select` does the same thing and keeps its state.
+
+### Who gets the update
+
+Exactly one of these handles any given update, in this order:
+
+1. **A pending conversation continuation.** The chat instance checks its own
+   `wait_*` continuation before it routes anything. A **command** the wait
+   did not ask for falls through to the router — so `/cancel` keeps working
+   mid-conversation — and the wait stays armed; everything else is consumed.
+2. **The router**, in route priority: pre-router middleware, then commands,
+   callback queries, custom routes, media, text patterns, specialized
+   routes, fallback.
+3. **Flow and dialog auto-resume**, which are router routes like any other:
+   `flow_registry.apply_to_router` registers them for text, callbacks and
+   media *after* your own routes, so a command or an exact text route you
+   registered still wins over a waiting flow.
+
+The two waiting mechanisms cannot share an update: a `wait_*` called from
+inside a flow step would swallow the very update the flow is parked on, so
+the library logs a warning and emits `["telega", "flow", "wait_in_step"]`
+when it sees one. Park the step instead — `action.wait` in a flow,
+`on_text` / `on_message` in a dialog.
+
 ## Dependency injection
 
 Handlers reach shared services — a database pool, an HTTP client, an i18n catalog — through the typed, non-persisted `dependencies` slot on `Context`. It is set once at init and is never serialized, unlike `session` (which holds per-user state):

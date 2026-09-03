@@ -205,6 +205,7 @@ pub fn execute_step(
                   case run_enter_hook(config.on_enter, ctx, instance) {
                     Ok(#(ctx_after_enter, instance_after_enter)) -> {
                       let handler_fn = fn() {
+                        use <- bot.in_flow_step(ctx_after_enter, flow.name)
                         config.handler(ctx_after_enter, instance_after_enter)
                       }
                       let started_at = telemetry.monotonic_time()
@@ -1043,7 +1044,10 @@ pub fn execute_subflow_step(
 ) -> Result(Context(session, error, dependencies), error) {
   case dict.get(flow.steps, instance.state.current_step) {
     Ok(step_config) -> {
-      let handler_fn = fn() { step_config.handler(ctx, instance) }
+      let handler_fn = fn() {
+        use <- bot.in_flow_step(ctx, flow.name)
+        step_config.handler(ctx, instance)
+      }
       let started_at = telemetry.monotonic_time()
       let result =
         apply_middlewares(

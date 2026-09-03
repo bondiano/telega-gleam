@@ -27,6 +27,11 @@ confirmation screens.
 
 ### Dialogs vs Conversations vs Flows vs Menu Builder
 
+The same table lives in the [README](../README.md#multi-step-interactions)
+alongside the rule for **which layer gets an update** — worth reading once,
+because a conversation `wait_*` and a parked flow step cannot both own the
+next one.
+
 Dialogs compile to [flows](./conversation-flows.md), so they inherit
 persistence, TTL, and `/cancel` — the difference is the level of abstraction:
 
@@ -41,10 +46,12 @@ persistence, TTL, and `/cancel` — the difference is the level of abstraction:
 | **Composition** | nested calls | subflows | nested menus | sub-dialogs |
 | **Best for** | quick Q&A forms | branchy processes with custom messages | standalone menus outside a process | screen-like UIs: settings, wizards, catalogs |
 
-Menu builder remains a good fit for a single menu that is not part of a
-persistent process. If you are hand-writing `editMessageText` calls and
-parsing callback payloads inside a flow — that is the sign to switch to a
-dialog.
+`menu_builder` is **deprecated**: a dialog window with `widget.select`,
+`widget.paged_select` or `widget.list_group` renders the same menu and keeps
+its state, its history and its callback-data budget. It still compiles and
+will not be removed without a major release, but it will not grow. If you are
+hand-writing `editMessageText` calls and parsing callback payloads inside a
+flow — that is the same sign, from the other direction.
 
 ## Terminology
 

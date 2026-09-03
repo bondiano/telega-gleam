@@ -1,3 +1,8 @@
+//// Tests for `telega/menu_builder`, which is deprecated in favour of
+//// `telega/dialog` — the deprecation warnings this file produces are the
+//// point of that deprecation, not a problem with the tests. They stay until
+//// the module goes.
+
 import birdie
 import gleam/option.{None, Some}
 import gleam/string

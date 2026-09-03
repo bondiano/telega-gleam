@@ -17,6 +17,7 @@ import telega/flow/registry
 import telega/flow/storage
 import telega/flow/types
 import telega/router
+import telega/telemetry
 import telega/testing/context
 import telega/testing/factory
 import telega/testing/mock
@@ -3370,4 +3371,83 @@ pub fn enter_subflow_accepts_an_inline_subflow_short_name_test() {
   let assert Ok(_) = engine.start_or_resume(flow, ctx, 740, 840, dict.new())
 
   process.receive(events, 200) |> should.equal(Ok("street"))
+}
+
+// A `wait_*` inside a flow step ---------------------------------------------
+//
+// The chat instance answers a pending continuation *before* it routes, so a
+// conversation wait armed from inside a flow step eats the update the flow
+// is parked on and the flow never resumes. It cannot be made to work, so it
+// is reported.
+
+type WaitInStepEvent {
+  WaitInStepEvent(flow_name: String)
+}
+
+fn watch_wait_in_step(id: String) -> process.Subject(WaitInStepEvent) {
+  let subject = process.new_subject()
+  telemetry.attach_many(
+    id:,
+    events: [["telega", "flow", "wait_in_step"]],
+    handler: fn(_name, _measurements, metadata) {
+      let flow_name = case list.key_find(metadata, "flow_name") {
+        Ok(telemetry.StringValue(name)) -> name
+        _ -> ""
+      }
+      process.send(subject, WaitInStepEvent(flow_name:))
+    },
+  )
+  subject
+}
+
+pub fn wait_inside_a_flow_step_is_reported_test() {
+  let events = watch_wait_in_step("wait-in-step")
+  let ctx = context.context(session: Nil)
+
+  bot.in_flow_step(ctx, "booking", fn() {
+    bot.wait_handler(
+      ctx:,
+      handler: bot.HandleText(fn(ctx, _text) { Ok(ctx) }),
+      handle_else: None,
+      timeout: None,
+    )
+  })
+  |> should.be_ok
+
+  process.receive(events, 100)
+  |> should.equal(Ok(WaitInStepEvent(flow_name: "booking")))
+}
+
+pub fn wait_outside_a_flow_step_is_not_reported_test() {
+  let events = watch_wait_in_step("wait-outside-step")
+  let ctx = context.context(session: Nil)
+
+  // The same call from an ordinary handler is the supported way to wait.
+  bot.wait_handler(
+    ctx:,
+    handler: bot.HandleText(fn(ctx, _text) { Ok(ctx) }),
+    handle_else: None,
+    timeout: None,
+  )
+  |> should.be_ok
+
+  process.receive(events, 50) |> should.equal(Error(Nil))
+}
+
+/// The mark belongs to the step, not to the rest of the update: a wait armed
+/// after the step returned is an ordinary one.
+pub fn the_flow_step_mark_ends_with_the_step_test() {
+  let events = watch_wait_in_step("wait-after-step")
+  let ctx = context.context(session: Nil)
+
+  bot.in_flow_step(ctx, "booking", fn() { Nil })
+  bot.wait_handler(
+    ctx:,
+    handler: bot.HandleText(fn(ctx, _text) { Ok(ctx) }),
+    handle_else: None,
+    timeout: None,
+  )
+  |> should.be_ok
+
+  process.receive(events, 50) |> should.equal(Error(Nil))
 }

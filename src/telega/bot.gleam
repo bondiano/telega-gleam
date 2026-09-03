@@ -1942,6 +1942,25 @@ pub type Handler(session, error, dependencies) {
   )
 }
 
+/// Where the flow engine records that user code is running inside a step, so
+/// a `wait_*` called from there can say what is wrong instead of silently
+/// stalling the flow. Scoped to the update, like everything else in `Scope`.
+const flow_step_key: scope.Key(String) = scope.Key("bot/flow_step")
+
+/// Run `step` marked as flow-step code. The flow and dialog engines wrap
+/// every user step handler in this.
+@internal
+pub fn in_flow_step(
+  ctx ctx: Context(session, error, dependencies),
+  flow_name flow_name: String,
+  step step: fn() -> a,
+) -> a {
+  scope.put(ctx.scope, flow_step_key, flow_name)
+  let result = step()
+  scope.erase(ctx.scope, flow_step_key)
+  result
+}
+
 /// Pass any handler to start waiting
 ///
 /// `or` - calls if there are any other updates
@@ -1952,11 +1971,37 @@ pub fn wait_handler(
   handle_else handle_else: Option(Handler(session, error, dependencies)),
   timeout timeout: Option(Int),
 ) -> Result(Context(session, error, dependencies), error) {
+  warn_if_inside_flow_step(ctx)
   actor.send(
     ctx.chat_subject,
     WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
   )
   Ok(ctx)
+}
+
+/// A chat instance answers a pending continuation *before* it routes, so a
+/// `wait_*` armed from inside a flow step swallows the very update the flow
+/// is parked on: the flow never resumes, and its `wait_token` sits there
+/// until the TTL. The two waiting mechanisms cannot both own the next update,
+/// so say so rather than let the flow appear to hang.
+fn warn_if_inside_flow_step(ctx: Context(session, error, dependencies)) -> Nil {
+  case scope.get(ctx.scope, flow_step_key) {
+    Error(Nil) -> Nil
+    Ok(flow_name) -> {
+      telemetry.execute(["telega", "flow", "wait_in_step"], [#("count", 1)], [
+        #("flow_name", telemetry.StringValue(flow_name)),
+      ])
+      log.warning(
+        "[flow:"
+        <> flow_name
+        <> "] wait_* was called from inside a flow step. The chat instance's"
+        <> " continuation is consulted before the router, so it will consume"
+        <> " the update the flow is waiting for and the flow will not resume."
+        <> " Park the step instead: `action.wait`/`action.wait_callback` in a"
+        <> " flow, `on_text`/`on_message` in a dialog.",
+      )
+    }
+  }
 }
 
 /// Same as `do_handle`, but wraps the handler invocation in a
