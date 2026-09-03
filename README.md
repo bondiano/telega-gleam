@@ -16,7 +16,9 @@ A [Gleam](https://gleam.run/) library for the Telegram Bot API on BEAM.
 - OTP supervision tree for all bot processes (bot actor, chat instances, polling)
 - adapter to use with [wisp](https://github.com/gleam-wisp/wisp)
 - long polling with automatic retry and exponential backoff
-- session bot implementation
+- session bot implementation, keyed however you like (`telega.with_session_key`)
+- chat-, user- and bot-wide shared state beside the session (`telega/store`)
+- delayed and recurring work, in memory or surviving a restart (`telega/jobs`)
 - conversation implementation (multi-message flows)
 - declarative single-message dialogs with widgets and sub-dialogs (`telega/dialog`, [guide](https://hexdocs.pm/telega/docs/dialogs.html))
 - per-user flood control middleware (`router.with_rate_limit`)
@@ -207,6 +209,7 @@ Progressive examples in the [examples](./examples) directory:
 6. `05-media-group-bot` — Media group handling
 7. `06-restaurant-booking` — Full-featured application with flows and database
 8. `07-streaming-bot` — LLM-style streaming into one growing message
+9. `08-group-bot` — Chat-scoped data, versioned sessions, persisted reminders
 
 ## Development
 

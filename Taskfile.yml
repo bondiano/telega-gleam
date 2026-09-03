@@ -10,6 +10,7 @@ vars:
   EXAMPLES: >-
     00-echo-bot 01-commands-bot 02-session-bot 03-conversation-bot
     04-keyboard-bot 05-media-group-bot 06-restaurant-booking
+    07-streaming-bot 08-group-bot
 
 tasks:
   format:

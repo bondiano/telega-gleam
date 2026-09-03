@@ -165,11 +165,13 @@ pub type ChatInstanceArgs(session, error, dependencies) {
   )
 }
 
-/// How a chat instance manages its own lifetime and its session writes.
+/// How a chat instance is keyed, how long it lives, and how it writes its
+/// session.
 ///
 /// Built with `default_chat_settings` and overridden field by field; the
 /// `telega` builder (`with_chat_idle_timeout`, `with_media_group_timeout`,
-/// `with_session_persistence`, ...) is the usual way to reach it.
+/// `with_session_persistence`, `with_session_key`, ...) is the usual way to
+/// reach it.
 pub type ChatSettings {
   /// - `idle_timeout` — how long (ms) an instance may sit idle before asking
   ///   the bot to stop it. `None` keeps every instance alive for the bot's
@@ -182,13 +184,37 @@ pub type ChatSettings {
   /// - `hibernate_after` — how long (ms) an instance may sit idle before it
   ///   compacts its heap. `None` never compacts.
   /// - `session_persistence` — whether an unchanged session is written back.
+  /// - `session_key` — the storage key (and chat instance identity) an update
+  ///   maps to. Defaults to [`default_session_key`](#default_session_key).
+  /// - `on_load_error` — what happens when the session cannot be read.
   ChatSettings(
     idle_timeout: Option(Int),
     init_timeout: Int,
     media_group_timeout: Option(Int),
     hibernate_after: Option(Int),
     session_persistence: SessionPersistence,
+    session_key: fn(Update) -> String,
+    on_load_error: SessionLoadError,
   )
+}
+
+/// What a chat instance does when `get_session` returns an `Error`.
+///
+/// A read that *failed* is not the same as "this user has no session yet", so
+/// none of these are the `Ok(None)` path — that one always uses
+/// `default_session()`.
+pub type SessionLoadError {
+  /// Refuse to start: the update is answered `False` and nothing is written.
+  /// The default, because handling the update on a default session would let
+  /// the first handler persist that default over the real, still-stored data.
+  FailUpdate
+  /// Start on `default_session()` and persist normally. Only safe when losing
+  /// a session is cheaper than dropping the update — a cache, a counter.
+  UseDefault
+  /// Start on `default_session()` but never write: handlers run, every
+  /// persist is skipped with a warning. The stored session survives a backend
+  /// that is briefly unreadable, and the next update tries the read again.
+  ReadOnly
 }
 
 /// Whether the session is written back after an update that did not change it.
@@ -212,6 +238,8 @@ pub fn default_chat_settings() -> ChatSettings {
     media_group_timeout: None,
     hibernate_after: Some(default_hibernate_after),
     session_persistence: PersistOnChange,
+    session_key: default_session_key,
+    on_load_error: FailUpdate,
   )
 }
 
@@ -690,7 +718,7 @@ fn handle_update_bot_message(
   envelope envelope,
   annotations annotations,
 ) -> Result(Bot(session, error, dependencies), error.TelegaError) {
-  let key = build_session_key(update)
+  let key = bot.chat_settings.session_key(update)
 
   use chat_subject <- result.try(case registry.get(bot.registry, key:) {
     Some(chat_subject) -> Ok(chat_subject)
@@ -791,6 +819,12 @@ type ChatInstance(session, error, dependencies) {
     tick_armed: Bool,
     // Albums still being gathered, keyed by `media_group_id`.
     media_groups: Dict(String, MediaGroupBuffer),
+    // Set when the session could not be read and `ReadOnly` was chosen: the
+    // instance serves updates off the default session and writes nothing.
+    read_only: Bool,
+    // Set when a write failed: the session in memory is ahead of storage, so
+    // the next update writes it again even if no handler changed it.
+    dirty: Bool,
   )
 }
 
@@ -819,21 +853,38 @@ pub fn start_chat_instance(
   actor.new_with_initialiser(args.settings.init_timeout, fn(subject) {
     // A read that *failed* is not the same as "this user has no session yet":
     // starting on a default here would let the first handler persist it over
-    // the real, still-stored data. Fail the start instead — the update is
-    // answered `False` and the next one gets a fresh attempt.
-    use session <- result.try(case args.session_settings.get_session(args.key) {
-      Ok(Some(session)) -> Ok(session)
-      Ok(None) -> Ok(args.session_settings.default_session())
-      Error(error) -> {
-        let reason =
-          "Failed to get session for key "
-          <> args.key
-          <> ": "
-          <> string.inspect(error)
-        log.error(reason)
-        Error(reason)
-      }
-    })
+    // the real, still-stored data. What happens instead is
+    // `settings.on_load_error`'s call — by default the start fails, the update
+    // is answered `False`, and the next one gets a fresh attempt.
+    use #(session, read_only) <- result.try(
+      case args.session_settings.get_session(args.key) {
+        Ok(Some(session)) -> Ok(#(session, False))
+        Ok(None) -> Ok(#(args.session_settings.default_session(), False))
+        Error(error) -> {
+          let reason =
+            "Failed to get session for key "
+            <> args.key
+            <> ": "
+            <> string.inspect(error)
+          case args.settings.on_load_error {
+            FailUpdate -> {
+              log.error(reason)
+              Error(reason)
+            }
+            UseDefault -> {
+              log.error(reason <> " — starting on the default session")
+              report_load_error(args.key, "use_default")
+              Ok(#(args.session_settings.default_session(), False))
+            }
+            ReadOnly -> {
+              log.error(reason <> " — starting read-only, writes are skipped")
+              report_load_error(args.key, "read_only")
+              Ok(#(args.session_settings.default_session(), True))
+            }
+          }
+        }
+      },
+    )
 
     let chat_instance =
       ChatInstance(
@@ -854,6 +905,8 @@ pub fn start_chat_instance(
         compacted: False,
         tick_armed: False,
         media_groups: dict.new(),
+        read_only:,
+        dirty: False,
       )
     // Self-register in registry (overwrites stale Subject on restart)
     registry.register(args.registry, key: args.key, subject:)
@@ -1300,17 +1353,22 @@ fn persist_and_continue(
   case persist_session(chat, new_session) {
     Ok(session) -> {
       ack_with(True)
-      let chat = ChatInstance(..chat, session:)
+      let chat = ChatInstance(..chat, session:, dirty: False)
       actor.continue(case clear_continuation {
         True -> ChatInstance(..chat, continuation: None)
         False -> chat
       })
     }
     Error(e) ->
+      // Keep the handler's session in memory and remember that storage is
+      // behind it: the update is reported as failed, but the next one retries
+      // the write instead of silently reverting the change.
       case chat.catch_handler(context, e) {
         Ok(_) -> {
           ack_with(False)
-          actor.continue(chat)
+          actor.continue(
+            ChatInstance(..chat, session: new_session, dirty: True),
+          )
         }
         Error(e) -> {
           log.error_d(failure_label, e)
@@ -1331,15 +1389,45 @@ fn persist_session(
   chat: ChatInstance(session, error, dependencies),
   new_session: session,
 ) -> Result(session, error) {
+  // `bool.guard` would evaluate the warning eagerly — this branch has to be
+  // lazy, not just short.
+  use <- guard_read_only(chat, new_session)
   case chat.settings.session_persistence {
     PersistAlways ->
       chat.session_settings.persist_session(chat.key, new_session)
     PersistOnChange ->
-      case new_session == chat.session {
+      // `dirty` means storage is behind what is in memory: the last write
+      // failed, so this one goes out even though nothing changed since.
+      case !chat.dirty && new_session == chat.session {
         True -> Ok(new_session)
         False -> chat.session_settings.persist_session(chat.key, new_session)
       }
   }
+}
+
+fn guard_read_only(
+  chat: ChatInstance(session, error, dependencies),
+  new_session: session,
+  write: fn() -> Result(session, error),
+) -> Result(session, error) {
+  case chat.read_only {
+    False -> write()
+    True -> {
+      log.warning(
+        "[session] skipping the write for key "
+        <> chat.key
+        <> ": this instance is read-only because its session could not be read",
+      )
+      Ok(new_session)
+    }
+  }
+}
+
+fn report_load_error(key: String, policy: String) -> Nil {
+  telemetry.execute(["telega", "session", "load_error"], [#("count", 1)], [
+    #("key", telemetry.StringValue(key)),
+    #("policy", telemetry.StringValue(policy)),
+  ])
 }
 
 /// Give up on this chat instance.
@@ -1611,16 +1699,46 @@ pub fn next_session(
   Ok(Context(..ctx, session:))
 }
 
-fn build_session_key(update: Update) {
+/// The key an update maps to unless `with_session_key` says otherwise:
+/// `"{chat_id}:{from_id}"`, one session (and one chat instance) per user per
+/// chat.
+///
+/// Alternatives ship beside it — [`chat_session_key`](#chat_session_key) for
+/// one shared session per chat, [`user_session_key`](#user_session_key) for
+/// one per user across chats. The caveats of each are in
+/// `docs/session-serialization.md`.
+pub fn default_session_key(update: Update) -> String {
   int.to_string(update.chat_id) <> ":" <> int.to_string(update.from_id)
 }
 
+/// One session per chat, shared by everyone in it: `"chat:{chat_id}"`.
+///
+/// The natural key for a group bot whose state is about the chat rather than
+/// the member — a shared counter, the group's language. Note that it also
+/// makes the chat a single instance, so members' updates are serialized
+/// through one process (which is what makes a shared counter safe).
+pub fn chat_session_key(update: Update) -> String {
+  "chat:" <> int.to_string(update.chat_id)
+}
+
+/// One session per user, shared across every chat they write in:
+/// `"user:{from_id}"`. Careful with updates that carry no user (a poll update
+/// keys as `user:-1`).
+pub fn user_session_key(update: Update) -> String {
+  "user:" <> int.to_string(update.from_id)
+}
+
+/// Read the session an update maps to under the **default** key.
+///
+/// A bot that changed its key with `telega.with_session_key` has to read
+/// through its own key function instead — this helper predates the setting and
+/// cannot see it.
 pub fn get_session(
   session_settings: SessionSettings(session, error),
   update: Update,
 ) -> Result(Option(session), error) {
   update
-  |> build_session_key
+  |> default_session_key
   |> session_settings.get_session
 }
 

@@ -8,7 +8,9 @@
 //// `FlowStorage` contracts from a single `KeyValueStorage`, so a bot only
 //// needs to wire up one backend for both sessions and flows.
 
+import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -77,6 +79,109 @@ pub fn session_settings_from_storage(
     },
     default_session: default,
   )
+}
+
+/// Derive `SessionSettings` that carry a schema version.
+///
+/// The stored value is wrapped in `{"v": <version>, "d": <encoded session>}`,
+/// so a build that changes the shape of its session can still read what an
+/// older build wrote. On load:
+///
+/// - the envelope's version matches → decode with `decode`;
+/// - it does not → hand `migrate` the stored version and the raw payload;
+/// - there is no envelope (the value was written by
+///   [`session_settings_from_storage`](#session_settings_from_storage)) → the
+///   version is `0` and `migrate` gets the whole value.
+///
+/// A `migrate` returning `Error(Nil)` is treated exactly like a value that
+/// will not decode: reported, then read as "no session", so the caller falls
+/// back to `default`.
+///
+/// ```gleam
+/// storage.session_settings_from_storage_versioned(
+///   storage:,
+///   encode: encode_session,
+///   decode: session_decoder(),
+///   default: fn() { Session(name: "", locale: "en") },
+///   version: 2,
+///   migrate: fn(from, raw) {
+///     case from {
+///       // v1 had no `locale`.
+///       1 -> decode.run(raw, v1_decoder()) |> result.replace_error(Nil)
+///       _ -> Error(Nil)
+///     }
+///   },
+/// )
+/// ```
+pub fn session_settings_from_storage_versioned(
+  storage storage: KeyValueStorage(error),
+  encode encode: fn(session) -> json.Json,
+  decode decoder: decode.Decoder(session),
+  default default: fn() -> session,
+  version version: Int,
+  migrate migrate: fn(Int, Dynamic) -> Result(session, Nil),
+) -> SessionSettings(session, error) {
+  SessionSettings(
+    persist_session: fn(key, session) {
+      let payload =
+        json.object([#("v", json.int(version)), #("d", encode(session))])
+        |> json.to_string
+      storage.set(session_prefix <> key, payload)
+      |> result.map(fn(_) { session })
+    },
+    get_session: fn(key) {
+      use maybe <- result.try(storage.get(session_prefix <> key))
+      case maybe {
+        None -> Ok(None)
+        Some(raw) ->
+          case read_versioned(raw, decoder, version, migrate) {
+            Ok(session) -> Ok(Some(session))
+            Error(reason) -> {
+              report_decode_error("session", key, reason)
+              Ok(None)
+            }
+          }
+      }
+    },
+    default_session: default,
+  )
+}
+
+type Envelope {
+  Envelope(version: Int, data: Dynamic)
+}
+
+fn envelope_decoder() -> decode.Decoder(Envelope) {
+  use version <- decode.field("v", decode.int)
+  use data <- decode.field("d", decode.dynamic)
+  decode.success(Envelope(version:, data:))
+}
+
+fn read_versioned(
+  raw: String,
+  decoder: decode.Decoder(session),
+  version: Int,
+  migrate: fn(Int, Dynamic) -> Result(session, Nil),
+) -> Result(session, String) {
+  use value <- result.try(
+    json.parse(raw, decode.dynamic)
+    |> result.map_error(fn(err) { string.inspect(err) }),
+  )
+  let #(stored_version, payload) = case decode.run(value, envelope_decoder()) {
+    Ok(Envelope(version:, data:)) -> #(version, data)
+    // No envelope: written before this session was versioned.
+    Error(_) -> #(0, value)
+  }
+  case stored_version == version {
+    True ->
+      decode.run(payload, decoder)
+      |> result.map_error(fn(errs) { string.inspect(errs) })
+    False ->
+      migrate(stored_version, payload)
+      |> result.replace_error(
+        "no migration from schema version " <> int.to_string(stored_version),
+      )
+  }
 }
 
 /// Derive `FlowStorage` from a `KeyValueStorage`.

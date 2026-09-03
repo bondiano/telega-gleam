@@ -52,9 +52,38 @@ telega.new_for_polling(api_client:)
 |> telega.with_session_persistence(bot.PersistAlways)
 ```
 
+## When the session cannot be read
+
+A read that *failed* is not the same as "this user has no session yet". By
+default (`bot.FailUpdate`) the chat instance refuses to start: the update is
+reported unhandled and nothing is written, because serving it on a default
+session would let the first handler persist that default over the real,
+still-stored data.
+
+```gleam
+telega.new_for_polling(api_client:)
+|> telega.with_session_settings(settings)
+|> telega.with_session_load_error(bot.ReadOnly)
+```
+
+- `bot.FailUpdate` (default) — drop the update, keep the stored session.
+- `bot.ReadOnly` — handlers run on the default session and every write is
+  skipped with a warning. The bot keeps answering while the backend is down,
+  and the stored session is still there when it comes back.
+- `bot.UseDefault` — handlers run on the default session and write normally.
+  Only when losing a session costs less than dropping the update.
+
+Either fallback emits `telega.session.load_error` telemetry with the policy
+that was applied.
+
+A **write** that fails is different again: the value the handler returned stays
+in memory and is written again on the next update, even under
+`PersistOnChange`, so a transient backend failure costs one update rather than
+the change.
+
 ## What the key identifies
 
-The key is `"{chat_id}:{from_id}"`, and a few update kinds map onto it in ways
+The default key is `"{chat_id}:{from_id}"`, and a few update kinds map onto it in ways
 worth knowing before you store anything sensitive per key:
 
 - **Anonymous group admins** post as the chat itself, so `from_id` is the
@@ -69,6 +98,83 @@ worth knowing before you store anything sensitive per key:
 
 If per-user isolation matters for one of these, key your own storage on
 something you derive from the update rather than on `ctx.key`.
+
+## Choosing the key
+
+`telega.with_session_key` decides what an update is keyed by — its session
+*and* the chat instance that handles it. Two updates with the same key share
+one process and one session, so the key decides both isolation and
+concurrency.
+
+```gleam
+telega.new_for_polling(api_client:)
+|> telega.with_session_key(bot.chat_session_key)
+```
+
+| Key function | Key | One session per |
+|---|---|---|
+| `bot.default_session_key` | `"{chat_id}:{from_id}"` | user, per chat |
+| `bot.chat_session_key` | `"chat:{chat_id}"` | chat, shared by its members |
+| `bot.user_session_key` | `"user:{from_id}"` | user, across every chat |
+
+Anything else is a plain function of the update — one session per forum topic,
+per business connection, per language:
+
+```gleam
+telega.with_session_key(builder, fn(update) {
+  case update.thread_id {
+    Some(thread) ->
+      int.to_string(update.chat_id) <> ":t" <> int.to_string(thread)
+    None -> bot.default_session_key(update)
+  }
+})
+```
+
+`bot.chat_session_key` also serializes the chat: every member's update goes
+through one instance, which is what makes a read-modify-write on the shared
+session safe.
+
+## State that is not the session
+
+A session belongs to one chat instance and is loaded once when it starts —
+wrong for anything several instances share. A group's counter written by one
+member would be invisible to another member's instance until it restarted.
+
+`telega/store` is that other shape: a typed view of one key-space, read and
+written straight through to the backend, never cached.
+
+```gleam
+import telega/store
+
+let counters =
+  store.chat_data(
+    storage: kv,
+    encode: json.int,
+    decode: decode.int,
+    default: fn() { 0 },
+  )
+
+fn handle_message(ctx, _text) {
+  use total <- result.try(store.update(ctx, counters, fn(n) { n + 1 }))
+  reply.text(ctx, "messages here: " <> int.to_string(total))
+}
+```
+
+| Constructor | Key | Scope |
+|---|---|---|
+| `store.chat_data` | `data:chat:{chat_id}` | the chat |
+| `store.user_data` | `data:user:{from_id}` | the user, across chats |
+| `store.global_data(name:)` | `data:global:{name}` | the whole bot |
+| `store.custom(key:)` | whatever you return | your call |
+
+A store is a plain value: build it at startup, put it in `dependencies`, and
+hand it to the handlers that need it. `store.with_ttl` expires written values;
+`store.get_at` / `set_at` / `update_at` / `delete_at` reach a key with no
+`Context` to derive one from (a job, an admin command reading another chat).
+
+`store.update` is read-modify-write and **not atomic** — two instances updating
+the same key at once can lose one of the changes. Where that matters, key the
+session by chat instead and let the single instance serialize the members.
 
 ## Unified Storage Interface
 
@@ -339,26 +445,42 @@ fn persist_session(db: pog.Connection, key: String, session: MySession) -> Resul
 
 ## Session Migration
 
-When your session type changes, version it and handle old formats in the decoder:
+When the shape of your session changes, version it. The stored value is wrapped
+in `{"v": <version>, "d": <session>}`, and a value written by an older build is
+handed to `migrate` instead of being read as garbage:
 
 ```gleam
-pub type MySession {
-  MySession(version: Int, name: String, preferences: Preferences)
-}
-
-fn decode_session(json_str: String) -> Result(MySession, DecodeError) {
-  case json.parse(json_str, v2_decoder()) {
-    Ok(session) -> Ok(session)
-    Error(_) ->
-      case json.parse(json_str, v1_decoder()) {
-        Ok(v1) -> Ok(migrate_v1_to_v2(v1))
-        Error(err) -> Error(err)
-      }
-  }
-}
+storage.session_settings_from_storage_versioned(
+  storage: kv,
+  encode: encode_session,
+  decode: session_decoder(),
+  default: fn() { Session(name: "", locale: "en") },
+  version: 2,
+  migrate: fn(from, raw) {
+    case from {
+      // v1 had no `locale`; v0 is what an unversioned build wrote.
+      0 | 1 -> decode.run(raw, v1_decoder()) |> result.replace_error(Nil)
+      _ -> Error(Nil)
+    }
+  },
+)
 ```
 
-Decode failures in `get_session` won't crash the bot (Telega falls back to `default_session()`), but handle migrations explicitly to avoid losing user data.
+- the envelope's version matches → decoded with `decode`;
+- it does not → `migrate` gets the stored version and the raw payload;
+- there is no envelope (written by `session_settings_from_storage`) → the
+  version is `0` and `migrate` gets the whole value.
+
+A `migrate` that returns `Error(Nil)` — including for a version from a *newer*
+build — is treated like a value that will not decode: reported through
+`telega.storage.decode_error`, then read as "no session", so the caller falls
+back to `default`. That is deliberate: half-populating a session from a shape
+you do not recognise is worse than starting over.
+
+Without versioning, a decode failure in `get_session` still does not crash the
+bot — it is reported and falls back to `default_session()` — but the next write
+overwrites the value that failed, so migrate explicitly rather than relying on
+it.
 
 ## Session TTL
 

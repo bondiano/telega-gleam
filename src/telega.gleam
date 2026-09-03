@@ -46,6 +46,11 @@ pub opaque type Telega(session, error, dependencies) {
     /// Kept so `background_context` can load a session and inject the same
     /// services a handler would see.
     session_settings: SessionSettings(session, error),
+    /// Kept so `background_context` keys a session exactly as an update would.
+    session_key: fn(update.Update) -> String,
+    /// Kept so `background_context` treats an unreadable session the same way
+    /// a chat instance start does.
+    session_load_error: bot.SessionLoadError,
     dependencies: dependencies,
   )
 }
@@ -93,6 +98,11 @@ pub opaque type TelegaBuilder(session, error, dependencies) {
     chat_hibernation: Bool,
     /// Whether a session no handler changed is written back anyway.
     session_persistence: bot.SessionPersistence,
+    /// How an update maps to a session key (and therefore to a chat
+    /// instance). `None` uses `bot.default_session_key`.
+    session_key: Option(fn(update.Update) -> String),
+    /// What happens when the session cannot be read from storage.
+    session_load_error: bot.SessionLoadError,
     media_group_timeout: Option(Int),
     // --- Lifecycle parameters ---
     on_start: Option(
@@ -193,18 +203,26 @@ pub fn background_context(
   chat_id chat_id: Int,
   user_id user_id: Int,
 ) -> Result(Context(session, error, dependencies), error.TelegaError) {
-  let key = int.to_string(chat_id) <> ":" <> int.to_string(user_id)
+  let background = update.background_update(chat_id:, user_id:)
+  let key = telega.session_key(background)
 
   use session <- result.try(case telega.session_settings.get_session(key) {
     Ok(Some(session)) -> Ok(session)
     Ok(None) -> Ok(telega.session_settings.default_session())
     Error(_) ->
-      Error(error.BotHandleUpdateError("failed to read the session for " <> key))
+      case telega.session_load_error {
+        bot.FailUpdate ->
+          Error(error.BotHandleUpdateError(
+            "failed to read the session for " <> key,
+          ))
+        bot.UseDefault | bot.ReadOnly ->
+          Ok(telega.session_settings.default_session())
+      }
   })
 
   Ok(bot.Context(
     key:,
-    update: update.background_update(chat_id:, user_id:),
+    update: background,
     config: telega.config,
     session:,
     dependencies: telega.dependencies,
@@ -255,6 +273,8 @@ fn default_builder(
     chat_hibernate_after: None,
     chat_hibernation: True,
     session_persistence: bot.PersistOnChange,
+    session_key: None,
+    session_load_error: bot.FailUpdate,
     media_group_timeout: None,
     on_start: None,
     on_shutdown: None,
@@ -464,6 +484,8 @@ pub fn with_dependencies(
     chat_hibernate_after: builder.chat_hibernate_after,
     chat_hibernation: builder.chat_hibernation,
     session_persistence: builder.session_persistence,
+    session_key: builder.session_key,
+    session_load_error: builder.session_load_error,
     media_group_timeout: builder.media_group_timeout,
     on_shutdown: builder.on_shutdown,
     drain_timeout: builder.drain_timeout,
@@ -701,6 +723,58 @@ pub fn with_session_persistence(
   persistence persistence: bot.SessionPersistence,
 ) -> TelegaBuilder(session, error, dependencies) {
   TelegaBuilder(..builder, session_persistence: persistence)
+}
+
+/// Choose what an update is keyed by — its session *and* the chat instance
+/// that handles it.
+///
+/// The default is `bot.default_session_key`: `"{chat_id}:{from_id}"`, one
+/// session per user per chat. `bot.chat_session_key` gives a group one shared
+/// session (and one instance, so members are serialized through it);
+/// `bot.user_session_key` follows a user across chats. Anything else is a
+/// function of the update:
+///
+/// ```gleam
+/// // One session per forum topic rather than per chat.
+/// telega.with_session_key(builder, fn(update) {
+///   case update.thread_id {
+///     Some(thread) -> int.to_string(update.chat_id) <> ":t" <> int.to_string(thread)
+///     None -> bot.default_session_key(update)
+///   }
+/// })
+/// ```
+///
+/// Two updates that map to the same key share one process and one session, so
+/// the key decides both concurrency and isolation. The trade-offs of the
+/// built-in keys — anonymous group admins, inline-message callbacks, updates
+/// with no user — are in `docs/session-serialization.md`.
+pub fn with_session_key(
+  builder: TelegaBuilder(session, error, dependencies),
+  key key: fn(update.Update) -> String,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, session_key: Some(key))
+}
+
+/// Choose what happens when the session cannot be read from storage.
+///
+/// The default is `bot.FailUpdate`: the chat instance refuses to start and the
+/// update is reported unhandled, because serving it on a default session would
+/// let the first handler persist that default over the real, still-stored
+/// data. `bot.ReadOnly` keeps the bot answering while the backend is down
+/// (handlers run on the default session, every write is skipped with a
+/// warning); `bot.UseDefault` is the old, lossy behaviour — pick it only when
+/// losing a session costs less than dropping the update.
+///
+/// ```gleam
+/// telega.new_for_polling(api_client:)
+/// |> telega.with_session_settings(settings)
+/// |> telega.with_session_load_error(bot.ReadOnly)
+/// ```
+pub fn with_session_load_error(
+  builder: TelegaBuilder(session, error, dependencies),
+  policy policy: bot.SessionLoadError,
+) -> TelegaBuilder(session, error, dependencies) {
+  TelegaBuilder(..builder, session_load_error: policy)
 }
 
 /// Gather the messages of an album into a single `MediaGroupUpdate`.
@@ -1942,6 +2016,8 @@ fn finalize(
       drain_timeout: option.unwrap(builder.drain_timeout, default_drain_timeout),
       on_shutdown: builder.on_shutdown,
       session_settings:,
+      session_key: session_key(builder),
+      session_load_error: builder.session_load_error,
       dependencies: builder.dependencies,
     )
 
@@ -2130,7 +2206,16 @@ pub fn chat_settings(
         ))
     },
     session_persistence: builder.session_persistence,
+    session_key: session_key(builder),
+    on_load_error: builder.session_load_error,
   )
+}
+
+// How an update maps to a session key, with the default filled in.
+fn session_key(
+  builder: TelegaBuilder(session, error, dependencies),
+) -> fn(update.Update) -> String {
+  option.unwrap(builder.session_key, bot.default_session_key)
 }
 
 // Generate a unique registry name from the bot token

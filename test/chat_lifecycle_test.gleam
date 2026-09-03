@@ -83,6 +83,7 @@ fn test_settings(
   persistence persistence: bot.SessionPersistence,
 ) -> bot.ChatSettings {
   bot.ChatSettings(
+    ..bot.default_chat_settings(),
     idle_timeout:,
     init_timeout: 5000,
     media_group_timeout: None,
