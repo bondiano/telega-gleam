@@ -232,10 +232,18 @@ tasks:
           sed -i.bak "s#^telega = { path = \"\.\.\" }#telega = \"${REQ}\"#" "${pkg}/gleam.toml"
           rm -f "${pkg}/gleam.toml.bak"
           swapped=1
+          # `build/packages/telega` is the path dependency's symlink. Gleam drops
+          # it when the requirement becomes a hex one but does not fetch the
+          # tarball in its place, and the publish then dies on a missing
+          # `build/packages/telega/gleam.toml`. Clearing the directory makes it
+          # download everything fresh.
+          rm -rf "${pkg}/build/packages"
         fi
         ( cd "${pkg}" && gleam publish ) || failed="${failed} ${pkg}"
         if [ "${swapped}" -eq 1 ]; then
           git -C "${pkg}" checkout -- gleam.toml manifest.toml
+          # Same in reverse: drop the hex copy so local dev links the path dep.
+          rm -rf "${pkg}/build/packages"
         fi
       done
       if [ -n "${failed}" ]; then
