@@ -41,12 +41,13 @@ Initiate a gleam project and add `telega` as a dependency:
 ```sh
 $ gleam new first_tg_bot
 $ cd first_tg_bot
-$ gleam add telega gleam_erlang telega_httpc
+$ gleam add telega gleam_erlang telega_httpc envoy
 ```
 
 Replace the `first_tg_bot.gleam` file content with the following code:
 
 ```gleam
+import envoy
 import gleam/erlang/process
 import telega
 import telega/reply
@@ -71,8 +72,10 @@ pub fn main() {
   |> router.on_any_text(handle_text)
   |> router.on_commands(["start", "help"], handle_command)
 
-  let client =
-    telega_httpc.new("BOT_TOKEN")
+  // Never hardcode the token: anyone who reads your repository can take over
+  // the bot with it.
+  let assert Ok(token) = envoy.get("BOT_TOKEN")
+  let client = telega_httpc.new(token)
 
   let assert Ok(_bot) =
     telega.new(client)
@@ -83,9 +86,10 @@ pub fn main() {
 }
 ```
 
-Replace `"BOT_TOKEN"` with the token you received from the BotFather. Then run the bot:
+Put the token from BotFather in the environment and run the bot:
 
 ```sh
+$ export BOT_TOKEN="123456:your-token-here"
 $ gleam run
 ```
 
@@ -99,6 +103,48 @@ then `telega.start()`. Optional services and session go in before the router
 (`telega.dependencies`, `telega.session`), and everything else is a `with_*`
 setting. Coming from 2.x? See the
 [v3 migration guide](https://hexdocs.pm/telega/docs/migration-v3.html).
+
+### Webhook instead of long polling
+
+Long polling needs no public address, which is why the quick start uses it. In
+production you usually want a webhook: Telegram POSTs each update to your
+server, so there is no idle request holding a connection open. Swap the mode
+step and serve the path with an adapter:
+
+```gleam
+import telega
+import telega_wisp
+import wisp
+
+fn handle_request(bot, req) {
+  use <- telega_wisp.handle_health(telega: bot, req:, path: telega_wisp.default_health_path)
+  use <- telega_wisp.handle_bot(telega: bot, req:)
+  wisp.not_found()
+}
+
+pub fn main() {
+  let assert Ok(bot) =
+    telega.new(client)
+    |> telega.webhook(
+      url: "https://bot.example.com",   // your public base URL
+      path: "webhook",                  // Telegram POSTs to <url>/<path>
+      secret_token: Some(secret),       // None generates one for you
+    )
+    |> telega.router(router)
+    |> telega.start()                   // calls setWebhook for you
+
+  // ... start wisp/mist with `handle_request(bot, _)`
+}
+```
+
+`telega.start()` registers the webhook with Telegram; the adapter validates the
+secret token on every request and answers `503` while the bot is draining or
+overloaded, so Telegram redelivers instead of losing the update. Two things are
+worth adding on a webhook: `telega/idempotency` (Telegram retries an update it
+did not get a `200` for) and `handle_health` above (a readiness probe your load
+balancer can use). Both, plus TLS, deploys and drain behaviour, are covered in
+the [deployment guide](https://hexdocs.pm/telega/docs/deployment.html); example
+[`09-webhook-wisp`](./examples/09-webhook-wisp) is the whole thing wired up.
 
 ## Architecture
 
@@ -182,9 +228,11 @@ dialog.window(id: "menu", render: render_menu, on_action: handle_menu)
 Exactly one of these handles any given update, in this order:
 
 1. **A pending conversation continuation.** The chat instance checks its own
-   `wait_*` continuation before it routes anything. A **command** the wait
-   did not ask for falls through to the router — so `/cancel` keeps working
-   mid-conversation — and the wait stays armed; everything else is consumed.
+   `wait_*` continuation before it routes anything. A **command**, and a
+   **pre-checkout or shipping query**, that the wait did not ask for falls
+   through to the router — so `/cancel` keeps working mid-conversation, and an
+   unanswered pre-checkout query cannot fail a payment — and the wait stays
+   armed; everything else is consumed.
 2. **The router**, in route priority: pre-router middleware, then commands,
    callback queries, custom routes, media, text patterns, specialized
    routes, fallback.
@@ -198,6 +246,46 @@ inside a flow step would swallow the very update the flow is parked on, so
 the library logs a warning and emits `["telega", "flow", "wait_in_step"]`
 when it sees one. Park the step instead — `action.wait` in a flow,
 `on_text` / `on_message` in a dialog.
+
+## Persisting state
+
+One `KeyValueStorage` backs everything the bot remembers — sessions, flow and
+dialog instances, `telega/store` values, persisted jobs, dead letters, webhook
+idempotency. Pick the backend, wire it once, and every subsystem uses it:
+
+```gleam
+import telega
+import telega/storage
+import telega_storage_sqlite
+
+let assert Ok(_) = telega_storage_sqlite.migrate(conn)
+let kv = telega_storage_sqlite.new(conn)
+
+telega.new(client)
+|> telega.session(storage.session_settings_from_storage(
+  storage: kv,
+  default_session: fn() { MySession(..) },
+  encode: encode_session,
+  decode: session_decoder(),
+))
+|> telega.router(router)
+|> telega.start()
+```
+
+| Backend | Reach for it when |
+|---|---|
+| **none** (default) | the bot is stateless, or state lives only in a conversation that may end with the process |
+| [`telega/storage/ets`](https://hexdocs.pm/telega/telega/storage/ets.html) | one node, state may be lost on restart — dedup windows, caches, local development |
+| [`telega_storage_sqlite`](./telega_storage_sqlite) | one node, state must survive a restart. A single file, no service to run: the default for small and medium bots |
+| [`telega_storage_postgres`](./telega_storage_postgres) | several nodes, or the bot's data already lives in Postgres |
+| [`telega_storage_redis`](./telega_storage_redis) | several nodes and high write rates, and losing state to a Redis flush is acceptable |
+
+Sessions hold per-user state; `telega/store` holds chat-, user- and bot-wide
+state that several people write (`store.update` is read-modify-write and *not*
+atomic — key the session by chat when that matters); `dependencies` hold
+services and are never serialized. Details, including versioned sessions and
+what happens when a stored session cannot be read, are in the
+[session guide](https://hexdocs.pm/telega/docs/session-serialization.html).
 
 ## Dependency injection
 
@@ -257,6 +345,26 @@ Telega is a monorepo. The core `telega` package is HTTP-client- and storage-agno
 | [`telega_webapp`](https://github.com/bondiano/telega-gleam/tree/master/telega_webapp) | Telegram Mini Apps (Web App) `initData` validation and helpers |
 | [`telega_i18n`](https://github.com/bondiano/telega-gleam/tree/master/telega_i18n) | Internationalization: TOML/JSON catalogs, locale middleware, interpolation, CLDR pluralization |
 
+## How Telega compares
+
+Telega is closest in spirit to [aiogram](https://docs.aiogram.dev/) — routers,
+filters, middleware, FSM-style flows and declarative dialogs — with everything
+that BEAM gives for free on top.
+
+| | Telega (Gleam) | [aiogram](https://docs.aiogram.dev/) (Python) | [grammY](https://grammy.dev/) (TS) | [teloxide](https://github.com/teloxide/teloxide) (Rust) |
+|---|---|---|---|---|
+| **Types** | fully static, generated from the API spec | runtime (pydantic) | static | static |
+| **Concurrency** | one supervised actor per chat | asyncio tasks | promises | tokio tasks |
+| **Failure isolation** | supervised per-chat actor: a crash restarts that chat alone, and its update is dead-lettered | error handler | error handler | error handler |
+| **Long-running state** | sessions, flows and dialogs in a pluggable storage | FSM storage | sessions plugin | dialogue storage |
+| **Declarative dialogs** | built in (`telega/dialog`, widgets, sub-dialogs) | separate [aiogram-dialog](https://github.com/Tishka17/aiogram_dialog) | — | — |
+| **API surface** | every method of the vendored spec, CI-checked for drift | full | full | full |
+| **Ecosystem size** | small and young | large | large | medium |
+
+Choose Telega if you want Gleam's type system and OTP supervision for a bot
+that has to stay up; choose one of the others if ecosystem breadth or your
+team's language matters more.
+
 ## Examples
 
 Progressive examples in the [examples](./examples) directory:
@@ -270,6 +378,8 @@ Progressive examples in the [examples](./examples) directory:
 7. `06-restaurant-booking` — Full-featured application with flows and database
 8. `07-streaming-bot` — LLM-style streaming into one growing message
 9. `08-group-bot` — Chat-scoped data, versioned sessions, persisted reminders
+10. `09-webhook-wisp` — Webhook deployment: health probe, idempotency, graceful drain
+11. `10-inline-and-payments` — Inline mode with pagination, and Telegram Stars
 
 ## Development
 

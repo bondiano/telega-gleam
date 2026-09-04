@@ -16,6 +16,11 @@ replaced — rather than about the bot's own logic.
 - [Dead letters](#dead-letters)
 - [Hot code reload](#hot-code-reload)
 
+Everything below is wired up together in
+[`examples/09-webhook-wisp`](https://github.com/bondiano/telega-gleam/tree/master/examples/09-webhook-wisp):
+a health probe, update deduplication, an overload cap and a SIGTERM drain in
+one small bot.
+
 ## Building a release
 
 Gleam compiles to Erlang, so a bot ships either as a Gleam project you run with

@@ -43,7 +43,7 @@ package is an independent Gleam project alongside it.
 ├── test/                  # core tests
 ├── codegen/               # generator for the model layer
 ├── docs/                  # long-form guides (published to hexdocs)
-├── examples/              # standalone example bots (00-echo-bot … 06-…)
+├── examples/              # standalone example bots (00-echo-bot … 10-…)
 ├── telega_wisp/           # wisp webhook adapter
 ├── telega_mist/           # mist webhook adapter
 ├── telega_httpc/          # httpc HTTP client adapter
@@ -96,6 +96,7 @@ gleam test
 | `task api:latest` | Report whether a newer Bot API spec is published upstream |
 | `task lint:totality` | Fail on `panic`/`let assert` anywhere on the update decode path (CI) |
 | `task publish` | Publish the core + all ecosystem packages (maintainers — see below) |
+| `task tag` | Tag the current commit with the core version (maintainers — see below) |
 
 The package and example lists live once in the `vars` block of `Taskfile.yml`.
 Adding a new package or example there makes it part of `format:all`, `test:all`,
@@ -191,10 +192,11 @@ See `codegen/README.md` for details.
   updated) context:
 
   ```gleam
-  fn handler(ctx: Context(session, error), data: Type) -> Result(Context(session, error), error)
+  fn handler(ctx: Context(session, error, dependencies), data: Type) -> Result(Context(session, error, dependencies), error)
   ```
 
-- **Builders** use the fluent `with_*` / `set_*` pattern (see `telega.gleam`).
+- **Builders** use bare verbs for pipeline steps and `with_*` for options (see
+  `telega.gleam`); there is no `set_*`.
 - **Public API needs doc comments** (`///`). Module-level guides go in `////`
   docstrings or `docs/*.md` — that is where end-user documentation lives.
 
@@ -246,7 +248,13 @@ logical change.
    ```
 
    If you touched a package or example, run its checks too (or `task test:all`).
-4. Open a PR with a clear description of **what** and **why**. Link any related
+4. **If behaviour changed, update the docs and the changelog in the same PR.**
+   The docstring of every public function you touched, the relevant
+   `docs/*.md` guide, and an entry under `## [Unreleased]` in `CHANGELOG.md`
+   in the right Keep a Changelog section. A behavioural change whose
+   documentation lands "later" is a bug report waiting to happen — the PR
+   template repeats this as a checklist.
+5. Open a PR with a clear description of **what** and **why**. Link any related
    issue.
 
 CI runs format check, `gleam check`, and the test suite for the core and — via
@@ -280,9 +288,14 @@ and miss unreleased API). `task publish` reconciles this:
 1. Bump the `version` in the `gleam.toml` of every package you changed
    (the core first if its public API changed). Hex rejects republishing an
    existing version.
-2. Commit your changes (including the path-dependency `gleam.toml` files —
+2. **Close out the changelog.** Rename `## [Unreleased]` in `CHANGELOG.md` to
+   `## [<version>] - <YYYY-MM-DD>`, add a fresh empty `## [Unreleased]` above
+   it, and add the two comparison links at the bottom of the file. Breaking
+   changes go under `### Changed`, prefixed **BREAKING**, and say what to do
+   instead — link the migration guide when there is one.
+3. Commit your changes (including the path-dependency `gleam.toml` files —
    the publish task restores them via `git checkout` afterwards).
-3. Run the release:
+4. Run the release:
 
    ```sh
    task publish        # publishes core, then every package
@@ -296,6 +309,16 @@ and miss unreleased API). `task publish` reconciles this:
    `gleam publish`, then restores the path dependency from git. Packages whose
    version was not bumped fail the "already published" check and are listed as
    skipped at the end — that is expected.
+
+5. **Tag the release and push the tag.** Every published version gets a tag, so
+   the hex release, the changelog entry and the commit it was cut from all
+   agree:
+
+   ```sh
+   task tag                  # creates v<core version>, refuses if the
+                             # changelog has no section for it
+   git push origin "v$(sed -nE 's/^version = "([^"]+)"/\1/p' gleam.toml)"
+   ```
 
 You need `HEXPM_API_KEY` set (or you'll be prompted to authenticate).
 

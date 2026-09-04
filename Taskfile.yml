@@ -10,7 +10,7 @@ vars:
   EXAMPLES: >-
     00-echo-bot 01-commands-bot 02-session-bot 03-conversation-bot
     04-keyboard-bot 05-media-group-bot 06-restaurant-booking
-    07-streaming-bot 08-group-bot
+    07-streaming-bot 08-group-bot 09-webhook-wisp 10-inline-and-payments
 
 tasks:
   format:
@@ -160,6 +160,26 @@ tasks:
         cmd: cd {{.ITEM}} && gleam test
       - for: { var: EXAMPLES }
         cmd: cd examples/{{.ITEM}} && gleam test
+
+  tag:
+    desc: >
+      Tag the current commit with the core version from gleam.toml (v<version>),
+      after checking the changelog mentions it. Run it right after `task publish`
+      so every published version is findable in git.
+    cmd: |
+      set -eu
+      VERSION=$(sed -nE 's/^version = "([^"]+)"/\1/p' gleam.toml)
+      TAG="v${VERSION}"
+      if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+        echo "${TAG} already exists."
+        exit 1
+      fi
+      if ! grep -q "^## \[${VERSION}\]" CHANGELOG.md; then
+        echo "CHANGELOG.md has no '## [${VERSION}]' section — write the release notes first."
+        exit 1
+      fi
+      git tag -a "${TAG}" -m "${TAG}"
+      echo "Tagged ${TAG}. Push it with: git push origin ${TAG}"
 
   publish:
     desc: >

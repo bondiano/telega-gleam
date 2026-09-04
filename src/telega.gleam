@@ -1,3 +1,65 @@
+//// Telega — the Telegram Bot API library for the BEAM.
+////
+//// This module is the entry point: it builds a bot, starts its supervision
+//// tree, and hands handlers everything they need through a `Context`.
+////
+//// ```gleam
+//// telega.new(api_client)
+//// |> telega.dependencies(deps)   // optional; must precede `router`
+//// |> telega.session(settings)    // optional; `Nil` session without it
+//// |> telega.router(router)
+//// |> telega.polling(polling.default_settings())  // or `telega.webhook(...)`
+//// |> telega.start()
+//// ```
+////
+//// One constructor, a mode step, one terminal. Bare verbs are the pipeline
+//// (`dependencies`, `session`, `router`, `router_tree`, `polling`, `webhook`,
+//// `start`, `supervised`); every option is a `with_*`. Coming from 2.x? See
+//// the [v3 migration guide](docs/migration-v3.html).
+////
+//// ## Which module do I want?
+////
+//// | Module | Reach for it when |
+//// |---|---|
+//// | [`telega`](telega.html) | building, starting and shutting down the bot; health, dead letters, background contexts |
+//// | [`telega/router`](telega/router.html) | deciding which handler sees an update — routes, filters, middleware, composition |
+//// | [`telega/reply`](telega/reply.html) | answering the update you are handling (the shortcut layer over `api`) |
+//// | [`telega/api`](telega/api.html) | calling any Bot API method directly |
+//// | [`telega/client`](telega/client.html) | HTTP behaviour: retries, rate limits, transformers, a custom endpoint |
+//// | [`telega/bot`](telega/bot.html) | pausing a handler mid-run (`wait_*`), sessions, pre-router middleware, chat-instance settings |
+//// | [`telega/flow/builder`](telega/flow/builder.html) | a persistent, branchy state machine that survives a restart |
+//// | [`telega/dialog`](telega/dialog.html) | a screen-like UI in one live message: windows, widgets, sub-dialogs |
+//// | [`telega/keyboard`](telega/keyboard.html) | building reply and inline keyboards, and typed callback payloads |
+//// | [`telega/format`](telega/format.html) | MarkdownV2/HTML text, or entity-based formatting with no escaping |
+//// | [`telega/update`](telega/update.html) | inspecting the typed update you were handed |
+//// | [`telega/store`](telega/store.html) | chat-, user- or bot-wide state that is *not* the session |
+//// | [`telega/scope`](telega/scope.html) | scratch space that lives exactly as long as one update |
+//// | [`telega/jobs`](telega/jobs.html) | work the bot does later, in memory or across restarts |
+//// | [`telega/storage`](telega/storage.html) | wiring a session/flow backend (Postgres, SQLite, Redis, ETS) |
+//// | [`telega/error`](telega/error.html) | reacting to a failed API call — `error.classify` reads the prose for you |
+//// | [`telega/telemetry`](telega/telemetry.html) | metrics and tracing for everything above |
+//// | [`telega/polling`](telega/polling.html) | tuning long polling |
+//// | [`telega/webhook_reply`](telega/webhook_reply.html) | answering an update inside the webhook HTTP response |
+//// | [`telega/idempotency`](telega/idempotency.html) | dropping updates Telegram re-delivers |
+//// | [`telega/roles`](telega/roles.html) | admin/owner checks and guards |
+//// | [`telega/payments`](telega/payments.html) | invoices, Telegram Stars, pre-checkout and shipping answers |
+//// | [`telega/inline_mode`](telega/inline_mode.html) | answering inline queries, with pagination |
+//// | [`telega/media_group`](telega/media_group.html) | sending albums (and receiving them as one update) |
+//// | [`telega/file`](telega/file.html) | uploading and downloading files |
+//// | [`telega/broadcast`](telega/broadcast.html) | mass messaging with pacing and delivery reports |
+//// | [`telega/deep_link`](telega/deep_link.html) | `t.me` start links and their payloads |
+//// | [`telega/chat_action`](telega/chat_action.html) | keeping "typing…" alive through a long handler |
+//// | [`telega/testing/*`](telega/testing/mock.html) | testing without a network: mock clients, factories, the dialog driver, graph export |
+////
+//// ## Guides
+////
+//// [Router](docs/router.html) · [Client](docs/client.html) ·
+//// [Replies](docs/replies.html) · [Conversation](docs/conversation.html) ·
+//// [Flows](docs/conversation-flows.html) · [Dialogs](docs/dialogs.html) ·
+//// [Sessions](docs/session-serialization.html) ·
+//// [Dependency injection](docs/dependency-injection.html) ·
+//// [Testing](docs/testing.html) · [Deployment](docs/deployment.html)
+
 import gleam/bool
 import gleam/dict
 import gleam/erlang/atom
