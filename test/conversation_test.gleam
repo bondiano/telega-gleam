@@ -9,6 +9,7 @@ import telega
 import telega/bot
 import telega/internal/config
 import telega/internal/registry
+import telega/model/types
 import telega/router
 import telega/testing/context
 import telega/testing/factory
@@ -456,4 +457,90 @@ pub fn non_command_updates_still_wait_test() {
   // The text the conversation was actually waiting for still lands.
   bot.handle_update(bot_subject, factory.text_update(text: "John"))
   process.receive(seen, 500) |> should.equal(Ok("name:John"))
+}
+
+// A payment query must not be swallowed either -------------------------------
+//
+// Telegram fails the payment if the bot does not answer a pre-checkout query
+// within 10 seconds, and in a private chat the query lands on the same chat
+// instance as the messages (its `chat_id` is the user's own id). A
+// conversation waiting for the successful-payment message would otherwise eat
+// the very query that has to be answered for that message to ever exist.
+
+const payer_id = 555
+
+fn pre_checkout_update() -> update.Update {
+  update.PreCheckoutQueryUpdate(
+    from_id: payer_id,
+    chat_id: payer_id,
+    pre_checkout_query: types.PreCheckoutQuery(
+      id: "pcq1",
+      from: factory.user_with(id: payer_id, first_name: "Payer"),
+      currency: "XTR",
+      total_amount: 50,
+      invoice_payload: "order:1",
+      shipping_option_id: None,
+      order_info: None,
+    ),
+    raw: factory.raw_update(message: factory.message(text: "")),
+  )
+}
+
+pub fn pre_checkout_query_reaches_the_router_during_a_wait_test() {
+  let seen = process.new_subject()
+
+  let handlers = [
+    bot.HandleCommand("buy", fn(ctx, _command) {
+      bot.wait_handler(
+        ctx:,
+        // What `payments.wait_successful_payment` parks on.
+        handler: bot.HandleMessage(fn(ctx, _message) {
+          process.send(seen, "paid")
+          Ok(ctx)
+        }),
+        handle_else: None,
+        timeout: None,
+      )
+    }),
+    bot.HandleAll(fn(ctx, upd) {
+      case upd {
+        update.PreCheckoutQueryUpdate(..) -> process.send(seen, "pre_checkout")
+        _ -> Nil
+      }
+      Ok(ctx)
+    }),
+  ]
+
+  let session_settings =
+    context.session_settings(default: fn() { TestSession(name: "") })
+  let bot_subject =
+    build_test_bot(handlers_to_router_handler(handlers), session_settings)
+
+  bot.handle_update(
+    bot_subject,
+    factory.command_update_with(
+      command: "buy",
+      payload: None,
+      from_id: payer_id,
+      chat_id: payer_id,
+    ),
+  )
+  |> should.be_true
+
+  // Same session key as the command, so it reaches the waiting instance — and
+  // must be handed to the router rather than swallowed.
+  bot.handle_update(bot_subject, pre_checkout_update())
+  process.receive(seen, 500) |> should.equal(Ok("pre_checkout"))
+
+  // The wait is still armed: the payment message that follows is the
+  // conversation's, not the router's.
+  bot.handle_update(
+    bot_subject,
+    factory.message_update_with(
+      message: factory.message(text: "receipt"),
+      from_id: payer_id,
+      chat_id: payer_id,
+    ),
+  )
+  process.receive(seen, 500) |> should.equal(Ok("paid"))
 }

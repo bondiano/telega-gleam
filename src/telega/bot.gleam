@@ -92,8 +92,9 @@ import telega/scope.{type Scope}
 import telega/telemetry
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
-  CommandUpdate, MediaGroupUpdate, MessageUpdate, PhotoUpdate, TextUpdate,
-  VideoUpdate, VoiceUpdate, WebAppUpdate,
+  CommandUpdate, MediaGroupUpdate, MessageUpdate, PhotoUpdate,
+  PreCheckoutQueryUpdate, ShippingQueryUpdate, TextUpdate, VideoUpdate,
+  VoiceUpdate, WebAppUpdate,
 }
 import telega/webhook_reply.{type Envelope}
 
@@ -1696,21 +1697,18 @@ fn do_handle_continuation(
 
 /// Nothing in the pending conversation wanted this update.
 ///
-/// A command still belongs to the router: swallowing it would leave `/cancel`
-/// (and every other registered command) dead for as long as a `wait_*` is
-/// armed, which is exactly how a user gets stuck in a conversation. The
-/// continuation stays armed — a command handler that means to end it calls
-/// `cancel_conversation_in`.
-///
-/// Anything else is the conversation's business and keeps waiting.
+/// Some updates belong to the router even so, and are handed to it with the
+/// continuation left armed (a handler that means to end it calls
+/// `cancel_conversation_in`). Everything else is the conversation's business
+/// and keeps waiting.
 fn unmatched_while_waiting(
   context context: Context(session, error, dependencies),
   update update: Update,
   chat chat: ChatInstance(session, error, dependencies),
   ack_with ack_with: fn(Bool) -> Nil,
 ) {
-  case update {
-    CommandUpdate(..) ->
+  case falls_through_to_router(update) {
+    True ->
       case
         update_span(context, update, fn() {
           chat.router_handler(context, update)
@@ -1727,10 +1725,34 @@ fn unmatched_while_waiting(
           )
         Error(e) -> handle_handler_error(chat, context, e, ack_with)
       }
-    _ -> {
+    False -> {
       ack_with(False)
       actor.continue(chat)
     }
+  }
+}
+
+/// Which updates a pending `wait_*` must not swallow.
+///
+/// A **command**: swallowing it would leave `/cancel` (and every other
+/// registered command) dead for as long as a `wait_*` is armed, which is
+/// exactly how a user gets stuck in a conversation.
+///
+/// A **pre-checkout or shipping query**: Telegram fails the payment if the bot
+/// does not answer within 10 seconds, and in a private chat these arrive on
+/// the same chat instance as the messages (`chat_id` is the user's own id).
+/// A conversation waiting for, say, the successful-payment message would
+/// otherwise eat the very query that has to be answered for that message to
+/// ever exist.
+///
+/// This is the fallback only: a continuation that *does* want one of these
+/// (`wait_command`, a `wait_for` predicate that matches it) has already
+/// handled it before we get here.
+fn falls_through_to_router(update: Update) -> Bool {
+  case update {
+    CommandUpdate(..) | PreCheckoutQueryUpdate(..) | ShippingQueryUpdate(..) ->
+      True
+    _ -> False
   }
 }
 

@@ -100,6 +100,12 @@
 //// service message arrives, so the whole purchase reads top-to-bottom (see
 //// the [conversation guide](/docs/conversation.html)):
 ////
+//// > **Register `on_pre_checkout_query` on the router anyway.** The wait does
+//// > not answer it, and Telegram fails the payment if nothing does within 10
+//// > seconds. A pre-checkout (or shipping) query that arrives while a `wait_*`
+//// > is armed is handed to the router rather than swallowed, precisely so the
+//// > two can run side by side — the wait stays armed through it.
+////
 //// ```gleam
 //// fn buy_handler(ctx, _command) {
 ////   let assert Ok(_) =
@@ -471,6 +477,10 @@ pub fn answer_shipping_error(
 /// Pauses the current chat actor's handler and waits for a successful payment
 /// service message. Other (non-payment) messages keep the conversation
 /// waiting, or go to the `or` handler if one is given.
+///
+/// This does **not** answer the pre-checkout query — register
+/// `router.on_pre_checkout_query` for that. It reaches the router even while
+/// this wait is armed, which is what makes the two work together.
 ///
 /// ```gleam
 /// let assert Ok(_) = payments.stars_invoice(...) |> payments.send(ctx)

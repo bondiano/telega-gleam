@@ -176,6 +176,15 @@ router.on_command(r, "cancel", fn(ctx, _cmd) {
 })
 ```
 
+**Payment queries are the other exception.** A pre-checkout or shipping query
+the conversation did not ask for also goes to the router, for the same reason
+with a harder deadline: Telegram **fails the payment** if the bot does not
+answer a pre-checkout query within 10 seconds, and in a private chat that
+query arrives on the same chat instance as the messages. So a handler can send
+an invoice and park on `payments.wait_successful_payment` while
+`router.on_pre_checkout_query` answers the query that has to be answered for
+the payment to happen at all. The wait stays armed through it.
+
 ## Examples
 
 ### Basic Name Collection
