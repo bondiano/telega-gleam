@@ -1,16 +1,16 @@
 name = "telega"
-version = "2.4.1"
+version = "3.0.0"
 description = "Gleam Telegram Bot Library"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "bondiano", repo = "telega-gleam" }
 links = [
     { title = "Issues", href = "https://github.com/bondiano/telega-gleam/issues" },
     { title = "Examples", href = "https://github.com/bondiano/telega-gleam/tree/master/examples" },
+    { title = "Changelog", href = "https://github.com/bondiano/telega-gleam/blob/master/CHANGELOG.md" },
 ]
 
 [documentation]
 pages = [
-    { title = " ", path = "#", source = "" },
     { title = "Router", path="docs/router.html", source="docs/router.md" },
     { title = "Client", path="docs/client.html", source="docs/client.md" },
     { title = "Replies", path="docs/replies.html", source="docs/replies.md" },
