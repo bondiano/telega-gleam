@@ -2278,22 +2278,10 @@ pub fn set_my_commands(
   commands commands: List(BotCommand),
   parameters parameters: Option(BotCommandParameters),
 ) -> Result(Bool, error.TelegaError) {
-  let parameters =
-    option.unwrap(parameters, types.default_bot_command_parameters())
-    |> encoder.encode_bot_command_parameters()
-
   let body_json =
     json.object([
-      #(
-        "commands",
-        json.array(commands, fn(command) {
-          json.object([
-            #("command", json.string(command.command)),
-            #("description", json.string(command.description)),
-            ..parameters
-          ])
-        }),
-      ),
+      #("commands", json.array(commands, encoder.encode_bot_command)),
+      ..bot_command_parameter_fields(parameters)
     ])
 
   new_post_request(
@@ -2305,6 +2293,33 @@ pub fn set_my_commands(
   |> map_response(decode.bool)
 }
 
+/// `scope` and `language_code` are fields of the *MyCommands request itself,
+/// not of a command inside it: a scope tucked into a command object is dropped
+/// by Telegram, and every localized call then overwrites the default menu
+/// instead of its own language.
+///
+/// Only the ones that are set are sent. `"scope": null` is not the same
+/// request as one with no scope in it, and the difference is not worth
+/// discovering in production.
+fn bot_command_parameter_fields(
+  parameters: Option(BotCommandParameters),
+) -> List(#(String, json.Json)) {
+  case parameters {
+    None -> []
+    Some(parameters) -> {
+      let scope = case parameters.scope {
+        Some(scope) -> [#("scope", encoder.bot_command_scope_to_json(scope))]
+        None -> []
+      }
+      let language = case parameters.language_code {
+        Some(code) -> [#("language_code", json.string(code))]
+        None -> []
+      }
+      list.append(scope, language)
+    }
+  }
+}
+
 /// Use this method to delete the list of the bot's commands for the given scope and user language.
 /// After deletion, [higher level commands](https://core.telegram.org/bots/api#determining-list-of-commands) will be shown to affected users.
 ///
@@ -2313,11 +2328,7 @@ pub fn delete_my_commands(
   client client: client.TelegramClient,
   parameters parameters: Option(BotCommandParameters),
 ) -> Result(Bool, error.TelegaError) {
-  let parameters =
-    option.unwrap(parameters, types.default_bot_command_parameters())
-    |> encoder.encode_bot_command_parameters()
-
-  let body_json = json.object(parameters)
+  let body_json = json.object(bot_command_parameter_fields(parameters))
 
   new_post_request(
     client:,
@@ -2334,12 +2345,8 @@ pub fn delete_my_commands(
 pub fn get_my_commands(
   client client: client.TelegramClient,
   parameters parameters: Option(BotCommandParameters),
-) -> Result(BotCommand, error.TelegaError) {
-  let parameters =
-    option.unwrap(parameters, types.default_bot_command_parameters())
-    |> encoder.encode_bot_command_parameters
-
-  let body_json = json.object(parameters)
+) -> Result(List(BotCommand), error.TelegaError) {
+  let body_json = json.object(bot_command_parameter_fields(parameters))
 
   new_post_request(
     client:,
@@ -2347,7 +2354,7 @@ pub fn get_my_commands(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.bot_command_decoder())
+  |> map_response(decode.list(decoder.bot_command_decoder()))
 }
 
 /// Use this method to change the bot's name. Returns `True` on success.

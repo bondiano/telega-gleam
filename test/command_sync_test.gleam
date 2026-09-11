@@ -89,6 +89,11 @@ pub fn auto_commands_published_on_start_test() {
   stop(bot)
 }
 
+/// `language_code` and `scope` are fields of the setMyCommands REQUEST. Put
+/// inside a command object instead, Telegram drops them — and then every
+/// localized call overwrites the default menu, so the last language published
+/// is the one everybody sees. Nothing about that is visible from a substring
+/// search, so these tests assert the whole body.
 pub fn auto_commands_localized_per_language_test() {
   let #(client, calls) = mock.routed_client(start_routes())
 
@@ -105,14 +110,116 @@ pub fn auto_commands_localized_per_language_test() {
     |> telega.with_command_translations(locales: ["ru"], translate:)
     |> telega.start()
 
-  let calls = drain(calls)
-  // Default-language menu...
-  seen(calls, "setMyCommands", "Start the bot") |> should.be_true
-  // ...plus a localized variant carrying the language_code.
-  seen(calls, "setMyCommands", "Запустить бота") |> should.be_true
-  seen(calls, "setMyCommands", "\"language_code\":\"ru\"") |> should.be_true
+  // The default-language menu carries no language at all — it is the menu for
+  // everyone the next call does not name — and the Russian one carries its
+  // own, beside `commands` rather than inside one.
+  set_my_commands_bodies(drain(calls))
+  |> should.equal([
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Show help\"},"
+      <> "{\"command\":\"start\",\"description\":\"Start the bot\"}]}",
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Показать справку\"},"
+      <> "{\"command\":\"start\",\"description\":\"Запустить бота\"}],"
+      <> "\"language_code\":\"ru\"}",
+  ])
 
   stop(bot)
+}
+
+pub fn command_scopes_split_the_private_menu_from_the_group_one_test() {
+  let #(client, calls) = mock.routed_client(start_routes())
+
+  let assert Ok(bot) =
+    new_builder(client)
+    |> telega.with_command_scopes([
+      #(telega.PrivateChats, ["start", "help"]),
+      #(telega.GroupChats, ["help"]),
+    ])
+    |> telega.start()
+
+  // Three menus: the default one keeps the whole catalog (it is what an
+  // unpublished scope falls back to), then one per scope, each carrying its
+  // own scope object and only the commands that belong in it.
+  // …and the scoped ones read in the order the CALLER listed them, which is the
+  // order a person reads the menu in — the router's own order is whatever the
+  // routes happened to be registered as.
+  set_my_commands_bodies(drain(calls))
+  |> should.equal([
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Show help\"},"
+      <> "{\"command\":\"start\",\"description\":\"Start the bot\"}]}",
+    "{\"commands\":[{\"command\":\"start\",\"description\":\"Start the bot\"},"
+      <> "{\"command\":\"help\",\"description\":\"Show help\"}],"
+      <> "\"scope\":{\"type\":\"all_private_chats\"}}",
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Show help\"}],"
+      <> "\"scope\":{\"type\":\"all_group_chats\"}}",
+  ])
+
+  stop(bot)
+}
+
+pub fn a_scope_is_published_in_every_locale_too_test() {
+  let #(client, calls) = mock.routed_client(start_routes())
+
+  let assert Ok(bot) =
+    new_builder(client)
+    |> telega.with_command_translations(
+      locales: ["ru"],
+      translate: fn(command, _locale) {
+        case command {
+          "help" -> Some("Показать справку")
+          _ -> None
+        }
+      },
+    )
+    |> telega.with_command_scopes([#(telega.GroupChats, ["help"])])
+    |> telega.start()
+
+  // A scoped menu is a menu: it gets the same per-locale treatment, with both
+  // fields side by side. A localized call that forgot its scope would land on
+  // the default menu and quietly replace it.
+  set_my_commands_bodies(drain(calls))
+  |> list.filter(string.contains(_, "all_group_chats"))
+  |> should.equal([
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Show help\"}],"
+      <> "\"scope\":{\"type\":\"all_group_chats\"}}",
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Показать справку\"}],"
+      <> "\"scope\":{\"type\":\"all_group_chats\"},\"language_code\":\"ru\"}",
+  ])
+
+  stop(bot)
+}
+
+pub fn a_command_no_route_describes_is_dropped_from_its_scope_test() {
+  let #(client, calls) = mock.routed_client(start_routes())
+
+  // `hunt` is a typo, a renamed command, or one registered without a
+  // description — either way the router has no words for it, and publishing it
+  // would offer the player a menu entry nothing answers.
+  let assert Ok(bot) =
+    new_builder(client)
+    |> telega.with_command_scopes([#(telega.GroupChats, ["hunt", "help"])])
+    |> telega.start()
+
+  set_my_commands_bodies(drain(calls))
+  |> list.filter(string.contains(_, "all_group_chats"))
+  |> should.equal([
+    "{\"commands\":[{\"command\":\"help\",\"description\":\"Show help\"}],"
+    <> "\"scope\":{\"type\":\"all_group_chats\"}}",
+  ])
+
+  stop(bot)
+}
+
+/// The body of every `setMyCommands` call, in the order they were made.
+fn set_my_commands_bodies(calls: List(ApiCall)) -> List(String) {
+  calls
+  |> list.filter(fn(call) {
+    let ApiCall(request:) = call
+    string.contains(request.path, "setMyCommands")
+  })
+  |> list.map(fn(call) {
+    let ApiCall(request:) = call
+    request.body
+  })
 }
 
 pub fn auto_allowed_updates_passed_to_set_webhook_test() {

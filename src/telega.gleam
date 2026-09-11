@@ -206,6 +206,9 @@ pub opaque type TelegaBuilder(session, error, dependencies, state) {
     /// Localizer: `(command, language_code) -> Option(description)`. `None`
     /// for a given pair falls back to the router's default description.
     command_translate: Option(fn(String, String) -> Option(String)),
+    /// Per-scope menus: which of the router's commands belong in private
+    /// chats, in groups, and so on. Empty publishes one menu everywhere.
+    command_scopes: List(#(CommandScope, List(String))),
     /// Update types added to the derived set — what the router cannot know
     /// about, such as a conversation's `wait_callback`.
     extra_allowed_updates: List(String),
@@ -400,6 +403,7 @@ pub fn new(
     auto_commands: False,
     command_locales: [],
     command_translate: None,
+    command_scopes: [],
     extra_allowed_updates: [],
     auto_allowed_updates: False,
     max_in_flight: None,
@@ -462,6 +466,7 @@ pub fn dependencies(
     auto_commands: builder.auto_commands,
     command_locales: builder.command_locales,
     command_translate: builder.command_translate,
+    command_scopes: builder.command_scopes,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
     max_in_flight: builder.max_in_flight,
@@ -526,6 +531,7 @@ pub fn session(
     auto_commands: builder.auto_commands,
     command_locales: builder.command_locales,
     command_translate: builder.command_translate,
+    command_scopes: builder.command_scopes,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
     max_in_flight: builder.max_in_flight,
@@ -570,6 +576,7 @@ fn configured(
     auto_commands: builder.auto_commands,
     command_locales: builder.command_locales,
     command_translate: builder.command_translate,
+    command_scopes: builder.command_scopes,
     extra_allowed_updates: builder.extra_allowed_updates,
     auto_allowed_updates: builder.auto_allowed_updates,
     max_in_flight: builder.max_in_flight,
@@ -1135,6 +1142,77 @@ pub fn with_command_translations(
     command_locales: locales,
     command_translate: Some(translate),
   )
+}
+
+/// Where a published command menu applies.
+///
+/// Telegram resolves the menu for a chat by walking from the most specific
+/// scope it has to the least, ending at the default one — so a scope that is
+/// never published simply falls through to a broader menu.
+pub type CommandScope {
+  /// Every private chat with the bot.
+  PrivateChats
+  /// Every group and supergroup the bot is in.
+  GroupChats
+  /// The administrators of every group the bot is in.
+  GroupAdministrators
+  /// One chat, by id.
+  ChatScope(chat_id: Int)
+}
+
+/// Publish a different command menu per scope.
+///
+/// Without this, every command the router describes is offered everywhere —
+/// which is wrong for most bots that are played in two places at once: the
+/// personal loop belongs in a DM, and the commands a group does together
+/// belong in the group. `scopes` names the commands (by name, in the order the
+/// menu should read) that belong in each one; descriptions still come from the
+/// router, localized by `with_command_translations` exactly as before.
+///
+/// The default scope keeps every described command: it is what Telegram falls
+/// back TO, and a scope you did not publish is answered from it. A command
+/// name the router does not know is skipped with a warning.
+///
+/// Implies `with_auto_commands`.
+///
+/// ```gleam
+/// telega.new(api_client)
+/// |> telega.router(router)
+/// |> telega.with_command_scopes([
+///   #(telega.PrivateChats, ["start", "hunt", "status", "help"]),
+///   #(telega.GroupChats, ["clan", "raid", "help"]),
+/// ])
+/// |> telega.start()
+/// ```
+pub fn with_command_scopes(
+  builder: TelegaBuilder(session, error, dependencies, state),
+  scopes scopes: List(#(CommandScope, List(String))),
+) -> TelegaBuilder(session, error, dependencies, state) {
+  TelegaBuilder(..builder, auto_commands: True, command_scopes: scopes)
+}
+
+fn command_scope_to_api(scope: CommandScope) -> types.BotCommandScope {
+  case scope {
+    PrivateChats ->
+      types.BotCommandScopeAllPrivateChatsBotCommandScope(
+        types.BotCommandScopeAllPrivateChats(type_: "all_private_chats"),
+      )
+    GroupChats ->
+      types.BotCommandScopeAllGroupChatsBotCommandScope(
+        types.BotCommandScopeAllGroupChats(type_: "all_group_chats"),
+      )
+    GroupAdministrators ->
+      types.BotCommandScopeAllChatAdministratorsBotCommandScope(
+        types.BotCommandScopeAllChatAdministrators(
+          type_: "all_chat_administrators",
+        ),
+      )
+    ChatScope(chat_id:) ->
+      types.BotCommandScopeChatBotCommandScope(types.BotCommandScopeChat(
+        type_: "chat",
+        chat_id: types.Int(chat_id),
+      ))
+  }
 }
 
 /// Derive `allowed_updates` from the router's registered routes.
@@ -2439,8 +2517,9 @@ fn resolve_allowed_updates(
 }
 
 /// Publish the router's described commands via `setMyCommands` when
-/// `auto_commands` is enabled: a default-language call first, then one
-/// `setMyCommands(language_code:)` per configured locale.
+/// `auto_commands` is enabled: the default scope first, then one menu per
+/// scope named by `with_command_scopes` — each of them a default-language call
+/// followed by one `setMyCommands(language_code:)` per configured locale.
 fn maybe_sync_commands(
   builder: TelegaBuilder(session, error, dependencies, state),
   config: Config,
@@ -2453,50 +2532,96 @@ fn maybe_sync_commands(
       let described = routable.registered_commands
       use <- bool.guard(described == [], Ok(Nil))
 
-      let client = config.api_client
-      let base_commands =
-        list.map(described, fn(pair) {
-          types.BotCommand(
-            command: pair.0,
-            description: pair.1,
-            is_ephemeral: None,
-          )
+      // The default scope always carries the whole catalog. It is the menu
+      // Telegram falls back to for any scope that was not published, and
+      // leaving the previous deploy's list standing there is how a command
+      // outlives the handler that answered it.
+      let menus = [
+        #(None, described),
+        ..list.map(builder.command_scopes, fn(scoped) {
+          let #(scope, names) = scoped
+          #(Some(command_scope_to_api(scope)), scoped_menu(described, names))
         })
+      ]
 
-      use _ <- result.try(api.set_my_commands(
-        client:,
-        commands: base_commands,
-        parameters: None,
-      ))
-
-      case builder.command_translate {
-        None -> Ok(Nil)
-        Some(translate) ->
-          list.try_each(builder.command_locales, fn(locale) {
-            let localized =
-              list.map(described, fn(pair) {
-                let description =
-                  translate(pair.0, locale) |> option.unwrap(pair.1)
-                types.BotCommand(
-                  command: pair.0,
-                  description:,
-                  is_ephemeral: None,
-                )
-              })
-
-            api.set_my_commands(
-              client:,
-              commands: localized,
-              parameters: Some(types.BotCommandParameters(
-                scope: None,
-                language_code: Some(locale),
-              )),
-            )
-            |> result.map(fn(_) { Nil })
-          })
-      }
+      list.try_each(menus, fn(menu) {
+        let #(scope, commands) = menu
+        publish_command_menu(builder, config.api_client, scope, commands)
+      })
     }
   }
+}
+
+/// One scope's menu, in the order the caller listed it — the menu is read top
+/// to bottom by a person, so it is their order that matters, not the order the
+/// routes happened to be registered in. A name no route describes is dropped
+/// with a warning: it would otherwise be published with no description, or
+/// silently missing from the menu it was meant for.
+fn scoped_menu(
+  described: List(#(String, String)),
+  names: List(String),
+) -> List(#(String, String)) {
+  list.filter_map(names, fn(name) {
+    case list.key_find(described, name) {
+      Ok(description) -> Ok(#(name, description))
+      Error(_) -> {
+        log.warning(
+          "command_scopes: \""
+          <> name
+          <> "\" is not a command the router describes — register it with "
+          <> "`router.on_command_with_description` or drop it from the scope.",
+        )
+        Error(Nil)
+      }
+    }
+  })
+}
+
+/// One `setMyCommands` for the scope's default language, then one per locale.
+fn publish_command_menu(
+  builder: TelegaBuilder(session, error, dependencies, state),
+  client: client.TelegramClient,
+  scope: Option(types.BotCommandScope),
+  described: List(#(String, String)),
+) -> Result(Nil, error.TelegaError) {
+  let publish = fn(commands, language_code) {
+    api.set_my_commands(
+      client:,
+      commands:,
+      parameters: Some(types.BotCommandParameters(scope:, language_code:)),
+    )
+    |> result.map(fn(_) { Nil })
+  }
+
+  use _ <- result.try(publish(bot_commands(described, None), None))
+
+  case builder.command_translate {
+    None -> Ok(Nil)
+    Some(translate) ->
+      list.try_each(builder.command_locales, fn(locale) {
+        publish(
+          bot_commands(described, Some(translate(_, locale))),
+          Some(locale),
+        )
+      })
+  }
+}
+
+/// `#(name, default description)` pairs as Bot API commands, with `localize`
+/// given the chance to replace each description; `None` from it (or no
+/// localizer at all) keeps the router's own.
+fn bot_commands(
+  described: List(#(String, String)),
+  localize: Option(fn(String) -> Option(String)),
+) -> List(types.BotCommand) {
+  list.map(described, fn(pair) {
+    let #(command, fallback) = pair
+    let description = case localize {
+      None -> fallback
+      Some(localize) -> localize(command) |> option.unwrap(fallback)
+    }
+    types.BotCommand(command:, description:, is_ephemeral: None)
+  })
 }
 
 fn install_signal_handlers(

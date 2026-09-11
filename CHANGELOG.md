@@ -11,6 +11,33 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+### Added
+
+- **A command menu per scope.** `telega.with_command_scopes` publishes a
+  different `setMyCommands` list per `CommandScope` (`PrivateChats`,
+  `GroupChats`, `GroupAdministrators`, `ChatScope(chat_id:)`) — the personal
+  loop in a DM, what a group plays together in the group. Each scope names
+  commands the router already describes, in the order the menu should read, and
+  is published in every locale `with_command_translations` configured. The
+  default scope still carries the whole catalog, because it is what an
+  unpublished scope falls back to. Guide:
+  [`docs/router.md`](docs/router.md#a-different-menu-per-scope).
+
+### Fixed
+
+- **`setMyCommands` sent `scope` and `language_code` inside each command object**
+  instead of beside `commands`, where the Bot API reads them. Telegram dropped
+  both, so `with_command_translations` published every language to the DEFAULT
+  scope in turn and the last locale won for everybody — a bot with two locales
+  showed one of them to all its users. Localized menus now land in their own
+  language, and a scope is honored at all.
+- **`api.get_my_commands` returned `Result(BotCommand, _)`** and decoded the
+  Bot API's array as a single command, so the call could only ever fail. It
+  returns `Result(List(BotCommand), _)`. The signature changes, but no working
+  call can exist to break.
+- `set_my_commands`, `delete_my_commands` and `get_my_commands` no longer send
+  `"scope": null` / `"language_code": null` for parameters that were not set.
+
 ## [3.0.0] - 2026-09-04
 
 The builder, the router's composition type and the dialog sub-result API all

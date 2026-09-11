@@ -536,6 +536,35 @@ telega.with_command_translations(
 )
 ```
 
+### A different menu per scope
+
+A bot that is played in two places wants two menus: the personal loop belongs in
+a DM, and the commands a group does together belong in the group. Name them with
+`telega.with_command_scopes` — it implies `with_auto_commands`:
+
+```gleam
+telega.new(api_client)
+|> telega.router(router)
+|> telega.with_command_scopes([
+  #(telega.PrivateChats, ["start", "hunt", "status", "help"]),
+  #(telega.GroupChats, ["clan", "raid", "help"]),
+])
+|> telega.start()
+```
+
+Scopes are `PrivateChats`, `GroupChats`, `GroupAdministrators` and
+`ChatScope(chat_id:)`. Each list names commands the ROUTER already describes —
+descriptions still come from it, localized per locale exactly as above — and the
+list's order is the order the menu reads in. A name no route describes is
+skipped with a warning.
+
+The default scope always keeps the full catalog: Telegram answers any scope you
+did not publish from it, and leaving a previous deploy's list standing there is
+how a command outlives the handler that answered it.
+
+Scopes are a MENU, not a permission: what a scope hides is still routed if the
+player types it. Gate the handler itself if that matters.
+
 ### Deriving `allowed_updates`
 
 Enable `telega.with_auto_allowed_updates` and Telega requests only the update
