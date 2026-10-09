@@ -5,6 +5,7 @@ import gleeunit/should
 import pog
 
 import telega/storage
+import telega/testing/storage as storage_contract
 import telega_storage_postgres as postgres
 
 /// persistent_term key under which the single shared pool state is memoized.
@@ -109,5 +110,12 @@ pub fn ttl_and_scan_test() {
       let assert Ok(Nil) = kv.delete("pg:scan:x")
       Nil
     }
+  }
+}
+
+pub fn satisfies_the_storage_contract_test() {
+  case shared_kv() {
+    Error(_) -> Nil
+    Ok(kv) -> storage_contract.check(kv, prefix: "postgres:contract:")
   }
 }

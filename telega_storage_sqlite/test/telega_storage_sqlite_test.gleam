@@ -11,6 +11,7 @@ import sqlight
 import telega/flow/instance
 import telega/flow/types.{FlowInstance, FlowStackFrame, FlowState, ParallelState}
 import telega/storage
+import telega/testing/storage as storage_contract
 import telega_storage_sqlite as sqlite
 
 pub fn main() {
@@ -139,4 +140,9 @@ pub fn scan_prefix_with_like_wildcards_is_literal_test() {
 
   let assert Ok(keys) = kv.scan("my%flow:")
   keys |> should.equal(["my%flow:c"])
+}
+
+pub fn satisfies_the_storage_contract_test() {
+  use kv <- with_kv()
+  storage_contract.check(kv, prefix: "contract:")
 }

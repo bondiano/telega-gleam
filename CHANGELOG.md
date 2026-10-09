@@ -13,6 +13,9 @@ under the release that shipped them.
 
 ### Added
 
+- **`telega/testing/storage.check`**, the contract every `KeyValueStorage`
+  backend must meet (get/set/delete, a literal `scan` prefix, TTL expiry), run
+  by the ETS, SQLite, Postgres and Redis suites alike.
 - **Telemetry event names as constants.** Every event `telega` emits is a
   `pub const` in `telega/telemetry` (`telemetry.update_stop`,
   `telemetry.flow_step`, …) and the module's event table now lists all of

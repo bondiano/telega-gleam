@@ -12,6 +12,7 @@ import telega/flow/types.{FlowInstance, FlowStackFrame, FlowState, ParallelState
 import telega/storage
 import telega/storage/ets
 import telega/telemetry
+import telega/testing/storage as storage_contract
 
 // ETS KeyValueStorage ---------------------------------------------------------
 
@@ -277,4 +278,9 @@ pub fn flow_bridge_retention_renews_on_save_test() {
 
   let assert Ok(Nil) = store.save(sample_instance())
   store.load("booking_20_10") |> should.equal(Ok(Some(sample_instance())))
+}
+
+pub fn ets_satisfies_the_storage_contract_test() {
+  let assert Ok(kv) = ets.new("test_kv_contract")
+  storage_contract.check(kv, prefix: "contract:")
 }

@@ -7,6 +7,7 @@ import gleeunit/should
 import valkyrie
 
 import telega/storage
+import telega/testing/storage as storage_contract
 import telega_storage_redis as redis
 
 /// persistent_term key under which the single shared pool state is memoized.
@@ -105,5 +106,12 @@ pub fn scan_test() {
       let assert Ok(Nil) = kv.delete("redis:scan:y")
       Nil
     }
+  }
+}
+
+pub fn satisfies_the_storage_contract_test() {
+  case shared_kv() {
+    Error(_) -> Nil
+    Ok(kv) -> storage_contract.check(kv, prefix: "redis:contract:")
   }
 }
