@@ -26,7 +26,7 @@ pub fn lang_keyboard_choose_russian_test() {
   conversation.conversation_test()
   |> conversation.send("/lang")
   |> conversation.expect_keyboard(buttons: ["Russian", "English"])
-  |> conversation.send_callback("0")
+  |> conversation.send_callback("choice:0")
   |> conversation.expect_reply_containing("Язык изменен")
   |> conversation.run(bot.build_router(), default_session)
 }
