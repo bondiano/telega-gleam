@@ -20,6 +20,10 @@ pub type TelegaError {
   )
   /// Returned if the Bot API server could not be reached or the request failed
   FetchError(error: String)
+  /// The Bot API server did not answer within the adapter's timeout. Its own
+  /// variant because the poller has to tell a timed-out long poll (expected,
+  /// quiet) from any other transport failure (logged).
+  FetchTimeoutError
   /// Returned if the JSON response from the Bot API could not be decoded
   JsonDecodeError(error: json.DecodeError)
 
@@ -58,7 +62,8 @@ pub fn to_string(error: TelegaError) -> String {
       "Telegram API error: " <> int.to_string(error_code) <> " " <> description
     JsonDecodeError(error) -> "Decode JSON error: " <> string.inspect(error)
     ApiToRequestConvertError -> "Failed to convert API request to HTTP request"
-    FetchError(error) -> "Failed to send request: " <> string.inspect(error)
+    FetchError(error) -> "Failed to send request: " <> error
+    FetchTimeoutError -> "Request timed out"
     SetWebhookError -> "Failed to set webhook"
     RegistryStartError(reason) -> "Failed to start registry: " <> reason
     BotStartError(reason) -> "Failed to start bot: " <> string.inspect(reason)

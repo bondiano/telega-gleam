@@ -13,6 +13,10 @@ under the release that shipped them.
 
 ### Added
 
+- **`error.FetchTimeoutError`.** `telega_httpc` and `telega_hackney` report a
+  timed-out request as this variant instead of a `FetchError` whose text had
+  to be searched for "Timeout"; the poller matches on it. `error.to_string` no
+  longer wraps a `FetchError` reason in quotes.
 - **One answer per button press, everywhere.** `reply.answer_callback_once`
   stops a button's spinner unless `reply.answer_toast` / `answer_alert` /
   `answer_quietly` already answered that press; `reply.callback_answered` reads

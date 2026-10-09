@@ -92,10 +92,7 @@ pub fn fetch_adapter_with_timeout(
   timeout_ms timeout_ms: Int,
 ) -> fn(Request(String)) -> Result(Response(String), TelegaError) {
   let config = configuration(timeout_ms)
-  fn(req) {
-    httpc.dispatch(config, req)
-    |> result.map_error(fn(err) { error.FetchError(string.inspect(err)) })
-  }
+  fn(req) { httpc.dispatch(config, req) |> result.map_error(to_telega_error) }
 }
 
 /// The httpc fetch adapter for binary file downloads.
@@ -113,8 +110,14 @@ pub fn fetch_bits_adapter_with_timeout(
 ) -> fn(Request(BitArray)) -> Result(Response(BitArray), TelegaError) {
   let config = configuration(timeout_ms)
   fn(req) {
-    httpc.dispatch_bits(config, req)
-    |> result.map_error(fn(err) { error.FetchError(string.inspect(err)) })
+    httpc.dispatch_bits(config, req) |> result.map_error(to_telega_error)
+  }
+}
+
+fn to_telega_error(err: httpc.HttpError) -> TelegaError {
+  case err {
+    httpc.ResponseTimeout -> error.FetchTimeoutError
+    other -> error.FetchError(string.inspect(other))
   }
 }
 

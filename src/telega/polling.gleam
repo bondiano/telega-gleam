@@ -74,7 +74,7 @@ import gleam/string
 import telega/api
 import telega/bot.{type BotSubject}
 import telega/client.{type TelegramClient}
-import telega/error.{type TelegaError, FetchError}
+import telega/error.{type TelegaError}
 import telega/internal/log
 import telega/model/types.{type Update, GetUpdatesParameters}
 import telega/update as update_module
@@ -477,12 +477,7 @@ fn handle_polling_message(
         False -> {
           // Only log non-timeout errors or persistent timeout issues
           // Timeouts are normal for long polling when there are no updates
-          let is_timeout = case error {
-            FetchError(msg) ->
-              string.contains(msg, "ResponseTimeout")
-              || string.contains(msg, "Timeout")
-            _ -> False
-          }
+          let is_timeout = error == error.FetchTimeoutError
 
           case is_timeout {
             True -> {

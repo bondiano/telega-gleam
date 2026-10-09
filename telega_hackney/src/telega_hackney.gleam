@@ -117,8 +117,20 @@ pub fn fetch_bits_adapter_with_timeout(
         headers: list.map(response.headers, normalise_header),
       )
     })
-    |> result.map_error(fn(err) { error.FetchError(string.inspect(err)) })
+    |> result.map_error(fn(err) {
+      case err {
+        Timeout -> error.FetchTimeoutError
+        Other(reason) -> error.FetchError(string.inspect(reason))
+      }
+    })
   }
+}
+
+/// What the FFI reports when hackney fails: its `timeout` / `connect_timeout`
+/// atoms folded into one, everything else as it came.
+type HackneyError {
+  Timeout
+  Other(reason: Dynamic)
 }
 
 fn normalise_header(header: http.Header) -> http.Header {
@@ -133,4 +145,4 @@ fn ffi_send(
   body: BytesTree,
   connect_timeout: Int,
   recv_timeout: Int,
-) -> Result(Response(BitArray), Dynamic)
+) -> Result(Response(BitArray), HackneyError)

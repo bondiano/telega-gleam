@@ -19,6 +19,12 @@ send(Method, Url, Headers, Body, ConnectTimeout, RecvTimeout) ->
             {ok, {response, Status, ResponseHeaders, ResponseBody}};
         {ok, Status, ResponseHeaders} ->
             {ok, {response, Status, ResponseHeaders, <<>>}};
+        {error, timeout} ->
+            {error, timeout};
+        {error, connect_timeout} ->
+            {error, timeout};
+        {error, checkout_timeout} ->
+            {error, timeout};
         {error, Error} ->
-            {error, Error}
+            {error, {other, Error}}
     end.
