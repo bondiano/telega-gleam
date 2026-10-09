@@ -73,14 +73,50 @@ jobs:
       - name: Test
         run: GLEAM_LOG=trace gleam test
 
-      - name: Check Examples
-        run: |
-          for dir in examples/*/; do
-            echo "=== Checking $dir ==="
-            cd "$dir"
-            gleam deps download
-            gleam format --check src test
-            gleam check
-            gleam test
-            cd "$GITHUB_WORKSPACE"
-          done
+  # One job per example: every example pulls ~30 packages, and eleven of them
+  # from one runner trips Hex's anonymous API rate limit halfway through.
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - 00-echo-bot
+          - 01-commands-bot
+          - 02-session-bot
+          - 03-conversation-bot
+          - 04-keyboard-bot
+          - 05-media-group-bot
+          - 06-restaurant-booking
+          - 07-streaming-bot
+          - 08-group-bot
+          - 09-webhook-wisp
+          - 10-inline-and-payments
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: 28.0.1
+          gleam-version: 1.19.1
+          rebar3-version: 3.25.1
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/gleam
+          key: gleam-hex-${{ runner.os }}-${{ hashFiles('examples/*/manifest.toml') }}
+          restore-keys: gleam-hex-${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: gleam deps download
+
+      - name: Check Format
+        run: gleam format --check src test
+
+      - name: Check
+        run: gleam check
+
+      - name: Test
+        run: gleam test
