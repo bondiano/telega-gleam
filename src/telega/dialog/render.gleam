@@ -39,6 +39,7 @@ import telega/model/types.{
   SendMessageReplyInlineKeyboardMarkupParameters, SendPhotoParameters,
   SendVideoParameters,
 }
+import telega/update
 import telega/webhook_reply
 
 /// Why a window could not be rendered.
@@ -214,8 +215,8 @@ fn send_window(
         markup,
         SendMessageReplyInlineKeyboardMarkupParameters,
       ),
-      business_connection_id: None,
-      message_thread_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
+      message_thread_id: update.message_thread_id(ctx.update),
       entities: None,
       link_preview_options: None,
       disable_notification: None,
@@ -224,7 +225,7 @@ fn send_window(
       allow_paid_broadcast: None,
       reply_parameters: None,
       ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -251,7 +252,7 @@ fn edit_window(
       entities: None,
       link_preview_options: None,
       reply_markup: markup,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       rich_message: None,
     ),
   )
@@ -287,8 +288,8 @@ fn send_media_window(
           parse_mode:,
           has_spoiler: spoiler_option(has_spoiler),
           reply_markup:,
-          business_connection_id: None,
-          message_thread_id: None,
+          business_connection_id: update.business_connection_id(ctx.update),
+          message_thread_id: update.message_thread_id(ctx.update),
           caption_entities: None,
           show_caption_above_media: None,
           disable_notification: None,
@@ -297,7 +298,7 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
-          direct_messages_topic_id: None,
+          direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
           suggested_post_parameters: None,
         ),
       )
@@ -311,8 +312,8 @@ fn send_media_window(
           parse_mode:,
           has_spoiler: spoiler_option(has_spoiler),
           reply_markup:,
-          business_connection_id: None,
-          message_thread_id: None,
+          business_connection_id: update.business_connection_id(ctx.update),
+          message_thread_id: update.message_thread_id(ctx.update),
           duration: None,
           width: None,
           height: None,
@@ -328,7 +329,7 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
-          direct_messages_topic_id: None,
+          direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
           suggested_post_parameters: None,
         ),
       )
@@ -341,8 +342,8 @@ fn send_media_window(
           caption:,
           parse_mode:,
           reply_markup:,
-          business_connection_id: None,
-          message_thread_id: None,
+          business_connection_id: update.business_connection_id(ctx.update),
+          message_thread_id: update.message_thread_id(ctx.update),
           duration: None,
           width: None,
           height: None,
@@ -356,7 +357,7 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
-          direct_messages_topic_id: None,
+          direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
           suggested_post_parameters: None,
         ),
       )
@@ -369,8 +370,8 @@ fn send_media_window(
           caption:,
           parse_mode:,
           reply_markup:,
-          business_connection_id: None,
-          message_thread_id: None,
+          business_connection_id: update.business_connection_id(ctx.update),
+          message_thread_id: update.message_thread_id(ctx.update),
           thumbnail: None,
           caption_entities: None,
           disable_content_type_detection: None,
@@ -380,7 +381,7 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
-          direct_messages_topic_id: None,
+          direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
           suggested_post_parameters: None,
         ),
       )
@@ -401,7 +402,7 @@ fn edit_media_window(
   api.edit_message_media(
     ctx.config.api_client,
     parameters: EditMessageMediaParameters(
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       chat_id: Some(types.Int(chat_id)),
       message_id: Some(message_id),
       inline_message_id: None,
@@ -497,7 +498,7 @@ pub fn remove_keyboard(
   api.edit_message_reply_markup(
     ctx.config.api_client,
     parameters: EditMessageReplyMarkupParameters(
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       chat_id: Some(types.Int(chat_id)),
       message_id: Some(message_id),
       inline_message_id: None,

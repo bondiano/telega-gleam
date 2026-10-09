@@ -21,11 +21,11 @@
 
 import gleam/erlang/process
 import gleam/int
-import gleam/option.{None}
 
 import telega/api
 import telega/bot.{type Context}
 import telega/model/types.{SendChatActionParameters}
+import telega/update
 
 /// Chat action to broadcast, mirrors [`ChatAction`](https://core.telegram.org/bots/api#sendchataction).
 pub type Action {
@@ -75,8 +75,8 @@ pub fn with_action_every(
   let parameters =
     SendChatActionParameters(
       chat_id: types.Int(ctx.update.chat_id),
-      business_connection_id: None,
-      message_thread_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
+      message_thread_id: update.message_thread_id(ctx.update),
       action: to_model_action(action),
     )
   let _ = api.send_chat_action(client:, parameters:)

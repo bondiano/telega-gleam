@@ -67,6 +67,16 @@ under the release that shipped them.
 
 ### Changed
 
+- **A reply lands where the update came from.** Every `reply.*` send, edit
+  and chat action, `payments.send` / `create_link`, and a dialog window pass
+  the update's `message_thread_id`, `business_connection_id` and
+  `direct_messages_topic_id` on (see `update.message_thread_id` and friends).
+  A bot answering in a forum topic no longer posts to General, and a handler
+  of `on_business_message` can reply with `reply.text` instead of a hand-built
+  `api.send_message`. **Breaking** only in effect: a bot that relied on its
+  replies landing in General must send through `api.*` with
+  `message_thread_id: None`. `reply.with_photo_bytes` still sends to the chat
+  only.
 - **Request parameter records match Bot API 10.3, and codegen keeps them so.**
   `task codegen` / CI now compares every hand-written `*Parameters` record's
   field names with the spec's method fields and fails on drift. Bringing the

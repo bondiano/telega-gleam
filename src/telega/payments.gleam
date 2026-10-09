@@ -158,6 +158,7 @@ import telega/model/types.{
   AnswerShippingQueryParameters, CreateInvoiceLinkParameters, LabeledPrice,
   SendInvoiceParameters, ShippingOption,
 }
+import telega/update
 
 /// Telegram Stars currency code.
 pub const stars_currency = "XTR"
@@ -333,7 +334,7 @@ pub fn send(
     ctx.config.api_client,
     parameters: SendInvoiceParameters(
       chat_id: types.Int(ctx.update.chat_id),
-      message_thread_id: None,
+      message_thread_id: update.message_thread_id(ctx.update),
       title: invoice.title,
       description: invoice.description,
       payload: invoice.payload,
@@ -361,7 +362,7 @@ pub fn send(
       message_effect_id: None,
       reply_parameters: None,
       reply_markup: invoice.reply_markup,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -375,7 +376,7 @@ pub fn create_link(
   api.create_invoice_link(
     ctx.config.api_client,
     parameters: CreateInvoiceLinkParameters(
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       title: invoice.title,
       description: invoice.description,
       payload: invoice.payload,

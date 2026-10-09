@@ -87,24 +87,7 @@ pub fn with_text(
 ) -> Result(Message, error.TelegaError) {
   api.send_message(
     ctx.config.api_client,
-    parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
-      business_connection_id: None,
-      message_thread_id: None,
-      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
-    ),
+    parameters: base_message_parameters(ctx, text),
   )
 }
 
@@ -122,22 +105,8 @@ pub fn with_markup(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, text),
       reply_markup: Some(reply_markup),
-      business_connection_id: None,
-      message_thread_id: None,
-      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      reply_parameters: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -162,22 +131,8 @@ pub fn with_formatted(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, text),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
-      business_connection_id: None,
-      message_thread_id: None,
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -198,22 +153,8 @@ pub fn with_html(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text: html,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, html),
       parse_mode: Some("HTML"),
-      business_connection_id: None,
-      message_thread_id: None,
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -233,22 +174,8 @@ pub fn with_markdown(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text: markdown,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, markdown),
       parse_mode: Some("Markdown"),
-      business_connection_id: None,
-      message_thread_id: None,
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -268,22 +195,8 @@ pub fn with_markdown_v2(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text: markdown,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, markdown),
       parse_mode: Some("MarkdownV2"),
-      business_connection_id: None,
-      message_thread_id: None,
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -301,22 +214,9 @@ pub fn with_formatted_markup(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, text),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       reply_markup: Some(reply_markup),
-      business_connection_id: None,
-      message_thread_id: None,
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -333,13 +233,13 @@ pub fn with_dice(
     |> option.lazy_unwrap(fn() {
       SendDiceParameters(
         chat_id: types.Int(ctx.update.chat_id),
-        message_thread_id: None,
+        message_thread_id: update.message_thread_id(ctx.update),
         emoji: None,
         disable_notification: None,
         protect_content: None,
         reply_parameters: None,
-        business_connection_id: None,
-        direct_messages_topic_id: None,
+        business_connection_id: update.business_connection_id(ctx.update),
+        direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
         allow_paid_broadcast: None,
         message_effect_id: None,
         suggested_post_parameters: None,
@@ -375,8 +275,8 @@ pub fn with_photo(
       parse_mode: option.then(caption, fn(_) {
         client.default_parse_mode_string(ctx.config.api_client)
       }),
-      business_connection_id: None,
-      message_thread_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
+      message_thread_id: update.message_thread_id(ctx.update),
       caption_entities: None,
       show_caption_above_media: None,
       has_spoiler: None,
@@ -387,7 +287,7 @@ pub fn with_photo(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -463,7 +363,7 @@ pub fn edit_text_formatted(
       entities: None,
       link_preview_options: None,
       inline_message_id: None,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       rich_message: None,
     )
 
@@ -537,22 +437,8 @@ pub fn with_ephemeral(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, text),
       ephemeral_message_parameters: Some(ephemeral_message_parameters),
-      business_connection_id: None,
-      message_thread_id: None,
-      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      reply_markup: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -569,22 +455,9 @@ pub fn with_ephemeral_markup(
   api.send_message(
     ctx.config.api_client,
     parameters: SendMessageParameters(
-      text:,
-      chat_id: types.Int(ctx.update.chat_id),
+      ..base_message_parameters(ctx, text),
       reply_markup: Some(reply_markup),
       ephemeral_message_parameters: Some(ephemeral_parameters(ctx)),
-      business_connection_id: None,
-      message_thread_id: None,
-      parse_mode: client.default_parse_mode_string(ctx.config.api_client),
-      entities: None,
-      link_preview_options: None,
-      disable_notification: None,
-      protect_content: None,
-      message_effect_id: None,
-      allow_paid_broadcast: None,
-      reply_parameters: None,
-      direct_messages_topic_id: None,
-      suggested_post_parameters: None,
     ),
   )
 }
@@ -632,7 +505,7 @@ pub fn with_poll(
       question:,
       options:,
       chat_id: types.Int(ctx.update.chat_id),
-      message_thread_id: None,
+      message_thread_id: update.message_thread_id(ctx.update),
       disable_notification: None,
       protect_content: None,
       reply_parameters: None,
@@ -641,7 +514,7 @@ pub fn with_poll(
       allow_paid_broadcast: None,
       allows_multiple_answers: None,
       allows_revoting: None,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       close_date: None,
       correct_option_ids: None,
       explanation: None,
@@ -690,7 +563,7 @@ pub fn with_invoice(
         LabeledPrice(label:, amount:)
       }),
       chat_id: types.Int(ctx.update.chat_id),
-      message_thread_id: None,
+      message_thread_id: update.message_thread_id(ctx.update),
       disable_notification: None,
       protect_content: None,
       reply_parameters: None,
@@ -713,7 +586,7 @@ pub fn with_invoice(
       need_name: None,
       need_phone_number: None,
       need_shipping_address: None,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -731,17 +604,17 @@ pub fn with_sticker(
     parameters: SendStickerParameters(
       sticker:,
       chat_id: types.Int(ctx.update.chat_id),
-      message_thread_id: None,
+      message_thread_id: update.message_thread_id(ctx.update),
       disable_notification: None,
       protect_content: None,
       reply_parameters: None,
       allow_paid_broadcast: None,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       message_effect_id: None,
       emoji: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -777,14 +650,14 @@ pub fn with_media_group(
     parameters: SendMediaGroupParameters(
       chat_id: types.Int(ctx.update.chat_id),
       media:,
-      business_connection_id: None,
-      message_thread_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
+      message_thread_id: update.message_thread_id(ctx.update),
       disable_notification: None,
       protect_content: None,
       message_effect_id: None,
       reply_parameters: None,
       allow_paid_broadcast: None,
-      direct_messages_topic_id: None,
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
     ),
   )
 }
@@ -817,7 +690,7 @@ pub fn with_paid_media(
       chat_id: types.Int(ctx.update.chat_id),
       star_count:,
       media:,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       payload: None,
       caption: None,
       parse_mode: client.default_parse_mode_string(ctx.config.api_client),
@@ -828,8 +701,8 @@ pub fn with_paid_media(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
-      message_thread_id: None,
-      direct_messages_topic_id: None,
+      message_thread_id: update.message_thread_id(ctx.update),
+      direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
       suggested_post_parameters: None,
     ),
   )
@@ -998,7 +871,7 @@ fn edit_callback(
       entities: None,
       link_preview_options: None,
       reply_markup:,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       rich_message: None,
     ),
   )
@@ -1115,8 +988,9 @@ fn callback_query(
   }
 }
 
-/// The `sendMessage` parameters every shortcut starts from: this chat, the
-/// client's default parse mode, nothing else set.
+/// The `sendMessage` parameters every text send starts from: this chat — in
+/// the topic, business connection or direct-messages topic the update came
+/// from — and the client's default parse mode, nothing else set.
 fn base_message_parameters(
   ctx: Context(session, error, dependencies),
   text: String,
@@ -1125,8 +999,8 @@ fn base_message_parameters(
     text:,
     chat_id: types.Int(ctx.update.chat_id),
     parse_mode: client.default_parse_mode_string(ctx.config.api_client),
-    business_connection_id: None,
-    message_thread_id: None,
+    business_connection_id: update.business_connection_id(ctx.update),
+    message_thread_id: update.message_thread_id(ctx.update),
     entities: None,
     link_preview_options: None,
     disable_notification: None,
@@ -1136,7 +1010,7 @@ fn base_message_parameters(
     reply_parameters: None,
     reply_markup: None,
     ephemeral_message_parameters: None,
-    direct_messages_topic_id: None,
+    direct_messages_topic_id: update.direct_messages_topic_id(ctx.update),
     suggested_post_parameters: None,
   )
 }
@@ -1309,7 +1183,7 @@ fn edit_stream_message(
       entities: None,
       link_preview_options: None,
       reply_markup: None,
-      business_connection_id: None,
+      business_connection_id: update.business_connection_id(ctx.update),
       rich_message: None,
     ),
   )
