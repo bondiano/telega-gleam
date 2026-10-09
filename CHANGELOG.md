@@ -25,6 +25,11 @@ under the release that shipped them.
 
 ### Fixed
 
+- **The default catch handler stopped the chat instance.** `bot.CatchHandler`
+  documented a default of `Ok(Nil)`, but without `with_catch_handler` the bot
+  used `Error(err)`: one failing handler killed that chat's instance and the
+  conversation it was waiting on. The default now logs the error and keeps the
+  instance.
 - **Storage `scan` treated the prefix as a pattern.** `telega_storage_postgres`
   and `telega_storage_sqlite` passed it straight to `LIKE`, so `_` and `%` in a
   prefix (a flow named `my_flow`) matched other characters; `telega_storage_redis`

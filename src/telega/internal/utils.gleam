@@ -25,7 +25,8 @@ pub fn normalize_webhook_path(webhook_path: String) {
   }
 }
 
-const prefix_alphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict"
+const prefix_alphabet =
+  "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict"
 
 /// Generates random string of given length using the prefix alphabet.
 pub fn random_string(length length) {

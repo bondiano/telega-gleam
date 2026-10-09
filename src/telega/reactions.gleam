@@ -73,65 +73,50 @@ pub fn paid() -> ReactionType {
 // Emoji presets
 // ============================================
 
-pub const thumbs_up: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "👍"),
-)
+pub const thumbs_up: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "👍"))
 
-pub const thumbs_down: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "👎"),
-)
+pub const thumbs_down: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "👎"))
 
-pub const heart: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "❤"),
-)
+pub const heart: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "❤"))
 
-pub const fire: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "🔥"),
-)
+pub const fire: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "🔥"))
 
-pub const clap: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "👏"),
-)
+pub const clap: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "👏"))
 
-pub const party: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "🎉"),
-)
+pub const party: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "🎉"))
 
-pub const laugh: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "😂"),
-)
+pub const laugh: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "😂"))
 
-pub const wow: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "😮"),
-)
+pub const wow: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "😮"))
 
-pub const sad: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "😢"),
-)
+pub const sad: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "😢"))
 
-pub const angry: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "😡"),
-)
+pub const angry: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "😡"))
 
-pub const poop: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "💩"),
-)
+pub const poop: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "💩"))
 
-pub const hundred: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "💯"),
-)
+pub const hundred: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "💯"))
 
-pub const eyes: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "👀"),
-)
+pub const eyes: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "👀"))
 
-pub const thinking: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "🤔"),
-)
+pub const thinking: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "🤔"))
 
-pub const ok: ReactionType = ReactionTypeEmojiReactionType(
-  ReactionTypeEmoji(type_: "emoji", emoji: "👌"),
-)
+pub const ok: ReactionType =
+  ReactionTypeEmojiReactionType(ReactionTypeEmoji(type_: "emoji", emoji: "👌"))
 
 // ============================================
 // Reaction actions

@@ -515,9 +515,8 @@ fn pager_row(
 // `widget_store` reads them back out of `ctx.scope` — the same scope, since
 // every copy of a context shares it.
 
-const stores_key: scope.Key(Dict(String, String)) = scope.Key(
-  "dialog/widget_stores",
-)
+const stores_key: scope.Key(Dict(String, String)) =
+  scope.Key("dialog/widget_stores")
 
 const store_data_prefix = "__dialog_widget:"
 

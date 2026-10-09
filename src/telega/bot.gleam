@@ -366,9 +366,11 @@ pub type BotHealth {
   BotHealth(draining: Bool, in_flight: Int, chat_instances: Int)
 }
 
-/// Handler called when an error occurs in handler
-/// If handler returns `Error`, the bot will be stopped and the error will be logged
-/// The default handler is `fn(_) -> Ok(Nil)`, which will do nothing if handler returns an error
+/// Called when a handler (or the session write after it) returns `Error`.
+///
+/// `Ok(Nil)` reports the update as unhandled and keeps the chat instance
+/// alive; `Error` stops the instance, dropping any `wait_*` it was holding.
+/// The default logs the error and returns `Ok(Nil)`.
 pub type CatchHandler(session, error, dependencies) =
   fn(Context(session, error, dependencies), error) -> Result(Nil, error)
 

@@ -1349,8 +1349,14 @@ fn boot(
   let api_client = config.api_client
   let session_settings = builder.session_settings
   let router_handler = routable.handle
+  // Log and carry on: a handler error must not take the chat instance (and
+  // the conversation it is waiting on) down with it. `with_catch_handler`
+  // replaces this.
   let catch_handler =
-    option.unwrap(builder.catch_handler, fn(_ctx, err) { Error(err) })
+    option.unwrap(builder.catch_handler, fn(_ctx, err) {
+      log.error_d("Unhandled handler error: ", err)
+      Ok(Nil)
+    })
 
   let registry_name = generate_registry_name(client.get_token(api_client))
   use registry <- result.try(registry.start(registry_name))
