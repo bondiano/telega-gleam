@@ -9,6 +9,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/erlang/atom.{type Atom}
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/string
 import telega/error.{type TelegaError}
 import telega/internal/utils
@@ -34,11 +35,22 @@ pub fn new(name name: String) -> Result(KeyValueStorage(error), TelegaError) {
         ets_insert(table, #(key, value, utils.current_time_ms() + ttl_ms))
         Ok(Nil)
       },
+      compare_and_set: fn(key, expected, value, ttl_ms) {
+        let now = utils.current_time_ms()
+        let expires_at = case ttl_ms {
+          None -> 0
+          Some(ms) -> now + ms
+        }
+        Ok(ets_compare_and_set(table, key, expected, value, expires_at, now))
+      },
       delete: fn(key) {
         ets_delete(table, key)
         Ok(Nil)
       },
-      scan: fn(prefix) { Ok(do_scan(table, prefix)) },
+      scan: fn(prefix, cursor, limit) {
+        let page = do_scan(table, prefix, cursor, limit)
+        Ok(#(page, storage.next_cursor(page, limit)))
+      },
     ),
   )
 }
@@ -74,15 +86,36 @@ fn do_get(table: EtsTable, key: String) -> Option(String) {
   }
 }
 
-fn do_scan(table: EtsTable, prefix: String) -> List(String) {
+/// The live keys under `prefix` in key order, `limit` of them past `after`.
+/// A `set` table has no order, so every page is a pass over the table —
+/// fine for the in-memory sizes ETS holds.
+fn do_scan(
+  table: EtsTable,
+  prefix: String,
+  after: Option(String),
+  limit: Int,
+) -> List(String) {
   ets_tab2list(table)
   |> list.filter_map(fn(entry) {
     let #(key, _value, expires_at) = entry
-    case string.starts_with(key, prefix) && is_live(expires_at) {
+    case
+      string.starts_with(key, prefix)
+      && is_live(expires_at)
+      && is_after(key, after)
+    {
       True -> Ok(key)
       False -> Error(Nil)
     }
   })
+  |> list.sort(string.compare)
+  |> list.take(limit)
+}
+
+fn is_after(key: String, cursor: Option(String)) -> Bool {
+  case cursor {
+    None -> True
+    Some(cursor) -> string.compare(key, cursor) == order.Gt
+  }
 }
 
 @external(erlang, "ets", "whereis")
@@ -112,3 +145,13 @@ fn ets_delete(table: EtsTable, key: String) -> Bool
 
 @external(erlang, "ets", "tab2list")
 fn ets_tab2list(table: EtsTable) -> List(#(String, String, Int))
+
+@external(erlang, "telega_ets_ffi", "compare_and_set")
+fn ets_compare_and_set(
+  table: EtsTable,
+  key: String,
+  expected: Option(String),
+  value: String,
+  expires_at: Int,
+  now: Int,
+) -> Bool

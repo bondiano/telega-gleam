@@ -44,24 +44,8 @@ pub fn create_database_storage(
   db: sqlight.Connection,
 ) -> types.FlowStorage(String) {
   sqlite.new(db)
-  |> with_string_errors
+  |> storage.map_error(string.inspect)
   |> storage.flow_storage_from_storage
-}
-
-fn with_string_errors(
-  kv: storage.KeyValueStorage(e),
-) -> storage.KeyValueStorage(String) {
-  storage.KeyValueStorage(
-    get: fn(key) { kv.get(key) |> result.map_error(string.inspect) },
-    set: fn(key, value) {
-      kv.set(key, value) |> result.map_error(string.inspect)
-    },
-    set_with_ttl: fn(key, value, ttl) {
-      kv.set_with_ttl(key, value, ttl) |> result.map_error(string.inspect)
-    },
-    delete: fn(key) { kv.delete(key) |> result.map_error(string.inspect) },
-    scan: fn(prefix) { kv.scan(prefix) |> result.map_error(string.inspect) },
-  )
 }
 
 /// Get restaurant name from environment

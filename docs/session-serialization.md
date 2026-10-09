@@ -172,9 +172,9 @@ hand it to the handlers that need it. `store.with_ttl` expires written values;
 `store.get_at` / `set_at` / `update_at` / `delete_at` reach a key with no
 `Context` to derive one from (a job, an admin command reading another chat).
 
-`store.update` is read-modify-write and **not atomic** — two instances updating
-the same key at once can lose one of the changes. Where that matters, key the
-session by chat instead and let the single instance serialize the members.
+`store.update` is a read-modify-write that retries on contention: it writes
+through `compare_and_set`, so two instances updating the same key at once both
+land, in some order, and neither change is lost.
 
 ## Unified Storage Interface
 
@@ -186,8 +186,14 @@ pub type KeyValueStorage(error) {
     get: fn(String) -> Result(Option(String), error),
     set: fn(String, String) -> Result(Nil, error),
     set_with_ttl: fn(String, String, Int) -> Result(Nil, error),
+    // Write only if the key holds `expected` (`None`: absent or expired);
+    // the check and the write are one atomic step on the backend.
+    compare_and_set: fn(String, Option(String), String, Option(Int)) ->
+      Result(Bool, error),
     delete: fn(String) -> Result(Nil, error),
-    scan: fn(String) -> Result(List(String), error),
+    // One page of live keys under a prefix, and the cursor of the next.
+    scan: fn(String, Option(String), Int) ->
+      Result(#(List(String), Option(String)), error),
   )
 }
 ```
@@ -219,7 +225,10 @@ let flow_storage = storage.flow_storage_from_storage(kv)
 
 ### Custom backend
 
-Implement `KeyValueStorage` once and both sessions and flows work. The contract is small: `get`/`set`/`set_with_ttl`/`delete`/`scan(prefix)`. Keys are namespaced for you (`session:…`, `flow:…`), so a single store can hold both. `scan(prefix)` must return live keys beginning with the prefix; it backs `FlowStorage.list_by_user` and TTL cleanup.
+Implement `KeyValueStorage` once and both sessions and flows work. The contract is small: `get`/`set`/`set_with_ttl`/`compare_and_set`/`delete`/`scan`. Keys are namespaced for you (`session:…`, `flow:…`), so a single store can hold both.
+
+- `compare_and_set(key, expected, value, ttl_ms)` writes only if the key currently holds `expected` (`None` meaning absent or expired) and answers whether it did. The check and the write must be one atomic step on the backend — a guarded `UPDATE … RETURNING`, a Lua script — because this is what `store.update` and the job scheduler rely on across processes and nodes.
+- `scan(prefix, cursor, limit)` returns one page of live keys beginning with the prefix and the cursor of the next page (`None` when done; the caller starts with `None`). Page by key order with `ORDER BY key LIMIT`, and derive the cursor with `storage.next_cursor(page, limit)`; `storage.scan_all` walks every page. It backs `FlowStorage.list_by_user`, dead letters and persisted jobs.
 
 ```gleam
 fn my_kv(conn) -> storage.KeyValueStorage(MyError) {
@@ -227,11 +236,20 @@ fn my_kv(conn) -> storage.KeyValueStorage(MyError) {
     get: fn(key) { /* SELECT value WHERE key = $1 */ },
     set: fn(key, value) { /* UPSERT */ },
     set_with_ttl: fn(key, value, ttl_ms) { /* UPSERT with expires_at */ },
+    compare_and_set: fn(key, expected, value, ttl_ms) {
+      /* UPDATE … WHERE key = $1 AND value = $2 AND not expired RETURNING key,
+         or an upsert that only replaces an expired row when `expected` is None */
+    },
     delete: fn(key) { /* DELETE */ },
-    scan: fn(prefix) { /* SELECT key WHERE key LIKE $1 || '%' AND not expired */ },
+    scan: fn(prefix, cursor, limit) {
+      /* SELECT key WHERE key LIKE $1 || '%' AND not expired AND key > cursor
+         ORDER BY key LIMIT $2 — then #(page, storage.next_cursor(page, limit)) */
+    },
   )
 }
 ```
+
+Run `telega/testing/storage.check` from the backend's test suite: it is the contract as a test, and the one the shipped backends pass. `storage.map_error` re-types a backend's errors (a `sqlight.Error` as the bot's own) without re-implementing the record.
 
 The manual `SessionSettings` recipes below remain valid if you prefer to wire sessions directly without the `KeyValueStorage` bridge.
 

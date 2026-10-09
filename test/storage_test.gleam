@@ -37,10 +37,10 @@ pub fn ets_scan_by_prefix_test() {
   let assert Ok(Nil) = kv.set("flow:y", "2")
   let assert Ok(Nil) = kv.set("session:z", "3")
 
-  let assert Ok(keys) = kv.scan("flow:")
+  let assert Ok(keys) = storage.scan_all(kv, "flow:")
   keys |> list.sort(by: string.compare) |> should.equal(["flow:x", "flow:y"])
 
-  let assert Ok(session_keys) = kv.scan("session:")
+  let assert Ok(session_keys) = storage.scan_all(kv, "session:")
   session_keys |> should.equal(["session:z"])
 }
 
@@ -51,7 +51,7 @@ pub fn ets_ttl_lazy_expiration_test() {
   let assert Ok(Nil) = kv.set_with_ttl("gone", "v", -1)
   kv.get("gone") |> should.equal(Ok(None))
   // Expired key must not appear in scan either.
-  kv.scan("") |> should.equal(Ok([]))
+  storage.scan_all(kv, "") |> should.equal(Ok([]))
 
   // Live (ttl well in the future).
   let assert Ok(Nil) = kv.set_with_ttl("live", "v", 60_000)

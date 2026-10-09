@@ -29,14 +29,89 @@ import telega/telemetry
 /// - `set` stores a value with no expiration.
 /// - `set_with_ttl` stores a value that expires after `ttl_ms` milliseconds.
 ///   Backends without native TTL emulate it with lazy expiration on access.
-/// - `scan` returns every key beginning with the given prefix (live keys only).
+/// - `compare_and_set(key, expected, value, ttl_ms)` writes `value` only if
+///   the key currently holds `expected` — `None` meaning absent or expired —
+///   and answers whether it did. The check and the write are one atomic step
+///   on the backend, which is what makes a read-modify-write safe across
+///   processes and nodes (`store.update`) and lets several nodes claim one
+///   job. `ttl_ms` is as for `set_with_ttl`; `None` never expires.
+/// - `scan(prefix, cursor, limit)` returns one page of live keys beginning
+///   with the prefix — about `limit` of them — and the cursor of the next
+///   page, `None` once there is no more. Start with `None`. Backends paging
+///   by key order can derive the cursor with [`next_cursor`](#next_cursor);
+///   [`scan_all`](#scan_all) walks every page for the callers that want the
+///   whole prefix.
+///
+/// [`telega/testing/storage.check`](testing/storage.html) is the contract as
+/// a test; run it from a backend's suite.
 pub type KeyValueStorage(error) {
   KeyValueStorage(
     get: fn(String) -> Result(Option(String), error),
     set: fn(String, String) -> Result(Nil, error),
     set_with_ttl: fn(String, String, Int) -> Result(Nil, error),
+    compare_and_set: fn(String, Option(String), String, Option(Int)) ->
+      Result(Bool, error),
     delete: fn(String) -> Result(Nil, error),
-    scan: fn(String) -> Result(List(String), error),
+    scan: fn(String, Option(String), Int) ->
+      Result(#(List(String), Option(String)), error),
+  )
+}
+
+/// How many keys `scan_all` asks for per page.
+const scan_page_size = 256
+
+/// Every live key under `prefix`, page by page through `scan`.
+pub fn scan_all(
+  storage: KeyValueStorage(error),
+  prefix: String,
+) -> Result(List(String), error) {
+  scan_pages(storage, prefix, None, [])
+}
+
+fn scan_pages(
+  storage: KeyValueStorage(error),
+  prefix: String,
+  cursor: Option(String),
+  acc: List(String),
+) -> Result(List(String), error) {
+  use #(keys, next) <- result.try(storage.scan(prefix, cursor, scan_page_size))
+  let acc = list.fold(keys, acc, fn(acc, key) { [key, ..acc] })
+  case next {
+    None -> Ok(list.reverse(acc))
+    Some(_) -> scan_pages(storage, prefix, next, acc)
+  }
+}
+
+/// The cursor a backend paging by key order hands back for `page`: the last
+/// key when the page is full, nothing when it is the final page.
+pub fn next_cursor(page: List(String), limit: Int) -> Option(String) {
+  case list.length(page) >= limit {
+    True -> list.last(page) |> option.from_result
+    False -> None
+  }
+}
+
+/// The same storage reporting its errors as another type — a `sqlight.Error`
+/// as the bot's own error, or as a `String` for the subsystems that only log
+/// them (`telega/jobs`, the dead-letter queue).
+pub fn map_error(
+  storage: KeyValueStorage(a),
+  with f: fn(a) -> b,
+) -> KeyValueStorage(b) {
+  KeyValueStorage(
+    get: fn(key) { storage.get(key) |> result.map_error(f) },
+    set: fn(key, value) { storage.set(key, value) |> result.map_error(f) },
+    set_with_ttl: fn(key, value, ttl) {
+      storage.set_with_ttl(key, value, ttl) |> result.map_error(f)
+    },
+    compare_and_set: fn(key, expected, value, ttl) {
+      storage.compare_and_set(key, expected, value, ttl)
+      |> result.map_error(f)
+    },
+    delete: fn(key) { storage.delete(key) |> result.map_error(f) },
+    scan: fn(prefix, cursor, limit) {
+      storage.scan(prefix, cursor, limit) |> result.map_error(f)
+    },
   )
 }
 
@@ -244,7 +319,7 @@ fn do_flow_storage(
     },
     delete: fn(id) { storage.delete(flow_prefix <> id) },
     list_by_user: fn(user_id, chat_id) {
-      use keys <- result.try(storage.scan(flow_prefix))
+      use keys <- result.try(scan_all(storage, flow_prefix))
       list.try_fold(keys, [], fn(acc, key) {
         use maybe <- result.try(storage.get(key))
         case maybe {
@@ -316,7 +391,7 @@ pub fn dead_letters_from_storage(
       |> result.map_error(string.inspect)
     },
     keys: fn() {
-      storage.scan(dead_letter.prefix) |> result.map_error(string.inspect)
+      scan_all(storage, dead_letter.prefix) |> result.map_error(string.inspect)
     },
     read: fn(key) { storage.get(key) |> result.map_error(string.inspect) },
     drop: fn(key) { storage.delete(key) |> result.map_error(string.inspect) },

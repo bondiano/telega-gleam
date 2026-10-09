@@ -7,6 +7,8 @@
 
 import gleam/dynamic/decode
 import gleam/erlang/atom
+import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import pog
@@ -31,8 +33,13 @@ pub fn new_with_table(
     set_with_ttl: fn(key, value, ttl_ms) {
       do_set(conn, table, key, value, Some(now_ms() + ttl_ms))
     },
+    compare_and_set: fn(key, expected, value, ttl_ms) {
+      do_compare_and_set(conn, table, key, expected, value, ttl_ms)
+    },
     delete: fn(key) { do_delete(conn, table, key) },
-    scan: fn(prefix) { do_scan(conn, table, prefix) },
+    scan: fn(prefix, cursor, limit) {
+      do_scan(conn, table, prefix, cursor, limit)
+    },
   )
 }
 
@@ -129,23 +136,90 @@ fn do_delete(
   }
 }
 
+/// One atomic statement each way: an `UPDATE` guarded by the expected value
+/// (and liveness), or an upsert that only replaces an expired row.
+/// `RETURNING` says whether a row was written.
+fn do_compare_and_set(
+  conn: pog.Connection,
+  table: String,
+  key: String,
+  expected: Option(String),
+  value: String,
+  ttl_ms: Option(Int),
+) -> Result(Bool, pog.QueryError) {
+  let now = now_ms()
+  let expires_at = pog.nullable(pog.int, option.map(ttl_ms, int.add(now, _)))
+  let query = case expected {
+    Some(current) ->
+      {
+        "UPDATE "
+        <> table
+        <> " SET value = $1, expires_at = $2 WHERE key = $3 AND value = $4"
+        <> " AND (expires_at IS NULL OR expires_at > $5) RETURNING key"
+      }
+      |> pog.query
+      |> pog.parameter(pog.text(value))
+      |> pog.parameter(expires_at)
+      |> pog.parameter(pog.text(key))
+      |> pog.parameter(pog.text(current))
+      |> pog.parameter(pog.int(now))
+    None ->
+      {
+        "INSERT INTO "
+        <> table
+        <> " (key, value, expires_at) VALUES ($1, $2, $3)"
+        <> " ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value,"
+        <> " expires_at = EXCLUDED.expires_at WHERE "
+        <> table
+        <> ".expires_at IS NOT NULL AND "
+        <> table
+        <> ".expires_at <= $4 RETURNING key"
+      }
+      |> pog.query
+      |> pog.parameter(pog.text(key))
+      |> pog.parameter(pog.text(value))
+      |> pog.parameter(expires_at)
+      |> pog.parameter(pog.int(now))
+  }
+  case pog.execute(pog.returning(query, decode.at([0], decode.string)), conn) {
+    Ok(pog.Returned(rows:, ..)) -> Ok(rows != [])
+    Error(err) -> Error(err)
+  }
+}
+
 fn do_scan(
   conn: pog.Connection,
   table: String,
   prefix: String,
-) -> Result(List(String), pog.QueryError) {
+  cursor: Option(String),
+  limit: Int,
+) -> Result(#(List(String), Option(String)), pog.QueryError) {
+  let #(after_sql, after_args) = case cursor {
+    None -> #("", [])
+    Some(last) -> #(" AND key > $4", [pog.text(last)])
+  }
   let sql =
     "SELECT key FROM "
     <> table
     <> " WHERE key LIKE $1 ESCAPE '\\' AND (expires_at IS NULL OR expires_at > $2)"
+    <> after_sql
+    <> " ORDER BY key LIMIT $3"
   let query =
-    sql
-    |> pog.query
-    |> pog.parameter(pog.text(escape_like(prefix) <> "%"))
-    |> pog.parameter(pog.int(now_ms()))
+    list.fold(
+      over: list.flatten([
+        [
+          pog.text(escape_like(prefix) <> "%"),
+          pog.int(now_ms()),
+          pog.int(limit),
+        ],
+        after_args,
+      ]),
+      from: pog.query(sql),
+      with: pog.parameter,
+    )
     |> pog.returning(decode.at([0], decode.string))
   case pog.execute(query, conn) {
-    Ok(pog.Returned(rows:, ..)) -> Ok(rows)
+    Ok(pog.Returned(rows:, ..)) -> Ok(#(rows, storage.next_cursor(rows, limit)))
     Error(err) -> Error(err)
   }
 }

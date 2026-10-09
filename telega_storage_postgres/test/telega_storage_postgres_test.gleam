@@ -104,7 +104,7 @@ pub fn ttl_and_scan_test() {
       let assert Ok(Nil) = kv.set_with_ttl("pg:scan:y", "2", -1)
 
       // The expired key must not be returned by scan.
-      let assert Ok(keys) = kv.scan("pg:scan:")
+      let assert Ok(keys) = storage.scan_all(kv, "pg:scan:")
       keys |> should.equal(["pg:scan:x"])
 
       let assert Ok(Nil) = kv.delete("pg:scan:x")

@@ -67,6 +67,20 @@ under the release that shipped them.
 
 ### Changed
 
+- **`KeyValueStorage` gained `compare_and_set` and a paged `scan`.**
+  **Breaking** for every backend implementation.
+  `compare_and_set(key, expected, value, ttl_ms)` writes only if the key
+  currently holds `expected` (`None`: absent or expired) and answers whether
+  it did, as one atomic step on the backend; it is what makes `store.update`
+  and the job scheduler safe across processes and nodes.
+  `scan(prefix, cursor, limit)` returns one page of keys and the cursor of
+  the next instead of the whole prefix at once; `storage.scan_all` walks
+  every page for callers that want it all, `storage.next_cursor` derives the
+  cursor for a backend paging by key order, and `storage.map_error` re-types
+  a backend's errors so nobody re-implements the record to do that (the
+  scheduler and the examples did). The ETS, SQLite, Postgres and Redis
+  backends implement both — a guarded `UPDATE … RETURNING` / upsert on SQL,
+  a Lua script on Redis — and `testing/storage.check` covers them.
 - **A reply lands where the update came from.** Every `reply.*` send, edit
   and chat action, `payments.send` / `create_link`, and a dialog window pass
   the update's `message_thread_id`, `business_connection_id` and

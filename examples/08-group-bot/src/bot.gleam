@@ -196,16 +196,7 @@ fn counter(kv: KeyValueStorage(TelegaError)) {
 fn as_telega_errors(
   kv: KeyValueStorage(sqlight.Error),
 ) -> KeyValueStorage(TelegaError) {
-  let wrap = fn(err) { error.ActorError(string.inspect(err)) }
-  storage.KeyValueStorage(
-    get: fn(key) { kv.get(key) |> result.map_error(wrap) },
-    set: fn(key, value) { kv.set(key, value) |> result.map_error(wrap) },
-    set_with_ttl: fn(key, value, ttl) {
-      kv.set_with_ttl(key, value, ttl) |> result.map_error(wrap)
-    },
-    delete: fn(key) { kv.delete(key) |> result.map_error(wrap) },
-    scan: fn(prefix) { kv.scan(prefix) |> result.map_error(wrap) },
-  )
+  storage.map_error(kv, fn(err) { error.ActorError(string.inspect(err)) })
 }
 
 // --- wiring -----------------------------------------------------------------

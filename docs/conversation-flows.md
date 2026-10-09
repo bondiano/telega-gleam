@@ -898,9 +898,16 @@ pub fn my_storage(db) -> KeyValueStorage(MyError) {
     set_with_ttl: fn(key, value, ttl_ms) {
       db_upsert(db, key, value, expires_at: Some(now_ms() + ttl_ms))
     },
+    // Written only if the key holds `expected` — one atomic statement.
+    compare_and_set: fn(key, expected, value, ttl_ms) {
+      db_update_if(db, key, expected, value, ttl_ms)
+    },
     delete: fn(key) { db_delete(db, key) },
-    // Live keys only — expired rows must not be returned.
-    scan: fn(prefix) { db_keys_with_prefix(db, prefix) },
+    // One page of live keys in key order — expired rows must not be returned.
+    scan: fn(prefix, cursor, limit) {
+      use page <- result.map(db_keys_with_prefix(db, prefix, after: cursor, limit:))
+      #(page, storage.next_cursor(page, limit))
+    },
   )
 }
 

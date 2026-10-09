@@ -45,7 +45,7 @@ pub fn scan_by_prefix_test() {
   let assert Ok(Nil) = kv.set("flow:y", "2")
   let assert Ok(Nil) = kv.set("session:z", "3")
 
-  let assert Ok(keys) = kv.scan("flow:")
+  let assert Ok(keys) = storage.scan_all(kv, "flow:")
   keys |> list.sort(by: string.compare) |> should.equal(["flow:x", "flow:y"])
 }
 
@@ -54,7 +54,7 @@ pub fn ttl_lazy_expiration_test() {
 
   let assert Ok(Nil) = kv.set_with_ttl("gone", "v", -1)
   kv.get("gone") |> should.equal(Ok(None))
-  kv.scan("") |> should.equal(Ok([]))
+  storage.scan_all(kv, "") |> should.equal(Ok([]))
 
   let assert Ok(Nil) = kv.set_with_ttl("live", "v", 60_000)
   kv.get("live") |> should.equal(Ok(Some("v")))
@@ -135,10 +135,10 @@ pub fn scan_prefix_with_like_wildcards_is_literal_test() {
   let assert Ok(Nil) = kv.set("myXflow:b", "2")
   let assert Ok(Nil) = kv.set("my%flow:c", "3")
 
-  let assert Ok(keys) = kv.scan("my_flow:")
+  let assert Ok(keys) = storage.scan_all(kv, "my_flow:")
   keys |> should.equal(["my_flow:a"])
 
-  let assert Ok(keys) = kv.scan("my%flow:")
+  let assert Ok(keys) = storage.scan_all(kv, "my%flow:")
   keys |> should.equal(["my%flow:c"])
 }
 

@@ -7,7 +7,10 @@
 
 import gleam/dynamic/decode
 import gleam/erlang/atom
+import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import sqlight
 import telega/storage.{type KeyValueStorage, KeyValueStorage}
@@ -31,8 +34,13 @@ pub fn new_with_table(
     set_with_ttl: fn(key, value, ttl_ms) {
       do_set(conn, table, key, value, Some(now_ms() + ttl_ms))
     },
+    compare_and_set: fn(key, expected, value, ttl_ms) {
+      do_compare_and_set(conn, table, key, expected, value, ttl_ms)
+    },
     delete: fn(key) { do_delete(conn, table, key) },
-    scan: fn(prefix) { do_scan(conn, table, prefix) },
+    scan: fn(prefix, cursor, limit) {
+      do_scan(conn, table, prefix, cursor, limit)
+    },
   )
 }
 
@@ -130,22 +138,86 @@ fn do_delete(
   }
 }
 
-fn do_scan(
+/// One atomic statement each way: an `UPDATE` guarded by the expected value
+/// (and liveness), or an upsert that only replaces an expired row. SQLite's
+/// `RETURNING` says whether a row was written.
+fn do_compare_and_set(
   conn: sqlight.Connection,
   table: String,
-  prefix: String,
-) -> Result(List(String), sqlight.Error) {
-  let sql =
-    "SELECT key FROM "
-    <> table
-    <> " WHERE key LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?)"
-  let args = [sqlight.text(escape_like(prefix) <> "%"), sqlight.int(now_ms())]
+  key: String,
+  expected: Option(String),
+  value: String,
+  ttl_ms: Option(Int),
+) -> Result(Bool, sqlight.Error) {
+  let now = now_ms()
+  let expires_at =
+    sqlight.nullable(sqlight.int, option.map(ttl_ms, int.add(now, _)))
+  let #(sql, args) = case expected {
+    Some(current) -> #(
+      "UPDATE "
+        <> table
+        <> " SET value = ?, expires_at = ? WHERE key = ? AND value = ?"
+        <> " AND (expires_at IS NULL OR expires_at > ?) RETURNING key",
+      [
+        sqlight.text(value),
+        expires_at,
+        sqlight.text(key),
+        sqlight.text(current),
+        sqlight.int(now),
+      ],
+    )
+    None -> #(
+      "INSERT INTO "
+        <> table
+        <> " (key, value, expires_at) VALUES (?, ?, ?)"
+        <> " ON CONFLICT(key) DO UPDATE SET value = excluded.value,"
+        <> " expires_at = excluded.expires_at WHERE "
+        <> table
+        <> ".expires_at IS NOT NULL AND "
+        <> table
+        <> ".expires_at <= ? RETURNING key",
+      [sqlight.text(key), sqlight.text(value), expires_at, sqlight.int(now)],
+    )
+  }
   sqlight.query(
     sql,
     on: conn,
     with: args,
     expecting: decode.at([0], decode.string),
   )
+  |> result.map(fn(written) { written != [] })
+}
+
+fn do_scan(
+  conn: sqlight.Connection,
+  table: String,
+  prefix: String,
+  cursor: Option(String),
+  limit: Int,
+) -> Result(#(List(String), Option(String)), sqlight.Error) {
+  let #(after_sql, after_args) = case cursor {
+    None -> #("", [])
+    Some(last) -> #(" AND key > ?", [sqlight.text(last)])
+  }
+  let sql =
+    "SELECT key FROM "
+    <> table
+    <> " WHERE key LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?)"
+    <> after_sql
+    <> " ORDER BY key LIMIT ?"
+  let args =
+    list.flatten([
+      [sqlight.text(escape_like(prefix) <> "%"), sqlight.int(now_ms())],
+      after_args,
+      [sqlight.int(limit)],
+    ])
+  sqlight.query(
+    sql,
+    on: conn,
+    with: args,
+    expecting: decode.at([0], decode.string),
+  )
+  |> result.map(fn(page) { #(page, storage.next_cursor(page, limit)) })
 }
 
 /// `_` and `%` are wildcards in `LIKE`; a prefix such as `my_flow:` must

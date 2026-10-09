@@ -99,7 +99,7 @@ pub fn scan_test() {
       let assert Ok(Nil) = kv.set("redis:scan:x", "1")
       let assert Ok(Nil) = kv.set("redis:scan:y", "2")
 
-      let assert Ok(keys) = kv.scan("redis:scan:")
+      let assert Ok(keys) = storage.scan_all(kv, "redis:scan:")
       list.length(keys) |> should.equal(2)
 
       let assert Ok(Nil) = kv.delete("redis:scan:x")

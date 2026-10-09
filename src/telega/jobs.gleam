@@ -81,7 +81,7 @@ import telega/client.{type TelegramClient}
 import telega/error.{type TelegaError}
 import telega/internal/log
 import telega/internal/utils
-import telega/storage.{type KeyValueStorage, KeyValueStorage}
+import telega/storage.{type KeyValueStorage}
 import telega/telemetry
 
 /// A running scheduler. Hand it to handlers through `dependencies`, or name it
@@ -174,7 +174,9 @@ pub fn with_storage(
   builder builder: Builder(session, error, dependencies),
   storage storage: KeyValueStorage(storage_error),
 ) -> Builder(session, error, dependencies) {
-  Builder(..builder, storage: Some(erase_storage(storage)))
+  // The scheduler only logs storage failures, so the backend's error type is
+  // flattened rather than infecting `Scheduler` with a fourth parameter.
+  Builder(..builder, storage: Some(storage.map_error(storage, string.inspect)))
 }
 
 /// Register what a persisted job named `name` does.
@@ -642,7 +644,7 @@ fn restore(
   case state.storage {
     None -> state
     Some(storage) ->
-      case storage.scan(job_prefix) {
+      case storage.scan_all(storage, job_prefix) {
         Error(reason) -> {
           log.error("[jobs] failed to read stored jobs: " <> reason)
           state
@@ -729,24 +731,6 @@ fn record_decoder() -> decode.Decoder(JobRecord) {
 fn to_unix_ms(at: Timestamp) -> Int {
   let #(seconds, nanoseconds) = timestamp.to_unix_seconds_and_nanoseconds(at)
   seconds * 1000 + nanoseconds / 1_000_000
-}
-
-/// The scheduler only logs storage failures, so a backend's error type is
-/// flattened here rather than infecting `Scheduler` with a fourth parameter.
-fn erase_storage(storage: KeyValueStorage(e)) -> KeyValueStorage(String) {
-  KeyValueStorage(
-    get: fn(key) { storage.get(key) |> result.map_error(string.inspect) },
-    set: fn(key, value) {
-      storage.set(key, value) |> result.map_error(string.inspect)
-    },
-    set_with_ttl: fn(key, value, ttl) {
-      storage.set_with_ttl(key, value, ttl) |> result.map_error(string.inspect)
-    },
-    delete: fn(key) { storage.delete(key) |> result.map_error(string.inspect) },
-    scan: fn(prefix) {
-      storage.scan(prefix) |> result.map_error(string.inspect)
-    },
-  )
 }
 
 fn report_run(id: String, handler: String) -> Nil {
