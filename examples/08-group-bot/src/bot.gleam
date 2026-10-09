@@ -242,7 +242,13 @@ pub fn main() {
     // A database that is briefly unreadable should not take the bot with it:
     // handlers keep answering, and nothing overwrites the stored session.
     |> telega.with_session_load_error(bot.ReadOnly)
-    |> telega.with_auto_commands()
+    // One menu per place: a reminder is personal, the counters are the
+    // group's. Both commands still work wherever they are typed; the scope
+    // only decides what the "/" menu offers. The default scope keeps both.
+    |> telega.with_command_scopes([
+      #(telega.PrivateChats, ["remind", "stats"]),
+      #(telega.GroupChats, ["stats"]),
+    ])
     |> telega.start()
 
   let assert Ok(_scheduler) =

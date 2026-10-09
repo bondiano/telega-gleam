@@ -50,6 +50,13 @@ gleam run          # /remind 2 test
 gleam run          # the reminder still arrives
 ```
 
+### A different command menu per place
+
+`telega.with_command_scopes` publishes one `setMyCommands` list per scope: the
+DM menu offers `/remind` and `/stats`, the group menu only `/stats`. Scopes
+change what the `/` menu shows, not what the router answers — `/remind` typed
+in a group still works.
+
 ### A database that is briefly unreadable
 
 `telega.with_session_load_error(bot.ReadOnly)` keeps the bot answering when the
