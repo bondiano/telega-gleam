@@ -25,6 +25,13 @@ under the release that shipped them.
 
 ### Fixed
 
+- **The request queue retried on top of the client.** A call that failed after
+  the client's own retry loop was re-queued up to three more times, each time
+  running the whole loop again (up to 16 HTTP attempts), and the queue did not
+  know which methods are idempotent, so a `sendMessage` lost to a transport
+  error could be sent twice. The queue no longer retries; `RetryPolicy` is the
+  only place retries happen. **Breaking:** `client.RequestQueueConfig` lost its
+  `retry_delay` and `max_retries` fields.
 - **`replay_dead_letters` dropped letters without running a handler** when
   `idempotency.deduplicate` was installed: the pre-handler had already seen the
   `update_id`, answered `Stop`, and the replay counted as handled. Replays now

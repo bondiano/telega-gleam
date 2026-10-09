@@ -277,9 +277,9 @@ rules.
 
 The queue decides *when* a call may run; the call itself runs in its own
 process, so queued calls are concurrent up to `overall_limit` and a slow call
-never stalls the others. A call that still fails after the client's own retries
-is re-queued up to `max_retries` times with an exponential backoff
-(`retry_delay`, doubling each attempt, capped at 30 seconds).
+never stalls the others. Retrying is the client's job alone (see
+[Retries](#retries)): a call that fails after the client's own attempts is
+reported to the caller, not re-queued.
 
 **`getUpdates` never goes through the queue.** A long poll holds its slot for
 the whole polling timeout (30 s by default) while Telegram rate-limits nothing

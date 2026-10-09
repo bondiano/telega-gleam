@@ -47,10 +47,6 @@ pub type QueueConfig {
     overall_rate: Option(Int),
     /// Overall concurrent request limit
     overall_limit: Option(Int),
-    /// Base retry delay in milliseconds; each further attempt doubles it
-    retry_delay: Int,
-    /// Maximum retries
-    max_retries: Int,
     /// Per-chat pacing. Rules for individual chats are created as requests for
     /// them arrive and dropped again once the chat goes quiet, so a bot serving
     /// many chats does not carry a rule per chat it has ever answered.
@@ -85,8 +81,6 @@ pub fn default_config() -> QueueConfig {
     rules: [Rule(id: "default", rate: 30, limit: 1000, priority: 5)],
     overall_rate: Some(30),
     overall_limit: Some(100),
-    retry_delay: 1000,
-    max_retries: 3,
     per_chat: Some(default_per_chat_limits()),
   )
 }
@@ -127,9 +121,6 @@ fn default_priority(config: QueueConfig) -> Int {
 /// arming another one.
 const tick_interval = 100
 
-/// Upper bound on the exponential retry backoff.
-const max_retry_delay = 30_000
-
 fn queue_unavailable() -> TelegaError {
   error.FetchError("Request queue is not available")
 }
@@ -145,8 +136,6 @@ type QueuedRequest {
     execute: fn() -> Result(Response(String), TelegaError),
     /// Reply channel
     reply_to: Subject(Result(Response(String), TelegaError)),
-    /// Current retry count
-    retry_count: Int,
   )
 }
 
@@ -169,7 +158,6 @@ type Message {
   Tick
   RequestCompleted(id: String)
   RequestFailed(request: QueuedRequest, error: TelegaError)
-  RetryRequest(request: QueuedRequest)
   WorkerDown(down: process.Down)
   GetTotalLength(reply_to: Subject(Int))
   IsOverheated(reply_to: Subject(Bool))
@@ -304,7 +292,6 @@ pub fn execute_with_rule(
           rule_id: rule_id,
           execute: execute,
           reply_to: reply_subject,
-          retry_count: 0,
         )),
       )
 
@@ -402,30 +389,12 @@ fn handle_message(
       actor.continue(new_state)
     }
 
+    // Retrying is the client's job (`client.RetryPolicy` knows which methods
+    // are safe to repeat); by the time a request fails here it has already had
+    // every attempt it is allowed.
     RequestFailed(request, error) -> {
       let new_state = release_slot(state, request.id)
-
-      case request.retry_count < state.config.max_retries {
-        True -> {
-          let retry_request =
-            QueuedRequest(..request, retry_count: request.retry_count + 1)
-          process.send_after(
-            state.self,
-            retry_delay_for(state.config.retry_delay, request.retry_count),
-            RetryRequest(retry_request),
-          )
-          actor.continue(new_state)
-        }
-        False -> {
-          process.send(request.reply_to, Error(error))
-          process.send(new_state.self, ProcessQueue)
-          actor.continue(new_state)
-        }
-      }
-    }
-
-    RetryRequest(request) -> {
-      let new_state = add_to_queue(state, request)
+      process.send(request.reply_to, Error(error))
       process.send(new_state.self, ProcessQueue)
       actor.continue(new_state)
     }
@@ -479,12 +448,6 @@ fn handle_message(
       actor.stop()
     }
   }
-}
-
-/// Exponential backoff: `base`, `2 × base`, `4 × base`, … capped so a long
-/// outage cannot park a request for minutes.
-fn retry_delay_for(base: Int, attempt: Int) -> Int {
-  int.min(base * int.bitwise_shift_left(1, attempt), max_retry_delay)
 }
 
 fn release_slot(state: State, id: String) -> State {

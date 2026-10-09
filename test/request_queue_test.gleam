@@ -85,8 +85,6 @@ pub fn execute_with_rule_test() {
       ],
       overall_rate: None,
       overall_limit: None,
-      retry_delay: 1000,
-      max_retries: 3,
       per_chat: None,
     )
 
@@ -126,8 +124,6 @@ pub fn no_retry_test() {
       rules: [queue.Rule(id: "default", rate: 30, limit: 1000, priority: 5)],
       overall_rate: None,
       overall_limit: None,
-      retry_delay: 100,
-      max_retries: 0,
       per_chat: None,
     )
 
@@ -161,8 +157,6 @@ pub fn is_overheated_test() {
       rules: [queue.Rule(id: "default", rate: 2, limit: 1000, priority: 5)],
       overall_rate: None,
       overall_limit: None,
-      retry_delay: 100,
-      max_retries: 0,
       per_chat: None,
     )
 
@@ -298,8 +292,6 @@ fn per_chat_queue(window_ms: Int) -> queue.RequestQueue {
       rules: [queue.Rule(id: "default", rate: 100, limit: 1000, priority: 5)],
       overall_rate: None,
       overall_limit: None,
-      retry_delay: 10,
-      max_retries: 0,
       per_chat: Some(queue.PerChatLimits(
         private_rate: 1,
         private_window_ms: window_ms,
@@ -466,8 +458,6 @@ pub fn a_saturating_bulk_lane_leaves_room_for_the_interactive_one_test() {
       ],
       overall_rate: Some(10),
       overall_limit: None,
-      retry_delay: 100,
-      max_retries: 0,
       per_chat: None,
     )
   let assert Ok(q) = queue.start(config)
@@ -522,8 +512,6 @@ pub fn a_per_chat_rule_keeps_the_default_lanes_priority_test() {
       ],
       overall_rate: Some(10),
       overall_limit: None,
-      retry_delay: 100,
-      max_retries: 0,
       per_chat: Some(queue.PerChatLimits(
         private_rate: 10,
         private_window_ms: 1000,

@@ -649,10 +649,6 @@ pub type RequestQueueConfig {
     overall_rate: Option(Int),
     /// Overall concurrent request limit
     overall_limit: Option(Int),
-    /// Default retry delay in milliseconds
-    retry_delay: Int,
-    /// Maximum retries
-    max_retries: Int,
     /// Per-chat pacing on top of the global rules. `None` paces by the global
     /// rules only, which is what a bot busy in one chat will notice first.
     per_chat: Option(PerChatLimits),
@@ -717,8 +713,6 @@ pub fn default_request_queue_config() -> RequestQueueConfig {
     rules:,
     overall_rate: default_config.overall_rate,
     overall_limit: default_config.overall_limit,
-    retry_delay: default_config.retry_delay,
-    max_retries: default_config.max_retries,
     per_chat: option.map(default_config.per_chat, fn(limits) {
       PerChatLimits(
         private_rate: limits.private_rate,
@@ -808,8 +802,6 @@ pub fn set_request_queue(
       }),
       overall_rate: config.overall_rate,
       overall_limit: config.overall_limit,
-      retry_delay: config.retry_delay,
-      max_retries: config.max_retries,
       per_chat: option.map(config.per_chat, fn(limits) {
         request_queue.PerChatLimits(
           private_rate: limits.private_rate,
