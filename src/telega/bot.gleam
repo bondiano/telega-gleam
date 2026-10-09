@@ -623,11 +623,18 @@ pub fn health(
   bot_subject bot_subject: BotSubject,
   timeout timeout: Int,
 ) -> Option(BotHealth) {
-  let reply = process.new_subject()
-  process.send(bot_subject, HealthBotMessage(reply))
-  case process.receive(reply, timeout) {
-    Ok(health) -> Some(health)
+  // A stopped bot has given up its registered name, and sending to a name
+  // nobody holds is a crash, not a timeout.
+  case process.subject_owner(bot_subject) {
     Error(Nil) -> None
+    Ok(_) -> {
+      let reply = process.new_subject()
+      process.send(bot_subject, HealthBotMessage(reply))
+      case process.receive(reply, timeout) {
+        Ok(health) -> Some(health)
+        Error(Nil) -> None
+      }
+    }
   }
 }
 
