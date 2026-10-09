@@ -385,42 +385,41 @@ errors (like session persistence) go to the bot's catch handler configured via
 
 ## Composition
 
-There are two types, and they do different jobs.
+One type does both jobs. A `router.Router` holds its own routes, middleware,
+catch handler and scope, and can hold other routers it consults in order when
+none of its own routes claims an update. `telega.router` takes one.
 
-- `router.Router` is a **leaf**: routes, middleware, a catch handler, a scope.
-  Everything named `on_*` registers on a leaf, and `telega.router` takes one.
-- `router.RouterTree` is a **composition**: an ordered list of leaves, some of
-  them guarded by a filter. It has no routes of its own — `on_command` on a tree
-  does not compile — and `telega.router_tree` takes one.
-
-**Merge** combines two leaves into one flat leaf; the first wins on conflicts:
+**Merge** combines two routers into one flat router; the first wins on
+conflicts:
 
 ```gleam
 let main = router.merge(admin_router, user_router)
 ```
 
-**A tree** tries each leaf in order, each keeping its own middleware and catch
-handler. `append` adds a leaf that is always consulted; `branch` adds one that is
-only consulted when a filter matches:
+**Branches** are tried in order after the router's own routes, each keeping its
+own middleware and catch handler. `append` adds one that is always consulted;
+`branch` adds one that is only consulted when a filter matches; `fallback`
+takes what nothing claimed:
 
 ```gleam
 let app =
-  router.tree()
+  router.new("app")
   |> router.branch(router.is_private_chat(), private_router)
   |> router.branch(router.is_group_chat(), group_router)
   |> router.append(shared_router)
-  |> router.tree_fallback(handle_unknown)
+  |> router.fallback(handle_unknown)
 
 telega.new(api_client)
-|> telega.router_tree(app)
+|> telega.router(app)
 ```
 
-`compose(a, b)` and `compose_many([a, b, c])` are shorthand for a tree of
-unconditional branches.
+`compose(a, b)` and `compose_many([a, b, c])` are shorthand for a router named
+`a+b` whose branches are `a` and `b`.
 
 A branch whose filter matches but which has no route for the update is skipped,
-so the next branch gets its turn. Routes that used to be registered *on* a
-composition now go into an explicit trailing leaf:
+so the next branch gets its turn. The router's own routes are tried first, so a
+route that should run only when every branch declines goes into a trailing
+branch:
 
 ```gleam
 // `/help` is handled after `private_router` and `public_router` decline it
@@ -429,13 +428,13 @@ let app =
   |> router.append(router.new("direct") |> router.on_command("help", handle_help))
 ```
 
-Settings that belong to each branch rather than to one of them have tree-level
-forms: `use_middleware_on_tree` and `with_catch_handler_on_tree` (the latter
-leaves a branch that already has its own catch handler alone).
+Middleware and the catch handler of a composed router wrap whatever handled the
+update — one of its own routes, a branch, or the fallback — so they apply to
+branches added later too. A branch's own catch handler sees its errors first;
+only what it does not handle reaches the composed router's.
 
-**Scope** restricts a leaf to updates matching a predicate. A scoped leaf
-declines updates outside its scope, so in a tree the next branch gets
-its turn:
+**Scope** restricts a router to updates matching a predicate. A scoped router
+declines updates outside its scope, so as a branch the next one gets its turn:
 
 ```gleam
 let admin =

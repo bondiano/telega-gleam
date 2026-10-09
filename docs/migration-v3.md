@@ -11,7 +11,7 @@ Three things changed:
    an explicit step (`telega.webhook(...)` / `telega.polling(...)`), not a pair
    of constructors and a pair of `init` functions.
 2. **One prefix per role.** The pipeline steps are bare verbs (`dependencies`,
-   `session`, `router`, `router_tree`, `polling`, `webhook`, `start`,
+   `session`, `router`, `polling`, `webhook`, `start`,
    `supervised`); everything optional is `with_*`. All `set_*` functions are
    gone.
 3. **The `with_dependencies` footgun is a compile error.** `dependencies` and
@@ -48,7 +48,7 @@ telega.new(api_client)
 | `telega.new_with_dependencies(...)` | `telega.new(api_client)` + `telega.webhook(...)` + `telega.dependencies(deps)` |
 | `telega.with_dependencies(deps)` | `telega.dependencies(deps)` |
 | `telega.with_router(router)` | `telega.router(router)` |
-| `telega.with_router_tree(tree)` | `telega.router_tree(tree)` |
+| `telega.with_router_tree(tree)` | `telega.router(tree)` — composition is a `Router` too |
 | `telega.with_session_settings(settings)` | `telega.session(settings)` |
 | `telega.with_nil_session()` | *(delete the call — `Nil` is the default)* |
 | `telega.init()` / `telega.init_for_polling()` | `telega.start()` |
@@ -76,7 +76,7 @@ Everything else (`with_catch_handler`, `use_pre_handler`, `with_session_key`,
 
 `TelegaBuilder` gained a fourth type parameter — a state marker. It is
 `telega.Fresh` on a new builder and `telega.Configured` once anything typed
-against `session`/`dependencies` is registered (`router`, `router_tree`,
+against `session`/`dependencies` is registered (`router`,
 `with_catch_handler`, `use_pre_handler`, `with_on_start`). `dependencies` and
 `session` only accept a `Fresh` builder.
 

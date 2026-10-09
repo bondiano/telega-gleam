@@ -44,6 +44,18 @@ under the release that shipped them.
 
 ### Changed
 
+- **`RouterTree` is gone; a `Router` composes.** `append` and `branch` add
+  branches to any router, consulted in order after its own routes and before
+  its `fallback`; `compose` / `compose_many` return a `Router`. **Breaking:**
+  `router.tree`, `tree_fallback`, `use_middleware_on_tree`,
+  `with_catch_handler_on_tree`, `tree_name`, `handle_tree`, `tree_routable`,
+  `tree_registered_commands`, `tree_allowed_updates` and `telega.router_tree`
+  are removed — the plain `fallback`, `use_middleware`, `with_catch_handler`,
+  `name`, `handle`, `routable`, `registered_commands`, `allowed_updates` and
+  `telega.router` now do the same for a composed router. Middleware and the
+  catch handler of a composed router wrap whatever handled the update, so they
+  now reach branches added after them and the fallback, which the `*_on_tree`
+  forms never did.
 - **One callback-data codec.** Dialog buttons (`dlg:…`), widget buttons
   (`w:…`), the yes/no payloads a flow step reads back and `wait_choice`'s
   buttons are all packed and unpacked with `telega/keyboard`'s

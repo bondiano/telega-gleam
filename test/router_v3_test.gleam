@@ -466,12 +466,12 @@ fn ping_router(tag: String) -> router.Router(String, TelegaError, Nil) {
 
 pub fn branch_picks_the_first_matching_filter_test() {
   let tree =
-    router.tree()
+    router.new("tree")
     |> router.branch(router.is_private_chat(), ping_router("private"))
     |> router.branch(router.is_group_chat(), ping_router("group"))
 
   let private = command_update("ping")
-  router.handle_tree(tree, make_ctx("initial"), private)
+  router.handle(tree, make_ctx("initial"), private)
   |> session_of
   |> should.equal("private")
 
@@ -488,30 +488,30 @@ pub fn branch_picks_the_first_matching_filter_test() {
       message: group_message,
       raw: factory.raw_update(message: group_message),
     )
-  router.handle_tree(tree, make_ctx("initial"), group)
+  router.handle(tree, make_ctx("initial"), group)
   |> session_of
   |> should.equal("group")
 }
 
 pub fn branch_whose_filter_matches_but_has_no_route_falls_through_test() {
   let tree =
-    router.tree()
+    router.new("tree")
     // Matches the update but has nothing registered for it.
     |> router.branch(router.is_private_chat(), router.new("empty"))
     |> router.append(ping_router("open"))
 
-  router.handle_tree(tree, make_ctx("initial"), command_update("ping"))
+  router.handle(tree, make_ctx("initial"), command_update("ping"))
   |> session_of
   |> should.equal("open")
 }
 
 pub fn tree_fallback_catches_what_no_branch_claimed_test() {
   let tree =
-    router.tree()
+    router.new("tree")
     |> router.append(ping_router("branch"))
-    |> router.tree_fallback(mark_update("fallback"))
+    |> router.fallback(mark_update("fallback"))
 
-  router.handle_tree(tree, make_ctx("initial"), command_update("nope"))
+  router.handle(tree, make_ctx("initial"), command_update("nope"))
   |> session_of
   |> should.equal("fallback")
 }
@@ -524,7 +524,7 @@ pub fn with_catch_handler_on_tree_leaves_an_existing_one_alone_test() {
     })
 
   let tree =
-    router.tree()
+    router.new("tree")
     |> router.append(
       failing
       |> router.with_catch_handler(fn(_err) { Ok(make_ctx("own_catch")) }),
@@ -535,13 +535,13 @@ pub fn with_catch_handler_on_tree_leaves_an_existing_one_alone_test() {
         Error(error.ActorError("bang"))
       }),
     )
-    |> router.with_catch_handler_on_tree(fn(_err) { Ok(make_ctx("tree_catch")) })
+    |> router.with_catch_handler(fn(_err) { Ok(make_ctx("tree_catch")) })
 
-  router.handle_tree(tree, make_ctx("initial"), command_update("boom"))
+  router.handle(tree, make_ctx("initial"), command_update("boom"))
   |> session_of
   |> should.equal("own_catch")
 
-  router.handle_tree(tree, make_ctx("initial"), command_update("bang"))
+  router.handle(tree, make_ctx("initial"), command_update("bang"))
   |> session_of
   |> should.equal("tree_catch")
 }
@@ -563,7 +563,7 @@ pub fn tree_registered_commands_unions_the_branches_test() {
         ),
     )
 
-  router.tree_registered_commands(tree)
+  router.registered_commands(tree)
   |> should.equal([#("ban", "Ban a user"), #("start", "Start")])
 }
 
@@ -574,12 +574,12 @@ pub fn one_wildcard_branch_gives_up_narrowing_for_the_tree_test() {
       router.new("b") |> router.fallback(mark_update("anything")),
     )
 
-  router.tree_allowed_updates(tree) |> should.equal([])
+  router.allowed_updates(tree) |> should.equal([])
 }
 
 pub fn tree_name_joins_the_branch_names_test() {
   router.compose(ping_router("a"), ping_router("b"))
-  |> router.tree_name
+  |> router.name
   |> should.equal("a+b")
 }
 
@@ -594,9 +594,9 @@ pub fn a_router_with_only_callback_routes_still_narrows_test() {
 
 pub fn an_empty_branch_does_not_stop_the_tree_from_narrowing_test() {
   // An empty router handles nothing; it is not a wildcard.
-  router.tree()
+  router.new("tree")
   |> router.append(router.new("empty"))
   |> router.append(router.new("inline") |> router.on_inline_query(mark("i")))
-  |> router.tree_allowed_updates
+  |> router.allowed_updates
   |> should.equal(["callback_query", "inline_query"])
 }

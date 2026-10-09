@@ -4,17 +4,13 @@
 //// It allows you to define handlers for different types of messages and organize them into
 //// logical groups with middleware support, error handling, and composition capabilities.
 ////
-//// ## Two types, two jobs
+//// ## One type
 ////
-//// - [`Router`](#Router) is a **leaf**: routes, middleware, a catch handler,
-////   an optional scope. Everything named `on_*` registers on a leaf.
-//// - [`RouterTree`](#RouterTree) is a **composition**: an ordered list of
-////   leaves, each optionally guarded by a [`Filter`](#Filter). It has no
-////   routes of its own, so `on_command` on a tree does not compile — the
-////   registration that a composed router used to swallow is now a type error.
-////
-//// `telega.router` takes a `Router`; `telega.router_tree` takes a
-//// `RouterTree`. Both are converted to a [`Routable`](#Routable) internally.
+//// A [`Router`](#Router) holds routes, middleware, a catch handler, an
+//// optional scope — and, through [`append`](#append) and [`branch`](#branch),
+//// other routers it consults in order when none of its own routes claims an
+//// update. `telega.router` takes one; it is reduced to a
+//// [`Routable`](#Routable) internally.
 ////
 //// ## Basic Usage
 ////
@@ -92,8 +88,9 @@
 //// |> router.use_middleware(rate_limit_middleware)   // innermost, closest to the handler
 //// ```
 ////
-//// On a `RouterTree`, `use_middleware_on_tree` pushes the middleware into every
-//// branch (each branch keeps its own copy, applied around its own handlers).
+//// Middleware wraps whatever handled the update — one of the router's own
+//// routes, a branch, or the fallback — so middleware added to a composed router
+//// sees every update it dispatches, including to branches added later.
 ////
 //// Built-in middleware includes:
 //// - `with_logging` - Logs all update processing
@@ -141,26 +138,26 @@
 //// let main_router = router.merge(admin_router, user_router)
 //// ```
 ////
-//// ### Building a tree
+//// ### Composing routers
 ////
-//// `append` adds a leaf that is tried in order; `branch` adds one that is only
-//// consulted when a filter matches. Each leaf keeps its own middleware and
-//// catch handler:
+//// `append` adds a router that is tried in order once this one's own routes
+//// have declined; `branch` adds one that is only consulted when a filter
+//// matches. Each keeps its own middleware and catch handler:
 ////
 //// ```gleam
-//// let tree =
-////   router.tree()
+//// let app =
+////   router.new("app")
 ////   |> router.branch(router.is_private_chat(), private_router)
 ////   |> router.branch(router.is_group_chat(), group_router)
 ////   |> router.append(shared_router)
-////   |> router.tree_fallback(handle_unknown)
+////   |> router.fallback(handle_unknown)
 ////
 //// telega.new(api_client)
-//// |> telega.router_tree(tree)
+//// |> telega.router(app)
 //// ```
 ////
-//// `compose(a, b)` and `compose_many([a, b, c])` are shorthand for a tree of
-//// unconditional branches.
+//// `compose(a, b)` and `compose_many([a, b, c])` are shorthand for a router
+//// of unconditional branches.
 ////
 //// ### Scoped leaves
 ////
@@ -310,12 +307,9 @@ import telega/scope
 import telega/telemetry
 import telega/update.{type Command, type Update}
 
-/// A leaf router: routes, middleware, a catch handler and an optional scope.
-///
-/// Every `on_*` function registers on one of these. Compositions live in
-/// [`RouterTree`](#RouterTree) — a separate type, so a registration on a
-/// composition is a compile error rather than a route that quietly goes
-/// nowhere.
+/// A router: routes, middleware, a catch handler, an optional scope, and the
+/// routers it consults in order ([`append`](#append) / [`branch`](#branch))
+/// when none of its own routes claims an update.
 pub opaque type Router(session, error, dependencies) {
   Router(
     commands: Dict(String, Handler(session, error, dependencies)),
@@ -332,36 +326,24 @@ pub opaque type Router(session, error, dependencies) {
       fn(error) -> Result(Context(session, error, dependencies), error),
     ),
     /// Set by `scope`: an update the predicate rejects is not this router's,
-    /// so `handle` returns the context untouched and, inside a tree, the next
-    /// branch gets its turn.
+    /// so `handle` returns the context untouched and, as a branch of another
+    /// router, the next branch gets its turn.
     scope_predicate: Option(fn(Update) -> Bool),
     name: String,
-  )
-}
-
-/// An ordered composition of leaf routers.
-///
-/// A tree holds no routes of its own: `on_command` and friends are not defined
-/// for it. Build one with [`tree`](#tree) and add leaves with
-/// [`append`](#append) (always tried) or [`branch`](#branch) (tried only when a
-/// filter matches). Branches are consulted in the order they were added, and
-/// the first one that both passes its filter and has a route for the update
-/// handles it.
-pub opaque type RouterTree(session, error, dependencies) {
-  RouterTree(
+    /// Consulted in order, after this router's own routes and before its
+    /// fallback. The first whose filter passes and which has a route for the
+    /// update handles it.
     branches: List(Branch(session, error, dependencies)),
-    fallback: Option(Handler(session, error, dependencies)),
   )
 }
 
-/// One leaf of a tree, with the filter that guards it (if any).
+/// One composed router, with the filter that guards it (if any).
 type Branch(session, error, dependencies) {
   Branch(filter: Option(Filter), router: Router(session, error, dependencies))
 }
 
-/// What `telega` actually stores: a leaf and a tree reduced to the four things
-/// the bot needs from a router. Build one with [`routable`](#routable) or
-/// [`tree_routable`](#tree_routable).
+/// What `telega` actually stores: a router reduced to the four things the bot
+/// needs from it. Build one with [`routable`](#routable).
 pub type Routable(session, error, dependencies) {
   Routable(
     name: String,
@@ -596,6 +578,7 @@ pub fn new(name: String) -> Router(session, error, dependencies) {
     catch_handler: None,
     scope_predicate: None,
     name: name,
+    branches: [],
   )
 }
 
@@ -620,8 +603,8 @@ pub fn matched_route(
   scope.get(ctx.scope, routing.route_slot) |> option.from_result
 }
 
-/// The name of the leaf router whose route claimed the current update — the
-/// tree branch, for a bot built with `router_tree`.
+/// The name of the router whose route claimed the current update — the
+/// branch, for a composed router.
 pub fn matched_router(
   ctx: Context(session, error, dependencies),
 ) -> Option(String) {
@@ -1461,7 +1444,9 @@ fn in_scope(
   }
 }
 
-/// Process an update through a leaf router.
+/// Process an update: this router's own route if one matches, else the first
+/// branch whose filter passes and which has a route for it, else the fallback.
+/// Middleware and the catch handler wrap whichever of those ran.
 pub fn handle(
   router: Router(session, error, dependencies),
   ctx: Context(session, error, dependencies),
@@ -1469,9 +1454,8 @@ pub fn handle(
 ) -> Result(Context(session, error, dependencies), error) {
   use <- bool.guard(when: !in_scope(router, update), return: Ok(ctx))
 
-  let #(route, found) = find_handler(router, update, ctx)
-  record_match(ctx, router.name, route)
-  let handler = apply_middleware(found, router.middleware)
+  let handler =
+    apply_middleware(dispatch(router, update, ctx), router.middleware)
 
   case router.catch_handler {
     Some(catch_fn) ->
@@ -1483,9 +1467,10 @@ pub fn handle(
   }
 }
 
-/// Merge two leaf routers into one. All routes are combined, with the first
-/// router's routes taking priority in case of conflicts. Middleware and catch
-/// handlers are shared.
+/// Merge two routers into one flat router. All routes are combined, with the
+/// first router's routes taking priority in case of conflicts. Middleware and
+/// catch handlers are shared; branches are kept in order, first's before
+/// second's.
 pub fn merge(
   first: Router(session, error, dependencies),
   second: Router(session, error, dependencies),
@@ -1504,6 +1489,7 @@ pub fn merge(
     scope_predicate: merge_scopes(first.scope_predicate, second.scope_predicate),
     // A merged router answers for both, so it carries both names.
     name: first.name <> "+" <> second.name,
+    branches: list.append(first.branches, second.branches),
   )
 }
 
@@ -1530,146 +1516,111 @@ fn merge_scopes(
 
 // Composition ------------------------------------------------------------------------
 
-/// An empty tree. Add leaves with `append` and `branch`.
-pub fn tree() -> RouterTree(session, error, dependencies) {
-  RouterTree(branches: [], fallback: None)
-}
-
-/// Add a leaf that is tried for every update, after the branches already added.
+/// Add a router that is consulted for every update this router's own routes
+/// decline, after the branches already added.
 pub fn append(
-  tree: RouterTree(session, error, dependencies),
   router: Router(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  RouterTree(
-    ..tree,
-    branches: list.append(tree.branches, [Branch(filter: None, router:)]),
+  leaf: Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  Router(
+    ..router,
+    branches: list.append(router.branches, [Branch(filter: None, router: leaf)]),
   )
 }
 
-/// Add a leaf that is only consulted when `when` matches the update.
+/// Add a router that is only consulted when `when` matches the update.
 ///
 /// ```gleam
-/// router.tree()
+/// router.new("app")
 /// |> router.branch(router.is_private_chat(), private_router)
 /// |> router.branch(router.is_group_chat(), group_router)
 /// ```
 pub fn branch(
-  tree: RouterTree(session, error, dependencies),
+  router: Router(session, error, dependencies),
   when filter: Filter,
-  router router: Router(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  RouterTree(
-    ..tree,
-    branches: list.append(tree.branches, [Branch(filter: Some(filter), router:)]),
+  router leaf: Router(session, error, dependencies),
+) -> Router(session, error, dependencies) {
+  Router(
+    ..router,
+    branches: list.append(router.branches, [
+      Branch(filter: Some(filter), router: leaf),
+    ]),
   )
 }
 
-/// A handler for updates no branch claimed.
-pub fn tree_fallback(
-  tree: RouterTree(session, error, dependencies),
-  handler: Handler(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  RouterTree(..tree, fallback: Some(handler))
-}
-
-/// Push middleware into every branch. Each branch keeps its own copy, applied
-/// around its own handlers, so a branch's catch handler still sees its errors.
-pub fn use_middleware_on_tree(
-  tree: RouterTree(session, error, dependencies),
-  middleware: Middleware(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  map_branches(tree, use_middleware(_, middleware))
-}
-
-/// Give every branch the same catch handler. A branch that already has one
-/// keeps it.
-pub fn with_catch_handler_on_tree(
-  tree: RouterTree(session, error, dependencies),
-  catch_handler: fn(error) ->
-    Result(Context(session, error, dependencies), error),
-) -> RouterTree(session, error, dependencies) {
-  use router <- map_branches(tree)
-  case router.catch_handler {
-    Some(_) -> router
-    None -> with_catch_handler(router, catch_handler)
-  }
-}
-
-fn map_branches(
-  tree: RouterTree(session, error, dependencies),
-  apply: fn(Router(session, error, dependencies)) ->
-    Router(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  RouterTree(
-    ..tree,
-    branches: list.map(tree.branches, fn(b) {
-      Branch(..b, router: apply(b.router))
-    }),
-  )
-}
-
-/// Compose two leaf routers into a tree. Both are tried in order.
+/// Compose two routers: both are tried in order. The result is named
+/// `first+second`.
 pub fn compose(
   first: Router(session, error, dependencies),
   second: Router(session, error, dependencies),
-) -> RouterTree(session, error, dependencies) {
-  tree() |> append(first) |> append(second)
+) -> Router(session, error, dependencies) {
+  new(first.name <> "+" <> second.name) |> append(first) |> append(second)
 }
 
-/// Compose many leaf routers into a tree, tried in order.
+/// Compose many routers, tried in order.
 pub fn compose_many(
   routers: List(Router(session, error, dependencies)),
-) -> RouterTree(session, error, dependencies) {
-  list.fold(routers, tree(), append)
-}
-
-/// The tree's name: its branch names joined with `+`.
-pub fn tree_name(tree: RouterTree(session, error, dependencies)) -> String {
-  case tree.branches {
-    [] -> "empty"
-    branches ->
-      branches
-      |> list.map(fn(b) { b.router.name })
+) -> Router(session, error, dependencies) {
+  case routers {
+    [] -> new("empty")
+    _ ->
+      routers
+      |> list.map(fn(r) { r.name })
       |> string.join("+")
+      |> new
+      |> list.fold(routers, _, append)
   }
 }
 
-/// Process an update through a tree: the first branch whose filter matches and
-/// which has a route for the update handles it, otherwise the tree fallback.
-pub fn handle_tree(
-  tree: RouterTree(session, error, dependencies),
-  ctx: Context(session, error, dependencies),
+/// What handles the update: one of this router's own routes, the first branch
+/// whose filter passes and which has a route for it, or the fallback. Records
+/// the match for `matched_route` on the way; a branch records its own.
+fn dispatch(
+  router: Router(session, error, dependencies),
   update: Update,
-) -> Result(Context(session, error, dependencies), error) {
-  do_handle_tree(tree.branches, tree.fallback, ctx, update)
-}
-
-fn do_handle_tree(
-  branches: List(Branch(session, error, dependencies)),
-  fallback: Option(Handler(session, error, dependencies)),
   ctx: Context(session, error, dependencies),
-  update: Update,
-) -> Result(Context(session, error, dependencies), error) {
-  case branches {
-    [] ->
-      case fallback {
-        Some(handler) -> handler(ctx, update)
-        None -> Ok(ctx)
-      }
-    [Branch(filter:, router:), ..rest] -> {
-      let selected = case filter {
-        Some(f) -> matches(f, update)
-        None -> True
-      }
-      case selected && can_handle_update(router, update, ctx) {
-        True -> handle(router, ctx, update)
-        False -> do_handle_tree(rest, fallback, ctx, update)
-      }
+) -> Handler(session, error, dependencies) {
+  case own_handler(router, update, ctx) {
+    Some(#(route, handler)) -> {
+      record_match(ctx, router.name, route)
+      handler
     }
+    None ->
+      case first_branch(router.branches, update, ctx) {
+        Some(leaf) -> fn(ctx, upd) { handle(leaf, ctx, upd) }
+        None ->
+          case router.fallback {
+            Some(handler) -> {
+              record_match(ctx, router.name, "fallback")
+              handler
+            }
+            None -> {
+              record_match(ctx, router.name, "unmatched")
+              fn(ctx, _) { Ok(ctx) }
+            }
+          }
+      }
   }
 }
 
-/// Reduce a leaf router to what the bot needs from it.
+/// The first branch that both passes its filter and can handle the update.
+fn first_branch(
+  branches: List(Branch(session, error, dependencies)),
+  update: Update,
+  ctx: Context(session, error, dependencies),
+) -> Option(Router(session, error, dependencies)) {
+  list.find(branches, fn(b) {
+    let selected = case b.filter {
+      Some(f) -> matches(f, update)
+      None -> True
+    }
+    selected && can_handle_update(b.router, update, ctx)
+  })
+  |> result.map(fn(b) { b.router })
+  |> option.from_result
+}
+
+/// Reduce a router to what the bot needs from it.
 pub fn routable(
   router: Router(session, error, dependencies),
 ) -> Routable(session, error, dependencies) {
@@ -1681,53 +1632,33 @@ pub fn routable(
   )
 }
 
-/// Reduce a tree to what the bot needs from it.
-pub fn tree_routable(
-  tree: RouterTree(session, error, dependencies),
-) -> Routable(session, error, dependencies) {
-  Routable(
-    name: tree_name(tree),
-    handle: fn(ctx, upd) { handle_tree(tree, ctx, upd) },
-    allowed_updates: tree_allowed_updates(tree),
-    registered_commands: tree_registered_commands(tree),
-  )
-}
-
 /// List every command registered with a description, as `#(command, description)`
-/// pairs sorted by command name. Commands added with `on_command` (no
-/// description) are omitted.
+/// pairs sorted by command name — this router's own and its branches', an
+/// earlier registration winning a duplicate. Commands added with `on_command`
+/// (no description) are omitted.
 ///
 /// This is what `telega.with_auto_commands` feeds into `setMyCommands`.
 pub fn registered_commands(
   router: Router(session, error, dependencies),
 ) -> List(#(String, String)) {
-  router.command_descriptions
-  |> dict.to_list
-  |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
-}
-
-/// The union of every branch's described commands, sorted by command name.
-/// Earlier branches win a duplicate.
-pub fn tree_registered_commands(
-  tree: RouterTree(session, error, dependencies),
-) -> List(#(String, String)) {
-  tree.branches
-  |> list.fold(dict.new(), fn(acc, b) {
-    merge_keeping_first(b.router.command_descriptions, acc)
+  router.branches
+  |> list.fold(router.command_descriptions, fn(acc, b) {
+    merge_keeping_first(dict.from_list(registered_commands(b.router)), acc)
   })
   |> dict.to_list
   |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
 }
 
 /// Derive the set of Telegram update types this router actually handles, as the
-/// strings expected by `allowed_updates` (e.g. `"message"`, `"callback_query"`).
-/// The result is deduplicated and sorted for stable output.
+/// strings expected by `allowed_updates` (e.g. `"message"`, `"callback_query"`),
+/// its branches included. The result is deduplicated and sorted for stable
+/// output.
 ///
-/// If the router has a fallback, custom, filtered, or `on_unknown_update`
-/// route, the handled set cannot be determined statically (those routes can
-/// match anything), so an empty list is returned to signal "do not restrict" —
-/// Telegram then sends its default update set. Use a manual override when you
-/// need narrowing alongside catch-all routes.
+/// If the router — or any branch — has a fallback, custom, filtered, or
+/// `on_unknown_update` route, the handled set cannot be determined statically
+/// (those routes can match anything), so an empty list is returned to signal
+/// "do not restrict" — Telegram then sends its default update set. Use a manual
+/// override when you need narrowing alongside catch-all routes.
 ///
 /// A non-empty result always contains `"callback_query"`, even for a router
 /// with no callback route. Static derivation only sees the router: a handler
@@ -1749,42 +1680,29 @@ pub fn allowed_updates(
     False -> ["callback_query"]
   }
   let from_routes = list.filter_map(router.routes, route_update_type)
+  // A branch with nothing registered contributes nothing; it does not stop
+  // the whole router from narrowing.
+  let from_branches =
+    list.flat_map(router.branches, fn(b) { allowed_updates(b.router) })
 
-  case from_commands, from_callbacks, from_routes {
-    // Nothing is registered at all, so there is nothing to derive. Not the
-    // same statement as "do not restrict" — see `tree_allowed_updates`.
-    [], [], [] -> []
-    _, _, _ ->
-      ["callback_query", ..list.flatten([from_commands, from_routes])]
+  case
+    list.flatten([from_commands, from_callbacks, from_routes, from_branches])
+  {
+    // Nothing is registered at all, so there is nothing to derive.
+    [] -> []
+    types ->
+      ["callback_query", ..types]
       |> list.unique
       |> list.sort(string.compare)
   }
 }
 
-/// Whether this router can match update kinds no static analysis can
-/// enumerate, and so cannot be narrowed at all.
+/// Whether this router — or any branch — can match update kinds no static
+/// analysis can enumerate, and so cannot be narrowed at all.
 fn narrowing_gives_up(router: Router(session, error, dependencies)) -> Bool {
-  option.is_some(router.fallback) || list.any(router.routes, is_wildcard_route)
-}
-
-/// The union of every branch's derived set. One branch that gives up on
-/// narrowing gives up for the whole tree — as does a tree fallback.
-pub fn tree_allowed_updates(
-  tree: RouterTree(session, error, dependencies),
-) -> List(String) {
-  use <- bool.guard(when: option.is_some(tree.fallback), return: [])
-  // A branch is asked whether it *gives up* on narrowing, not whether its
-  // derived set is empty: a branch with nothing registered contributes
-  // nothing, it does not force the whole tree to stop narrowing.
-  use <- bool.guard(
-    when: list.any(tree.branches, fn(b) { narrowing_gives_up(b.router) }),
-    return: [],
-  )
-
-  tree.branches
-  |> list.flat_map(fn(b) { allowed_updates(b.router) })
-  |> list.unique
-  |> list.sort(string.compare)
+  option.is_some(router.fallback)
+  || list.any(router.routes, is_wildcard_route)
+  || list.any(router.branches, fn(b) { narrowing_gives_up(b.router) })
 }
 
 /// A route that can match update kinds no static analysis can enumerate.
@@ -1867,26 +1785,25 @@ fn can_handle_update(
   keyed
   || list.any(router.routes, route_matches(_, update))
   || option.is_some(router.fallback)
+  || option.is_some(first_branch(router.branches, update, context))
 }
 
 /// Find the appropriate handler for an update
 /// The handler for an update, together with the label of the route it came
 /// from. The label is what `telega.update.stop` reports as `route`.
-fn find_handler(
+fn own_handler(
   router: Router(session, error, dependencies),
   update: Update,
   context: Context(session, error, dependencies),
-) -> #(String, Handler(session, error, dependencies)) {
+) -> Option(#(String, Handler(session, error, dependencies))) {
+  let from_routes = fn() { find_matching_route(router.routes, update) }
   case update {
     update.CommandUpdate(..) ->
       find_command_handler(router, update, context)
-      |> option.lazy_unwrap(fn() { find_route_or_fallback(router, update) })
-
+      |> option.lazy_or(from_routes)
     update.CallbackQueryUpdate(..) ->
-      find_callback_handler(router, update)
-      |> option.lazy_unwrap(fn() { find_route_or_fallback(router, update) })
-
-    _ -> find_route_or_fallback(router, update)
+      find_callback_handler(router, update) |> option.lazy_or(from_routes)
+    _ -> from_routes()
   }
 }
 
@@ -2034,20 +1951,6 @@ fn matches_callback_pattern(key: String, data: String) -> Bool {
 }
 
 /// Try routes, then fallback
-fn find_route_or_fallback(
-  router: Router(session, error, dependencies),
-  update: Update,
-) -> #(String, Handler(session, error, dependencies)) {
-  case find_matching_route(router.routes, update) {
-    Some(labelled) -> labelled
-    None ->
-      case router.fallback {
-        Some(handler) -> #("fallback", handler)
-        None -> #("unmatched", fn(ctx, _) { Ok(ctx) })
-      }
-  }
-}
-
 /// Find matching route for an update
 fn find_matching_route(
   routes: List(Route(session, error, dependencies)),

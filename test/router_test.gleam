@@ -512,7 +512,7 @@ pub fn router_composition_integration_test() {
 
   let c = make_ctx("initial")
   composed
-  |> router.handle_tree(c, start_update)
+  |> router.handle(c, start_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router1")
@@ -528,7 +528,7 @@ pub fn router_composition_integration_test() {
 
   let ctx2 = make_ctx("initial")
   composed
-  |> router.handle_tree(ctx2, help_update)
+  |> router.handle(ctx2, help_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router2")
@@ -667,7 +667,7 @@ pub fn compose_basic_test() {
     )
 
   let c = make_ctx("initial")
-  router.handle_tree(combined, c, start_update)
+  router.handle(combined, c, start_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router1_start")
@@ -682,7 +682,7 @@ pub fn compose_basic_test() {
     )
 
   let ctx2 = make_ctx("initial")
-  router.handle_tree(combined, ctx2, help_update)
+  router.handle(combined, ctx2, help_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router2_help")
@@ -713,7 +713,7 @@ pub fn compose_priority_test() {
     )
 
   let c = make_ctx("initial")
-  router.handle_tree(combined, c, test_update)
+  router.handle(combined, c, test_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router1_wins")
@@ -743,7 +743,7 @@ pub fn compose_fallback_test() {
     )
 
   let c = make_ctx("initial")
-  router.handle_tree(combined, c, text_update)
+  router.handle(combined, c, text_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("router2_fallback")
@@ -786,7 +786,7 @@ pub fn compose_catch_handler_test() {
     )
 
   let ctx1 = make_ctx("initial")
-  router.handle_tree(combined, ctx1, fail1_update)
+  router.handle(combined, ctx1, fail1_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("caught_by_router1")
@@ -801,7 +801,7 @@ pub fn compose_catch_handler_test() {
     )
 
   let ctx2 = make_ctx("initial")
-  router.handle_tree(combined, ctx2, fail2_update)
+  router.handle(combined, ctx2, fail2_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("caught_by_router2")
@@ -839,7 +839,7 @@ pub fn nested_compose_test() {
     )
 
   let ctx3 = make_ctx("initial")
-  router.handle_tree(nested_composed, ctx3, cmd3_update)
+  router.handle(nested_composed, ctx3, cmd3_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("handled_by_router3")
@@ -894,7 +894,7 @@ pub fn deeply_nested_compose_test() {
     )
 
   let ctx1 = make_ctx("init")
-  router.handle_tree(final_composed, ctx1, cmd1_update)
+  router.handle(final_composed, ctx1, cmd1_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("init_mw1_r1")
@@ -909,7 +909,7 @@ pub fn deeply_nested_compose_test() {
     )
 
   let ctx3 = make_ctx("init")
-  router.handle_tree(final_composed, ctx3, cmd3_update)
+  router.handle(final_composed, ctx3, cmd3_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("init_mw3_r3")
@@ -953,7 +953,7 @@ pub fn nested_compose_with_fallback_test() {
     )
 
   let c = make_ctx("initial")
-  router.handle_tree(nested_composed, c, unknown_update)
+  router.handle(nested_composed, c, unknown_update)
   |> should.be_ok()
   |> fn(ctx) { ctx.session }
   |> should.equal("fallback_router2")
@@ -1964,7 +1964,7 @@ pub fn allowed_updates_across_compose_test() {
     |> router.on_inline_query(ok_1)
 
   router.compose(a, b)
-  |> router.tree_allowed_updates
+  |> router.allowed_updates
   |> should.equal(["callback_query", "inline_query", "message"])
 }
 
@@ -2101,7 +2101,7 @@ pub fn composed_router_handles_callback_prefix_with_colon_test() {
 
   let composed = router.compose(router.new("other"), owner)
 
-  router.handle_tree(
+  router.handle(
     composed,
     make_ctx("initial"),
     factory.callback_query_update(data: "travel_to:gate"),
@@ -2147,12 +2147,12 @@ pub fn tree_appends_a_trailing_leaf_test() {
     )
 
   let assert Ok(ctx) =
-    router.handle_tree(composed, make_ctx("initial"), command_update("help"))
+    router.handle(composed, make_ctx("initial"), command_update("help"))
   ctx.session |> should.equal("help")
 
   // The earlier branches still get first go.
   let assert Ok(ctx) =
-    router.handle_tree(composed, make_ctx("initial"), command_update("a"))
+    router.handle(composed, make_ctx("initial"), command_update("a"))
   ctx.session |> should.equal("a")
 }
 
@@ -2169,10 +2169,10 @@ pub fn compose_middleware_wraps_every_branch_test() {
       router.new("a") |> router.on_command("a", marking_command_handler("a")),
       router.new("b") |> router.on_command("b", marking_command_handler("b")),
     )
-    |> router.use_middleware_on_tree(mark_middleware)
+    |> router.use_middleware(mark_middleware)
 
   let assert Ok(ctx) =
-    router.handle_tree(composed, make_ctx("initial"), command_update("b"))
+    router.handle(composed, make_ctx("initial"), command_update("b"))
   ctx.session |> should.equal("b+mw")
 }
 
@@ -2187,11 +2187,7 @@ pub fn compose_matches_command_addressed_to_the_bot_test() {
   // `/help@testbot` in a group: `can_handle_update` used to compare the raw
   // command, so the composed router declined and the update was dropped.
   let assert Ok(ctx) =
-    router.handle_tree(
-      composed,
-      make_ctx("initial"),
-      command_update("help@testbot"),
-    )
+    router.handle(composed, make_ctx("initial"), command_update("help@testbot"))
   ctx.session |> should.equal("a")
 }
 
@@ -2209,7 +2205,7 @@ pub fn scoped_router_does_not_swallow_other_routers_updates_test() {
     )
 
   let assert Ok(ctx) =
-    router.handle_tree(composed, make_ctx("initial"), command_update("ping"))
+    router.handle(composed, make_ctx("initial"), command_update("ping"))
   ctx.session |> should.equal("open")
 }
 

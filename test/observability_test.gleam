@@ -135,10 +135,11 @@ pub fn tree_branch_is_named_in_metadata_test() {
   let private =
     router.new("private")
     |> router.on_command("start", fn(ctx, _cmd) { Ok(ctx) })
-  let tree = router.tree() |> router.branch(router.is_private_chat(), private)
+  let tree =
+    router.new("tree") |> router.branch(router.is_private_chat(), private)
 
   use bot_subject, _calls <- test_handler.with_test_bot_advanced(
-    router_handler: fn(ctx, update) { router.handle_tree(tree, ctx, update) },
+    router_handler: fn(ctx, update) { router.handle(tree, ctx, update) },
     session_settings: test_context.session_settings(default: fn() { Nil }),
   )
   bot.handle_update(bot_subject:, update: factory.command_update("/start"))

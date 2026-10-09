@@ -13,7 +13,7 @@
 //// ```
 ////
 //// One constructor, a mode step, one terminal. Bare verbs are the pipeline
-//// (`dependencies`, `session`, `router`, `router_tree`, `polling`, `webhook`,
+//// (`dependencies`, `session`, `router`, `polling`, `webhook`,
 //// `start`, `supervised`); every option is a `with_*`. Coming from 2.x? See
 //// the [v3 migration guide](docs/migration-v3.html).
 ////
@@ -92,7 +92,7 @@ import telega/keyboard
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
 import telega/reply
-import telega/router.{type Routable, type Router, type RouterTree}
+import telega/router.{type Routable, type Router}
 import telega/telemetry
 import telega/update
 import telega/webhook_reply
@@ -589,24 +589,6 @@ pub fn router(
   router router_: Router(session, error, dependencies),
 ) -> TelegaBuilder(session, error, dependencies, Configured) {
   configured(TelegaBuilder(..builder, router: Some(router.routable(router_))))
-}
-
-/// Set a composed `router.RouterTree` that handles updates.
-///
-/// ```gleam
-/// let tree =
-///   router.tree()
-///   |> router.branch(router.is_private_chat(), private_router)
-///   |> router.branch(router.is_group_chat(), group_router)
-///
-/// telega.new(api_client)
-/// |> telega.router_tree(tree)
-/// ```
-pub fn router_tree(
-  builder: TelegaBuilder(session, error, dependencies, state),
-  tree tree: RouterTree(session, error, dependencies),
-) -> TelegaBuilder(session, error, dependencies, Configured) {
-  configured(TelegaBuilder(..builder, router: Some(router.tree_routable(tree))))
 }
 
 /// Receive updates by long polling (the default) with explicit settings.

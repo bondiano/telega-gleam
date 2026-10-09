@@ -168,7 +168,7 @@ pub fn ensure_owner(
 ///   |> router.use_middleware(roles.require_admin(cache:, on_denied: deny))
 ///   |> router.on_command("ban", ban_handler)
 ///
-/// // a RouterTree — pass it with `telega.with_router_tree`
+/// // composed — pass it with `telega.router`
 /// router.compose(main_router, admin)
 /// ```
 pub fn require_admin(
