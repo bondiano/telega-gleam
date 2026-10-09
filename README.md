@@ -101,8 +101,8 @@ The builder is one constructor plus a mode step: `telega.new(api_client)`, then
 `telega.polling(...)` (the default) or `telega.webhook(url:, path:, secret_token:)`,
 then `telega.start()`. Optional services and session go in before the router
 (`telega.dependencies`, `telega.session`), and everything else is a `with_*`
-setting. Coming from 2.x? See the
-[v3 migration guide](https://hexdocs.pm/telega/docs/migration-v3.html).
+setting. Coming from 3.x? See the
+[v4 migration guide](https://hexdocs.pm/telega/docs/migration-v4.html).
 
 ### Webhook instead of long polling
 

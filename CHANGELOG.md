@@ -11,6 +11,11 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+The storage contract, router composition, pre-handler annotations and the
+request parameter records changed shape, and a reply now lands in the topic it
+was asked in. Follow the [v4 migration guide](docs/migration-v4.md). Every
+ecosystem package is released at `4.0.0` alongside the core and requires it.
+
 ### Added
 
 - **`router.with_timeout`.** A deadline on a handler: past `ms` it is killed
