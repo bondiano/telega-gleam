@@ -6393,6 +6393,8 @@ pub fn default_bot_command_parameters() -> BotCommandParameters {
 
 pub type EditMessageTextParameters {
   EditMessageTextParameters(
+    /// Unique identifier of the business connection on behalf of which the message to be edited was sent
+    business_connection_id: Option(String),
     /// Required if _inline_message_id_ is not specified.
     /// Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)
     chat_id: Option(IntOrString),
@@ -6400,8 +6402,8 @@ pub type EditMessageTextParameters {
     message_id: Option(Int),
     /// Required if _chat_id_ and _message_id_ are not specified. Identifier of the inline message
     inline_message_id: Option(String),
-    /// New text of the message, 1-4096 characters after entities parsing
-    text: String,
+    /// New text of the message, 1-4096 characters after entity parsing; required if rich_message isn't specified
+    text: Option(String),
     /// Mode for parsing entities in the message text. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.
     parse_mode: Option(String),
     /// A JSON-serialized list of special entities that appear in message text, which can be specified instead of _parse_mode_
@@ -6410,6 +6412,8 @@ pub type EditMessageTextParameters {
     link_preview_options: Option(LinkPreviewOptions),
     /// A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards).
     reply_markup: Option(InlineKeyboardMarkup),
+    /// New rich content of the message; required if text isn't specified. Direct upload of new files and explicit upload of files by a URL isn't supported when an inline message is edited.
+    rich_message: Option(InputRichMessage),
   )
 }
 
@@ -6429,6 +6433,14 @@ pub type ForwardMessageParameters {
     message_thread_id: Option(Int),
     /// Protects the contents of the forwarded message from forwarding and saving
     protect_content: Option(Bool),
+    /// Identifier of the direct messages topic to which the message will be forwarded; required if the message is forwarded to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// New start timestamp for the forwarded video in the message
+    video_start_timestamp: Option(Int),
+    /// Unique identifier of the message effect to be added to the message; only available when forwarding to private chats
+    message_effect_id: Option(String),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6448,6 +6460,8 @@ pub type ForwardMessagesParameters {
     disable_notification: Option(Bool),
     /// Protects the contents of the forwarded messages from forwarding and saving
     protect_content: Option(Bool),
+    /// Identifier of the direct messages topic to which the messages will be forwarded; required if the messages are forwarded to a direct messages chat
+    direct_messages_topic_id: Option(Int),
   )
 }
 
@@ -6526,6 +6540,12 @@ pub type CopyMessageParameters {
     reply_parameters: Option(ReplyParameters),
     /// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove a reply keyboard or to force a reply from the user
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// Unique identifier of the message effect to be added to the message; only available when copying to private chats
+    message_effect_id: Option(String),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6548,6 +6568,8 @@ pub type CopyMessagesParameters {
     protect_content: Option(Bool),
     /// Pass True to copy the messages without their captions
     remove_caption: Option(Bool),
+    /// Identifier of the direct messages topic to which the messages will be sent; required if the messages are sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
   )
 }
 
@@ -6596,6 +6618,10 @@ pub type SendMessageParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6613,7 +6639,19 @@ pub type SendDiceParameters {
     /// Protects the contents of the sent message from forwarding
     protect_content: Option(Bool),
     /// Description of the message to reply to
-    reply_parameters: Option(ReplyKeyboardMarkup),
+    reply_parameters: Option(ReplyParameters),
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    business_connection_id: Option(String),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// Pass True to allow up to 1000 messages per second, ignoring broadcasting limits for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance.
+    allow_paid_broadcast: Option(Bool),
+    /// Unique identifier of the message effect to be added to the message; for private chats only
+    message_effect_id: Option(String),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
+    /// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove a reply keyboard or to force a reply from the user.
+    reply_markup: Option(SendMessageReplyMarkupParameters),
   )
 }
 
@@ -6664,6 +6702,10 @@ pub type SendPhotoParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6707,6 +6749,10 @@ pub type SendAudioParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6746,6 +6792,10 @@ pub type SendDocumentParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6799,6 +6849,10 @@ pub type SendVideoParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6846,6 +6900,10 @@ pub type SendAnimationParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6883,6 +6941,10 @@ pub type SendVoiceParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6918,6 +6980,10 @@ pub type SendVideoNoteParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -6942,6 +7008,8 @@ pub type SendMediaGroupParameters {
     message_effect_id: Option(String),
     /// Reply parameters
     reply_parameters: Option(ReplyParameters),
+    /// Identifier of the direct messages topic to which the messages will be sent; required if the messages are sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
   )
 }
 
@@ -6981,6 +7049,10 @@ pub type SendLocationParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -7024,6 +7096,10 @@ pub type SendVenueParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -7059,6 +7135,10 @@ pub type SendContactParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -7225,6 +7305,10 @@ pub type SendInvoiceParameters {
     reply_parameters: Option(ReplyParameters),
     /// Inline keyboard markup
     reply_markup: Option(InlineKeyboardMarkup),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -7306,6 +7390,10 @@ pub type SendStickerParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -7536,6 +7624,8 @@ pub type RestrictChatMemberParameters {
     permissions: ChatPermissions,
     /// Date when the user will be unbanned; Unix time. If user is banned for more than 366 days or less than 30 seconds from the current time they are considered to be banned forever.
     until_date: Option(Int),
+    /// Pass True if chat permissions are set independently. Otherwise, the can_send_other_messages and can_add_web_page_previews permissions will imply the can_send_messages, can_send_audios, can_send_documents, can_send_photos, can_send_videos, can_send_video_notes, and can_send_voice_notes permissions; the can_send_polls permission will imply the can_send_messages permission.
+    use_independent_chat_permissions: Option(Bool),
   )
 }
 
@@ -7581,6 +7671,10 @@ pub type PromoteChatMemberParameters {
     can_manage_topics: Option(Bool),
     /// Pass True if the administrator can send welcome messages to new chat members (Bot API 10.3)
     can_send_welcome_messages: Option(Bool),
+    /// Pass True if the administrator can manage direct messages within the channel and decline suggested posts; for channels only
+    can_manage_direct_messages: Option(Bool),
+    /// Pass True if the administrator can edit the tags of regular members; for groups and supergroups only
+    can_manage_tags: Option(Bool),
   )
 }
 
@@ -7679,9 +7773,9 @@ pub type CreateChatSubscriptionInviteLinkParameters {
     /// Invite link name; 0-32 characters
     name: Option(String),
     /// The number of seconds the subscription will be active for before the next payment. Currently, it must always be 2592000 (30 days).
-    period: Int,
-    /// The amount of Telegram Stars a user must pay initially and after each subsequent subscription period to be a member of the chat; 1-2500
-    amount: Int,
+    subscription_period: Int,
+    /// The amount of Telegram Stars a user must pay initially and after each subsequent subscription period to be a member of the chat; 1-10000
+    subscription_price: Int,
   )
 }
 
@@ -8644,10 +8738,14 @@ pub type GetBusinessAccountGiftsParameters {
     exclude_saved: Option(Bool),
     /// Pass True to exclude gifts that can be purchased an unlimited number of times
     exclude_unlimited: Option(Bool),
-    /// Pass True to exclude gifts that can be purchased a limited number of times
-    exclude_limited: Option(Bool),
+    /// Pass True to exclude gifts that can be purchased a limited number of times and can be upgraded to unique
+    exclude_limited_upgradable: Option(Bool),
+    /// Pass True to exclude gifts that can be purchased a limited number of times and can't be upgraded to unique
+    exclude_limited_non_upgradable: Option(Bool),
     /// Pass True to exclude unique gifts
     exclude_unique: Option(Bool),
+    /// Pass True to exclude gifts that were assigned from the TON blockchain and can't be resold or transferred in Telegram
+    exclude_from_blockchain: Option(Bool),
     /// Pass True to sort results by gift price instead of send date. Sorting is applied before pagination.
     sort_by_price: Option(Bool),
     /// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
@@ -8754,18 +8852,10 @@ pub type DeleteStoryParameters {
 /// Parameters for `answerGuestQuery` (Bot API 10.0).
 pub type AnswerGuestQueryParameters {
   AnswerGuestQueryParameters(
-    /// Unique identifier of the guest query as returned in `Message.guest_query_id`
+    /// Unique identifier for the query to be answered
     guest_query_id: String,
-    /// Text of the message to be sent, 0-4096 characters
-    text: String,
-    /// Optional. Mode for parsing entities in the message text
-    parse_mode: Option(String),
-    /// Optional. A JSON-serialized list of special entities that appear in the message text
-    entities: Option(List(MessageEntity)),
-    /// Optional. Link preview generation options for the message
-    link_preview_options: Option(LinkPreviewOptions),
-    /// Optional. Additional interface options. A JSON-serialized object for an inline keyboard
-    reply_markup: Option(InlineKeyboardMarkup),
+    /// A JSON-serialized object describing the message to be sent
+    result: InlineQueryResult,
   )
 }
 
@@ -8806,8 +8896,8 @@ pub type SendLivePhotoParameters {
     message_thread_id: Option(Int),
     /// Information about the suggested post parameters
     direct_messages_topic_id: Option(Int),
-    /// Video of the live photo to send. Pass a file_id or "attach://<file_attach_name>". URLs are not supported.
-    media: FileOrString,
+    /// Live photo video to send. The video must be no longer than 10 seconds and must not exceed 10 MB in size. Pass a file_id as String to send a video that exists on the Telegram servers (recommended) or upload a new video using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files. Sending live photos by a URL is currently unsupported.
+    live_photo: FileOrString,
     /// The static photo to send. Pass a file_id or "attach://<file_attach_name>". URLs are not supported.
     photo: FileOrString,
     /// Optional. Photo caption, 0-1024 characters after entities parsing
@@ -8835,6 +8925,8 @@ pub type SendLivePhotoParameters {
     /// Optional. A JSON-serialized object containing the parameters of the
     /// ephemeral message to send; for group chats only (Bot API 10.3)
     ephemeral_message_parameters: Option(EphemeralMessageParameters),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -9035,6 +9127,12 @@ pub type SendPaidMediaParameters {
     reply_parameters: Option(ReplyParameters),
     /// Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove a reply keyboard or to force a reply from the user
     reply_markup: Option(SendMessageReplyMarkupParameters),
+    /// Unique identifier for the target message thread (topic) of a forum; for forum supergroups and private chats of bots with forum topic mode enabled only
+    message_thread_id: Option(Int),
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    direct_messages_topic_id: Option(Int),
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    suggested_post_parameters: Option(SuggestedPostParameters),
   )
 }
 
@@ -9058,24 +9156,29 @@ pub fn new_send_paid_media_parameters(
     allow_paid_broadcast: None,
     reply_parameters: None,
     reply_markup: None,
+    message_thread_id: None,
+    direct_messages_topic_id: None,
+    suggested_post_parameters: None,
   )
 }
 
 /// Parameters for `getManagedBotAccessSettings` (Bot API 10.0).
 pub type GetManagedBotAccessSettingsParameters {
   GetManagedBotAccessSettingsParameters(
-    /// Unique identifier of the managed bot
-    bot_id: Int,
+    /// User identifier of the managed bot whose access settings will be returned
+    user_id: Int,
   )
 }
 
 /// Parameters for `setManagedBotAccessSettings` (Bot API 10.0).
 pub type SetManagedBotAccessSettingsParameters {
   SetManagedBotAccessSettingsParameters(
-    /// Unique identifier of the managed bot
-    bot_id: Int,
-    /// The new access settings of the bot
-    settings: BotAccessSettings,
+    /// User identifier of the managed bot whose access settings will be changed
+    user_id: Int,
+    /// Pass True if only selected users can access the bot. The bot's owner can always access it.
+    is_access_restricted: Bool,
+    /// A JSON-serialized list of up to 10 identifiers of users who will have access to the bot in addition to its owner. Ignored if is_access_restricted is False.
+    added_user_ids: Option(List(Int)),
   )
 }
 
@@ -9084,8 +9187,8 @@ pub type GetUserPersonalChatMessagesParameters {
   GetUserPersonalChatMessagesParameters(
     /// Unique identifier of the target user
     user_id: Int,
-    /// Identifiers of the messages to retrieve from the user's personal chat (1-100)
-    message_ids: List(Int),
+    /// The maximum number of messages to return; 1-20
+    limit: Int,
   )
 }
 

@@ -102,6 +102,8 @@ pub fn with_text(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -134,6 +136,8 @@ pub fn with_markup(
       message_effect_id: None,
       allow_paid_broadcast: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -172,6 +176,8 @@ pub fn with_formatted(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -206,6 +212,8 @@ pub fn with_html(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -239,6 +247,8 @@ pub fn with_markdown(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -272,6 +282,8 @@ pub fn with_markdown_v2(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -303,6 +315,8 @@ pub fn with_formatted_markup(
       allow_paid_broadcast: None,
       reply_parameters: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -324,6 +338,12 @@ pub fn with_dice(
         disable_notification: None,
         protect_content: None,
         reply_parameters: None,
+        business_connection_id: None,
+        direct_messages_topic_id: None,
+        allow_paid_broadcast: None,
+        message_effect_id: None,
+        suggested_post_parameters: None,
+        reply_markup: None,
       )
     })
 
@@ -367,6 +387,8 @@ pub fn with_photo(
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -433,7 +455,7 @@ pub fn edit_text_formatted(
 
   let parameters =
     EditMessageTextParameters(
-      text:,
+      text: Some(text),
       message_id: Some(message_id),
       parse_mode: Some(format.parse_mode_to_string(parse_mode)),
       chat_id: Some(types.Int(ctx.update.chat_id)),
@@ -441,6 +463,8 @@ pub fn edit_text_formatted(
       entities: None,
       link_preview_options: None,
       inline_message_id: None,
+      business_connection_id: None,
+      rich_message: None,
     )
 
   api.edit_message_text(ctx.config.api_client, parameters)
@@ -527,6 +551,8 @@ pub fn with_ephemeral(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -557,6 +583,8 @@ pub fn with_ephemeral_markup(
       message_effect_id: None,
       allow_paid_broadcast: None,
       reply_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -685,6 +713,8 @@ pub fn with_invoice(
       need_name: None,
       need_phone_number: None,
       need_shipping_address: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -711,6 +741,8 @@ pub fn with_sticker(
       emoji: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -752,6 +784,7 @@ pub fn with_media_group(
       message_effect_id: None,
       reply_parameters: None,
       allow_paid_broadcast: None,
+      direct_messages_topic_id: None,
     ),
   )
 }
@@ -795,6 +828,9 @@ pub fn with_paid_media(
       allow_paid_broadcast: None,
       reply_parameters: None,
       reply_markup: None,
+      message_thread_id: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
@@ -954,7 +990,7 @@ fn edit_callback(
   api.edit_message_text(
     ctx.config.api_client,
     EditMessageTextParameters(
-      text:,
+      text: Some(text),
       chat_id:,
       message_id:,
       inline_message_id: query.inline_message_id,
@@ -962,6 +998,8 @@ fn edit_callback(
       entities: None,
       link_preview_options: None,
       reply_markup:,
+      business_connection_id: None,
+      rich_message: None,
     ),
   )
 }
@@ -1098,6 +1136,8 @@ fn base_message_parameters(
     reply_parameters: None,
     reply_markup: None,
     ephemeral_message_parameters: None,
+    direct_messages_topic_id: None,
+    suggested_post_parameters: None,
   )
 }
 
@@ -1261,7 +1301,7 @@ fn edit_stream_message(
   api.edit_message_text(
     ctx.config.api_client,
     EditMessageTextParameters(
-      text:,
+      text: Some(text),
       chat_id: Some(types.Int(ctx.update.chat_id)),
       message_id: Some(message_id),
       inline_message_id: None,
@@ -1269,6 +1309,8 @@ fn edit_stream_message(
       entities: None,
       link_preview_options: None,
       reply_markup: None,
+      business_connection_id: None,
+      rich_message: None,
     ),
   )
 }

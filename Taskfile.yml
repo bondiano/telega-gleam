@@ -47,7 +47,8 @@ tasks:
       Hashes every generated file, regenerates in place, and compares — so a
       hand edit to a generated file, or a spec bump nobody regenerated, cannot
       pass CI. Also runs the generator's own checks: every spec method has a
-      wrapper in `api.gleam`, and every method is classified as (non-)idempotent.
+      wrapper in `api.gleam`, every hand-written `*Parameters` record has the
+      spec's fields, and every method is classified as (non-)idempotent.
     vars:
       GENERATED: >-
         src/telega/model/types.gleam src/telega/model/decoder.gleam

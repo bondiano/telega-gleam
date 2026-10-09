@@ -61,6 +61,29 @@ under the release that shipped them.
 
 ### Changed
 
+- **Request parameter records match Bot API 10.3, and codegen keeps them so.**
+  `task codegen` / CI now compares every hand-written `*Parameters` record's
+  field names with the spec's method fields and fails on drift. Bringing the
+  records up to date added `direct_messages_topic_id` and
+  `suggested_post_parameters` to every `send*`, `forward*` and `copy*` record
+  (plus `message_effect_id` / `video_start_timestamp` where the spec has them),
+  `use_independent_chat_permissions` to `RestrictChatMemberParameters`,
+  `can_manage_direct_messages` / `can_manage_tags` to
+  `PromoteChatMemberParameters`, and `business_connection_id` / `rich_message`
+  to `EditMessageTextParameters`, whose `text` is now `Option(String)`.
+  `SendDiceParameters` gained the six fields it was missing and its
+  `reply_parameters` is a `ReplyParameters` (it was typed as a reply keyboard).
+  **Breaking** renames to match the spec: `SendLivePhotoParameters.media` →
+  `live_photo`; `CreateChatSubscriptionInviteLinkParameters.period` / `amount`
+  → `subscription_period` / `subscription_price`;
+  `GetUserPersonalChatMessagesParameters.message_ids` → `limit`;
+  `GetManagedBotAccessSettingsParameters.bot_id` → `user_id`;
+  `SetManagedBotAccessSettingsParameters` is `user_id`, `is_access_restricted`,
+  `added_user_ids`; `AnswerGuestQueryParameters` is `guest_query_id` plus
+  `result: InlineQueryResult`; `GetBusinessAccountGiftsParameters.exclude_limited`
+  split into `exclude_limited_upgradable` / `exclude_limited_non_upgradable`,
+  with `exclude_from_blockchain` added. Every record constructed by hand needs
+  the new fields (`None`).
 - **`RouterTree` is gone; a `Router` composes.** `append` and `branch` add
   branches to any router, consulted in order after its own routes and before
   its `fallback`; `compose` / `compose_many` return a `Router`. **Breaking:**

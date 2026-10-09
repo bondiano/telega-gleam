@@ -2020,6 +2020,8 @@ pub fn wait_choice(
         keyboard,
       )),
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     )
 
   case api.send_message(ctx.config.api_client, send_params) {

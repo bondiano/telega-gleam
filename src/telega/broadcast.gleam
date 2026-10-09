@@ -279,6 +279,8 @@ pub fn send_text(
         reply_parameters: None,
         reply_markup: None,
         ephemeral_message_parameters: None,
+        direct_messages_topic_id: None,
+        suggested_post_parameters: None,
       ),
     )
   })

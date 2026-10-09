@@ -7856,7 +7856,7 @@ pub fn encode_edit_message_text_parameters(
     "inline_message_id",
     json.nullable(params.inline_message_id, json.string),
   )
-  let text = #("text", json.string(params.text))
+  let text = #("text", json.nullable(params.text, json.string))
   let parse_mode = #(
     "parse_mode",
     json.nullable(params.parse_mode, json.string),
@@ -7883,6 +7883,14 @@ pub fn encode_edit_message_text_parameters(
     entities,
     link_preview_options,
     reply_markup,
+    #(
+      "rich_message",
+      json.nullable(params.rich_message, encode_input_rich_message),
+    ),
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
   ])
 }
 
@@ -7901,6 +7909,22 @@ pub fn encode_forward_message_parameters(
     ),
     #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
     #("protect_content", json.nullable(params.protect_content, json.bool)),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "video_start_timestamp",
+      json.nullable(params.video_start_timestamp, json.int),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -7931,6 +7955,13 @@ pub fn encode_forward_messages_parameters(
       "protect_content",
       json.nullable(forward_messages_parameters.protect_content, json.bool),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(
+        forward_messages_parameters.direct_messages_topic_id,
+        json.int,
+      ),
+    ),
   ])
 }
 
@@ -7953,7 +7984,7 @@ pub fn encode_send_dice_parameters(params: SendDiceParameters) -> Json {
   )
   let reply_parameters = #(
     "reply_parameters",
-    json.nullable(params.reply_parameters, encode_reply_keyboard_markup),
+    json.nullable(params.reply_parameters, encode_reply_parameters),
   )
 
   json_object_filter_nulls([
@@ -7963,6 +7994,33 @@ pub fn encode_send_dice_parameters(params: SendDiceParameters) -> Json {
     disable_notification,
     protect_content,
     reply_parameters,
+    #(
+      "business_connection_id",
+      json.nullable(params.business_connection_id, json.string),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "allow_paid_broadcast",
+      json.nullable(params.allow_paid_broadcast, json.bool),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
+    #(
+      "reply_markup",
+      json.nullable(
+        params.reply_markup,
+        encode_send_message_reply_markup_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8061,6 +8119,17 @@ pub fn encode_send_message_parameters(
     reply_parameters,
     reply_markup,
     ephemeral_message_parameters,
+    #(
+      "direct_messages_topic_id",
+      json.nullable(send_message_parameters.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        send_message_parameters.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8187,6 +8256,18 @@ pub fn encode_copy_message_parameters(params: CopyMessageParameters) -> Json {
         encode_send_message_reply_markup_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #("message_effect_id", json.nullable(params.message_effect_id, json.string)),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8202,6 +8283,10 @@ pub fn encode_copy_messages_parameters(params: CopyMessagesParameters) -> Json {
     ),
     #("protect_content", json.nullable(params.protect_content, json.bool)),
     #("remove_caption", json.nullable(params.remove_caption, json.bool)),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
   ])
 }
 
@@ -8254,6 +8339,17 @@ pub fn encode_send_photo_parameters(params: SendPhotoParameters) -> Json {
       json.nullable(
         params.ephemeral_message_parameters,
         encode_ephemeral_message_parameters,
+      ),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
       ),
     ),
   ])
@@ -8311,6 +8407,17 @@ pub fn encode_send_audio_parameters(params: SendAudioParameters) -> Json {
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8365,6 +8472,17 @@ pub fn encode_send_document_parameters(params: SendDocumentParameters) -> Json {
       json.nullable(
         params.ephemeral_message_parameters,
         encode_ephemeral_message_parameters,
+      ),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
       ),
     ),
   ])
@@ -8430,6 +8548,17 @@ pub fn encode_send_video_parameters(params: SendVideoParameters) -> Json {
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8492,6 +8621,17 @@ pub fn encode_send_animation_parameters(
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8544,6 +8684,17 @@ pub fn encode_send_voice_parameters(params: SendVoiceParameters) -> Json {
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8591,6 +8742,17 @@ pub fn encode_send_video_note_parameters(
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8620,6 +8782,10 @@ pub fn encode_send_media_group_parameters(
     #(
       "reply_parameters",
       json.nullable(params.reply_parameters, encode_reply_parameters),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
     ),
   ])
 }
@@ -8674,6 +8840,17 @@ pub fn encode_send_location_parameters(params: SendLocationParameters) -> Json {
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8723,6 +8900,17 @@ pub fn encode_send_venue_parameters(params: SendVenueParameters) -> Json {
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -8766,6 +8954,17 @@ pub fn encode_send_contact_parameters(params: SendContactParameters) -> Json {
       json.nullable(
         params.ephemeral_message_parameters,
         encode_ephemeral_message_parameters,
+      ),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
       ),
     ),
   ])
@@ -8964,6 +9163,17 @@ pub fn encode_send_invoice_parameters(params: SendInvoiceParameters) -> Json {
       "reply_markup",
       json.nullable(params.reply_markup, encode_inline_keyboard_markup),
     ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
@@ -9054,6 +9264,17 @@ pub fn encode_send_sticker_parameters(params: SendStickerParameters) -> Json {
       json.nullable(
         params.ephemeral_message_parameters,
         encode_ephemeral_message_parameters,
+      ),
+    ),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
       ),
     ),
   ])
@@ -9317,6 +9538,10 @@ pub fn encode_restrict_chat_member_parameters(
     #("user_id", json.int(params.user_id)),
     #("permissions", encode_chat_permissions(params.permissions)),
     #("until_date", json.nullable(params.until_date, json.int)),
+    #(
+      "use_independent_chat_permissions",
+      json.nullable(params.use_independent_chat_permissions, json.bool),
+    ),
   ])
 }
 
@@ -9359,6 +9584,11 @@ pub fn encode_promote_chat_member_parameters(
       "can_send_welcome_messages",
       json.nullable(params.can_send_welcome_messages, json.bool),
     ),
+    #(
+      "can_manage_direct_messages",
+      json.nullable(params.can_manage_direct_messages, json.bool),
+    ),
+    #("can_manage_tags", json.nullable(params.can_manage_tags, json.bool)),
   ])
 }
 
@@ -9462,8 +9692,8 @@ pub fn encode_create_chat_subscription_invite_link_parameters(
   json_object_filter_nulls([
     #("chat_id", encode_int_or_string(params.chat_id)),
     #("name", json.nullable(params.name, json.string)),
-    #("period", json.int(params.period)),
-    #("amount", json.int(params.amount)),
+    #("subscription_period", json.int(params.subscription_period)),
+    #("subscription_price", json.int(params.subscription_price)),
   ])
 }
 
@@ -10503,8 +10733,19 @@ pub fn encode_get_business_account_gifts_parameters(
     #("exclude_unsaved", json.nullable(params.exclude_unsaved, json.bool)),
     #("exclude_saved", json.nullable(params.exclude_saved, json.bool)),
     #("exclude_unlimited", json.nullable(params.exclude_unlimited, json.bool)),
-    #("exclude_limited", json.nullable(params.exclude_limited, json.bool)),
+    #(
+      "exclude_limited_upgradable",
+      json.nullable(params.exclude_limited_upgradable, json.bool),
+    ),
+    #(
+      "exclude_limited_non_upgradable",
+      json.nullable(params.exclude_limited_non_upgradable, json.bool),
+    ),
     #("exclude_unique", json.nullable(params.exclude_unique, json.bool)),
+    #(
+      "exclude_from_blockchain",
+      json.nullable(params.exclude_from_blockchain, json.bool),
+    ),
     #("sort_by_price", json.nullable(params.sort_by_price, json.bool)),
     #("offset", json.nullable(params.offset, json.string)),
     #("limit", json.nullable(params.limit, json.int)),
@@ -10609,20 +10850,7 @@ pub fn encode_answer_guest_query_parameters(
 ) -> Json {
   json_object_filter_nulls([
     #("guest_query_id", json.string(params.guest_query_id)),
-    #("text", json.string(params.text)),
-    #("parse_mode", json.nullable(params.parse_mode, json.string)),
-    #(
-      "entities",
-      json.nullable(params.entities, json.array(_, encode_message_entity)),
-    ),
-    #(
-      "link_preview_options",
-      json.nullable(params.link_preview_options, encode_link_preview_options),
-    ),
-    #(
-      "reply_markup",
-      json.nullable(params.reply_markup, encode_inline_keyboard_markup),
-    ),
+    #("result", encode_inline_query_result(params.result)),
   ])
 }
 
@@ -10661,7 +10889,7 @@ pub fn encode_send_live_photo_parameters(
       "direct_messages_topic_id",
       json.nullable(params.direct_messages_topic_id, json.int),
     ),
-    #("media", encode_file_or_string(params.media)),
+    #("live_photo", encode_file_or_string(params.live_photo)),
     #("photo", encode_file_or_string(params.photo)),
     #("caption", json.nullable(params.caption, json.string)),
     #("parse_mode", json.nullable(params.parse_mode, json.string)),
@@ -10705,21 +10933,32 @@ pub fn encode_send_live_photo_parameters(
         encode_ephemeral_message_parameters,
       ),
     ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
+      ),
+    ),
   ])
 }
 
 pub fn encode_get_managed_bot_access_settings_parameters(
   params: GetManagedBotAccessSettingsParameters,
 ) -> Json {
-  json_object_filter_nulls([#("bot_id", json.int(params.bot_id))])
+  json_object_filter_nulls([#("user_id", json.int(params.user_id))])
 }
 
 pub fn encode_set_managed_bot_access_settings_parameters(
   params: SetManagedBotAccessSettingsParameters,
 ) -> Json {
   json_object_filter_nulls([
-    #("bot_id", json.int(params.bot_id)),
-    #("settings", encode_bot_access_settings(params.settings)),
+    #("user_id", json.int(params.user_id)),
+    #("is_access_restricted", json.bool(params.is_access_restricted)),
+    #(
+      "added_user_ids",
+      json.nullable(params.added_user_ids, json.array(_, json.int)),
+    ),
   ])
 }
 
@@ -10728,7 +10967,7 @@ pub fn encode_get_user_personal_chat_messages_parameters(
 ) -> Json {
   json_object_filter_nulls([
     #("user_id", json.int(params.user_id)),
-    #("message_ids", json.array(params.message_ids, json.int)),
+    #("limit", json.int(params.limit)),
   ])
 }
 
@@ -10777,6 +11016,18 @@ pub fn encode_send_paid_media_parameters(
       json.nullable(
         params.reply_markup,
         encode_send_message_reply_markup_parameters,
+      ),
+    ),
+    #("message_thread_id", json.nullable(params.message_thread_id, json.int)),
+    #(
+      "direct_messages_topic_id",
+      json.nullable(params.direct_messages_topic_id, json.int),
+    ),
+    #(
+      "suggested_post_parameters",
+      json.nullable(
+        params.suggested_post_parameters,
+        encode_suggested_post_parameters,
       ),
     ),
   ])

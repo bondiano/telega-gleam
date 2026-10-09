@@ -77,6 +77,8 @@ pub fn send_audio_reports_an_api_error_test() {
       reply_parameters: None,
       reply_markup: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
   |> should.equal(

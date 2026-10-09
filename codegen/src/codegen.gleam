@@ -189,10 +189,24 @@ fn raw_type_decoder() -> decode.Decoder(RawType) {
   ))
 }
 
+type RawMethod {
+  RawMethod(fields: Option(List(RawField)))
+}
+
+fn raw_method_decoder() -> decode.Decoder(RawMethod) {
+  use fields <- decode.optional_field(
+    "fields",
+    None,
+    decode.optional(decode.list(raw_field_decoder())),
+  )
+  decode.success(RawMethod(fields:))
+}
+
 type Spec {
   Spec(
     version: String,
     types: Dict(String, RawType),
+    methods: Dict(String, RawMethod),
     method_names: List(String),
   )
 }
@@ -205,11 +219,12 @@ fn spec_decoder() -> decode.Decoder(Spec) {
   )
   use methods <- decode.field(
     "methods",
-    decode.dict(decode.string, decode.success(Nil)),
+    decode.dict(decode.string, raw_method_decoder()),
   )
   decode.success(Spec(
     version:,
     types:,
+    methods:,
     method_names: dict.keys(methods) |> list.sort(string.compare),
   ))
 }
@@ -434,6 +449,90 @@ fn check_api_coverage(method_names: List(String)) -> Result(Int, String) {
           stale,
         ),
       )
+  }
+}
+
+/// Methods `api.gleam` wraps with one or two plain arguments instead of a
+/// `*Parameters` record. Anything else with parameters must have the record.
+const methods_without_parameters_record = [
+  "deleteMyCommands", "deleteWebhook", "getChat", "getFile",
+  "getManagedBotToken", "getMyCommands", "replaceManagedBotToken",
+  "setMyCommands",
+]
+
+/// Check that every hand-written `*Parameters` record in `types.gleam` has
+/// exactly the fields the spec gives its method — no more, no fewer.
+///
+/// The records are hand-written, so a new optional parameter in a Bot API
+/// release would otherwise go unnoticed until a user asked for it. Field
+/// *types* are not compared; names are what drift.
+fn check_parameter_fields(
+  methods: Dict(String, RawMethod),
+  types_suffix: String,
+) -> Result(Int, String) {
+  let skipped = set.from_list(methods_without_parameters_record)
+  let with_record =
+    methods
+    |> dict.to_list
+    |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
+    |> list.filter_map(fn(entry) {
+      let #(name, method) = entry
+      case method.fields, set.contains(skipped, name) {
+        None, _ | Some([]), _ | Some(_), True -> Error(Nil)
+        Some(fields), False ->
+          Ok(#(justin.pascal_case(name) <> "Parameters", fields))
+      }
+    })
+  let problems =
+    list.filter_map(with_record, fn(entry) {
+      let #(record, fields) = entry
+      case record_field_names(types_suffix, record) {
+        Error(Nil) -> Ok(record <> ": no such record in types.gleam")
+        Ok(have) -> {
+          let want = list.map(fields, fn(f) { map_field_name(f.name) })
+          let missing = list.filter(want, fn(w) { !list.contains(have, w) })
+          let stale = list.filter(have, fn(h) { !list.contains(want, h) })
+          case missing, stale {
+            [], [] -> Error(Nil)
+            _, _ ->
+              Ok(
+                record
+                <> name_list(" missing from the record:", missing)
+                <> name_list(" not in the spec:", stale),
+              )
+          }
+        }
+      }
+    })
+  case problems {
+    [] -> Ok(list.length(with_record))
+    _ ->
+      Error(
+        "parameter records disagree with the spec:\n  "
+        <> string.join(problems, "\n  "),
+      )
+  }
+}
+
+/// The field names of `pub type <record> { <record>( ... ) }` in `source`.
+fn record_field_names(
+  source: String,
+  record: String,
+) -> Result(List(String), Nil) {
+  let assert Ok(block_re) =
+    regexp.from_string("(?s)pub type " <> record <> " \\{\n(.*?)\n\\}")
+  let assert Ok(field_re) = regexp.from_string("(?m)^\\s+(\\w+):")
+  case regexp.scan(block_re, source) {
+    [regexp.Match(submatches: [Some(body)], ..), ..] ->
+      regexp.scan(field_re, body)
+      |> list.filter_map(fn(m) {
+        case m.submatches {
+          [Some(name)] -> Ok(name)
+          _ -> Error(Nil)
+        }
+      })
+      |> Ok
+    _ -> Error(Nil)
   }
 }
 
@@ -1137,7 +1236,8 @@ fn replace_generated_block(path: String, body: String) -> Result(Nil, String) {
 
 // --- File assembly ----------------------------------------------------------
 
-const types_header = "//// This module contains all types from [Telegram Bot API](https://core.telegram.org/bots/api).
+const types_header =
+  "//// This module contains all types from [Telegram Bot API](https://core.telegram.org/bots/api).
 ////
 //// Most of types named in the same way as in the official documentation.
 //// But some types are renamed to more verbose names for using from Gleam code (ex. `type` -> `type_`).
@@ -1146,7 +1246,8 @@ import gleam/option.{type Option, None}
 
 "
 
-const decoder_header = "//// This module contains all decoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
+const decoder_header =
+  "//// This module contains all decoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/dynamic/decode
 import gleam/int
@@ -1154,7 +1255,8 @@ import gleam/option.{None}
 
 "
 
-const method_info_header = "//// Per-method facts derived from the Telegram Bot API spec.
+const method_info_header =
+  "//// Per-method facts derived from the Telegram Bot API spec.
 ////
 //// The only fact so far is **idempotency**: whether replaying a method after a
 //// transport error or a 5xx is safe. `telega/client`'s retry policy reads it,
@@ -1167,7 +1269,8 @@ import gleam/result
 
 "
 
-const update_info_header = "//// Per-update-kind facts derived from the Telegram Bot API spec.
+const update_info_header =
+  "//// Per-update-kind facts derived from the Telegram Bot API spec.
 ////
 //// The optional fields of the spec's `Update` type are three things at once:
 //// the names Telegram accepts in `allowed_updates`, the payloads
@@ -1178,7 +1281,8 @@ const update_info_header = "//// Per-update-kind facts derived from the Telegram
 
 "
 
-const encoder_header = "//// This module contains all encoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
+const encoder_header =
+  "//// This module contains all encoders for types [Telegram Bot API](https://core.telegram.org/bots/api).
 
 import gleam/int
 import gleam/json.{type Json}
@@ -1387,6 +1491,7 @@ fn run() -> Result(String, String) {
 
   // --- api.gleam: checked, not generated ---
   use wrapped <- result.try(check_api_coverage(spec.method_names))
+  use records <- result.try(check_parameter_fields(spec.methods, types_suffix))
 
   Ok(
     "Generated model layer for "
@@ -1403,7 +1508,9 @@ fn run() -> Result(String, String) {
     <> int_to_string(list.length(update_fields))
     <> " update kinds, "
     <> int_to_string(wrapped)
-    <> " method wrappers checked.",
+    <> " method wrappers and "
+    <> int_to_string(records)
+    <> " parameter records checked.",
   )
 }
 

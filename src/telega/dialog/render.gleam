@@ -224,6 +224,8 @@ fn send_window(
       allow_paid_broadcast: None,
       reply_parameters: None,
       ephemeral_message_parameters: None,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
   |> result.map(fn(message) { message.message_id })
@@ -244,11 +246,13 @@ fn edit_window(
       chat_id: Some(types.Int(chat_id)),
       message_id: Some(message_id),
       inline_message_id: None,
-      text:,
+      text: Some(text),
       parse_mode: Some(parse_mode),
       entities: None,
       link_preview_options: None,
       reply_markup: markup,
+      business_connection_id: None,
+      rich_message: None,
     ),
   )
   |> result.map(fn(message) { message.message_id })
@@ -293,6 +297,8 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
+          direct_messages_topic_id: None,
+          suggested_post_parameters: None,
         ),
       )
     dialog_types.VideoMedia(media:, has_spoiler:) ->
@@ -322,6 +328,8 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
+          direct_messages_topic_id: None,
+          suggested_post_parameters: None,
         ),
       )
     dialog_types.AnimationMedia(media:) ->
@@ -348,6 +356,8 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
+          direct_messages_topic_id: None,
+          suggested_post_parameters: None,
         ),
       )
     dialog_types.DocumentMedia(media:) ->
@@ -370,6 +380,8 @@ fn send_media_window(
           message_effect_id: None,
           reply_parameters: None,
           ephemeral_message_parameters: None,
+          direct_messages_topic_id: None,
+          suggested_post_parameters: None,
         ),
       )
   }

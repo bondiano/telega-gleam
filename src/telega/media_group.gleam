@@ -782,6 +782,7 @@ fn parameters(chat_id: String, group: MediaGroupBuilder) {
     allow_paid_broadcast: None,
     message_effect_id: None,
     reply_parameters: None,
+    direct_messages_topic_id: None,
   )
 }
 

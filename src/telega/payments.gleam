@@ -361,6 +361,8 @@ pub fn send(
       message_effect_id: None,
       reply_parameters: None,
       reply_markup: invoice.reply_markup,
+      direct_messages_topic_id: None,
+      suggested_post_parameters: None,
     ),
   )
 }
