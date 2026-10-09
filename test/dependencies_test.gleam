@@ -11,7 +11,7 @@ import gleeunit
 import gleeunit/should
 
 import telega
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/reply
 import telega/router
@@ -39,17 +39,14 @@ fn greet_handler(
 
 pub fn handler_reads_service_from_dependencies_test() {
   let #(client, _calls) = mock.message_client()
-  let cfg = test_context.config_with_client(client)
 
   // Inject a mock service via dependencies.
   let ctx =
-    Context(
-      ..test_context.context_with_dependencies(
-        session: Nil,
-        dependencies: Service(greeting: "hello from dependencies", calls: 0),
-      ),
-      config: cfg,
+    test_context.context_with_dependencies(
+      session: Nil,
+      dependencies: Service(greeting: "hello from dependencies", calls: 0),
     )
+    |> test_context.with_client(client)
 
   ctx.dependencies.greeting
   |> should.equal("hello from dependencies")
@@ -98,7 +95,7 @@ pub fn dependencies_is_independent_of_session_test() {
       session: 0,
       dependencies: Service(greeting: "svc", calls: 7),
     )
-  let next = Context(..ctx, session: 99)
+  let assert Ok(next) = bot.next_session(ctx, 99)
 
   next.session |> should.equal(99)
   next.dependencies.calls |> should.equal(7)

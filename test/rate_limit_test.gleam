@@ -2,7 +2,7 @@ import gleam/erlang/process
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/router
 import telega/testing/context as test_context
@@ -19,12 +19,12 @@ fn make_router(limit limit: Int, window_ms window_ms: Int) {
       limit:,
       window_ms:,
       on_limit: fn(ctx: Context(String, TelegaError, Nil)) {
-        Ok(Context(..ctx, session: "limited"))
+        bot.next_session(ctx, "limited")
       },
     ),
   )
   |> router.on_any_text(fn(ctx: Context(String, TelegaError, Nil), _text) {
-    Ok(Context(..ctx, session: "handled"))
+    bot.next_session(ctx, "handled")
   })
 }
 
@@ -93,7 +93,7 @@ pub fn rate_limit_invokes_handler_exactly_once_test() {
       ),
     )
     |> router.on_any_text(fn(ctx: Context(String, TelegaError, Nil), _text) {
-      Ok(Context(..ctx, session: ctx.session <> "+"))
+      bot.next_session(ctx, ctx.session <> "+")
     })
 
   let upd = factory.text_update_with(text: "hi", from_id: 7, chat_id: 7)

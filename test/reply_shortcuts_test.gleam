@@ -40,7 +40,7 @@ fn context_with(
       bot_info: factory.bot_user(),
       dependencies: Nil,
     )
-  bot.Context(..ctx, config: testing_context.config_with_client(tg_client))
+  testing_context.with_client(ctx, tg_client)
 }
 
 fn text_context(

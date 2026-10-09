@@ -25,7 +25,7 @@ fn context_with(
   update: update.Update,
 ) -> bot.Context(Nil, error.TelegaError, Nil) {
   let ctx = testing_context.context_with(session: Nil, update:)
-  bot.Context(..ctx, config: testing_context.config_with_client(tg_client))
+  testing_context.with_client(ctx, tg_client)
 }
 
 pub fn ephemeral_parameters_from_text_update_test() {

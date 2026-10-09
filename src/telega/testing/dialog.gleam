@@ -34,6 +34,7 @@ import gleam/string
 
 import telega/bot.{type Context}
 import telega/client.{type TelegramClient}
+import telega/context as context_record
 import telega/dialog/engine as dialog_engine
 import telega/flow/engine as flow_engine
 import telega/flow/instance
@@ -282,7 +283,10 @@ fn context_for(
       bot_info: factory.bot_user(),
       dependencies: driver.dependencies,
     )
-  bot.Context(..ctx, config: context.config_with_client(driver.client))
+  context_record.Context(
+    ..ctx,
+    config: context.config_with_client(driver.client),
+  )
 }
 
 fn int_key(driver: Driver(session, error, dependencies)) -> String {

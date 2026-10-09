@@ -303,36 +303,33 @@ telega.new(api_client)
 
 Pre-handlers run in registration order; the first `bot.Stop` short-circuits the
 rest and the router. A `PreContext` carries the `update`, `config`,
-`dependencies`, `bot_info`, and the `annotations` earlier pre-handlers set — but
-no `session` (it hasn't been loaded yet). Because they all run sequentially in
-the single bot actor, read-then-write logic is race-free across concurrent
-updates.
+`dependencies` and `bot_info` — but no `session` (it hasn't been loaded yet).
+Because they all run sequentially in the single bot actor, read-then-write
+logic is race-free across concurrent updates.
 
 ### Annotations
 
-A pre-handler can attach per-update facts for the handlers downstream by
-returning `bot.Continue(annotations:)` instead of `bot.proceed()`. Annotations
-from successive pre-handlers are merged (a repeated key takes the newer value)
-and arrive in every handler as `ctx.annotations`, read back with
-`bot.annotation`:
+A pre-handler can hand per-update facts to the handlers downstream by returning
+`bot.Continue(annotate:)` instead of `bot.proceed()`. The `annotate` function
+runs against the update's [scope](./telega/scope.html) once the chat instance
+has built the context, so the facts are typed by their `scope.Key` and read
+back with `scope.get`. Pre-handlers annotate in registration order, so a later
+one writing the same key wins.
 
 ```gleam
-import gleam/dict
-import gleam/dynamic
-import gleam/dynamic/decode
 import gleam/result
+import telega/scope
+
+const locale: scope.Key(String) = scope.Key("locale")
 
 telega.new(api_client)
 |> telega.use_pre_handler(fn(pre: bot.PreContext(deps)) {
-  bot.Continue(annotations: dict.from_list([
-    #("locale", dynamic.string(resolve_locale(pre.update))),
-  ]))
+  let resolved = resolve_locale(pre.update)
+  bot.Continue(annotate: fn(s) { scope.put(s, locale, resolved) })
 })
 
 // ... in any handler
-let locale =
-  bot.annotation(ctx, "locale", decode.string)
-  |> result.unwrap("en")
+let locale = scope.get(ctx.scope, locale) |> result.unwrap("en")
 ```
 
 Annotations live for one update and are never persisted — long-lived services

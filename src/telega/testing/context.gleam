@@ -11,18 +11,16 @@
 //// let cfg = context.config()
 //// ```
 
-import gleam/dict
-import gleam/erlang/process
 import gleam/option.{None, Some}
 
 import gleam/http/response
 
 import telega/bot
 import telega/client
+import telega/context
 import telega/error
 import telega/internal/config
 import telega/model/types
-import telega/scope
 import telega/testing/factory
 import telega/update
 
@@ -47,6 +45,15 @@ pub fn config() -> config.Config {
 pub fn config_with_client(client: client.TelegramClient) -> config.Config {
   let cfg = config()
   config.Config(..cfg, api_client: client)
+}
+
+/// The same context, with its API calls going to `client` (usually a
+/// `telega/testing/mock` client).
+pub fn with_client(
+  ctx: bot.Context(session, error, dependencies),
+  client: client.TelegramClient,
+) -> bot.Context(session, error, dependencies) {
+  context.Context(..ctx, config: config_with_client(client))
 }
 
 /// Creates a `Context` with the given session and default update/config.
@@ -96,19 +103,13 @@ pub fn context_with_all(
   bot_info bot_info: types.User,
   dependencies dependencies: dependencies,
 ) -> bot.Context(session, error, dependencies) {
-  let chat_subject = process.new_subject()
-  bot.Context(
+  context.new(
     key:,
     update:,
     config: config(),
     session:,
     dependencies:,
-    chat_subject:,
-    start_time: None,
-    log_prefix: None,
     bot_info:,
-    annotations: dict.new(),
-    scope: scope.new(),
   )
 }
 

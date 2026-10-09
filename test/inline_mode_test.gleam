@@ -3,7 +3,7 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/inline_mode
 import telega/model/types
@@ -92,7 +92,7 @@ pub fn answer_sends_results_and_options_test() {
       session: "initial",
       update: factory.text_update(text: "hi"),
     )
-  let ctx = Context(..base, config: test_context.config_with_client(client))
+  let ctx = test_context.with_client(base, client)
 
   inline_mode.new()
   |> inline_mode.article(id: "1", title: "Result", text: "text")

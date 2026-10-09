@@ -2,7 +2,7 @@ import gleam/option.{None}
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/router
 import telega/testing/context as test_context
@@ -18,7 +18,7 @@ pub fn main() {
 fn filtered_router(filter: router.Filter) {
   router.new("filters_test")
   |> router.on_filtered(filter, fn(ctx: Context(String, TelegaError, Nil), _u) {
-    Ok(Context(..ctx, session: "matched"))
+    bot.next_session(ctx, "matched")
   })
 }
 

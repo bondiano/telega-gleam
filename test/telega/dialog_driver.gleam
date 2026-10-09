@@ -23,7 +23,7 @@ pub type DialogStorage =
 
 pub fn ctx_for(client: TelegramClient, upd: update.Update) -> Ctx {
   let ctx = context.context_with(session: Nil, update: upd)
-  bot.Context(..ctx, config: context.config_with_client(client))
+  context.with_client(ctx, client)
 }
 
 fn driver_for(

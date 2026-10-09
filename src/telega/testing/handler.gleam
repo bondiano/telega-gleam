@@ -30,16 +30,15 @@
 //// }
 //// ```
 
-import gleam/dict
 import gleam/erlang/process.{type Subject}
 import gleam/option.{None}
 import gleam/otp/factory_supervisor as fsup
 import gleam/otp/supervision
 
 import telega/bot
+import telega/context
 import telega/internal/registry
 import telega/router
-import telega/scope
 import telega/testing/context as test_context
 import telega/testing/factory
 import telega/testing/mock
@@ -58,18 +57,13 @@ pub fn test_handler(
   let #(client, calls) = mock.message_client()
   let config = test_context.config_with_client(client)
   let ctx =
-    bot.Context(
+    context.new(
       key: "test_chat:123",
       update:,
       config:,
       session:,
       dependencies: Nil,
-      chat_subject: process.new_subject(),
-      start_time: None,
-      log_prefix: None,
       bot_info: factory.bot_user(),
-      annotations: dict.new(),
-      scope: scope.new(),
     )
   let result = handler(ctx, update)
   #(result, calls)

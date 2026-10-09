@@ -1,4 +1,3 @@
-import gleam/dict
 import gleam/erlang/process
 import gleeunit
 import gleeunit/should
@@ -33,7 +32,6 @@ fn pre_context_for(id: Int) -> bot.PreContext(Nil) {
     config: test_context.config(),
     dependencies: Nil,
     bot_info: factory.bot_user(),
-    annotations: dict.new(),
   )
 }
 

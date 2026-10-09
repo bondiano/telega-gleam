@@ -6,7 +6,7 @@ import gleam/option.{None}
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/client
 import telega/error.{type TelegaError}
 import telega/model/encoder
@@ -150,7 +150,7 @@ pub fn ttl_zero_disables_cache_test() {
 fn ctx_for(client: client.TelegramClient) -> Context(String, TelegaError, Nil) {
   let upd = factory.text_update_with(text: "hi", from_id: user_id, chat_id:)
   let ctx = test_context.context_with(session: "initial", update: upd)
-  Context(..ctx, config: test_context.config_with_client(client))
+  test_context.with_client(ctx, client)
 }
 
 pub fn ensure_admin_runs_body_for_admin_test() {
@@ -159,9 +159,9 @@ pub fn ensure_admin_runs_body_for_admin_test() {
 
   let result = {
     use ctx <- roles.ensure_admin(ctx_for(client), cache, on_denied: fn(ctx) {
-      Ok(Context(..ctx, session: "denied"))
+      bot.next_session(ctx, "denied")
     })
-    Ok(Context(..ctx, session: "allowed"))
+    bot.next_session(ctx, "allowed")
   }
 
   result
@@ -176,9 +176,9 @@ pub fn ensure_admin_denies_plain_member_test() {
 
   let result = {
     use ctx <- roles.ensure_admin(ctx_for(client), cache, on_denied: fn(ctx) {
-      Ok(Context(..ctx, session: "denied"))
+      bot.next_session(ctx, "denied")
     })
-    Ok(Context(..ctx, session: "allowed"))
+    bot.next_session(ctx, "allowed")
   }
 
   result

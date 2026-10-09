@@ -7,6 +7,7 @@ import gleam/result
 import gleeunit
 import gleeunit/should
 import telega/bot
+import telega/context as context_record
 import telega/error
 import telega/flow/action
 import telega/flow/builder
@@ -516,7 +517,7 @@ pub fn engine_sequential_flow_test() {
       session: Nil,
       update: factory.text_update_with(text: "hi", from_id: 10, chat_id: 20),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -565,7 +566,7 @@ pub fn engine_data_flows_through_steps_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -616,7 +617,7 @@ pub fn engine_wait_and_resume_with_text_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 50, chat_id: 60),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // First call: should wait
   let assert Ok(_) =
@@ -681,7 +682,7 @@ pub fn text_step_with_resolves_prompt_per_update_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 50, chat_id: 60),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // First call: prompt is built from the context, then the step waits.
   let assert Ok(_) =
@@ -738,7 +739,7 @@ pub fn message_step_with_uses_context_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 7, chat_id: 8),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -793,7 +794,7 @@ pub fn engine_wait_callback_and_resume_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 70, chat_id: 80),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -836,7 +837,7 @@ pub fn engine_wait_with_timeout_sets_deadline_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -870,7 +871,7 @@ pub fn engine_wait_callback_with_timeout_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 3, chat_id: 4),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -914,7 +915,7 @@ pub fn engine_cancel_deletes_instance_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -956,7 +957,7 @@ pub fn engine_cancel_triggers_exit_hook_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1000,7 +1001,7 @@ pub fn engine_goto_clears_step_data_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1057,7 +1058,7 @@ pub fn engine_back_returns_to_previous_step_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1117,7 +1118,7 @@ pub fn engine_conditional_routing_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // With "high" score -> ConditionalA
   let assert Ok(_) =
@@ -1153,7 +1154,7 @@ pub fn engine_routing_steps_stay_out_of_history_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1209,7 +1210,7 @@ pub fn engine_back_skips_routing_steps_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) = engine.resume_with_instance(flow, ctx, stale, None)
 
@@ -1257,7 +1258,7 @@ pub fn engine_conditional_default_branch_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 5, chat_id: 6),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // With "low" score -> default branch (ConditionalB)
   let assert Ok(_) =
@@ -1336,7 +1337,7 @@ pub fn engine_multi_conditional_routing_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 10, chat_id: 20),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
   let assert Ok(_) =
     engine.start_or_resume(
       flow,
@@ -1353,7 +1354,7 @@ pub fn engine_multi_conditional_routing_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 11, chat_id: 21),
     )
-  let ctx2 = bot.Context(..ctx2, config: context.config_with_client(client))
+  let ctx2 = context.with_client(ctx2, client)
   let assert Ok(_) =
     engine.start_or_resume(
       flow,
@@ -1370,7 +1371,7 @@ pub fn engine_multi_conditional_routing_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 12, chat_id: 22),
     )
-  let ctx3 = bot.Context(..ctx3, config: context.config_with_client(client))
+  let ctx3 = context.with_client(ctx3, client)
   let assert Ok(_) =
     engine.start_or_resume(
       flow,
@@ -1425,7 +1426,7 @@ pub fn engine_parallel_steps_execute_and_join_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1479,7 +1480,7 @@ pub fn engine_step_hooks_execution_order_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1526,7 +1527,7 @@ pub fn engine_step_hooks_skip_leave_on_wait_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1573,7 +1574,7 @@ pub fn engine_flow_lifecycle_hooks_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1612,7 +1613,7 @@ pub fn engine_on_complete_handler_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1643,7 +1644,7 @@ pub fn engine_complete_deletes_before_failing_on_complete_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // Without an `on_error` handler the failure reaches the caller instead of
   // being swallowed.
@@ -1679,7 +1680,7 @@ pub fn engine_step_error_reaches_the_caller_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // Used to be `Ok(ctx)`: the error was dropped with no log, no telemetry and
   // no way for the bot's catch handler to see it.
@@ -1712,7 +1713,7 @@ pub fn engine_failing_on_error_handler_is_not_swallowed_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   engine.start_or_resume(
     flow,
@@ -1756,7 +1757,7 @@ pub fn engine_global_middleware_applies_to_all_steps_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1820,7 +1821,7 @@ pub fn engine_inline_subflow_execution_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1892,7 +1893,7 @@ pub fn engine_inline_subflow_with_mapping_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1940,7 +1941,7 @@ pub fn engine_self_transition_with_goto_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -1988,7 +1989,7 @@ pub fn engine_resume_existing_instance_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // First call: wait
   let assert Ok(_) =
@@ -2028,7 +2029,7 @@ pub fn engine_exit_deletes_instance_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -2066,7 +2067,7 @@ pub fn engine_initial_data_available_in_first_step_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -2106,7 +2107,7 @@ pub fn engine_missing_step_triggers_error_handler_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -2152,7 +2153,7 @@ pub fn engine_ttl_expired_instance_is_recreated_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // First: create instance
   let assert Ok(_) =
@@ -2426,7 +2427,7 @@ pub fn registry_cancel_user_flows_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 100, chat_id: 200),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   // Start the flow to create an instance
   let assert Ok(_) =
@@ -2468,7 +2469,7 @@ pub fn registry_cancel_flow_instance_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 10, chat_id: 20),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -2518,7 +2519,7 @@ pub fn registry_call_flow_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     registry.call_flow(
@@ -2774,7 +2775,7 @@ pub fn engine_subflow_resumes_and_returns_to_parent_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -2938,7 +2939,7 @@ pub fn engine_step_middleware_combined_with_global_test() {
       session: Nil,
       update: factory.text_update_with(text: "", from_id: 1, chat_id: 2),
     )
-  let ctx = bot.Context(..ctx, config: context.config_with_client(client))
+  let ctx = context.with_client(ctx, client)
 
   let assert Ok(_) =
     engine.start_or_resume(
@@ -3004,7 +3005,11 @@ fn flow_ctx(from_id: Int, chat_id: Int, upd) {
       session: Nil,
       update: factory.text_update_with(text: "", from_id:, chat_id:),
     )
-  bot.Context(..ctx, config: context.config_with_client(client), update: upd)
+  context_record.Context(
+    ..ctx,
+    config: context.config_with_client(client),
+    update: upd,
+  )
 }
 
 pub fn wait_callback_is_not_resumed_by_text_test() {

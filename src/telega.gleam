@@ -61,7 +61,6 @@
 //// [Testing](docs/testing.html) · [Deployment](docs/deployment.html)
 
 import gleam/bool
-import gleam/dict
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
@@ -84,14 +83,14 @@ import telega/internal/update_info
 import telega/internal/utils
 
 import telega/api
-import telega/bot.{type BotSubject, type Context, type SessionSettings}
+import telega/bot.{type BotSubject, type SessionSettings}
 import telega/client
+import telega/context.{type Context, Context}
 import telega/dead_letter
 import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
 import telega/router.{type Routable, type Router, type RouterTree}
-import telega/scope
 import telega/telemetry
 import telega/update
 import telega/webhook_reply
@@ -313,19 +312,13 @@ pub fn background_context(
       }
   })
 
-  Ok(bot.Context(
+  Ok(context.new(
     key:,
     update: background,
     config: telega.config,
     session:,
     dependencies: telega.dependencies,
-    chat_subject: process.new_subject(),
-    start_time: None,
-    log_prefix: None,
     bot_info: telega.bot_info,
-    // No update, so no pre-router middleware ran to annotate one.
-    annotations: dict.new(),
-    scope: scope.new(),
   ))
 }
 
@@ -1614,7 +1607,7 @@ pub fn log_context(
   fun: fn(Context(session, error, dependencies)) ->
     Result(Context(session, error, dependencies), error),
 ) -> Result(Context(session, error, dependencies), error) {
-  let ctx_with_log = bot.Context(..ctx, log_prefix: Some(prefix))
+  let ctx_with_log = Context(..ctx, log_prefix: Some(prefix))
   use <- log.with_metadata(log_metadata(ctx_with_log, prefix))
   fun(ctx_with_log)
 }

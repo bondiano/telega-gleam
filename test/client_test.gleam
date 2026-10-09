@@ -330,7 +330,7 @@ fn context_with_client(
   tg_client: client.TelegramClient,
 ) -> bot.Context(Nil, error.TelegaError, Nil) {
   let ctx = testing_context.context(session: Nil)
-  bot.Context(..ctx, config: testing_context.config_with_client(tg_client))
+  testing_context.with_client(ctx, tg_client)
 }
 
 pub fn default_parse_mode_applied_test() {

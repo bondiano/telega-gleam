@@ -61,8 +61,6 @@
 
 import gleam/bool
 import gleam/dict.{type Dict}
-import gleam/dynamic.{type Dynamic}
-import gleam/dynamic/decode.{type Decoder}
 import gleam/erlang/process.{type Pid, type Subject}
 import gleam/int
 import gleam/list
@@ -83,6 +81,7 @@ import telega/internal/registry.{type Registry}
 import telega/internal/routing
 
 import telega/client
+import telega/context.{Context}
 import telega/error
 import telega/model/types.{
   type Audio, type ChatMemberUpdated, type Message, type PhotoSize,
@@ -279,33 +278,38 @@ pub type PreContext(dependencies) {
     /// The same injected services available to handlers via `Context`.
     dependencies: dependencies,
     bot_info: User,
-    /// What the pre-handlers before this one annotated the update with.
-    annotations: Dict(String, Dynamic),
   )
 }
 
 /// Decision returned by a `PreHandler`: keep processing the update through the
 /// router, or stop it here (drop it before routing).
 pub type PreRouterResult {
-  /// Continue to the next pre-router middleware and, eventually, the router,
-  /// attaching `annotations` to this update.
+  /// Continue to the next pre-router middleware and, eventually, the router.
   ///
-  /// Annotations are merged into what earlier pre-handlers set (a repeated key
-  /// takes the newer value) and reach every handler as `ctx.annotations`, read
-  /// back with [`annotation`](#annotation). They live for one update and are
-  /// never persisted — long-lived services belong in `dependencies`, per-user
-  /// state in the session.
+  /// `annotate` runs against the update's [`Scope`](scope.html) once the chat
+  /// instance has built the context, so a pre-handler can hand typed facts to
+  /// every handler downstream:
   ///
-  /// Use [`proceed`](#proceed) when there is nothing to annotate.
-  Continue(annotations: Dict(String, Dynamic))
+  /// ```gleam
+  /// const locale: scope.Key(String) = scope.Key("locale")
+  ///
+  /// bot.Continue(annotate: fn(s) { scope.put(s, locale, "ru") })
+  /// // ... in any handler
+  /// scope.get(ctx.scope, locale) |> result.unwrap("en")
+  /// ```
+  ///
+  /// Annotations live for one update and are never persisted — long-lived
+  /// services belong in `dependencies`, per-user state in the session. Use
+  /// [`proceed`](#proceed) when there is nothing to annotate.
+  Continue(annotate: fn(Scope) -> Nil)
   /// Stop processing this update. The webhook/poller is told the update was
   /// acknowledged (so Telegram does not retry it) but no handler runs.
   Stop
 }
 
-/// Continue without annotating the update — `Continue(dict.new())`.
+/// Continue without annotating the update.
 pub fn proceed() -> PreRouterResult {
-  Continue(dict.new())
+  Continue(annotate: fn(_) { Nil })
 }
 
 /// Pre-router middleware: a single global pass over every update, run before
@@ -487,14 +491,14 @@ fn bot_loop(
               process.send(reply_with, True)
               actor.continue(bot)
             }
-            Continue(annotations) ->
+            Continue(annotate:) ->
               case
                 handle_update_bot_message(
                   bot:,
                   update:,
                   reply_with:,
                   envelope:,
-                  annotations:,
+                  annotate:,
                 )
               {
                 Ok(bot) ->
@@ -524,7 +528,7 @@ fn bot_loop(
               update:,
               reply_with:,
               envelope: None,
-              annotations: dict.new(),
+              annotate: fn(_) { Nil },
             )
           {
             Ok(bot) -> actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
@@ -633,20 +637,23 @@ fn run_pre_handlers(
   bot: Bot(session, error, dependencies),
   update: Update,
 ) -> PreRouterResult {
-  case bot.pre_handlers {
-    [] -> Continue(dict.new())
-    handlers -> do_run_pre_handlers(handlers, bot, update, dict.new())
-  }
+  do_run_pre_handlers(bot.pre_handlers, bot, update, [])
 }
 
 fn do_run_pre_handlers(
   handlers: List(PreHandler(dependencies)),
   bot: Bot(session, error, dependencies),
   update: Update,
-  annotations: Dict(String, Dynamic),
+  annotations: List(fn(Scope) -> Nil),
 ) -> PreRouterResult {
   case handlers {
-    [] -> Continue(annotations)
+    [] -> {
+      // In registration order, so a later pre-handler's key wins.
+      let annotations = list.reverse(annotations)
+      Continue(annotate: fn(scope) {
+        list.each(annotations, fn(f) { f(scope) })
+      })
+    }
     [handler, ..rest] -> {
       let pre_ctx =
         PreContext(
@@ -654,12 +661,11 @@ fn do_run_pre_handlers(
           config: bot.config,
           dependencies: bot.dependencies,
           bot_info: bot.bot_info,
-          annotations:,
         )
       case handler(pre_ctx) {
         Stop -> Stop
-        Continue(added) ->
-          do_run_pre_handlers(rest, bot, update, dict.merge(annotations, added))
+        Continue(annotate:) ->
+          do_run_pre_handlers(rest, bot, update, [annotate, ..annotations])
       }
     }
   }
@@ -832,7 +838,7 @@ fn handle_update_bot_message(
   update update,
   reply_with reply_with,
   envelope envelope,
-  annotations annotations,
+  annotate annotate: fn(Scope) -> Nil,
 ) -> Result(Bot(session, error, dependencies), error.TelegaError) {
   let key = bot.chat_settings.session_key(update)
 
@@ -865,7 +871,7 @@ fn handle_update_bot_message(
 
   actor.send(
     chat_subject,
-    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotations:),
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotate:),
   )
   Ok(watch_instance(bot, key:, chat_subject:, reply_with:, update:))
 }
@@ -880,8 +886,8 @@ pub opaque type ChatInstanceMessage(session, error, dependencies) {
     update: Update,
     reply_with: Subject(Bool),
     envelope: Option(Envelope),
-    /// What the pre-router middleware attached to this update.
-    annotations: Dict(String, Dynamic),
+    /// What the pre-router middleware wants written into the update's scope.
+    annotate: fn(Scope) -> Nil,
   )
   /// Forget the suspended `wait_*` handler, keep serving updates. Sent by the
   /// bot for `cancel_conversation`; a handler uses `cancel_conversation_in`.
@@ -1071,7 +1077,7 @@ fn loop_chat_instance(
   message,
 ) {
   case message {
-    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotations:) -> {
+    HandleNewChatInstanceMessage(update:, reply_with:, envelope:, annotate:) -> {
       let chat = touch(chat)
       case media_group_part(chat, update) {
         Some(#(media_group_id, message)) ->
@@ -1082,7 +1088,7 @@ fn loop_chat_instance(
               chat:,
               update:,
               envelope:,
-              annotations:,
+              annotate:,
             ),
             chat:,
             update:,
@@ -1404,7 +1410,7 @@ fn flush_media_group(
           do_handle_update(
             // The album was assembled from several updates over the debounce
             // window; there is no single set of annotations to carry over.
-            context: new_context(chat:, update:, annotations: dict.new()),
+            context: new_context(chat:, update:, annotate: fn(_) { Nil }),
             chat:,
             update:,
             ack_with: fn(_settled) { Nil },
@@ -1852,73 +1858,28 @@ fn handle_handler_error(
 
 // Context ----------------------------------------------------------------------------
 
-/// Context holds information needed for the bot instance and the current update.
-pub type Context(session, error, dependencies) {
-  Context(
-    key: String,
-    update: Update,
-    config: Config,
-    session: session,
-    /// Non-persisted services/dependencies injected at bot init (DI container).
-    /// Unlike `session`, `dependencies` is never persisted — it holds things like a db
-    /// pool, http client, or i18n catalog. See `telega.with_dependencies`.
-    dependencies: dependencies,
-    chat_subject: ChatInstanceSubject(session, error, dependencies),
-    /// Used to calculate the duration of the conversation in logs
-    start_time: Option(Timestamp),
-    log_prefix: Option(String),
-    bot_info: User,
-    /// What the pre-router middleware attached to *this* update, read back
-    /// with [`annotation`](#annotation). Scoped to one update and never
-    /// persisted — unlike `dependencies` (services) and `session` (per-user
-    /// state).
-    annotations: Dict(String, Dynamic),
-    /// Scratch space for *this* update, shared by every copy of the context
-    /// and dropped once the update is handled. Where the dialog engine keeps
-    /// its "callback already answered" flag and its widget stash, and where a
-    /// middleware can hand a resolved locale to handlers nested below it. See
-    /// [`telega/scope`](scope.html).
-    scope: Scope,
-  )
-}
+/// The per-update context handed to every handler; see
+/// [`telega/context`](context.html). The name here is the historical one and
+/// the one most code imports.
+pub type Context(session, error, dependencies) =
+  context.Context(session, error, dependencies)
 
 fn new_context(
   chat chat: ChatInstance(session, error, dependencies),
   update update,
-  annotations annotations: Dict(String, Dynamic),
+  annotate annotate: fn(Scope) -> Nil,
 ) -> Context(session, error, dependencies) {
-  Context(
-    update:,
-    config: chat.config,
-    key: chat.key,
-    session: chat.session,
-    dependencies: chat.dependencies,
-    chat_subject: chat.self,
-    start_time: None,
-    log_prefix: None,
-    bot_info: chat.bot_info,
-    annotations:,
-    scope: scope.new(),
-  )
-}
-
-/// Read one pre-router annotation, decoded.
-///
-/// `Error(Nil)` when the key was never set or the value does not decode as
-/// `decoder` expects, so a handler can fall back with `result.unwrap`:
-///
-/// ```gleam
-/// let locale =
-///   bot.annotation(ctx, "locale", decode.string)
-///   |> result.unwrap("en")
-/// ```
-pub fn annotation(
-  ctx: Context(session, error, dependencies),
-  key: String,
-  decoder: Decoder(a),
-) -> Result(a, Nil) {
-  use value <- result.try(dict.get(ctx.annotations, key))
-  decode.run(value, decoder) |> result.replace_error(Nil)
+  let ctx =
+    context.new(
+      key: chat.key,
+      update:,
+      config: chat.config,
+      session: chat.session,
+      dependencies: chat.dependencies,
+      bot_info: chat.bot_info,
+    )
+  annotate(ctx.scope)
+  ctx
 }
 
 /// Build the update's context; when the update was dispatched with a
@@ -1928,9 +1889,9 @@ fn new_context_with_envelope(
   chat chat: ChatInstance(session, error, dependencies),
   update update,
   envelope envelope: Option(Envelope),
-  annotations annotations: Dict(String, Dynamic),
+  annotate annotate: fn(Scope) -> Nil,
 ) -> Context(session, error, dependencies) {
-  let context = new_context(chat:, update:, annotations:)
+  let context = new_context(chat:, update:, annotate:)
   case envelope {
     None -> context
     Some(envelope) -> {

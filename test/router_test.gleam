@@ -3,7 +3,7 @@ import gleam/option.{None, Some}
 import gleam/string
 import gleeunit
 import gleeunit/should
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/model/types
 import telega/router
@@ -25,7 +25,7 @@ pub fn command_routing_integration_test() {
     cmd: update.Command,
   ) {
     case cmd.command {
-      "start" -> Ok(Context(..ctx, session: "start_called"))
+      "start" -> bot.next_session(ctx, "start_called")
       _ -> Ok(ctx)
     }
   }
@@ -35,7 +35,7 @@ pub fn command_routing_integration_test() {
     cmd: update.Command,
   ) {
     case cmd.command {
-      "help" -> Ok(Context(..ctx, session: "help_called"))
+      "help" -> bot.next_session(ctx, "help_called")
       _ -> Ok(ctx)
     }
   }
@@ -135,7 +135,7 @@ pub fn decode_command_with_args_test() {
 
 pub fn router_command_with_args_test() {
   let handler = fn(ctx: Context(String, TelegaError, Nil), cmd: update.Command) {
-    Ok(Context(..ctx, session: option.unwrap(cmd.payload, "no_payload")))
+    bot.next_session(ctx, option.unwrap(cmd.payload, "no_payload"))
   }
 
   let r =
@@ -184,7 +184,7 @@ pub fn router_command_with_non_matching_suffix_test() {
 
 fn router_command_with_suffix_test(text: String, session_val: String) {
   let handler = fn(ctx: Context(String, TelegaError, Nil), cmd: update.Command) {
-    Ok(Context(..ctx, session: cmd.command))
+    bot.next_session(ctx, cmd.command)
   }
 
   let r =
@@ -222,11 +222,11 @@ fn router_command_with_suffix_test(text: String, session_val: String) {
 
 pub fn text_pattern_matching_integration_test() {
   let exact_handler = fn(ctx: Context(String, TelegaError, Nil), _text: String) {
-    Ok(Context(..ctx, session: "exact_matched"))
+    bot.next_session(ctx, "exact_matched")
   }
 
   let prefix_handler = fn(ctx: Context(String, TelegaError, Nil), _text: String) {
-    Ok(Context(..ctx, session: "prefix_matched"))
+    bot.next_session(ctx, "prefix_matched")
   }
 
   let r =
@@ -269,15 +269,15 @@ pub fn text_pattern_matching_integration_test() {
 
 pub fn middleware_integration_test() {
   let handler = fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
-    Ok(Context(..ctx, session: ctx.session <> "_handler"))
+    bot.next_session(ctx, ctx.session <> "_handler")
   }
 
   let counting_middleware = fn(handler) {
     fn(ctx: Context(String, TelegaError, Nil), update: Update) {
-      let modified_ctx = Context(..ctx, session: ctx.session <> "_pre")
+      let assert Ok(modified_ctx) = bot.next_session(ctx, ctx.session <> "_pre")
       case handler(modified_ctx, update) {
         Ok(result_ctx) ->
-          Ok(Context(..result_ctx, session: result_ctx.session <> "_post"))
+          bot.next_session(result_ctx, result_ctx.session <> "_post")
         Error(err) -> Error(err)
       }
     }
@@ -309,14 +309,14 @@ pub fn fallback_integration_test() {
     ctx: Context(String, TelegaError, Nil),
     _cmd: update.Command,
   ) {
-    Ok(Context(..ctx, session: "command_handled"))
+    bot.next_session(ctx, "command_handled")
   }
 
   let fallback_handler = fn(
     ctx: Context(String, TelegaError, Nil),
     _update: Update,
   ) {
-    Ok(Context(..ctx, session: "fallback_handled"))
+    bot.next_session(ctx, "fallback_handled")
   }
 
   let r =
@@ -357,7 +357,7 @@ pub fn fallback_integration_test() {
 
 pub fn filter_middleware_integration_test() {
   let handler = fn(ctx: Context(String, TelegaError, Nil), _update: Update) {
-    Ok(Context(..ctx, session: "handler_called"))
+    bot.next_session(ctx, "handler_called")
   }
 
   let user_filter = fn(update: Update) -> Bool {
@@ -416,7 +416,7 @@ pub fn custom_matcher_integration_test() {
     ctx: Context(String, TelegaError, Nil),
     _update: Update,
   ) {
-    Ok(Context(..ctx, session: "custom_matched"))
+    bot.next_session(ctx, "custom_matched")
   }
 
   let contains_number = fn(update: Update) -> Bool {
@@ -481,14 +481,14 @@ pub fn router_composition_integration_test() {
     ctx: Context(String, TelegaError, Nil),
     _cmd: update.Command,
   ) {
-    Ok(Context(..ctx, session: "router1"))
+    bot.next_session(ctx, "router1")
   }
 
   let handler2 = fn(
     ctx: Context(String, TelegaError, Nil),
     _cmd: update.Command,
   ) {
-    Ok(Context(..ctx, session: "router2"))
+    bot.next_session(ctx, "router2")
   }
 
   let router1 =
@@ -539,14 +539,14 @@ pub fn media_handlers_integration_test() {
     ctx: Context(String, TelegaError, Nil),
     _photos: List(types.PhotoSize),
   ) {
-    Ok(Context(..ctx, session: "photo"))
+    bot.next_session(ctx, "photo")
   }
 
   let video_handler = fn(
     ctx: Context(String, TelegaError, Nil),
     _video: types.Video,
   ) {
-    Ok(Context(..ctx, session: "video"))
+    bot.next_session(ctx, "video")
   }
 
   let r =
@@ -640,19 +640,19 @@ pub fn compose_basic_test() {
   let router1 =
     router.new("router1")
     |> router.on_command("start", fn(c, _cmd) {
-      Ok(Context(..c, session: "router1_start"))
+      bot.next_session(c, "router1_start")
     })
     |> router.on_text(router.Prefix("hello"), fn(c, _text) {
-      Ok(Context(..c, session: "router1_hello"))
+      bot.next_session(c, "router1_hello")
     })
 
   let router2 =
     router.new("router2")
     |> router.on_command("help", fn(c, _cmd) {
-      Ok(Context(..c, session: "router2_help"))
+      bot.next_session(c, "router2_help")
     })
     |> router.on_text(router.Prefix("world"), fn(c, _text) {
-      Ok(Context(..c, session: "router2_world"))
+      bot.next_session(c, "router2_world")
     })
 
   let combined = router.compose(router1, router2)
@@ -692,13 +692,13 @@ pub fn compose_priority_test() {
   let router1 =
     router.new("router1")
     |> router.on_command("test", fn(c, _cmd) {
-      Ok(Context(..c, session: "router1_wins"))
+      bot.next_session(c, "router1_wins")
     })
 
   let router2 =
     router.new("router2")
     |> router.on_command("test", fn(c, _cmd) {
-      Ok(Context(..c, session: "router2_should_not_run"))
+      bot.next_session(c, "router2_should_not_run")
     })
 
   let combined = router.compose(router1, router2)
@@ -723,14 +723,12 @@ pub fn compose_fallback_test() {
   let router1 =
     router.new("router1")
     |> router.on_command("start", fn(c, _cmd) {
-      Ok(Context(..c, session: "router1_start"))
+      bot.next_session(c, "router1_start")
     })
 
   let router2 =
     router.new("router2")
-    |> router.fallback(fn(c, _) {
-      Ok(Context(..c, session: "router2_fallback"))
-    })
+    |> router.fallback(fn(c, _) { bot.next_session(c, "router2_fallback") })
 
   let combined = router.compose(router1, router2)
 
@@ -1461,7 +1459,7 @@ pub fn inline_query_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     query: types.InlineQuery,
   ) {
-    Ok(Context(..ctx, session: "inline_query:" <> query.query))
+    bot.next_session(ctx, "inline_query:" <> query.query)
   }
 
   let r =
@@ -1495,7 +1493,7 @@ pub fn chosen_inline_result_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     result: types.ChosenInlineResult,
   ) {
-    Ok(Context(..ctx, session: "chosen:" <> result.result_id))
+    bot.next_session(ctx, "chosen:" <> result.result_id)
   }
 
   let r =
@@ -1525,7 +1523,7 @@ pub fn chosen_inline_result_handler_test() {
 
 pub fn poll_handler_test() {
   let handler = fn(ctx: Context(String, TelegaError, Nil), poll: types.Poll) {
-    Ok(Context(..ctx, session: "poll:" <> poll.question))
+    bot.next_session(ctx, "poll:" <> poll.question)
   }
 
   let r =
@@ -1595,7 +1593,7 @@ pub fn poll_answer_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     answer: types.PollAnswer,
   ) {
-    Ok(Context(..ctx, session: "poll_answer:" <> answer.poll_id))
+    bot.next_session(ctx, "poll_answer:" <> answer.poll_id)
   }
 
   let r =
@@ -1628,7 +1626,7 @@ pub fn shipping_query_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     query: types.ShippingQuery,
   ) {
-    Ok(Context(..ctx, session: "shipping:" <> query.id))
+    bot.next_session(ctx, "shipping:" <> query.id)
   }
 
   let r =
@@ -1667,7 +1665,7 @@ pub fn pre_checkout_query_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     query: types.PreCheckoutQuery,
   ) {
-    Ok(Context(..ctx, session: "checkout:" <> query.id))
+    bot.next_session(ctx, "checkout:" <> query.id)
   }
 
   let r =
@@ -1702,7 +1700,7 @@ pub fn message_reaction_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     reaction: types.MessageReactionUpdated,
   ) {
-    Ok(Context(..ctx, session: "reaction:" <> string.inspect(reaction.chat.id)))
+    bot.next_session(ctx, "reaction:" <> string.inspect(reaction.chat.id))
   }
 
   let r =
@@ -1737,12 +1735,7 @@ pub fn chat_member_updated_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     member: types.ChatMemberUpdated,
   ) {
-    Ok(
-      Context(
-        ..ctx,
-        session: "member_updated:" <> string.inspect(member.chat.id),
-      ),
-    )
+    bot.next_session(ctx, "member_updated:" <> string.inspect(member.chat.id))
   }
 
   let r =
@@ -1794,7 +1787,7 @@ pub fn chat_join_request_handler_test() {
     ctx: Context(String, TelegaError, Nil),
     request: types.ChatJoinRequest,
   ) {
-    Ok(Context(..ctx, session: "join_request:" <> request.from.first_name))
+    bot.next_session(ctx, "join_request:" <> request.from.first_name)
   }
 
   let r =
@@ -1982,7 +1975,7 @@ pub fn callback_prefix_with_colon_routes_test() {
   let r =
     router.new("test")
     |> router.on_callback(router.Prefix("travel_to:"), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "routed:" <> data))
+      bot.next_session(ctx, "routed:" <> data)
     })
 
   let ctx = make_ctx("initial")
@@ -2003,10 +1996,10 @@ pub fn specific_callback_prefix_beats_catch_all_test() {
   let r =
     router.new("test")
     |> router.on_callback(router.Prefix("raid_pick:"), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "specific:" <> data))
+      bot.next_session(ctx, "specific:" <> data)
     })
     |> router.on_callback(router.Prefix(""), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "catch_all:" <> data))
+      bot.next_session(ctx, "catch_all:" <> data)
     })
 
   let ctx = make_ctx("initial")
@@ -2028,10 +2021,10 @@ pub fn specific_text_pattern_beats_catch_all_test() {
   let r =
     router.new("test")
     |> router.on_text(router.Prefix("order "), fn(ctx, text) {
-      Ok(Context(..ctx, session: "specific:" <> text))
+      bot.next_session(ctx, "specific:" <> text)
     })
     |> router.on_any_text(fn(ctx, text) {
-      Ok(Context(..ctx, session: "catch_all:" <> text))
+      bot.next_session(ctx, "catch_all:" <> text)
     })
 
   let ctx = make_ctx("initial")
@@ -2049,11 +2042,9 @@ pub fn flow_catch_all_shadows_a_bots_photo_route_test() {
   // catch-alls last, so it takes those input types over from the bot.
   let r =
     router.new("test")
+    |> router.on_photo(fn(ctx, _photos) { bot.next_session(ctx, "bot_photo") })
     |> router.on_photo(fn(ctx, _photos) {
-      Ok(Context(..ctx, session: "bot_photo"))
-    })
-    |> router.on_photo(fn(ctx, _photos) {
-      Ok(Context(..ctx, session: "flow_auto_resume"))
+      bot.next_session(ctx, "flow_auto_resume")
     })
 
   let ctx = make_ctx("initial")
@@ -2071,10 +2062,10 @@ pub fn exact_callback_payload_that_looks_like_a_pattern_test() {
   let r =
     router.new("test")
     |> router.on_callback(router.Exact("prefix:foo"), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "exact:" <> data))
+      bot.next_session(ctx, "exact:" <> data)
     })
     |> router.on_callback(router.Prefix("foo"), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "prefix:" <> data))
+      bot.next_session(ctx, "prefix:" <> data)
     })
 
   // Both routes survived registration and each answers only its own payload.
@@ -2105,7 +2096,7 @@ pub fn composed_router_handles_callback_prefix_with_colon_test() {
   let owner =
     router.new("owner")
     |> router.on_callback(router.Prefix("travel_to:"), fn(ctx, _id, data) {
-      Ok(Context(..ctx, session: "routed:" <> data))
+      bot.next_session(ctx, "routed:" <> data)
     })
 
   let composed = router.compose(router.new("other"), owner)
@@ -2138,7 +2129,7 @@ fn command_update(command: String) -> Update {
 
 fn marking_command_handler(mark: String) {
   fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
-    Ok(Context(..ctx, session: mark))
+    bot.next_session(ctx, mark)
   }
 }
 
@@ -2169,7 +2160,7 @@ pub fn compose_middleware_wraps_every_branch_test() {
   let mark_middleware = fn(handler) {
     fn(ctx: Context(String, TelegaError, Nil), upd) {
       let assert Ok(ctx) = handler(ctx, upd)
-      Ok(Context(..ctx, session: ctx.session <> "+mw"))
+      bot.next_session(ctx, ctx.session <> "+mw")
     }
   }
 
@@ -2270,7 +2261,7 @@ pub fn bare_command_still_has_an_empty_payload_test() {
 
 pub fn command_matching_ignores_case_test() {
   let handler = fn(ctx: Context(String, TelegaError, Nil), _cmd: update.Command) {
-    Ok(Context(..ctx, session: "matched"))
+    bot.next_session(ctx, "matched")
   }
   let r =
     router.new("test")
@@ -2288,7 +2279,7 @@ pub fn my_chat_member_route_test() {
     ctx: Context(String, TelegaError, Nil),
     _updated: types.ChatMemberUpdated,
   ) {
-    Ok(Context(..ctx, session: "my_chat_member"))
+    bot.next_session(ctx, "my_chat_member")
   }
 
   let r =

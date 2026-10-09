@@ -2,14 +2,10 @@
 //// dedicated routes for update kinds that used to need `on_custom`, and the
 //// content filters.
 
-import gleam/dict
-import gleam/dynamic
-import gleam/dynamic/decode
 import gleam/option.{None, Some}
-import gleam/result
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/keyboard
 import telega/model/types
@@ -26,11 +22,11 @@ fn make_ctx(session: String) -> Ctx {
 }
 
 fn mark(tag: String) {
-  fn(ctx: Ctx, _payload) { Ok(Context(..ctx, session: tag)) }
+  fn(ctx: Ctx, _payload) { bot.next_session(ctx, tag) }
 }
 
 fn mark_update(tag: String) {
-  fn(ctx: Ctx, _upd: Update) { Ok(Context(..ctx, session: tag)) }
+  fn(ctx: Ctx, _upd: Update) { bot.next_session(ctx, tag) }
 }
 
 fn session_of(result: Result(Ctx, TelegaError)) -> String {
@@ -55,7 +51,7 @@ pub fn on_callback_data_hands_the_decoded_payload_to_the_handler_test() {
   let r =
     router.new("test")
     |> router.on_callback_data(page, fn(ctx: Ctx, _query, page_number: Int) {
-      Ok(Context(..ctx, session: "page:" <> int_to_string(page_number)))
+      bot.next_session(ctx, "page:" <> int_to_string(page_number))
     })
 
   let payload = keyboard.pack_callback(callback_data: page, data: 7).payload
@@ -101,7 +97,7 @@ pub fn on_callback_data_drops_a_payload_that_does_not_decode_test() {
 
 fn mark_callback(tag: String) {
   fn(ctx: Ctx, _query: types.CallbackQuery, _data) {
-    Ok(Context(..ctx, session: tag))
+    bot.next_session(ctx, tag)
   }
 }
 
@@ -465,9 +461,7 @@ pub fn content_filters_decline_updates_without_a_message_test() {
 
 fn ping_router(tag: String) -> router.Router(String, TelegaError, Nil) {
   router.new(tag)
-  |> router.on_command("ping", fn(ctx: Ctx, _cmd) {
-    Ok(Context(..ctx, session: tag))
-  })
+  |> router.on_command("ping", fn(ctx: Ctx, _cmd) { bot.next_session(ctx, tag) })
 }
 
 pub fn branch_picks_the_first_matching_filter_test() {
@@ -587,38 +581,6 @@ pub fn tree_name_joins_the_branch_names_test() {
   router.compose(ping_router("a"), ping_router("b"))
   |> router.tree_name
   |> should.equal("a+b")
-}
-
-// Pre-router annotations ------------------------------------------------------
-
-pub fn annotation_reads_what_a_pre_handler_attached_test() {
-  let ctx =
-    Context(
-      ..make_ctx("initial"),
-      annotations: dict.from_list([
-        #("locale", dynamic.string("ru")),
-        #("attempt", dynamic.int(3)),
-      ]),
-    )
-
-  bot.annotation(ctx, "locale", decode.string) |> should.equal(Ok("ru"))
-  bot.annotation(ctx, "attempt", decode.int) |> should.equal(Ok(3))
-}
-
-pub fn annotation_fails_on_a_missing_key_or_wrong_type_test() {
-  let ctx =
-    Context(
-      ..make_ctx("initial"),
-      annotations: dict.from_list([#("locale", dynamic.string("ru"))]),
-    )
-
-  bot.annotation(ctx, "missing", decode.string) |> should.equal(Error(Nil))
-  bot.annotation(ctx, "locale", decode.int) |> should.equal(Error(Nil))
-
-  // Which makes `result.unwrap` the idiomatic read.
-  bot.annotation(ctx, "missing", decode.string)
-  |> result.unwrap("en")
-  |> should.equal("en")
 }
 
 pub fn a_router_with_only_callback_routes_still_narrows_test() {

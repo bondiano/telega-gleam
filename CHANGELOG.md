@@ -35,6 +35,18 @@ under the release that shipped them.
 - `encoder.bot_command_scope_to_json`: use the generated
   `encoder.encode_bot_command_scope`.
 
+### Changed
+
+- **`Context` lives in `telega/context`.** `bot.Context` is an alias for the same
+  type, so imports keep working; what changed is the record. `chat_subject`
+  (unused since `wait_*` stopped messaging the chat instance) and `start_time`
+  (never read) are gone, and so is `annotations`. **Breaking:** a pre-handler
+  now returns `bot.Continue(annotate: fn(Scope) -> Nil)` instead of
+  `Continue(annotations: Dict)`, writes typed values into the update's scope,
+  and handlers read them with `scope.get(ctx.scope, key)`. `bot.annotation` and
+  `PreContext.annotations` are removed. Build a context by hand with
+  `context.new`.
+
 ### Fixed
 
 - **The request queue retried on top of the client.** A call that failed after

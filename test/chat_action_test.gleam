@@ -4,7 +4,7 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/chat_action
 import telega/error.{type TelegaError}
 import telega/testing/context as test_context
@@ -17,7 +17,7 @@ pub fn main() {
 fn ctx_with_client(client) -> Context(String, TelegaError, Nil) {
   let base: Context(String, TelegaError, Nil) =
     test_context.context(session: "initial")
-  Context(..base, config: test_context.config_with_client(client))
+  test_context.with_client(base, client)
 }
 
 fn assert_all_send_chat_action(calls: List(mock.ApiCall)) -> Nil {

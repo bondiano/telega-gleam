@@ -4,7 +4,7 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 
-import telega/bot.{type Context, Context}
+import telega/bot.{type Context}
 import telega/error.{type TelegaError}
 import telega/model/types
 import telega/payments
@@ -25,7 +25,7 @@ fn ctx_with_client(client) -> Context(String, TelegaError, Nil) {
       session: "initial",
       update: factory.text_update_with(text: "hi", from_id: 123, chat_id: 456),
     )
-  Context(..base, config: test_context.config_with_client(client))
+  test_context.with_client(base, client)
 }
 
 pub fn stars_invoice_send_test() {

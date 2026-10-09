@@ -7,6 +7,7 @@ import gleeunit/should
 
 import telega/bot.{Stop}
 import telega/internal/registry
+import telega/scope
 import telega/testing/context
 import telega/testing/factory
 
@@ -164,5 +165,54 @@ pub fn replay_skips_the_pre_router_middleware_test() {
   // The replay path reaches the router.
   bot.replay_update(started.data, upd) |> should.be_true
   process.receive(router_reached, 200) |> should.equal(Ok(Nil))
+  let _ = registry.stop(reg)
+}
+
+// An annotation written by a pre-handler is readable from the handler's scope -
+
+const locale: scope.Key(String) = scope.Key("locale")
+
+pub fn annotate_writes_into_the_update_scope_test() {
+  let assert Ok(reg) = registry.start("pre_router_annotate")
+  let seen = process.new_subject()
+  let router_handler = fn(ctx: bot.Context(S, Nil, Nil), _update) {
+    process.send(seen, scope.get(ctx.scope, locale))
+    Ok(ctx)
+  }
+  let first = fn(_pre: bot.PreContext(Nil)) {
+    bot.Continue(annotate: fn(s) { scope.put(s, locale, "en") })
+  }
+  // Registered later, so its value wins.
+  let second = fn(_pre: bot.PreContext(Nil)) {
+    bot.Continue(annotate: fn(s) { scope.put(s, locale, "ru") })
+  }
+
+  let assert Ok(started) =
+    bot.start(
+      registry: reg,
+      config: context.config(),
+      bot_info: factory.bot_user(),
+      router_handler:,
+      pre_handlers: [first, second],
+      session_settings: context.session_settings_with(
+        default: fn() { S },
+        initial: S,
+      ),
+      catch_handler: context.catch_handler(),
+      dependencies: Nil,
+      chat_factory: start_factory(),
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
+      dead_letters: None,
+      name: None,
+    )
+
+  bot.handle_update(started.data, factory.text_update(text: "hi"))
+  |> should.be_true
+  process.receive(seen, 200) |> should.equal(Ok(Ok("ru")))
   let _ = registry.stop(reg)
 }
