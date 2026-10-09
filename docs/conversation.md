@@ -119,9 +119,11 @@ use ctx, color <- wait_choice(
 ```
 
 **Features:**
-- Sends `text` together with the generated inline keyboard
-- Maps selection back to typed value
-- Handles invalid selections
+- Sends `text` together with the generated inline keyboard; each button
+  carries `choice:<index>`, packed with `keyboard.int_callback_data("choice")`
+- Maps selection back to typed value and answers the press
+- Handles invalid selections; a press on some other keyboard is not a
+  selection at all and goes to `or:` like any unexpected update
 - If the prompt cannot be sent, logs the error and returns `Ok(ctx)` instead of
   waiting for a press that will never arrive
 

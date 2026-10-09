@@ -19,6 +19,7 @@ import telega/flow/types.{
   VoiceInput,
 }
 import telega/internal/utils
+import telega/keyboard
 
 /// Create a new FlowInstance with minimal required fields
 pub fn new_instance(
@@ -416,15 +417,19 @@ pub fn encode_text_wait_result(text: String) -> String {
 
 /// Encode callback wait result.
 ///
-/// A payload shaped `"{id}:true"` / `"{id}:false"` is a yes/no button. The id
-/// travels with it — dropping it (as this used to) left a step unable to tell
-/// `confirm:true` from `subscribe:true`.
+/// A payload a `keyboard.bool_callback_data(id)` packed (`"{id}:true"` /
+/// `"{id}:false"`) is a yes/no button. The id travels with it — dropping it
+/// (as this used to) left a step unable to tell `confirm:true` from
+/// `subscribe:true`.
 @internal
 pub fn encode_callback_wait_result(data: String) -> String {
-  case string.split(data, ":") {
-    [id, "true"] -> "bool:" <> id <> ":true"
-    [id, "false"] -> "bool:" <> id <> ":false"
-    _ -> "data:" <> data
+  let as_bool = {
+    use #(id, _) <- result.try(string.split_once(data, ":"))
+    keyboard.unpack_callback(data, keyboard.bool_callback_data(id))
+  }
+  case as_bool {
+    Ok(callback) -> "bool:" <> callback.payload
+    Error(Nil) -> "data:" <> data
   }
 }
 

@@ -1165,7 +1165,7 @@ fn with_dialog_routing(
   dialog: Dialog(state, session, error, dependencies),
 ) -> flow_registry.FlowRegistry(session, error, dependencies) {
   let flow_name = engine.flow_name_prefix <> dialog.compiled.id
-  let prefix = "dlg:" <> dialog.compiled.id <> ":"
+  let prefix = render.callback_prefix(dialog_id: dialog.compiled.id)
   let labels = dialog.compiled.labels
   registry
   |> flow_registry.with_callback_filter(flow_name:, filter: string.starts_with(

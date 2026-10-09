@@ -54,12 +54,13 @@ import logging
 import telega/bot.{type Context}
 import telega/dialog/render
 import telega/dialog/types.{
-  type ActionEvent, type DialogAction, type Labels, type Window, ActionEvent,
+  type ActionEvent, type DialogAction, type Labels, type Window,
 }
 import telega/dialog/widget
 import telega/flow/builder as flow_builder
 import telega/flow/instance
 import telega/flow/types as flow_types
+import telega/keyboard
 import telega/model/types as model_types
 import telega/reply
 import telega/scope
@@ -1171,39 +1172,31 @@ fn wait(
 
 // Callback data parsing -----------------------------------------------------------
 
-/// Parse `dlg:<dialog_id>:<window_id>:<action_id>[:<arg>]`. Extra segments
-/// are joined back into the arg, so args may contain `:`.
+/// Parse `dlg:<dialog_id>:<window_id>:<action_id>[:<arg>]` with the codec the
+/// buttons were packed with (`render.callback_codec`).
 pub fn parse_callback_data(
   data: String,
 ) -> Result(#(String, String, ActionEvent), Nil) {
-  case string.split(data, ":") {
-    ["dlg", dialog_id, window_id, action_id] ->
-      Ok(#(dialog_id, window_id, ActionEvent(action_id:, arg: None)))
-    ["dlg", dialog_id, window_id, action_id, ..arg_parts] ->
-      Ok(#(
-        dialog_id,
-        window_id,
-        ActionEvent(action_id:, arg: Some(string.join(arg_parts, ":"))),
-      ))
-    _ -> Error(Nil)
-  }
+  keyboard.unpack_callback(data, render.callback_codec())
+  |> result.map(fn(callback) { callback.data })
 }
 
 /// A widget event arrives as `ActionEvent("w", Some("<widget_id>:<cmd>[:<arg>]"))`
-/// after the generic parse (`dlg:<d>:<w>:w:<widget_id>:<cmd>[:<arg>]`). Extra
-/// segments are re-joined into the arg, mirroring `parse_callback_data`.
+/// after the generic parse (`dlg:<d>:<w>:w:<widget_id>:<cmd>[:<arg>]`); the
+/// pair is the widget codec's payload split at its first delimiter, so it is
+/// put back together and unpacked with `widget.action_codec`.
 @internal
 pub fn parse_widget_event(
   event: ActionEvent,
 ) -> Result(#(String, String, Option(String)), Nil) {
-  case event.action_id, event.arg {
-    "w", Some(rest) ->
-      case string.split(rest, ":") {
-        [widget_id, cmd] -> Ok(#(widget_id, cmd, None))
-        [widget_id, cmd, ..arg_parts] ->
-          Ok(#(widget_id, cmd, Some(string.join(arg_parts, ":"))))
-        _ -> Error(Nil)
-      }
+  let codec = widget.action_codec()
+  case event.action_id == keyboard.callback_data_id(codec), event.arg {
+    True, Some(rest) ->
+      keyboard.unpack_callback(
+        keyboard.callback_data_prefix(codec) <> rest,
+        codec,
+      )
+      |> result.map(fn(callback) { callback.data })
     _, _ -> Error(Nil)
   }
 }

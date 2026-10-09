@@ -88,6 +88,7 @@ import telega/client
 import telega/context.{type Context, Context}
 import telega/dead_letter
 import telega/error
+import telega/keyboard
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
 import telega/reply
@@ -2003,27 +2004,15 @@ pub fn wait_choice(
   continue continue: fn(Context(session, error, dependencies), a) ->
     Result(Context(session, error, dependencies), error),
 ) -> Result(Context(session, error, dependencies), error) {
-  // Create inline keyboard buttons from options
+  // One button per option, carrying the option's index.
+  let codec = wait_choice_codec()
   let buttons =
     options
     |> list.index_map(fn(opt, idx) {
       let #(label, _value) = opt
-      let callback_data = int.to_string(idx)
-      types.InlineKeyboardButton(
-        text: label,
-        icon_custom_emoji_id: None,
-        style: None,
-        url: None,
-        callback_data: Some(callback_data),
-        web_app: None,
-        login_url: None,
-        switch_inline_query: None,
-        switch_inline_query_current_chat: None,
-        switch_inline_query_chosen_chat: None,
-        callback_game: None,
-        pay: None,
-        copy_text: None,
-        disabled: None,
+      keyboard.inline_raw_callback_button(
+        label,
+        keyboard.pack_callback(codec, idx).payload,
       )
     })
 
@@ -2057,17 +2046,22 @@ pub fn wait_choice(
       Ok(ctx)
     }
     Ok(_) -> {
-      // Wait for callback query
+      // Only this prompt's buttons are ours; a press on any other keyboard
+      // goes to `or:` like any other unexpected update.
+      let assert Ok(ours) =
+        regexp.from_string("^" <> keyboard.callback_data_prefix(codec))
       use ctx, data, _callback_query_id <- wait_callback_query(
         ctx,
-        filter: None,
+        filter: Some(bot.CallbackQueryFilter(re: ours)),
         or: handle_else,
         timeout:,
       )
       reply.answer_callback_once(ctx)
 
-      // Parse index and get value
-      case int.parse(data) {
+      let index =
+        keyboard.unpack_callback(data, codec)
+        |> result.map(fn(callback) { callback.data })
+      case index {
         Ok(idx) ->
           case list_at(options, idx) {
             Ok(#(_label, value)) -> continue(ctx, value)
@@ -2093,6 +2087,11 @@ pub fn wait_choice(
       }
     }
   }
+}
+
+/// The codec `wait_choice` packs its buttons with: `choice:<index>`.
+fn wait_choice_codec() -> keyboard.KeyboardCallbackData(Int) {
+  keyboard.int_callback_data("choice")
 }
 
 /// Wait for update matching custom filter.

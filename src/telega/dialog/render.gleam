@@ -27,6 +27,7 @@ import gleam/string
 import telega/api
 import telega/bot.{type Context}
 import telega/dialog/types as dialog_types
+import telega/dialog/widget
 import telega/error.{type TelegaError}
 import telega/format
 import telega/keyboard
@@ -555,20 +556,65 @@ fn build_button(
 /// Telegram's callback-data byte limit; validation and packing share it.
 pub const max_callback_data_bytes = 64
 
-/// The exact callback-data string for an action — the single place the
-/// `dlg:` scheme is constructed. Build-time validation measures budgets
-/// through this same function, so packing and validation can never diverge.
+/// The `keyboard` codec every dialog button is packed with and every press is
+/// unpacked with: `dlg:<dialog_id>:<window_id>:<action_id>[:<arg>]`. Extra
+/// segments belong to the arg, so args may contain `:`.
+pub fn callback_codec() -> keyboard.KeyboardCallbackData(
+  #(String, String, dialog_types.ActionEvent),
+) {
+  keyboard.new_callback_data(
+    id: "dlg",
+    serialize: fn(value) {
+      let #(dialog_id, window_id, dialog_types.ActionEvent(action_id:, arg:)) =
+        value
+      let data = dialog_id <> ":" <> window_id <> ":" <> action_id
+      case arg {
+        Some(arg) -> data <> ":" <> arg
+        None -> data
+      }
+    },
+    deserialize: fn(data) {
+      case string.split(data, ":") {
+        [dialog_id, window_id, action_id] ->
+          Ok(#(
+            dialog_id,
+            window_id,
+            dialog_types.ActionEvent(action_id:, arg: None),
+          ))
+        [dialog_id, window_id, action_id, ..arg_parts] ->
+          Ok(#(
+            dialog_id,
+            window_id,
+            dialog_types.ActionEvent(
+              action_id:,
+              arg: Some(string.join(arg_parts, ":")),
+            ),
+          ))
+        _ -> Error(Nil)
+      }
+    },
+  )
+}
+
+/// The exact callback-data string for an action. Build-time validation
+/// measures budgets through this same function, so packing and validation can
+/// never diverge.
 pub fn callback_data(
   dialog_id dialog_id: String,
   window_id window_id: String,
   action_id action_id: String,
   arg arg: Option(String),
 ) -> String {
-  let data = "dlg:" <> dialog_id <> ":" <> window_id <> ":" <> action_id
-  case arg {
-    Some(arg) -> data <> ":" <> arg
-    None -> data
-  }
+  keyboard.pack_callback(callback_codec(), #(
+    dialog_id,
+    window_id,
+    dialog_types.ActionEvent(action_id:, arg:),
+  )).payload
+}
+
+/// What every payload of one dialog starts with.
+pub fn callback_prefix(dialog_id dialog_id: String) -> String {
+  keyboard.callback_data_prefix(callback_codec()) <> dialog_id <> ":"
 }
 
 /// Build callback data for an action, checking the reserved `:` in the
@@ -584,7 +630,13 @@ pub fn pack_callback_data(
   arg arg: Option(String),
 ) -> Result(String, RenderError) {
   use <- bool.guard(
-    !{ string.starts_with(action_id, "w:") || !string.contains(action_id, ":") },
+    !{
+      string.starts_with(
+        action_id,
+        keyboard.callback_data_prefix(widget.action_codec()),
+      )
+      || !string.contains(action_id, ":")
+    },
     Error(InvalidButton(
       action_id:,
       reason: "action id must not contain ':' (reserved for the w: widget namespace)",

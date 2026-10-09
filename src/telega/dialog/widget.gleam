@@ -55,6 +55,7 @@ import telega/dialog/types.{
   type DialogAction, type DialogButton, type KeyboardWidget, type Labels,
   type WidgetCtx, type WidgetResult, type WidgetStore, KeyboardWidget,
 }
+import telega/keyboard
 import telega/scope.{type Scope}
 
 /// An item offered by `select`/`radio`/`multiselect`/`paged_select`. The `id`
@@ -416,8 +417,33 @@ pub fn list_group(
 
 // Shared helpers --------------------------------------------------------------------
 
+/// The `keyboard` codec a widget's buttons are packed with, inside a dialog
+/// action id: `w:<widget_id>:<cmd>[:<arg>]`. Extra segments belong to the arg.
+pub fn action_codec() -> keyboard.KeyboardCallbackData(
+  #(String, String, Option(String)),
+) {
+  keyboard.new_callback_data(
+    id: "w",
+    serialize: fn(value) {
+      let #(widget_id, cmd, arg) = value
+      case arg {
+        Some(arg) -> widget_id <> ":" <> cmd <> ":" <> arg
+        None -> widget_id <> ":" <> cmd
+      }
+    },
+    deserialize: fn(rest) {
+      case string.split(rest, ":") {
+        [widget_id, cmd] -> Ok(#(widget_id, cmd, None))
+        [widget_id, cmd, ..arg_parts] ->
+          Ok(#(widget_id, cmd, Some(string.join(arg_parts, ":"))))
+        _ -> Error(Nil)
+      }
+    },
+  )
+}
+
 fn action(widget_id: String, cmd: String) -> String {
-  "w:" <> widget_id <> ":" <> cmd
+  keyboard.pack_callback(action_codec(), #(widget_id, cmd, None)).payload
 }
 
 fn item_grid(

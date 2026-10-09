@@ -44,6 +44,15 @@ under the release that shipped them.
 
 ### Changed
 
+- **One callback-data codec.** Dialog buttons (`dlg:…`), widget buttons
+  (`w:…`), the yes/no payloads a flow step reads back and `wait_choice`'s
+  buttons are all packed and unpacked with `telega/keyboard`'s
+  `KeyboardCallbackData` (`render.callback_codec`, `widget.action_codec`,
+  `keyboard.bool_callback_data`, `keyboard.int_callback_data("choice")`)
+  instead of four hand-written parsers. Wire formats are unchanged except
+  `wait_choice`, whose buttons now carry `choice:<index>` instead of a bare
+  index and only accept their own presses; a `wait_choice` prompt does not
+  survive a restart anyway.
 - **`Context` lives in `telega/context`.** `bot.Context` is an alias for the same
   type, so imports keep working; what changed is the record. `chat_subject`
   (unused since `wait_*` stopped messaging the chat instance) and `start_time`
