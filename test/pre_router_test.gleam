@@ -120,3 +120,49 @@ pub fn first_stop_short_circuits_the_chain_test() {
   // ... but nothing after the `Stop` did.
   process.receive(seen, 50) |> should.equal(Error(Nil))
 }
+
+// A replayed dead letter must get past a pre-handler that already saw it ----
+
+pub fn replay_skips_the_pre_router_middleware_test() {
+  let assert Ok(reg) = registry.start("pre_router_replay")
+  let router_reached = process.new_subject()
+  let router_handler = fn(ctx: bot.Context(S, Nil, Nil), _update) {
+    process.send(router_reached, Nil)
+    Ok(ctx)
+  }
+  let block = fn(_pre: bot.PreContext(Nil)) { Stop }
+
+  let assert Ok(started) =
+    bot.start(
+      registry: reg,
+      config: context.config(),
+      bot_info: factory.bot_user(),
+      router_handler:,
+      pre_handlers: [block],
+      session_settings: context.session_settings_with(
+        default: fn() { S },
+        initial: S,
+      ),
+      catch_handler: context.catch_handler(),
+      dependencies: Nil,
+      chat_factory: start_factory(),
+      chat_settings: bot.ChatSettings(
+        ..bot.default_chat_settings(),
+        idle_timeout: None,
+        init_timeout: 5000,
+        media_group_timeout: option.None,
+      ),
+      dead_letters: None,
+      name: None,
+    )
+  let upd = factory.text_update(text: "hi")
+
+  // The ordinary path is stopped, and reports the update as acknowledged.
+  bot.handle_update(started.data, upd) |> should.be_true
+  process.receive(router_reached, 200) |> should.equal(Error(Nil))
+
+  // The replay path reaches the router.
+  bot.replay_update(started.data, upd) |> should.be_true
+  process.receive(router_reached, 200) |> should.equal(Ok(Nil))
+  let _ = registry.stop(reg)
+}

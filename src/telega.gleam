@@ -2388,9 +2388,11 @@ pub fn dead_letters(
 /// Run it once the bug that crashed the handler is fixed — a replayed update
 /// that crashes again is dead-lettered afresh under the same key, so the queue
 /// does not grow. Updates are replayed oldest `update_id` first, one at a
-/// time, and each is dispatched exactly like an update arriving from Telegram
-/// (the same routing, the same session, the same pre-router middleware). An
-/// update the bot declines (`False`) keeps its entry.
+/// time, and each is routed like an update arriving from Telegram (the same
+/// routing, the same session), except that the pre-router middleware is
+/// skipped: it already saw this update the first time, and a dedup
+/// pre-handler would otherwise drop the replay as a repeat. An update the bot
+/// declines (`False`) keeps its entry.
 ///
 /// This is deliberately a manual operation: replaying a queue full of updates
 /// the users have long since moved past is rarely what you want automatically.
@@ -2403,7 +2405,12 @@ pub fn replay_dead_letters(
   let #(replayed, failed) =
     list.fold(found, #(0, []), fn(acc, letter) {
       let #(replayed, failed) = acc
-      case handle_update(telega, letter.update) {
+      case
+        bot.replay_update(
+          telega.bot_subject,
+          update.raw_to_update(letter.update),
+        )
+      {
         True -> {
           let _ = dead_letter.drop(letters:, key: letter.key)
           #(replayed + 1, failed)

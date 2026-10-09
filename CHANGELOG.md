@@ -25,6 +25,10 @@ under the release that shipped them.
 
 ### Fixed
 
+- **`replay_dead_letters` dropped letters without running a handler** when
+  `idempotency.deduplicate` was installed: the pre-handler had already seen the
+  `update_id`, answered `Stop`, and the replay counted as handled. Replays now
+  skip the pre-router middleware.
 - The two update-kind matches in the chat instance that decide what a pending
   `wait_*` must not swallow and which messages are album parts no longer end in
   a wildcard, so a new Bot API update kind fails to compile until it is placed.

@@ -331,6 +331,10 @@ pub opaque type BotMessage {
     reply_with: Subject(Bool),
     envelope: Option(Envelope),
   )
+  // A dead letter fed back in. Routed like any update but past the pre-router
+  // middleware: a dedup pre-handler has already seen this `update_id`, and
+  // would `Stop` the replay before it reached a handler.
+  ReplayUpdateBotMessage(update: Update, reply_with: Subject(Bool))
   // Sent by a chat instance once it finishes handling one update (success or
   // handled error). Used to keep the in-flight counter accurate for draining
   // and to forget the caller it has just answered.
@@ -514,6 +518,30 @@ fn bot_loop(
                   actor.continue(bot)
                 }
               }
+          }
+      }
+    ReplayUpdateBotMessage(update:, reply_with:) ->
+      case bot.accepting {
+        False -> {
+          process.send(reply_with, False)
+          actor.continue(bot)
+        }
+        True ->
+          case
+            handle_update_bot_message(
+              bot:,
+              update:,
+              reply_with:,
+              envelope: None,
+              annotations: dict.new(),
+            )
+          {
+            Ok(bot) -> actor.continue(Bot(..bot, in_flight: bot.in_flight + 1))
+            Error(error) -> {
+              log.error_d("Failed to dispatch replayed update: ", error)
+              process.send(reply_with, False)
+              actor.continue(bot)
+            }
           }
       }
     UpdateHandledBotMessage(pid:) ->
@@ -2016,6 +2044,29 @@ pub fn handle_update_within(
   update update: Update,
   timeout timeout: Int,
 ) -> Bool {
+  send_and_await(bot_subject, timeout, fn(reply_with) {
+    HandleUpdateBotMessage(update:, reply_with:, envelope: None)
+  })
+}
+
+/// Dispatch a dead letter again, skipping the pre-router middleware, and wait
+/// up to `update_dispatch_timeout` for it. Users should use
+/// `telega.replay_dead_letters`.
+@internal
+pub fn replay_update(
+  bot_subject bot_subject: BotSubject,
+  update update: Update,
+) -> Bool {
+  send_and_await(bot_subject, update_dispatch_timeout, fn(reply_with) {
+    ReplayUpdateBotMessage(update:, reply_with:)
+  })
+}
+
+fn send_and_await(
+  bot_subject: BotSubject,
+  timeout: Int,
+  message: fn(Subject(Bool)) -> BotMessage,
+) -> Bool {
   case process.subject_owner(bot_subject) {
     Error(Nil) -> False
     Ok(bot_pid) -> {
@@ -2026,10 +2077,7 @@ pub fn handle_update_within(
         |> process.select(reply_with)
         |> process.select_specific_monitor(monitor, fn(_down) { False })
 
-      process.send(
-        bot_subject,
-        HandleUpdateBotMessage(update:, reply_with:, envelope: None),
-      )
+      process.send(bot_subject, message(reply_with))
 
       let handled =
         process.selector_receive(from: selector, within: timeout)
