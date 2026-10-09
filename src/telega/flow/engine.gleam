@@ -21,15 +21,15 @@ import telega/internal/log
 import telega/internal/utils
 import telega/telemetry
 
-/// Emit a `telega.flow` telemetry event (`step`, `timeout` or `cancel`)
-/// with `flow_name` and `step` metadata.
+/// Emit one of the `telega.flow.*` telemetry events with `flow_name` and
+/// `step` metadata.
 @internal
 pub fn emit_flow_event(
-  event event: String,
+  event event: List(String),
   instance instance: FlowInstance,
   measurements measurements: List(#(String, Int)),
 ) -> Nil {
-  telemetry.execute(["telega", "flow", event], measurements, [
+  telemetry.execute(event, measurements, [
     #("flow_name", telemetry.StringValue(instance.flow_name)),
     #("step", telemetry.StringValue(instance.state.current_step)),
   ])
@@ -219,7 +219,7 @@ pub fn execute_step(
                             config.middlewares,
                           ),
                         )
-                      emit_flow_event("step", instance, [
+                      emit_flow_event(telemetry.flow_step, instance, [
                         #("duration", telemetry.monotonic_time() - started_at),
                       ])
                       case result {
@@ -251,7 +251,7 @@ pub fn execute_step(
 /// Handle an error in a flow.
 ///
 /// Every failure — a step handler, a hook, a save, an unknown step — is logged
-/// and emitted as `["telega", "flow", "error"]`. Without an `on_error` handler
+/// and emitted as `telemetry.flow_error`. Without an `on_error` handler
 /// the error is propagated to the bot's catch handler instead of being turned
 /// into a successful `Ok(ctx)`, which used to leave a flow stuck with nothing
 /// written anywhere.
@@ -275,7 +275,7 @@ pub fn handle_error(
     <> "' failed: "
     <> reason,
   )
-  telemetry.execute(["telega", "flow", "error"], [#("count", 1)], [
+  telemetry.execute(telemetry.flow_error, [#("count", 1)], [
     #("flow_name", telemetry.StringValue(instance.flow_name)),
     #("step", telemetry.StringValue(instance.state.current_step)),
     #("reason", telemetry.StringValue(reason)),
@@ -668,7 +668,7 @@ fn process_action(
     }
 
     Cancel -> {
-      emit_flow_event("cancel", instance, [#("count", 1)])
+      emit_flow_event(telemetry.flow_cancel, instance, [#("count", 1)])
       case finish_instance(flow, ctx, instance) {
         Ok(final_ctx) -> Ok(final_ctx)
         Error(err) -> handle_error(flow, ctx, instance, Some(err))
@@ -720,7 +720,7 @@ fn process_action(
     }
 
     Exit(_) -> {
-      emit_flow_event("exit", instance, [#("count", 1)])
+      emit_flow_event(telemetry.flow_exit, instance, [#("count", 1)])
       case finish_instance(flow, ctx, instance) {
         Ok(final_ctx) -> Ok(final_ctx)
         Error(err) -> handle_error(flow, ctx, instance, Some(err))
@@ -1056,7 +1056,7 @@ pub fn execute_subflow_step(
           handler_fn,
           list.append(flow.global_middlewares, step_config.middlewares),
         )
-      emit_flow_event("step", instance, [
+      emit_flow_event(telemetry.flow_step, instance, [
         #("duration", telemetry.monotonic_time() - started_at),
       ])
       case result {
@@ -1105,7 +1105,7 @@ fn process_subflow_action(
     }
 
     Cancel -> {
-      emit_flow_event("cancel", instance, [#("count", 1)])
+      emit_flow_event(telemetry.flow_cancel, instance, [#("count", 1)])
       delete_instance(flow, instance.id)
       Ok(ctx)
     }

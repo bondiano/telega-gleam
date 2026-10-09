@@ -279,7 +279,7 @@ fn report_decode_error(kind: String, key: String, reason: String) -> Nil {
     <> "' — falling back to the default, which will overwrite it: "
     <> reason,
   )
-  telemetry.execute(["telega", "storage", "decode_error"], [#("count", 1)], [
+  telemetry.execute(telemetry.storage_decode_error, [#("count", 1)], [
     #("kind", telemetry.StringValue(kind)),
     #("key", telemetry.StringValue(key)),
   ])

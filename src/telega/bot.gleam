@@ -719,7 +719,7 @@ fn handle_instance_down(
           list.each(watch.pending, fn(entry) { process.send(entry.0, False) })
           registry.unregister_owned_by(bot.registry, key: watch.key, pid:)
           telemetry.execute(
-            ["telega", "chat_instance", "down"],
+            telemetry.chat_instance_down,
             [#("unanswered", list.length(watch.pending))],
             [#("key", telemetry.StringValue(watch.key))],
           )
@@ -754,7 +754,7 @@ fn dead_letter_all(
           case dead_letter.record(letters:, update: raw, reason:) {
             Ok(Nil) ->
               telemetry.execute(
-                ["telega", "dead_letter", "recorded"],
+                telemetry.dead_letter_recorded,
                 [#("count", 1)],
                 [
                   #("key", telemetry.StringValue(watch.key)),
@@ -845,7 +845,7 @@ fn handle_update_bot_message(
   use chat_subject <- result.try(case registry.get(bot.registry, key:) {
     Some(chat_subject) -> Ok(chat_subject)
     None -> {
-      telemetry.execute(["telega", "chat_instance", "spawn"], [#("count", 1)], [
+      telemetry.execute(telemetry.chat_instance_spawn, [#("count", 1)], [
         #("chat_id", telemetry.IntValue(update.chat_id)),
         #("from_id", telemetry.IntValue(update.from_id)),
       ])
@@ -1103,14 +1103,10 @@ fn loop_chat_instance(
       |> actor.continue
     IdleCheckChatInstanceMessage -> handle_idle_check(chat)
     ShutdownChatInstanceMessage -> {
-      telemetry.execute(
-        ["telega", "chat_instance", "terminate"],
-        [#("count", 1)],
-        [
-          #("key", telemetry.StringValue(chat.key)),
-          #("reason", telemetry.StringValue("idle_timeout")),
-        ],
-      )
+      telemetry.execute(telemetry.chat_instance_terminate, [#("count", 1)], [
+        #("key", telemetry.StringValue(chat.key)),
+        #("reason", telemetry.StringValue("idle_timeout")),
+      ])
       actor.stop()
     }
   }
@@ -1206,7 +1202,7 @@ fn hibernate(
   chat: ChatInstance(session, error, dependencies),
 ) -> ChatInstance(session, error, dependencies) {
   garbage_collect()
-  telemetry.execute(["telega", "chat_instance", "hibernate"], [#("count", 1)], [
+  telemetry.execute(telemetry.chat_instance_hibernate, [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
   ])
   ChatInstance(..chat, compacted: True)
@@ -1547,7 +1543,7 @@ fn update_span(
   let metadata = update_telemetry_metadata(upd)
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
-    ["telega", "update", "start"],
+    telemetry.update_start,
     [#("system_time", telemetry.system_time())],
     metadata,
   )
@@ -1559,16 +1555,15 @@ fn update_span(
   case result {
     Ok(_) ->
       telemetry.execute(
-        ["telega", "update", "stop"],
+        telemetry.update_stop,
         [#("duration", duration)],
         metadata,
       )
     Error(error) ->
-      telemetry.execute(
-        ["telega", "update", "exception"],
-        [#("duration", duration)],
-        [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
-      )
+      telemetry.execute(telemetry.update_exception, [#("duration", duration)], [
+        #("error", telemetry.StringValue(string.inspect(error))),
+        ..metadata
+      ])
   }
 
   result
@@ -1660,7 +1655,7 @@ fn guard_read_only(
 }
 
 fn report_load_error(key: String, policy: String) -> Nil {
-  telemetry.execute(["telega", "session", "load_error"], [#("count", 1)], [
+  telemetry.execute(telemetry.session_load_error, [#("count", 1)], [
     #("key", telemetry.StringValue(key)),
     #("policy", telemetry.StringValue(policy)),
   ])
@@ -1680,7 +1675,7 @@ fn stop_chat_instance(
 ) {
   ack_with(False)
   registry.unregister(chat.registry, key: chat.key)
-  telemetry.execute(["telega", "chat_instance", "terminate"], [#("count", 1)], [
+  telemetry.execute(telemetry.chat_instance_terminate, [#("count", 1)], [
     #("key", telemetry.StringValue(chat.key)),
     #("reason", telemetry.StringValue(reason)),
   ])
@@ -2229,7 +2224,7 @@ fn warn_if_inside_flow_step(ctx: Context(session, error, dependencies)) -> Nil {
   case scope.get(ctx.scope, flow_step_key) {
     Error(Nil) -> Nil
     Ok(flow_name) -> {
-      telemetry.execute(["telega", "flow", "wait_in_step"], [#("count", 1)], [
+      telemetry.execute(telemetry.flow_wait_in_step, [#("count", 1)], [
         #("flow_name", telemetry.StringValue(flow_name)),
       ])
       log.warning(
@@ -2259,7 +2254,7 @@ fn do_handle_with_telemetry(
   ]
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
-    ["telega", "update", "start"],
+    telemetry.update_start,
     [#("system_time", telemetry.system_time())],
     metadata,
   )
@@ -2269,14 +2264,13 @@ fn do_handle_with_telemetry(
   let duration = telemetry.monotonic_time() - started_at
   case result {
     Some(Error(error)) ->
-      telemetry.execute(
-        ["telega", "update", "exception"],
-        [#("duration", duration)],
-        [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
-      )
+      telemetry.execute(telemetry.update_exception, [#("duration", duration)], [
+        #("error", telemetry.StringValue(string.inspect(error))),
+        ..metadata
+      ])
     _ ->
       telemetry.execute(
-        ["telega", "update", "stop"],
+        telemetry.update_stop,
         [#("duration", duration)],
         metadata,
       )

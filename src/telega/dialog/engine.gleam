@@ -682,9 +682,14 @@ fn start_sub(
       when_unknown()
     }
     Ok(sub) -> {
-      emit_dialog_event(dialog, "sub_start", inst.state.current_step, [
-        #("count", 1),
-      ])
+      emit_dialog_event(
+        dialog,
+        telemetry.dialog_sub_start,
+        inst.state.current_step,
+        [
+          #("count", 1),
+        ],
+      )
       let frame =
         SubFrame(
           sub_id:,
@@ -711,7 +716,7 @@ fn finish_sub(
   sub_id: String,
   sub_state: String,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
-  emit_dialog_event(dialog, "sub_done", inst.state.current_step, [
+  emit_dialog_event(dialog, telemetry.dialog_sub_done, inst.state.current_step, [
     #("count", 1),
   ])
   let return_window = return_window_of(dialog, inst)
@@ -804,9 +809,14 @@ fn cancel_sub(
   inst: flow_types.FlowInstance,
   sub_id: String,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
-  emit_dialog_event(dialog, "sub_cancel", inst.state.current_step, [
-    #("count", 1),
-  ])
+  emit_dialog_event(
+    dialog,
+    telemetry.dialog_sub_cancel,
+    inst.state.current_step,
+    [
+      #("count", 1),
+    ],
+  )
   let return_window = return_window_of(dialog, inst)
   let inst = leave_sub(dialog, ctx, inst, sub_id)
   jump_and_render(dialog, ctx, inst, return_window)
@@ -918,7 +928,7 @@ fn render_window(
     )
   {
     Ok(#(message_id, kind)) -> {
-      emit_dialog_event(dialog, "render", window.id, [
+      emit_dialog_event(dialog, telemetry.dialog_render, window.id, [
         #("duration", telemetry.monotonic_time() - started_at),
       ])
       inst
@@ -1208,7 +1218,7 @@ fn emit_action_event(
   window_id: String,
   event: ActionEvent,
 ) -> Nil {
-  telemetry.execute(["telega", "dialog", "action"], [#("count", 1)], [
+  telemetry.execute(telemetry.dialog_action, [#("count", 1)], [
     #("dialog_id", telemetry.StringValue(dialog.id)),
     #("window_id", telemetry.StringValue(window_id)),
     #("action_id", telemetry.StringValue(event.action_id)),
@@ -1217,11 +1227,11 @@ fn emit_action_event(
 
 fn emit_dialog_event(
   dialog: CompiledDialog(session, error, dependencies),
-  event: String,
+  event: List(String),
   window_id: String,
   measurements: List(#(String, Int)),
 ) -> Nil {
-  telemetry.execute(["telega", "dialog", event], measurements, [
+  telemetry.execute(event, measurements, [
     #("dialog_id", telemetry.StringValue(dialog.id)),
     #("window_id", telemetry.StringValue(window_id)),
   ])
@@ -1249,7 +1259,9 @@ fn log_render_error(
   window_id: String,
   render_error: render.RenderError,
 ) -> Nil {
-  emit_dialog_event(dialog, "render_error", window_id, [#("count", 1)])
+  emit_dialog_event(dialog, telemetry.dialog_render_error, window_id, [
+    #("count", 1),
+  ])
   logging.log(
     logging.Error,
     "[dialog:"
@@ -1266,7 +1278,9 @@ fn log_dialog_error(
   inst: flow_types.FlowInstance,
   maybe_error: Option(error),
 ) -> Nil {
-  emit_dialog_event(dialog, "error", inst.state.current_step, [#("count", 1)])
+  emit_dialog_event(dialog, telemetry.dialog_error, inst.state.current_step, [
+    #("count", 1),
+  ])
   let details = case maybe_error {
     Some(error) -> string.inspect(error)
     None -> "unknown step '" <> inst.state.current_step <> "'"

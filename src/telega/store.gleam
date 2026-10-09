@@ -261,7 +261,7 @@ fn report_decode_error(key: String, err: json.DecodeError) -> Nil {
     <> "' — reading the default instead: "
     <> string.inspect(err),
   )
-  telemetry.execute(["telega", "storage", "decode_error"], [#("count", 1)], [
+  telemetry.execute(telemetry.storage_decode_error, [#("count", 1)], [
     #("kind", telemetry.StringValue("store")),
     #("key", telemetry.StringValue(key)),
   ])

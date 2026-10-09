@@ -60,8 +60,8 @@
 //// registered stays in storage untouched, so the deploy that adds the
 //// handler picks it up at start.
 ////
-//// Every run emits `["telega", "job", "run"]`; a failure to run one emits
-//// `["telega", "job", "error"]`.
+//// Every run emits `telemetry.job_run`; a failure to run one emits
+//// `telemetry.job_error`.
 
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
@@ -750,14 +750,14 @@ fn erase_storage(storage: KeyValueStorage(e)) -> KeyValueStorage(String) {
 }
 
 fn report_run(id: String, handler: String) -> Nil {
-  telemetry.execute(["telega", "job", "run"], [#("count", 1)], [
+  telemetry.execute(telemetry.job_run, [#("count", 1)], [
     #("id", telemetry.StringValue(id)),
     #("handler", telemetry.StringValue(handler)),
   ])
 }
 
 fn report_error(id: String, reason: String) -> Nil {
-  telemetry.execute(["telega", "job", "error"], [#("count", 1)], [
+  telemetry.execute(telemetry.job_error, [#("count", 1)], [
     #("id", telemetry.StringValue(id)),
     #("reason", telemetry.StringValue(reason)),
   ])

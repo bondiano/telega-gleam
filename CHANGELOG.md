@@ -13,6 +13,12 @@ under the release that shipped them.
 
 ### Added
 
+- **Telemetry event names as constants.** Every event `telega` emits is a
+  `pub const` in `telega/telemetry` (`telemetry.update_stop`,
+  `telemetry.flow_step`, …) and the module's event table now lists all of
+  them, including the nine it was missing (`chat_instance.hibernate`,
+  `session.load_error`, `storage.decode_error`, `flow.exit`, `flow.error`,
+  `flow.wait_in_step`, `dialog.*`, `job.run`, `job.error`).
 - **`error.FetchTimeoutError`.** `telega_httpc` and `telega_hackney` report a
   timed-out request as this variant instead of a `FetchError` whose text had
   to be searched for "Timeout"; the poller matches on it. `error.to_string` no

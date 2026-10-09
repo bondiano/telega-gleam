@@ -88,7 +88,7 @@
 ////   are answered the same way by a fallback that `attach` registers
 ////   automatically.
 //// - **Errors**: user handler errors are logged, emit
-////   `["telega", "dialog", "error"]` telemetry and re-render the current
+////   `telemetry.dialog_error` telemetry and re-render the current
 ////   window; failed renders (API errors, over-64-byte callback data) are
 ////   logged loudly and keep the dialog alive.
 

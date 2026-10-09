@@ -461,7 +461,7 @@ fn release_slot(state: State, id: String) -> State {
 }
 
 fn emit_queue_depth(rule: Rule, depth: Int) {
-  telemetry.execute(["telega", "request_queue", "depth"], [#("depth", depth)], [
+  telemetry.execute(telemetry.request_queue_depth, [#("depth", depth)], [
     #("rule_id", telemetry.StringValue(rule.id)),
     #("priority", telemetry.IntValue(rule.priority)),
   ])

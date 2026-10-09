@@ -2385,7 +2385,7 @@ pub fn with_rate_limit(
       case rate_limiter.hit(limiter, key) {
         True -> handler(ctx, update_param)
         False -> {
-          telemetry.execute(["telega", "rate_limit", "hit"], [#("count", 1)], [
+          telemetry.execute(telemetry.rate_limit_hit, [#("count", 1)], [
             #("chat_id", telemetry.IntValue(update_param.chat_id)),
             #("from_id", telemetry.IntValue(update_param.from_id)),
             #(

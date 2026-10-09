@@ -2196,7 +2196,7 @@ pub fn cancel_conversation(
 pub fn shutdown(telega: Telega(session, error, dependencies)) -> Nil {
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
-    ["telega", "shutdown", "start"],
+    telemetry.shutdown_start,
     [#("system_time", telemetry.system_time())],
     [],
   )
@@ -2216,7 +2216,7 @@ pub fn shutdown(telega: Telega(session, error, dependencies)) -> Nil {
 
   let duration = telemetry.monotonic_time() - started_at
   telemetry.execute(
-    ["telega", "shutdown", "stop"],
+    telemetry.shutdown_stop,
     [#("duration", duration), #("drained", int.max(0, drained))],
     [#("timed_out", telemetry.BoolValue(drained < 0))],
   )

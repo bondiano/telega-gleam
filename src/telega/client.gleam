@@ -883,7 +883,7 @@ fn fetch_with_telemetry(
   let metadata = [#("method", telemetry.StringValue(method))]
   let started_at = telemetry.monotonic_time()
   telemetry.execute(
-    ["telega", "api_call", "start"],
+    telemetry.api_call_start,
     [#("system_time", telemetry.system_time())],
     metadata,
   )
@@ -893,14 +893,13 @@ fn fetch_with_telemetry(
   let duration = telemetry.monotonic_time() - started_at
   case result {
     Ok(response) ->
-      telemetry.execute(
-        ["telega", "api_call", "stop"],
-        [#("duration", duration)],
-        [#("status", telemetry.IntValue(response.status)), ..metadata],
-      )
+      telemetry.execute(telemetry.api_call_stop, [#("duration", duration)], [
+        #("status", telemetry.IntValue(response.status)),
+        ..metadata
+      ])
     Error(error) ->
       telemetry.execute(
-        ["telega", "api_call", "exception"],
+        telemetry.api_call_exception,
         [#("duration", duration)],
         [#("error", telemetry.StringValue(string.inspect(error))), ..metadata],
       )
@@ -910,14 +909,10 @@ fn fetch_with_telemetry(
 }
 
 fn emit_api_retry(method: String, attempt: Int, retry_delay: Int) {
-  telemetry.execute(
-    ["telega", "api_call", "retry"],
-    [#("retry_after", retry_delay)],
-    [
-      #("method", telemetry.StringValue(method)),
-      #("attempt", telemetry.IntValue(attempt)),
-    ],
-  )
+  telemetry.execute(telemetry.api_call_retry, [#("retry_after", retry_delay)], [
+    #("method", telemetry.StringValue(method)),
+    #("attempt", telemetry.IntValue(attempt)),
+  ])
 }
 
 /// Extract the delay in milliseconds from a 429 response's

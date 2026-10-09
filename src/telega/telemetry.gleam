@@ -22,12 +22,29 @@
 //// | `telega.chat_instance.spawn` | `count` | `chat_id`, `from_id` |
 //// | `telega.chat_instance.terminate` | `count` | `key`, `reason` |
 //// | `telega.chat_instance.down` | `unanswered` | `key` |
+//// | `telega.chat_instance.hibernate` | `count` | `key` |
+//// | `telega.session.load_error` | `count` | `key`, `policy` |
+//// | `telega.storage.decode_error` | `count` | `kind`, `key` |
 //// | `telega.dead_letter.recorded` | `count` | `key`, `update_id` |
 //// | `telega.flow.step` | `duration` | `flow_name`, `step` |
 //// | `telega.flow.timeout` | `count` | `flow_name`, `step` |
 //// | `telega.flow.cancel` | `count` | `flow_name`, `step` |
+//// | `telega.flow.exit` | `count` | `flow_name`, `step` |
+//// | `telega.flow.error` | `count` | `flow_name`, `step`, `reason` |
+//// | `telega.flow.wait_in_step` | `count` | `flow_name` |
+//// | `telega.dialog.action` | `count` | `dialog_id`, `window_id`, `action_id` |
+//// | `telega.dialog.render` | `duration` | `dialog_id`, `window_id` |
+//// | `telega.dialog.render_error` | `count` | `dialog_id`, `window_id` |
+//// | `telega.dialog.error` | `count` | `dialog_id`, `window_id` |
+//// | `telega.dialog.sub_start` / `sub_done` / `sub_cancel` | `count` | `dialog_id`, `window_id` |
+//// | `telega.job.run` | `count` | `id`, `handler` |
+//// | `telega.job.error` | `count` | `id`, `reason` |
 //// | `telega.shutdown.start` | `system_time` | — |
 //// | `telega.shutdown.stop` | `duration`, `drained` | `timed_out` |
+////
+//// Every name is a constant in this module (`telemetry.update_stop`,
+//// `telemetry.flow_step`, …), so a handler attaches to the same value the
+//// library emits.
 ////
 //// - Update and API call events follow the **span convention**
 ////   (`start`/`stop`/`exception` with a monotonic `duration`), the same
@@ -173,6 +190,77 @@ import gleam/dynamic/decode
 import gleam/erlang/atom.{type Atom}
 import gleam/list
 import gleam/string
+
+// Event names ------------------------------------------------------------------------
+//
+// The one place an event is spelled. The doc table above is written from
+// these; a new event is added here first.
+
+pub const update_start = ["telega", "update", "start"]
+
+pub const update_stop = ["telega", "update", "stop"]
+
+pub const update_exception = ["telega", "update", "exception"]
+
+pub const api_call_start = ["telega", "api_call", "start"]
+
+pub const api_call_stop = ["telega", "api_call", "stop"]
+
+pub const api_call_exception = ["telega", "api_call", "exception"]
+
+pub const api_call_retry = ["telega", "api_call", "retry"]
+
+pub const request_queue_depth = ["telega", "request_queue", "depth"]
+
+pub const rate_limit_hit = ["telega", "rate_limit", "hit"]
+
+pub const chat_instance_spawn = ["telega", "chat_instance", "spawn"]
+
+pub const chat_instance_terminate = ["telega", "chat_instance", "terminate"]
+
+pub const chat_instance_down = ["telega", "chat_instance", "down"]
+
+pub const chat_instance_hibernate = ["telega", "chat_instance", "hibernate"]
+
+pub const session_load_error = ["telega", "session", "load_error"]
+
+pub const storage_decode_error = ["telega", "storage", "decode_error"]
+
+pub const dead_letter_recorded = ["telega", "dead_letter", "recorded"]
+
+pub const flow_step = ["telega", "flow", "step"]
+
+pub const flow_timeout = ["telega", "flow", "timeout"]
+
+pub const flow_cancel = ["telega", "flow", "cancel"]
+
+pub const flow_exit = ["telega", "flow", "exit"]
+
+pub const flow_error = ["telega", "flow", "error"]
+
+pub const flow_wait_in_step = ["telega", "flow", "wait_in_step"]
+
+pub const dialog_action = ["telega", "dialog", "action"]
+
+pub const dialog_render = ["telega", "dialog", "render"]
+
+pub const dialog_render_error = ["telega", "dialog", "render_error"]
+
+pub const dialog_error = ["telega", "dialog", "error"]
+
+pub const dialog_sub_start = ["telega", "dialog", "sub_start"]
+
+pub const dialog_sub_done = ["telega", "dialog", "sub_done"]
+
+pub const dialog_sub_cancel = ["telega", "dialog", "sub_cancel"]
+
+pub const job_run = ["telega", "job", "run"]
+
+pub const job_error = ["telega", "job", "error"]
+
+pub const shutdown_start = ["telega", "shutdown", "start"]
+
+pub const shutdown_stop = ["telega", "shutdown", "stop"]
 
 /// Metadata value attached to an event.
 pub type Value {
