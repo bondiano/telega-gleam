@@ -7,13 +7,10 @@
 //// construction directly. Handler-level behavior that reads `ctx.dependencies` is
 //// covered with `context.context_with_dependencies`.
 
-import gleam/dict
-import gleam/erlang/process
 import gleam/option.{None, Some}
 import sqlight
 
 import telega/bot as telega_bot
-import telega/scope
 import telega/testing/context
 import telega/testing/factory
 import telega/testing/mock
@@ -77,19 +74,14 @@ fn dependencies_context(
   d: Dependencies,
   client,
 ) -> telega_bot.Context(Nil, String, Dependencies) {
-  telega_bot.Context(
-    key: "test_chat:123",
-    update: factory.command_update(command: "my_bookings"),
-    config: context.config_with_client(client),
+  context.context_with_all(
     session: Nil,
-    dependencies: d,
-    chat_subject: process.new_subject(),
-    start_time: None,
-    log_prefix: None,
+    update: factory.command_update(command: "my_bookings"),
+    key: "test_chat:123",
     bot_info: factory.bot_user(),
-    annotations: dict.new(),
-    scope: scope.new(),
+    dependencies: d,
   )
+  |> context.with_client(client)
 }
 
 // Validators ----------------------------------------------------------------

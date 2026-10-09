@@ -37,7 +37,8 @@ pub fn migrate(db: sqlight.Connection) -> Result(Nil, sqlight.Error) {
   Ok(Nil)
 }
 
-const schema = "
+const schema =
+  "
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   telegram_id INTEGER UNIQUE NOT NULL,
@@ -72,7 +73,8 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 "
 
-const seed_tables = "
+const seed_tables =
+  "
 INSERT OR IGNORE INTO restaurant_tables (table_number, capacity, location) VALUES
   (1, 2, 'window'),
   (2, 2, 'window'),
