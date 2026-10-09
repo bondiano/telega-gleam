@@ -18,6 +18,7 @@ import telega/flow/types.{
 }
 import telega/internal/coerce
 import telega/model/types as model_types
+import telega/reply
 import telega/router
 import telega/update
 
@@ -621,7 +622,7 @@ fn auto_resume_callback_handler(
         ])
       })
 
-    case resumed {
+    let result = case resumed {
       Some(res) -> res
       None ->
         case
@@ -633,6 +634,9 @@ fn auto_resume_callback_handler(
           Error(_) -> Ok(ctx)
         }
     }
+    // Whoever took the press, its spinner stops here unless they answered it.
+    reply.answer_callback_once(ctx)
+    result
   }
 }
 

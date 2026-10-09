@@ -427,7 +427,7 @@ pub type WaitResult {
 }
 ```
 
-All these input types are automatically handled by `registry.apply_to_router` — when a flow is waiting (after `action.wait` or `action.wait_callback`), any matching update will resume it with the appropriate `WaitResult`.
+All these input types are automatically handled by `registry.apply_to_router` — when a flow is waiting (after `action.wait` or `action.wait_callback`), any matching update will resume it with the appropriate `WaitResult`. A button press is answered once the step is done (`reply.answer_callback_once`), so the spinner stops even when the step says nothing; a step that calls `reply.answer_toast` or `reply.answer_alert` itself is not answered a second time.
 
 ## Built-in Step Handlers
 

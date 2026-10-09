@@ -71,6 +71,7 @@ import telega/model/types.{
   SendPaidMediaParameters, SendPhotoParameters, SendPollParameters,
   SendStickerParameters,
 }
+import telega/scope
 import telega/update
 import telega/webhook_reply
 
@@ -996,6 +997,48 @@ pub fn answer_quietly(
   answer_query(ctx, "answer_quietly", None, show_alert: False)
 }
 
+/// Answer the callback query of this update quietly, unless it has already
+/// been answered during this update — by `answer_toast`, `answer_alert`,
+/// `answer_quietly` or an earlier call of this. A no-op when the update is not
+/// a callback query.
+///
+/// This is what the dialog engine, the flow registry and `wait_choice` call
+/// once they are done with a button press, so a handler that said nothing
+/// still stops the spinner, and one that showed a toast is not answered twice
+/// (Telegram rejects the second answer).
+pub fn answer_callback_once(
+  ctx ctx: Context(session, error, dependencies),
+) -> Nil {
+  case ctx.update {
+    update.CallbackQueryUpdate(..) ->
+      case callback_answered(ctx) {
+        True -> Nil
+        False -> {
+          let _ =
+            answer_query(ctx, "answer_callback_once", None, show_alert: False)
+          Nil
+        }
+      }
+    _ -> Nil
+  }
+}
+
+/// Whether the callback query of this update has already been answered during
+/// this update through `reply`.
+pub fn callback_answered(
+  ctx ctx: Context(session, error, dependencies),
+) -> Bool {
+  case ctx.update {
+    update.CallbackQueryUpdate(query:, ..) ->
+      scope.get(ctx.scope, answered_key) == Ok(query.id)
+    _ -> False
+  }
+}
+
+/// The query id answered during this update. Lives in the update's scope, so
+/// every copy of the context sees it and it is gone with the next update.
+const answered_key: scope.Key(String) = scope.Key("reply/answered")
+
 fn answer_query(
   ctx: Context(session, error, dependencies),
   caller: String,
@@ -1004,7 +1047,7 @@ fn answer_query(
 ) -> Result(Bool, error.TelegaError) {
   use query <- result.try(callback_query(ctx, caller))
 
-  api.answer_callback_query(
+  use answered <- result.map(api.answer_callback_query(
     ctx.config.api_client,
     types.AnswerCallbackQueryParameters(
       callback_query_id: query.id,
@@ -1013,7 +1056,9 @@ fn answer_query(
       url: None,
       cache_time: None,
     ),
-  )
+  ))
+  scope.put(ctx.scope, answered_key, query.id)
+  answered
 }
 
 fn callback_query(

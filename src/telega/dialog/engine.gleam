@@ -61,6 +61,7 @@ import telega/flow/builder as flow_builder
 import telega/flow/instance
 import telega/flow/types as flow_types
 import telega/model/types as model_types
+import telega/reply
 import telega/scope
 import telega/telemetry
 import telega/update
@@ -312,14 +313,13 @@ pub fn compile(
 // Step handler ------------------------------------------------------------------
 
 /// Run `body`, then answer the callback query it was handling unless
-/// something already did.
+/// something already did (`dialog.alert` / `dialog.toast`, or a `reply.answer_*`).
 fn answering_callback(
   ctx: Context(session, error, dependencies),
   body: fn() -> a,
 ) -> a {
-  render.begin_callback_answer(ctx)
   let result = body()
-  render.auto_answer(ctx)
+  reply.answer_callback_once(ctx)
   result
 }
 
@@ -352,11 +352,8 @@ fn window_step(
       flow_types.TextInput(value:) ->
         handle_text(dialog, window, ctx, inst, value)
       // A leftover bool-format button (`<id>:true`) still arrives as a
-      // callback query: remove the client spinner before ignoring it.
-      flow_types.BoolCallback(..) -> {
-        render.answer_quietly(ctx, None)
-        wait(ctx, inst)
-      }
+      // callback query; `answering_callback` removes its spinner.
+      flow_types.BoolCallback(..) -> wait(ctx, inst)
       // Media the window asked for goes to `on_message`; commands and
       // everything else are not dialog events, so keep waiting. Cancel
       // commands are handled by the flow registry before the instance is
@@ -383,18 +380,12 @@ fn handle_callback(
   data: String,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   case parse_callback_data(data) {
-    // Foreign or malformed payload: silently remove the spinner and keep
-    // waiting — some other route owns this button.
-    Error(Nil) -> {
-      render.answer_quietly(ctx, None)
-      wait(ctx, inst)
-    }
+    // Foreign or malformed payload: keep waiting — some other route owns this
+    // button. The spinner goes with the step's automatic answer.
+    Error(Nil) -> wait(ctx, inst)
     Ok(#(dialog_id, window_id, event)) ->
       case dialog_id == dialog.id, window_id == window.id {
-        False, _ -> {
-          render.answer_quietly(ctx, None)
-          wait(ctx, inst)
-        }
+        False, _ -> wait(ctx, inst)
         // A press on an outdated message of this dialog (the dialog has
         // moved on): soft notice, no transition.
         True, False -> answer_stale(dialog, ctx, inst)
@@ -482,7 +473,7 @@ fn answer_stale(
   inst: flow_types.FlowInstance,
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   let labels = dialog.labels(ctx)
-  render.answer_quietly(ctx, Some(labels.stale))
+  let _ = reply.answer_toast(ctx, labels.stale)
   wait(ctx, inst)
 }
 
@@ -527,11 +518,8 @@ fn handle_widget_event(
 ) -> flow_types.StepResult(String, session, error, dependencies) {
   case list.find(window.widgets, fn(candidate) { candidate.id == widget_id }) {
     // A widget button of a window that no longer declares this widget: the
-    // message is effectively stale — remove the spinner and keep waiting.
-    Error(Nil) -> {
-      render.answer_quietly(ctx, None)
-      wait(ctx, inst)
-    }
+    // message is effectively stale — keep waiting.
+    Error(Nil) -> wait(ctx, inst)
     Ok(found) -> {
       let store = load_widget_store(inst, window.id, widget_id)
       let widget_ctx =

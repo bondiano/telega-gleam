@@ -33,11 +33,17 @@ using `with_text` and maps the error itself.
 | `reply.answer_toast(ctx, text)` | Answer the callback query with a notification |
 | `reply.answer_alert(ctx, text)` | Answer it with a modal the user must dismiss |
 | `reply.answer_quietly(ctx)` | Answer it with nothing — just stop the spinner |
+| `reply.answer_callback_once(ctx)` | Stop the spinner unless something already answered this press |
 
-The four callback shortcuts need a callback query in `ctx.update` and return an
+The callback shortcuts need a callback query in `ctx.update` and return an
 error otherwise; silently sending a new message instead would be worse than
 refusing. Every callback query must be answered, or the client keeps a spinner
-on the button for a minute.
+on the button for a minute. The three `answer_*` shortcuts remember, for the
+rest of the update, that they answered; `answer_callback_once` checks that
+memory and is what the dialog engine, the flow registry and `wait_choice` call
+after a button press, so a handler that said nothing still stops the spinner
+and one that showed a toast is not answered twice. `reply.callback_answered`
+reads the same flag.
 
 `quote` on an update that is not about a message (an inline query, a poll
 answer) has nothing to quote, so it sends the text plainly.

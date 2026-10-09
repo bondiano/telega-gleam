@@ -4,6 +4,8 @@
 //// point of a shortcut is that the record it fills in is right, and the point
 //// of the stream is that it flushes on a clock rather than per token.
 
+import gleam/erlang/process
+import gleam/http/response
 import gleam/list
 import gleam/string
 import gleam/yielder
@@ -290,4 +292,41 @@ pub fn stream_text_of_an_empty_stream_sends_nothing_test() {
   |> should.be_true
 
   mock.assert_no_calls(calls)
+}
+
+// One answer per press ----------------------------------------------------------
+
+/// `answerCallbackQuery` returns `True`; the generic mock answers `{}`.
+fn bool_client() -> #(client.TelegramClient, process.Subject(mock.ApiCall)) {
+  mock.client_with(fn(_req) {
+    Ok(response.new(200) |> response.set_body(mock.bool_response()))
+  })
+}
+
+pub fn answer_callback_once_answers_a_press_exactly_once_test() {
+  let #(tg_client, calls) = bool_client()
+  let ctx = callback_context(tg_client)
+
+  reply.callback_answered(ctx) |> should.be_false
+  reply.answer_callback_once(ctx)
+  reply.callback_answered(ctx) |> should.be_true
+  reply.answer_callback_once(ctx)
+
+  let _ = mock.assert_call_count(from: calls, expected: 1)
+}
+
+pub fn answer_callback_once_steps_back_after_a_toast_test() {
+  let #(tg_client, calls) = bool_client()
+  let ctx = callback_context(tg_client)
+
+  let assert Ok(_) = reply.answer_toast(ctx, "saved")
+  reply.answer_callback_once(ctx)
+
+  let _ = mock.assert_call_count(from: calls, expected: 1)
+}
+
+pub fn answer_callback_once_ignores_a_text_update_test() {
+  let #(tg_client, calls) = mock.client()
+  reply.answer_callback_once(text_context(tg_client))
+  mock.assert_no_calls(from: calls)
 }

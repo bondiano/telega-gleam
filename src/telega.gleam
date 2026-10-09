@@ -90,6 +90,7 @@ import telega/dead_letter
 import telega/error
 import telega/model/types.{type File, type Update, type User}
 import telega/polling
+import telega/reply
 import telega/router.{type Routable, type Router, type RouterTree}
 import telega/telemetry
 import telega/update
@@ -2063,6 +2064,7 @@ pub fn wait_choice(
         or: handle_else,
         timeout:,
       )
+      reply.answer_callback_once(ctx)
 
       // Parse index and get value
       case int.parse(data) {

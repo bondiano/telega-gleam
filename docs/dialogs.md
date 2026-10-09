@@ -511,12 +511,13 @@ filter:
   messages are politely ignored and the window re-renders, exactly like text
   without `on_text`.
 - `alert(ctx, text)` / `toast(ctx, text)` show a modal alert or a toast from
-  inside `on_action`, `on_sub_result` or a widget handler; the engine then
-  skips its automatic spinner-removing callback answer for that event. The
-  automatic answer happens **after** the handler and the re-render, so a
-  handler reached later in the same press — an `on_sub_result` running when a
-  sub-dialog is `Done` — still gets to be the answer instead of a second one
-  Telegram would reject.
+  inside `on_action`, `on_sub_result` or a widget handler (they are
+  `reply.answer_alert` / `reply.answer_toast`); the engine then skips its
+  automatic spinner-removing answer (`reply.answer_callback_once`) for that
+  event. The automatic answer happens **after** the handler and the re-render,
+  so a handler reached later in the same press — an `on_sub_result` running
+  when a sub-dialog is `Done` — still gets to be the answer instead of a second
+  one Telegram would reject.
 
 ### Several dialogs at once
 

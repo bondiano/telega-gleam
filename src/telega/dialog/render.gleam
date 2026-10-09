@@ -31,16 +31,13 @@ import telega/error.{type TelegaError}
 import telega/format
 import telega/keyboard
 import telega/model/types.{
-  type InlineKeyboardButton, type InlineKeyboardMarkup,
-  AnswerCallbackQueryParameters, DeleteMessageParameters,
+  type InlineKeyboardButton, type InlineKeyboardMarkup, DeleteMessageParameters,
   EditMessageMediaParameters, EditMessageReplyMarkupParameters,
   EditMessageTextParameters, InlineKeyboardMarkup, SendAnimationParameters,
   SendDocumentParameters, SendMessageParameters,
   SendMessageReplyInlineKeyboardMarkupParameters, SendPhotoParameters,
   SendVideoParameters,
 }
-import telega/scope
-import telega/update
 import telega/webhook_reply
 
 /// Why a window could not be rendered.
@@ -613,155 +610,6 @@ pub fn pack_callback_data(
     )),
   )
   Ok(data)
-}
-
-// Callback answering -------------------------------------------------------------
-
-/// Show a modal alert to the user who pressed the button. Call from
-/// `on_action` before returning; the engine then skips its automatic
-/// `answer_callback_query` for this event.
-pub fn alert(
-  ctx ctx: Context(session, error, dependencies),
-  text text: String,
-) -> Result(Nil, TelegaError) {
-  answer_with(ctx, Some(text), show_alert: True)
-}
-
-/// Show a toast notification at the top of the chat. Same contract as
-/// `alert`, but without the modal dialog.
-pub fn toast(
-  ctx ctx: Context(session, error, dependencies),
-  text text: String,
-) -> Result(Nil, TelegaError) {
-  answer_with(ctx, Some(text), show_alert: False)
-}
-
-/// Answer the current callback query without text (removes the client-side
-/// spinner). Used by the engine; no-op if the update is not a callback query
-/// or the query was already answered — by `alert`/`toast`, or by an earlier
-/// `auto_answer` for the same query.
-///
-/// Idempotent per query id, so the engine can call it at every point a step
-/// can leave without answering twice.
-@internal
-pub fn auto_answer(ctx: Context(session, error, dependencies)) -> Nil {
-  case ctx.update {
-    update.CallbackQueryUpdate(query:, ..) ->
-      case answered_query(ctx) == Some(query.id) {
-        True -> Nil
-        False -> {
-          let _ = do_answer(ctx, query.id, None, False)
-          mark_answered(ctx, query.id)
-          Nil
-        }
-      }
-    _ -> Nil
-  }
-}
-
-fn answer_with(
-  ctx: Context(session, error, dependencies),
-  text: Option(String),
-  show_alert show_alert: Bool,
-) -> Result(Nil, TelegaError) {
-  case ctx.update {
-    update.CallbackQueryUpdate(query:, ..) -> {
-      use _ <- result.try(do_answer(ctx, query.id, text, show_alert))
-      mark_answered(ctx, query.id)
-      Ok(Nil)
-    }
-    _ -> Ok(Nil)
-  }
-}
-
-fn do_answer(
-  ctx: Context(session, error, dependencies),
-  query_id: String,
-  text: Option(String),
-  show_alert: Bool,
-) -> Result(Nil, TelegaError) {
-  api.answer_callback_query(
-    ctx.config.api_client,
-    parameters: AnswerCallbackQueryParameters(
-      callback_query_id: query_id,
-      text:,
-      show_alert: Some(show_alert),
-      url: None,
-      cache_time: None,
-    ),
-  )
-  |> result.replace(Nil)
-}
-
-/// Answer the current callback query with the given text (no alert). Used by
-/// the engine for stale-button and foreign-payload responses; marks the query
-/// answered so the step's own `auto_answer` does not answer it a second time.
-@internal
-pub fn answer_quietly(
-  ctx: Context(session, error, dependencies),
-  text: Option(String),
-) -> Nil {
-  case ctx.update {
-    update.CallbackQueryUpdate(query:, ..) -> {
-      let _ = do_answer(ctx, query.id, text, False)
-      mark_answered(ctx, query.id)
-      Nil
-    }
-    _ -> Nil
-  }
-}
-
-// "Already answered" flag ----------------------------------------------------
-//
-// alert/toast run inside the user's `on_action`, so the engine can't see
-// their effect through the return value. The flag lives in the update's
-// `Scope`, which the whole update shares and nothing outside it can read.
-
-const answered_key: scope.Key(String) = scope.Key("dialog/answered")
-
-fn mark_answered(
-  ctx: Context(session, error, dependencies),
-  query_id: String,
-) -> Nil {
-  scope.put(ctx.scope, answered_key, query_id)
-}
-
-/// The query already answered, if any. Peeks rather than consumes, so several
-/// `auto_answer` calls within one update stay a single answer.
-fn answered_query(
-  ctx: Context(session, error, dependencies),
-) -> Option(String) {
-  scope.get(ctx.scope, answered_key)
-  |> option.from_result
-}
-
-/// Start handling a callback query: forget a mark left by an *earlier* update.
-///
-/// A mark for this same query is kept — one update can run several dialog
-/// steps (a `Goto` re-enters the step handler), and an `alert` from the first
-/// of them must still count.
-@internal
-pub fn begin_callback_answer(
-  ctx: Context(session, error, dependencies),
-) -> Nil {
-  case ctx.update {
-    update.CallbackQueryUpdate(query:, ..) -> {
-      let current = query.id
-      case answered_query(ctx) {
-        Some(id) if id != current -> reset_answered(ctx)
-        _ -> Nil
-      }
-    }
-    _ -> Nil
-  }
-}
-
-/// Forget which query was answered. The runtime drops the whole scope between
-/// updates; a test driver that replays one query id against a single context
-/// needs this.
-@internal
-pub fn reset_answered(ctx: Context(session, error, dependencies)) -> Nil {
-  scope.erase(ctx.scope, answered_key)
 }
 
 /// Human-readable description of a render error, for logs.

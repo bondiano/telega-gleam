@@ -117,6 +117,7 @@ import telega/flow/engine as flow_engine
 import telega/flow/registry as flow_registry
 import telega/flow/storage as flow_storage
 import telega/flow/types as flow_types
+import telega/reply
 
 /// A validated dialog, ready to be attached to a flow registry. Internally
 /// the windows are type-erased (they carry the state codec in closures); the
@@ -1174,7 +1175,7 @@ fn with_dialog_routing(
   |> flow_registry.with_orphan_callback_handler(
     matches: string.starts_with(_, prefix),
     handler: fn(ctx, _data) {
-      render.answer_quietly(ctx, Some(labels(ctx).stale))
+      let _ = reply.answer_toast(ctx, labels(ctx).stale)
       Ok(ctx)
     },
   )
@@ -1340,19 +1341,20 @@ pub fn widget_store(
 
 /// Show a modal alert to the user who pressed the button. Call inside
 /// `on_action` before returning an action; the engine will skip its
-/// automatic spinner-removing answer for this event.
+/// automatic spinner-removing answer for this event. The same as
+/// `reply.answer_alert`.
 pub fn alert(
   ctx ctx: Context(session, error, dependencies),
   text text: String,
 ) -> Result(Nil, TelegaError) {
-  render.alert(ctx, text)
+  reply.answer_alert(ctx, text) |> result.replace(Nil)
 }
 
 /// Show a toast notification at the top of the chat. Same contract as
-/// `alert`.
+/// `alert`; the same as `reply.answer_toast`.
 pub fn toast(
   ctx ctx: Context(session, error, dependencies),
   text text: String,
 ) -> Result(Nil, TelegaError) {
-  render.toast(ctx, text)
+  reply.answer_toast(ctx, text) |> result.replace(Nil)
 }

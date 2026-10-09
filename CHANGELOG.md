@@ -13,6 +13,13 @@ under the release that shipped them.
 
 ### Added
 
+- **One answer per button press, everywhere.** `reply.answer_callback_once`
+  stops a button's spinner unless `reply.answer_toast` / `answer_alert` /
+  `answer_quietly` already answered that press; `reply.callback_answered` reads
+  the same per-update flag. The dialog engine, the flow registry's callback
+  resume and `wait_choice` all call it, so a plain flow step or a `wait_choice`
+  no longer leaves the spinner running for a minute. `dialog.alert` and
+  `dialog.toast` are the `reply` shortcuts under their dialog names.
 - **A command menu per scope.** `telega.with_command_scopes` publishes a
   different `setMyCommands` list per `CommandScope` (`PrivateChats`,
   `GroupChats`, `GroupAdministrators`, `ChatScope(chat_id:)`) — the personal
