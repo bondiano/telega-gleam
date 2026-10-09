@@ -25,6 +25,10 @@ under the release that shipped them.
 
 ### Fixed
 
+- The two update-kind matches in the chat instance that decide what a pending
+  `wait_*` must not swallow and which messages are album parts no longer end in
+  a wildcard, so a new Bot API update kind fails to compile until it is placed.
+  Album parts arriving as business messages are now gathered like any other.
 - **An update queued behind the handler that armed a `wait_*` skipped the
   wait.** The continuation was armed by a message to the chat instance's own
   mailbox, so an update already waiting there was routed first. This hit every

@@ -1246,13 +1246,46 @@ fn media_group_part(
   // is expecting the individual messages.
   use <- bool.guard(when: chat.continuation != None, return: None)
 
+  // Spelled out so that a new message-carrying update kind has to say whether
+  // its albums are gathered. An aggregated `MediaGroupUpdate` is never a part.
   let message = case update {
-    PhotoUpdate(message:, ..)
-    | VideoUpdate(message:, ..)
-    | AudioUpdate(message:, ..)
-    | VoiceUpdate(message:, ..)
-    | MessageUpdate(message:, ..) -> Some(message)
-    _ -> None
+    update.PhotoUpdate(message:, ..)
+    | update.VideoUpdate(message:, ..)
+    | update.AudioUpdate(message:, ..)
+    | update.VoiceUpdate(message:, ..)
+    | update.MessageUpdate(message:, ..)
+    | update.BusinessMessageUpdate(message:, ..) -> Some(message)
+
+    update.TextUpdate(..)
+    | update.CommandUpdate(..)
+    | update.MediaGroupUpdate(..)
+    | update.WebAppUpdate(..)
+    | update.ChannelPostUpdate(..)
+    | update.EditedMessageUpdate(..)
+    | update.EditedChannelPostUpdate(..)
+    | update.BusinessConnectionUpdate(..)
+    | update.EditedBusinessMessageUpdate(..)
+    | update.DeletedBusinessMessageUpdate(..)
+    | update.MessageReactionUpdate(..)
+    | update.MessageReactionCountUpdate(..)
+    | update.InlineQueryUpdate(..)
+    | update.ChosenInlineResultUpdate(..)
+    | update.CallbackQueryUpdate(..)
+    | update.ShippingQueryUpdate(..)
+    | update.PreCheckoutQueryUpdate(..)
+    | update.PaidMediaPurchaseUpdate(..)
+    | update.PollUpdate(..)
+    | update.PollAnswerUpdate(..)
+    | update.MyChatMemberUpdate(..)
+    | update.ChatMemberUpdate(..)
+    | update.ChatJoinRequestUpdate(..)
+    | update.ChatBoostUpdate(..)
+    | update.RemovedChatBoost(..)
+    | update.ManagedBotUpdate(..)
+    | update.GuestMessageUpdate(..)
+    | update.SubscriptionUpdate(..)
+    | update.MessageGenerationStoppedUpdate(..)
+    | update.UnknownUpdate(..) -> None
   }
 
   case message {
@@ -1737,10 +1770,45 @@ fn unmatched_while_waiting(
 /// (`wait_command`, a `wait_for` predicate that matches it) has already
 /// handled it before we get here.
 fn falls_through_to_router(update: Update) -> Bool {
+  // Spelled out so that a new update kind has to decide which side it is on.
   case update {
-    CommandUpdate(..) | PreCheckoutQueryUpdate(..) | ShippingQueryUpdate(..) ->
-      True
-    _ -> False
+    update.CommandUpdate(..)
+    | update.PreCheckoutQueryUpdate(..)
+    | update.ShippingQueryUpdate(..) -> True
+
+    update.TextUpdate(..)
+    | update.PhotoUpdate(..)
+    | update.VideoUpdate(..)
+    | update.AudioUpdate(..)
+    | update.VoiceUpdate(..)
+    | update.MediaGroupUpdate(..)
+    | update.WebAppUpdate(..)
+    | update.MessageUpdate(..)
+    | update.ChannelPostUpdate(..)
+    | update.EditedMessageUpdate(..)
+    | update.EditedChannelPostUpdate(..)
+    | update.BusinessConnectionUpdate(..)
+    | update.BusinessMessageUpdate(..)
+    | update.EditedBusinessMessageUpdate(..)
+    | update.DeletedBusinessMessageUpdate(..)
+    | update.MessageReactionUpdate(..)
+    | update.MessageReactionCountUpdate(..)
+    | update.InlineQueryUpdate(..)
+    | update.ChosenInlineResultUpdate(..)
+    | update.CallbackQueryUpdate(..)
+    | update.PaidMediaPurchaseUpdate(..)
+    | update.PollUpdate(..)
+    | update.PollAnswerUpdate(..)
+    | update.MyChatMemberUpdate(..)
+    | update.ChatMemberUpdate(..)
+    | update.ChatJoinRequestUpdate(..)
+    | update.ChatBoostUpdate(..)
+    | update.RemovedChatBoost(..)
+    | update.ManagedBotUpdate(..)
+    | update.GuestMessageUpdate(..)
+    | update.SubscriptionUpdate(..)
+    | update.MessageGenerationStoppedUpdate(..)
+    | update.UnknownUpdate(..) -> False
   }
 }
 
