@@ -20,7 +20,8 @@ pub fn main() {
 //   hash   = HMAC-SHA256(key=secret, msg=data_check_string)
 const token = "123456:test-token"
 
-const init_data = "auth_date=1700000000&query_id=abc123&user={\"id\":42,\"first_name\":\"Ada\"}&hash=67d6dab32066b404ee1be485bd816a0dc07345a836d006fe4765e0c899d6557c"
+const init_data =
+  "auth_date=1700000000&query_id=abc123&user={\"id\":42,\"first_name\":\"Ada\"}&hash=67d6dab32066b404ee1be485bd816a0dc07345a836d006fe4765e0c899d6557c"
 
 pub fn validate_ok_test() {
   let assert Ok(data) = telega_webapp.validate(token, init_data)

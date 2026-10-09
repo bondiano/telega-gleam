@@ -95,7 +95,8 @@ fn reply_to(prompt: String) -> String {
   <> "Four hundred tokens cost a handful of API calls, not four hundred."
 }
 
-const story = "Once upon a time a bot answered instantly, and nobody believed "
+const story =
+  "Once upon a time a bot answered instantly, and nobody believed "
   <> "it had thought about the question at all. So it learned to write the way "
   <> "people do — a word at a time, in one message that grows."
 

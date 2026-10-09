@@ -5,7 +5,6 @@
 //// removed automatically — no lazy cleanup needed. `scan` uses cursor-based
 //// `SCAN` over a key prefix, which is safe for production unlike `KEYS`.
 
-import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
@@ -44,16 +43,27 @@ pub fn new_with_timeout(
       }
     },
     set_with_ttl: fn(key, value, ttl_ms) {
-      // One `SET ... PX`: a `SET` followed by `EXPIRE` leaves a key that never
-      // expires if the second call fails.
-      let options =
-        valkyrie.SetOptions(
-          ..valkyrie.default_set_options(),
-          expiry_option: Some(valkyrie.ExpiryMilliseconds(int.max(ttl_ms, 1))),
-        )
-      case valkyrie.set(conn, key, value, Some(options), timeout) {
-        Ok(_) -> Ok(Nil)
-        Error(err) -> Error(err)
+      case ttl_ms <= 0 {
+        // Already expired: the key must read as missing right away, which a
+        // 1 ms expiry does not guarantee.
+        True ->
+          case valkyrie.del(conn, [key], timeout) {
+            Ok(_) -> Ok(Nil)
+            Error(err) -> Error(err)
+          }
+        // One `SET ... PX`: a `SET` followed by `EXPIRE` leaves a key that
+        // never expires if the second call fails.
+        False -> {
+          let options =
+            valkyrie.SetOptions(
+              ..valkyrie.default_set_options(),
+              expiry_option: Some(valkyrie.ExpiryMilliseconds(ttl_ms)),
+            )
+          case valkyrie.set(conn, key, value, Some(options), timeout) {
+            Ok(_) -> Ok(Nil)
+            Error(err) -> Error(err)
+          }
+        }
       }
     },
     delete: fn(key) {
