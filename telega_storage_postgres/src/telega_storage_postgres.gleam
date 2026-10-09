@@ -8,6 +8,7 @@
 import gleam/dynamic/decode
 import gleam/erlang/atom
 import gleam/option.{type Option, None, Some}
+import gleam/string
 import pog
 import telega/storage.{type KeyValueStorage, KeyValueStorage}
 
@@ -136,17 +137,26 @@ fn do_scan(
   let sql =
     "SELECT key FROM "
     <> table
-    <> " WHERE key LIKE $1 AND (expires_at IS NULL OR expires_at > $2)"
+    <> " WHERE key LIKE $1 ESCAPE '\\' AND (expires_at IS NULL OR expires_at > $2)"
   let query =
     sql
     |> pog.query
-    |> pog.parameter(pog.text(prefix <> "%"))
+    |> pog.parameter(pog.text(escape_like(prefix) <> "%"))
     |> pog.parameter(pog.int(now_ms()))
     |> pog.returning(decode.at([0], decode.string))
   case pog.execute(query, conn) {
     Ok(pog.Returned(rows:, ..)) -> Ok(rows)
     Error(err) -> Error(err)
   }
+}
+
+/// `_` and `%` are wildcards in `LIKE`; a prefix such as `my_flow:` must
+/// match literally.
+fn escape_like(prefix: String) -> String {
+  prefix
+  |> string.replace("\\", "\\\\")
+  |> string.replace("%", "\\%")
+  |> string.replace("_", "\\_")
 }
 
 /// An absent (`None`) `expires_at` means "never expires".

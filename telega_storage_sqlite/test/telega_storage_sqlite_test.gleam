@@ -127,3 +127,16 @@ pub fn instance_json_round_trip_test() {
     original |> instance.to_json_string |> instance.from_json_string
   restored |> should.equal(original)
 }
+
+pub fn scan_prefix_with_like_wildcards_is_literal_test() {
+  use kv <- with_kv()
+  let assert Ok(Nil) = kv.set("my_flow:a", "1")
+  let assert Ok(Nil) = kv.set("myXflow:b", "2")
+  let assert Ok(Nil) = kv.set("my%flow:c", "3")
+
+  let assert Ok(keys) = kv.scan("my_flow:")
+  keys |> should.equal(["my_flow:a"])
+
+  let assert Ok(keys) = kv.scan("my%flow:")
+  keys |> should.equal(["my%flow:c"])
+}

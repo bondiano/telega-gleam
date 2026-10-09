@@ -25,6 +25,13 @@ under the release that shipped them.
 
 ### Fixed
 
+- **Storage `scan` treated the prefix as a pattern.** `telega_storage_postgres`
+  and `telega_storage_sqlite` passed it straight to `LIKE`, so `_` and `%` in a
+  prefix (a flow named `my_flow`) matched other characters; `telega_storage_redis`
+  passed it to `SCAN MATCH` unescaped. All three now match the prefix literally.
+- **`telega_storage_redis.set_with_ttl` sent `SET` then `EXPIRE`** as two
+  commands, leaving a key that never expires when the second failed. It sends
+  one `SET ... PX`.
 - **`setMyCommands` sent `scope` and `language_code` inside each command object**
   instead of beside `commands`, where the Bot API reads them. Telegram dropped
   both, so `with_command_translations` published every language to the DEFAULT

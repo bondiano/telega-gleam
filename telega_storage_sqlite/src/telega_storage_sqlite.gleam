@@ -8,6 +8,7 @@
 import gleam/dynamic/decode
 import gleam/erlang/atom
 import gleam/option.{type Option, None, Some}
+import gleam/string
 import sqlight
 import telega/storage.{type KeyValueStorage, KeyValueStorage}
 
@@ -137,14 +138,23 @@ fn do_scan(
   let sql =
     "SELECT key FROM "
     <> table
-    <> " WHERE key LIKE ? AND (expires_at IS NULL OR expires_at > ?)"
-  let args = [sqlight.text(prefix <> "%"), sqlight.int(now_ms())]
+    <> " WHERE key LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?)"
+  let args = [sqlight.text(escape_like(prefix) <> "%"), sqlight.int(now_ms())]
   sqlight.query(
     sql,
     on: conn,
     with: args,
     expecting: decode.at([0], decode.string),
   )
+}
+
+/// `_` and `%` are wildcards in `LIKE`; a prefix such as `my_flow:` must
+/// match literally.
+fn escape_like(prefix: String) -> String {
+  prefix
+  |> string.replace("\\", "\\\\")
+  |> string.replace("%", "\\%")
+  |> string.replace("_", "\\_")
 }
 
 /// An absent (`None`) `expires_at` means "never expires".

@@ -1,12 +1,14 @@
 //// Redis/Valkey storage adapter for Telega.
 ////
 //// Implements `telega/storage.KeyValueStorage` on top of a Valkyrie connection
-//// pool. TTL is handled natively by the server (`EXPIRE`), so expired keys are
+//// pool. TTL is handled natively by the server (`SET PX`), so expired keys are
 //// removed automatically — no lazy cleanup needed. `scan` uses cursor-based
 //// `SCAN` over a key prefix, which is safe for production unlike `KEYS`.
 
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/string
 import telega/storage.{type KeyValueStorage, KeyValueStorage}
 import valkyrie
 
@@ -42,14 +44,15 @@ pub fn new_with_timeout(
       }
     },
     set_with_ttl: fn(key, value, ttl_ms) {
-      case valkyrie.set(conn, key, value, None, timeout) {
-        Ok(_) ->
-          case
-            valkyrie.expire(conn, key, ms_to_seconds(ttl_ms), None, timeout)
-          {
-            Ok(_) -> Ok(Nil)
-            Error(err) -> Error(err)
-          }
+      // One `SET ... PX`: a `SET` followed by `EXPIRE` leaves a key that never
+      // expires if the second call fails.
+      let options =
+        valkyrie.SetOptions(
+          ..valkyrie.default_set_options(),
+          expiry_option: Some(valkyrie.ExpiryMilliseconds(int.max(ttl_ms, 1))),
+        )
+      case valkyrie.set(conn, key, value, Some(options), timeout) {
+        Ok(_) -> Ok(Nil)
         Error(err) -> Error(err)
       }
     },
@@ -59,7 +62,9 @@ pub fn new_with_timeout(
         Error(err) -> Error(err)
       }
     },
-    scan: fn(prefix) { scan_all(conn, prefix <> "*", 0, [], timeout) },
+    scan: fn(prefix) {
+      scan_all(conn, escape_glob(prefix) <> "*", 0, [], timeout)
+    },
   )
 }
 
@@ -82,11 +87,12 @@ fn scan_all(
   }
 }
 
-/// Redis `EXPIRE` works in whole seconds; round up so a sub-second TTL still
-/// lives for at least one second. A non-positive TTL expires immediately.
-fn ms_to_seconds(ttl_ms: Int) -> Int {
-  case ttl_ms <= 0 {
-    True -> 0
-    False -> { ttl_ms + 999 } / 1000
-  }
+/// `SCAN MATCH` is a glob; `*`, `?`, `[` and `\\` in a prefix must match
+/// literally.
+fn escape_glob(prefix: String) -> String {
+  prefix
+  |> string.replace("\\", "\\\\")
+  |> string.replace("*", "\\*")
+  |> string.replace("?", "\\?")
+  |> string.replace("[", "\\[")
 }
