@@ -62,6 +62,15 @@
 ////
 //// Every run emits `telemetry.job_run`; a failure to run one emits
 //// `telemetry.job_error`.
+////
+//// ## Several nodes
+////
+//// A persisted job is armed on the node that scheduled it and on every node
+//// that started after it was written. When their timers fire, each node
+//// claims the run with the storage's `compare_and_set` — replacing the
+//// record with its next run, or with a claimed copy for a one-shot — and
+//// exactly one wins; the others arm whatever the winner left. So a shared
+//// Postgres or Redis is enough to run the scheduler on every node.
 
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
@@ -123,6 +132,9 @@ type JobRecord {
     repeat_ms: Option(Int),
     /// How many times building this job's context has failed.
     attempts: Int,
+    /// A one-shot job some node has taken and is about to run; the record is
+    /// deleted right after and only outlives a crash in between, briefly.
+    claimed: Bool,
   )
 }
 
@@ -157,6 +169,10 @@ pub const max_job_attempts = 5
 
 /// How long a job waits before its context is tried again.
 pub const job_retry_delay_ms = 60_000
+
+/// How long a claimed one-shot job may stay in storage. It is deleted as
+/// soon as it is claimed; the ttl only covers a crash in between.
+const claim_ttl_ms = 60_000
 
 /// Start configuring a scheduler for a started bot.
 pub fn new(
@@ -312,6 +328,7 @@ pub fn persisted(
       payload: json.to_string(payload),
       repeat_ms: None,
       attempts: 0,
+      claimed: False,
     )),
   )
 }
@@ -342,6 +359,7 @@ pub fn persisted_every(
       payload: json.to_string(payload),
       repeat_ms: Some(interval),
       attempts: 0,
+      claimed: False,
     )),
   )
 }
@@ -556,45 +574,156 @@ fn fire_persisted(
     }
 
     Ok(handler) ->
-      case
-        telega.background_context(
-          state.telega,
-          chat_id: record.chat_id,
-          user_id: record.user_id,
-        )
-      {
-        Error(_) -> retry(state, record)
+      // The job is taken out of storage (or moved to its next run) before it
+      // is dispatched: a handler that crashes is not retried, a restart
+      // mid-run does not run it twice, and of several nodes holding the same
+      // job only the one whose claim landed runs it.
+      case claim(state, record) {
+        Error(state) -> state
+        Ok(#(state, record)) ->
+          case
+            telega.background_context(
+              state.telega,
+              chat_id: record.chat_id,
+              user_id: record.user_id,
+            )
+          {
+            Error(_) -> retry(state, record)
 
-        Ok(ctx) -> {
-          let payload =
-            json.parse(record.payload, decode.dynamic)
-            |> result.unwrap(dynamic.nil())
-          report_run(record.id, record.handler)
-
-          // The job is taken out of storage (or moved to its next run) before
-          // it is dispatched: a handler that crashes is not retried, and a
-          // restart mid-run does not run it twice.
-          let state = case record.repeat_ms {
-            None -> {
-              let state = drop_stored(state, record.id)
-              State(..state, persisted: dict.delete(state.persisted, record.id))
+            Ok(ctx) -> {
+              let payload =
+                json.parse(record.payload, decode.dynamic)
+                |> result.unwrap(dynamic.nil())
+              report_run(record.id, record.handler)
+              let _ = process.spawn_unlinked(fn() { handler(ctx, payload) })
+              state
             }
-            Some(interval) ->
-              schedule_persisted(
-                state,
-                JobRecord(
-                  ..record,
-                  run_at: utils.current_time_ms() + interval,
-                  attempts: 0,
-                ),
-              )
           }
-
-          let _ = process.spawn_unlinked(fn() { handler(ctx, payload) })
-          state
-        }
       }
   }
+}
+
+/// Take this run, or learn that another node has: of every scheduler holding
+/// the job, exactly one gets `Ok`, with the record as stored.
+///
+/// The stored record is replaced with a `compare_and_set` against the exact
+/// string that was read — by its next run for a repeating job, by a claimed,
+/// short-lived copy for a one-shot, which is then deleted — so two nodes
+/// whose timers fired together cannot both win. The loser arms whatever the
+/// winner left, or lets the job go.
+fn claim(
+  state: State(session, error, dependencies),
+  record: JobRecord,
+) -> Result(
+  #(State(session, error, dependencies), JobRecord),
+  State(session, error, dependencies),
+) {
+  case state.storage {
+    None -> Ok(#(state, record))
+    Some(storage) -> {
+      let now = utils.current_time_ms()
+      case storage.get(job_prefix <> record.id) {
+        Ok(Some(raw)) ->
+          case json.parse(raw, record_decoder()) {
+            Ok(stored) if stored.claimed -> Error(forget_local(state, record.id))
+            // Another node ran this one and wrote down the next run.
+            Ok(stored) if stored.run_at > now -> Error(arm_stored(state, stored))
+            Ok(stored) -> take(state, storage, raw, stored)
+            // Not a job record at all.
+            Error(_) -> Error(forget_local(state, record.id))
+          }
+        // Run and deleted elsewhere, or cancelled.
+        Ok(None) -> Error(forget_local(state, record.id))
+        Error(reason) -> Error(claim_later(state, record.id, reason))
+      }
+    }
+  }
+}
+
+fn take(
+  state: State(session, error, dependencies),
+  storage: KeyValueStorage(String),
+  raw: String,
+  stored: JobRecord,
+) -> Result(
+  #(State(session, error, dependencies), JobRecord),
+  State(session, error, dependencies),
+) {
+  let now = utils.current_time_ms()
+  let #(replacement, ttl) = case stored.repeat_ms {
+    None -> #(JobRecord(..stored, claimed: True), Some(claim_ttl_ms))
+    Some(interval) -> #(
+      JobRecord(..stored, run_at: now + interval, attempts: 0),
+      None,
+    )
+  }
+  let key = job_prefix <> stored.id
+  case
+    storage.compare_and_set(key, Some(raw), encode_record(replacement), ttl)
+  {
+    Ok(True) -> {
+      let state = case stored.repeat_ms {
+        None -> drop_stored(forget_local(state, stored.id), stored.id)
+        Some(_) -> arm_stored(state, replacement)
+      }
+      Ok(#(state, stored))
+    }
+    Ok(False) -> Error(follow(state, storage, stored.id))
+    Error(reason) -> Error(claim_later(state, stored.id, reason))
+  }
+}
+
+/// Another node changed the record first: arm what it left, or let go.
+fn follow(
+  state: State(session, error, dependencies),
+  storage: KeyValueStorage(String),
+  id: String,
+) -> State(session, error, dependencies) {
+  case storage.get(job_prefix <> id) {
+    Ok(Some(raw)) ->
+      case json.parse(raw, record_decoder()) {
+        Ok(stored) if !stored.claimed -> arm_stored(state, stored)
+        _ -> forget_local(state, id)
+      }
+    _ -> forget_local(state, id)
+  }
+}
+
+/// Hold `stored` as the job's current record and arm it for its due time.
+fn arm_stored(
+  state: State(session, error, dependencies),
+  stored: JobRecord,
+) -> State(session, error, dependencies) {
+  arm(
+    State(..state, persisted: dict.insert(state.persisted, stored.id, stored)),
+    stored.id,
+    stored.run_at - utils.current_time_ms(),
+  )
+}
+
+/// The backend would not answer: the run is skipped rather than risked twice,
+/// and the claim is tried again later. A restart reads the job back anyway.
+fn claim_later(
+  state: State(session, error, dependencies),
+  id: String,
+  reason: String,
+) -> State(session, error, dependencies) {
+  log.error(
+    "[jobs] could not claim the job '"
+    <> id
+    <> "', trying again in "
+    <> int.to_string(job_retry_delay_ms)
+    <> "ms: "
+    <> reason,
+  )
+  arm(state, id, job_retry_delay_ms)
+}
+
+fn forget_local(
+  state: State(session, error, dependencies),
+  id: String,
+) -> State(session, error, dependencies) {
+  State(..state, persisted: dict.delete(state.persisted, id))
 }
 
 /// The context could not be built — usually a session the backend would not
@@ -699,6 +828,7 @@ fn encode_record(record: JobRecord) -> String {
       Some(ms) -> json.int(ms)
     }),
     #("attempts", json.int(record.attempts)),
+    #("claimed", json.bool(record.claimed)),
   ])
   |> json.to_string
 }
@@ -716,6 +846,7 @@ fn record_decoder() -> decode.Decoder(JobRecord) {
     decode.optional(decode.int),
   )
   use attempts <- decode.optional_field("attempts", 0, decode.int)
+  use claimed <- decode.optional_field("claimed", False, decode.bool)
   decode.success(JobRecord(
     id:,
     handler:,
@@ -725,6 +856,7 @@ fn record_decoder() -> decode.Decoder(JobRecord) {
     payload:,
     repeat_ms:,
     attempts:,
+    claimed:,
   ))
 }
 

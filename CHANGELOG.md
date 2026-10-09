@@ -153,6 +153,15 @@ under the release that shipped them.
 
 ### Fixed
 
+- **A persisted job ran on every node that held it.** Each scheduler armed
+  its own timer and ran the job when it fired, so two nodes sharing a
+  Postgres or Redis sent every reminder twice and every `persisted_every`
+  digest once per node. A firing node now claims the run with the storage's
+  `compare_and_set` — replacing the record with its next run, or with a
+  claimed copy for a one-shot — and only the claim that landed runs; the
+  others arm what the winner left. The stored record gained a `claimed`
+  flag. [`docs/deployment.md`](docs/deployment.md#several-nodes) now says
+  what does and does not work across nodes.
 - **`telega_wisp` read and parsed the body before checking the secret**, so a
   request with a wrong token got `400`/`415` instead of `401` and cost a parse.
   Both adapters now check path, secret and health before touching the body.

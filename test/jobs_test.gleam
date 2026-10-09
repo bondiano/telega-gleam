@@ -232,6 +232,62 @@ pub fn a_repeating_persisted_job_reschedules_itself_test() {
   stop(bot)
 }
 
+// --- several nodes -----------------------------------------------------------
+
+/// Two schedulers on one storage stand in for two nodes: the second reads the
+/// job back at start and arms the same timer.
+fn two_nodes(
+  kv,
+  ran: process.Subject(#(Int, String)),
+  schedule: fn(jobs.Scheduler(Nil, TelegaError, Nil)) -> Nil,
+) -> Nil {
+  let bot = start_bot()
+  let node = fn() {
+    jobs.new(bot)
+    |> jobs.with_storage(kv)
+    |> jobs.with_handler("reminder", reminder_handler(ran))
+    |> jobs.start()
+  }
+  let assert Ok(first) = node()
+  schedule(first)
+  sleep(20)
+  let assert Ok(_second) = node()
+
+  process.receive(ran, 2000) |> should.be_ok
+  // Both timers fired; only the claim that landed ran the job.
+  process.receive(ran, 300) |> should.be_error
+
+  stop(bot)
+}
+
+pub fn a_one_shot_job_held_by_two_nodes_runs_once_test() {
+  let assert Ok(kv) = ets.new("jobs_two_nodes_once")
+  use first <- two_nodes(kv, process.new_subject())
+  jobs.persisted(
+    first,
+    id: "reminder:77",
+    handler: "reminder",
+    chat_id: 77,
+    user_id: 7,
+    at: timestamp.add(timestamp.system_time(), duration.milliseconds(100)),
+    payload: json.object([#("text", json.string("once"))]),
+  )
+}
+
+pub fn a_repeating_job_held_by_two_nodes_runs_once_per_interval_test() {
+  let assert Ok(kv) = ets.new("jobs_two_nodes_every")
+  use first <- two_nodes(kv, process.new_subject())
+  jobs.persisted_every(
+    first,
+    id: "digest:77",
+    handler: "reminder",
+    chat_id: 77,
+    user_id: 7,
+    interval_ms: 500,
+    payload: json.object([#("text", json.string("digest"))]),
+  )
+}
+
 pub fn pending_lists_what_the_scheduler_is_holding_test() {
   let bot = start_bot()
   let assert Ok(kv) = ets.new("jobs_pending")

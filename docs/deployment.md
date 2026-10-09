@@ -324,6 +324,42 @@ fixed, and forget one with `telega.drop_dead_letter`.
 Use a persistent backend for it: the ETS store dies with the node, which is
 exactly the moment you wanted the evidence.
 
+## Several nodes
+
+Everything above is about one node. Running two or more — a webhook behind a
+load balancer, or a rolling deploy where the old and the new release overlap
+— works for the state that lives in a shared backend and not for the state
+that lives in a process:
+
+- **Sessions, flows, dialogs, stores, dead letters and persisted jobs** live
+  in the `KeyValueStorage` you wired; `telega_storage_postgres` and
+  `telega_storage_redis` are shared, SQLite and ETS are one node's. A flow or
+  a dialog resumes on any node: its state is data, and the step that resumes
+  it is looked up by name. `store.update` is a compare-and-set, so two nodes
+  bumping one counter both land. A persisted job is armed on the node that
+  scheduled it and on every node that started after it was written; when the
+  timers fire, the nodes claim it with `compare_and_set` and exactly one runs
+  it.
+- **A session is cached by the chat instance that loaded it**, one instance
+  per node. Two nodes handling the same chat each hold a copy and overwrite
+  each other's writes. Route a chat to one node — sticky by `chat_id` at the
+  balancer — or keep what several nodes write in a `telega/store`, which is
+  never cached.
+- **A `wait_*` continuation is a closure in one node's memory.** The next
+  message of that conversation has to reach the same node. With sticky
+  routing it does; without, use a flow or a dialog, which park in storage.
+- **Per node by design:** the rate limiter (`router.with_rate_limit`), the
+  `roles` cache, `telega.health`, and the in-memory jobs (`run_after`,
+  `run_every`). A chore that must run once per interval across the fleet is
+  a persisted job.
+- **Long polling is one node's.** Telegram hands `getUpdates` to one consumer
+  at a time; a second poller is answered `409 Conflict`. Several nodes mean a
+  webhook.
+
+The short version: a shared Postgres or Redis, a webhook, and sticky routing
+by `chat_id`, and every feature works. Without sticky routing, keep
+conversations in flows and dialogs and shared state in stores.
+
 ## Hot code reload
 
 The BEAM can load a new version of a module into a running node, and telega
