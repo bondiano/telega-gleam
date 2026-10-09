@@ -11,6 +11,8 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-09
+
 The storage contract, router composition, pre-handler annotations and the
 request parameter records changed shape, and a reply now lands in the topic it
 was asked in. Follow the [v4 migration guide](docs/migration-v4.md). Every
@@ -496,7 +498,8 @@ released at `3.0.0` alongside the core and requires it.
 [commit history](https://github.com/bondiano/telega-gleam/commits/master) and
 the [release tags](https://github.com/bondiano/telega-gleam/tags).
 
-[Unreleased]: https://github.com/bondiano/telega-gleam/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/bondiano/telega-gleam/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/bondiano/telega-gleam/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/bondiano/telega-gleam/compare/v2.4.1...v3.0.0
 [2.4.1]: https://github.com/bondiano/telega-gleam/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/bondiano/telega-gleam/compare/v2.3.0...v2.4.0
