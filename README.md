@@ -278,8 +278,8 @@ telega.new(client)
 | [`telega_storage_redis`](./telega_storage_redis) | several nodes and high write rates, and losing state to a Redis flush is acceptable |
 
 Sessions hold per-user state; `telega/store` holds chat-, user- and bot-wide
-state that several people write (`store.update` is read-modify-write and *not*
-atomic — key the session by chat when that matters); `dependencies` hold
+state that several people write (`store.update` is a compare-and-set, so two
+members bumping one counter at once both land); `dependencies` hold
 services and are never serialized. Details, including versioned sessions and
 what happens when a stored session cannot be read, are in the
 [session guide](https://hexdocs.pm/telega/docs/session-serialization.html).

@@ -36,12 +36,10 @@
 //// (or a module constant) and hand it to whichever handlers need it. Nothing
 //// needs to be registered on the builder.
 ////
-//// **Read-modify-write is not atomic.** `update` reads, applies your function
-//// and writes; two chat instances doing that at the same time can lose one of
-//// the increments. Where that matters, key the *session* by chat instead
-//// (`telega.with_session_key(bot.chat_session_key)`) so every member's update
-//// is serialized through one process, and keep stores for state that is
-//// written rarely or by one writer.
+//// `update` is safe to race: it writes through the backend's
+//// `compare_and_set`, and when another instance — on this node or another —
+//// changed the key in between, it reads again and reapplies your function.
+//// Two members bumping the same counter at once both land.
 
 import gleam/dynamic/decode
 import gleam/json
@@ -178,18 +176,29 @@ pub fn get(
 /// migration, an admin command reading another chat's data. The key is the one
 /// [`key`](#key) would have produced, without the `data:` prefix.
 pub fn get_at(store: Store(value, error), key: String) -> Result(value, error) {
-  use raw <- result.try(store.storage.get(data_prefix <> key))
-  case raw {
-    None -> Ok(store.default())
+  use #(_raw, value) <- result.map(read(store, key))
+  value
+}
+
+/// The stored string beside the value it decodes to — the string is what a
+/// `compare_and_set` has to match.
+fn read(
+  store: Store(value, error),
+  key: String,
+) -> Result(#(Option(String), value), error) {
+  use raw <- result.map(store.storage.get(data_prefix <> key))
+  let value = case raw {
+    None -> store.default()
     Some(raw) ->
       case json.parse(raw, store.decoder) {
-        Ok(value) -> Ok(value)
+        Ok(value) -> value
         Error(err) -> {
           report_decode_error(key, err)
-          Ok(store.default())
+          store.default()
         }
       }
   }
+  #(raw, value)
 }
 
 /// Write the value for this update's key.
@@ -216,8 +225,10 @@ pub fn set_at(
 
 /// Read, apply `change`, write back, and return the written value.
 ///
-/// Not atomic: two instances updating the same key at the same time can lose
-/// one of the changes (see the module docs).
+/// The write is a `compare_and_set` against what was read, so a concurrent
+/// change to the same key is not lost: the read and `change` are repeated on
+/// the new value until the write lands. `change` must therefore be pure — it
+/// can run more than once.
 pub fn update(
   ctx: Context(session, error_, dependencies),
   store: Store(value, error),
@@ -232,10 +243,20 @@ pub fn update_at(
   key: String,
   change: fn(value) -> value,
 ) -> Result(value, error) {
-  use current <- result.try(get_at(store, key))
+  use #(raw, current) <- result.try(read(store, key))
   let next = change(current)
-  use _ <- result.try(set_at(store, key, next))
-  Ok(next)
+  let payload = store.encode(next) |> json.to_string
+  use written <- result.try(store.storage.compare_and_set(
+    data_prefix <> key,
+    raw,
+    payload,
+    store.ttl_ms,
+  ))
+  case written {
+    True -> Ok(next)
+    // Someone else wrote in between; their write is the one to build on.
+    False -> update_at(store, key, change)
+  }
 }
 
 /// Forget the value for this update's key. A later read returns the default.

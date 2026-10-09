@@ -2,10 +2,12 @@
 //// user, or global to the bot.
 
 import gleam/dynamic/decode
+import gleam/erlang/process
 import gleam/json
 import gleam/option.{Some}
 import gleeunit/should
 
+import telega/storage.{KeyValueStorage}
 import telega/storage/ets
 import telega/store
 import telega/testing/context
@@ -136,3 +138,34 @@ pub fn an_explicit_key_reaches_data_no_update_points_at_test() {
 
 @external(erlang, "timer", "sleep")
 fn sleep(milliseconds: Int) -> anything
+
+pub fn an_update_raced_by_another_writer_loses_neither_change_test() {
+  let assert Ok(kv) = ets.new("store_race")
+  // Fires once: right after the first read, "another instance" writes 10,
+  // which is what a lost update would silently overwrite.
+  let interference = process.new_subject()
+  process.send(interference, Nil)
+  let racy =
+    KeyValueStorage(..kv, get: fn(key) {
+      let read = kv.get(key)
+      case process.receive(interference, 0) {
+        Ok(Nil) -> {
+          let assert Ok(Nil) = kv.set(key, "10")
+          Nil
+        }
+        Error(Nil) -> Nil
+      }
+      read
+    })
+  let counters =
+    store.chat_data(
+      storage: racy,
+      encode: json.int,
+      decode: decode.int,
+      default: fn() { 0 },
+    )
+
+  store.update(ctx_in(chat_id: -100, from_id: 7), counters, fn(n) { n + 1 })
+  |> should.equal(Ok(11))
+  kv.get("data:chat:-100") |> should.equal(Ok(Some("11")))
+}

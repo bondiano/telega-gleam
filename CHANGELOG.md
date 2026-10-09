@@ -67,6 +67,12 @@ under the release that shipped them.
 
 ### Changed
 
+- **`store.update` no longer loses a concurrent write.** It writes through
+  `compare_and_set` and repeats the read and your function when the key
+  changed in between, so two chat instances bumping one counter both land —
+  on one node or several. The function you pass must be pure, since it can
+  run more than once. The advice to key the session by chat for shared
+  counters is withdrawn.
 - **`KeyValueStorage` gained `compare_and_set` and a paged `scan`.**
   **Breaking** for every backend implementation.
   `compare_and_set(key, expected, value, ttl_ms)` writes only if the key
