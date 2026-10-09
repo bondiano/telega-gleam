@@ -7827,40 +7827,9 @@ pub fn encode_bot_command_parameters(
   params: BotCommandParameters,
 ) -> List(#(String, Json)) {
   [
-    #("scope", json.nullable(params.scope, bot_command_scope_to_json)),
+    #("scope", json.nullable(params.scope, encode_bot_command_scope)),
     #("language_code", json.nullable(params.language_code, json.string)),
   ]
-}
-
-pub fn bot_command_scope_to_json(scope: BotCommandScope) -> Json {
-  case scope {
-    BotCommandScopeDefaultBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("default"))])
-    BotCommandScopeAllPrivateChatsBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("all_private_chats"))])
-    BotCommandScopeAllGroupChatsBotCommandScope(_) ->
-      json_object_filter_nulls([#("type", json.string("all_group_chats"))])
-    BotCommandScopeAllChatAdministratorsBotCommandScope(_) ->
-      json_object_filter_nulls([
-        #("type", json.string("all_chat_administrators")),
-      ])
-    BotCommandScopeChatBotCommandScope(scope) ->
-      json_object_filter_nulls([
-        #("type", json.string("chat")),
-        #("chat_id", encode_int_or_string(scope.chat_id)),
-      ])
-    BotCommandScopeChatAdministratorsBotCommandScope(scope) ->
-      json_object_filter_nulls([
-        #("type", json.string("chat_administrators")),
-        #("chat_id", encode_int_or_string(scope.chat_id)),
-      ])
-    BotCommandScopeChatMemberBotCommandScope(scope) ->
-      json_object_filter_nulls([
-        #("type", json.string("chat_member")),
-        #("chat_id", encode_int_or_string(scope.chat_id)),
-        #("user_id", json.int(scope.user_id)),
-      ])
-  }
 }
 
 pub fn bot_commands_from(

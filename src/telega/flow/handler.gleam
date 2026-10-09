@@ -1,10 +1,9 @@
-//// Built-in step handlers and resume handler factories.
+//// Built-in step handlers and the text resume handler.
 
 import gleam/dict
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 import telega/bot.{type Context}
 import telega/flow/engine
 import telega/flow/instance
@@ -12,7 +11,6 @@ import telega/flow/types.{
   type Flow, type FlowInstance, type StepHandler, Cancel, Complete, Next,
   Pending, TextInput, Wait,
 }
-import telega/keyboard
 import telega/reply
 import telega/update
 
@@ -134,23 +132,6 @@ pub fn message_step_with(
   }
 }
 
-/// Create a router handler for resuming flows from callback queries
-pub fn create_resume_handler(
-  flow: Flow(step_type, session, error, dependencies),
-) -> fn(Context(session, error, dependencies), update.Update) ->
-  Result(Context(session, error, dependencies), error) {
-  resume_handler(flow)
-}
-
-/// Create a router handler for resuming flows from callback queries with keyboard parsing
-pub fn create_resume_handler_with_keyboard(
-  flow: Flow(step_type, session, error, dependencies),
-  callback_data: keyboard.KeyboardCallbackData(String),
-) -> fn(Context(session, error, dependencies), update.Update) ->
-  Result(Context(session, error, dependencies), error) {
-  resume_handler_with_keyboard(flow, callback_data)
-}
-
 /// Create a text handler for resuming flows
 pub fn create_text_handler(
   flow: Flow(step_type, session, error, dependencies),
@@ -180,70 +161,6 @@ pub fn create_text_handler(
             )
           }
           Error(Nil) -> Ok(ctx)
-        }
-      }
-      _ -> Ok(ctx)
-    }
-  }
-}
-
-fn resume_handler(
-  flow flow: Flow(step_type, session, error, dependencies),
-) -> fn(Context(session, error, dependencies), update.Update) ->
-  Result(Context(session, error, dependencies), error) {
-  fn(ctx, upd) {
-    case upd {
-      update.CallbackQueryUpdate(query:, ..) -> {
-        let data = option.unwrap(query.data, "")
-        let token = case string.split(data, ":") {
-          [_prefix, token, ..] -> token
-          _ -> data
-        }
-        let resume_data =
-          dict.from_list([
-            #("callback_data", data),
-            #(
-              instance.wait_result_key,
-              instance.encode_callback_wait_result(data),
-            ),
-          ])
-        engine.resume_with_token(flow, ctx, token, Some(resume_data))
-      }
-      _ -> Ok(ctx)
-    }
-  }
-}
-
-fn resume_handler_with_keyboard(
-  flow: Flow(step_type, session, error, dependencies),
-  callback_data: keyboard.KeyboardCallbackData(String),
-) -> fn(Context(session, error, dependencies), update.Update) ->
-  Result(Context(session, error, dependencies), error) {
-  fn(ctx, upd) {
-    case upd {
-      update.CallbackQueryUpdate(query:, ..) -> {
-        let data = option.unwrap(query.data, "")
-        let wait_result_value = instance.encode_callback_wait_result(data)
-        let resume_data =
-          dict.from_list([
-            #("callback_data", data),
-            #(instance.wait_result_key, wait_result_value),
-          ])
-        case keyboard.unpack_callback(data, callback_data) {
-          Ok(callback) ->
-            engine.resume_with_token(
-              flow,
-              ctx,
-              callback.data,
-              Some(resume_data),
-            )
-          Error(_) -> {
-            let token = case string.split(data, ":") {
-              [_prefix, token, ..] -> token
-              _ -> data
-            }
-            engine.resume_with_token(flow, ctx, token, Some(resume_data))
-          }
         }
       }
       _ -> Ok(ctx)

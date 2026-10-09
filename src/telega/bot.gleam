@@ -92,8 +92,7 @@ import telega/scope.{type Scope}
 import telega/telemetry
 import telega/update.{
   type Command, type Update, AudioUpdate, CallbackQueryUpdate, ChatMemberUpdate,
-  CommandUpdate, MediaGroupUpdate, MessageUpdate, PhotoUpdate,
-  PreCheckoutQueryUpdate, ShippingQueryUpdate, TextUpdate, VideoUpdate,
+  CommandUpdate, MediaGroupUpdate, MessageUpdate, TextUpdate, VideoUpdate,
   VoiceUpdate, WebAppUpdate,
 }
 import telega/webhook_reply.{type Envelope}
@@ -440,14 +439,6 @@ pub fn start(
 }
 
 const bot_init_timeout = 1000
-
-/// Stops waiting for any handler for specific key (chat_id)
-pub fn cancel_conversation(
-  bot bot: Bot(session, error, dependencies),
-  key key: String,
-) -> Nil {
-  cancel_conversation_for(bot_subject: bot.self, key: key)
-}
 
 /// Drop the pending conversation continuation of one chat instance.
 ///

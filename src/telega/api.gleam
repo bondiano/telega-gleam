@@ -2308,7 +2308,7 @@ fn bot_command_parameter_fields(
     None -> []
     Some(parameters) -> {
       let scope = case parameters.scope {
-        Some(scope) -> [#("scope", encoder.bot_command_scope_to_json(scope))]
+        Some(scope) -> [#("scope", encoder.encode_bot_command_scope(scope))]
         None -> []
       }
       let language = case parameters.language_code {

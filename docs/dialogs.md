@@ -25,7 +25,7 @@ Use a dialog when the interaction is **one message with buttons that morphs
 in place**: settings panels, booking wizards, browsable catalogs,
 confirmation screens.
 
-### Dialogs vs Conversations vs Flows vs Menu Builder
+### Dialogs vs Conversations vs Flows
 
 The same table lives in the [README](../README.md#multi-step-interactions)
 alongside the rule for **which layer gets an update** — worth reading once,
@@ -35,23 +35,19 @@ next one.
 Dialogs compile to [flows](./conversation-flows.md), so they inherit
 persistence, TTL, and `/cancel` — the difference is the level of abstraction:
 
-| | [Conversations](./conversation.md) | [Flows](./conversation-flows.md) | Menu Builder | Dialogs |
-|---|---|---|---|---|
-| **UI model** | bot sends messages | you send/edit manually | one menu message | one live message, auto edit-or-send |
-| **Persistence** | in-memory | storage backend | in-memory | storage backend (via flow) |
-| **Callback data** | manual | manual | generated | generated + validated (64 bytes) |
-| **Back navigation** | no | manual (`Back` action) | built-in | built-in |
-| **Media** | manual | manual | no | text ↔ media transitions handled |
-| **Reusable selects/pagination** | no | no | pagination | widgets (pager, radio, multiselect, …) |
-| **Composition** | nested calls | subflows | nested menus | sub-dialogs |
-| **Best for** | quick Q&A forms | branchy processes with custom messages | standalone menus outside a process | screen-like UIs: settings, wizards, catalogs |
+| | [Conversations](./conversation.md) | [Flows](./conversation-flows.md) | Dialogs |
+|---|---|---|---|
+| **UI model** | bot sends messages | you send/edit manually | one live message, auto edit-or-send |
+| **Persistence** | in-memory | storage backend | storage backend (via flow) |
+| **Callback data** | manual | manual | generated + validated (64 bytes) |
+| **Back navigation** | no | manual (`Back` action) | built-in |
+| **Media** | manual | manual | text ↔ media transitions handled |
+| **Reusable selects/pagination** | no | no | widgets (pager, radio, multiselect, …) |
+| **Composition** | nested calls | subflows | sub-dialogs |
+| **Best for** | quick Q&A forms | branchy processes with custom messages | screen-like UIs: settings, wizards, catalogs |
 
-`menu_builder` is **deprecated**: a dialog window with `widget.select`,
-`widget.paged_select` or `widget.list_group` renders the same menu and keeps
-its state, its history and its callback-data budget. It still compiles and
-will not be removed without a major release, but it will not grow. If you are
-hand-writing `editMessageText` calls and parsing callback payloads inside a
-flow — that is the same sign, from the other direction.
+If you are hand-writing `editMessageText` calls and parsing callback payloads
+inside a flow, that is the sign you want a dialog.
 
 ## Terminology
 

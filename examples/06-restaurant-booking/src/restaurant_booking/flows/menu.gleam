@@ -4,8 +4,7 @@
 //// dishes → one dish. The paging comes from `widget.paged_select`, the
 //// callback payloads are generated and size-checked at build time, and going
 //// `Back` is the engine's own history — none of which this file has to spell
-//// out. It replaced a `menu_builder` flow that re-sent the whole menu on
-//// every press.
+//// out. It replaced a flow that re-sent the whole menu on every press.
 
 import gleam/dynamic/decode
 import gleam/int

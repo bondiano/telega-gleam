@@ -23,6 +23,18 @@ under the release that shipped them.
   unpublished scope falls back to. Guide:
   [`docs/router.md`](docs/router.md#a-different-menu-per-scope).
 
+### Removed
+
+- **`telega/menu_builder`**, deprecated in 3.0.0. A dialog window with
+  `widget.select`, `widget.paged_select` or `widget.list_group` renders the
+  same menu and keeps its state.
+- `flow/handler.create_resume_handler` and `create_resume_handler_with_keyboard`:
+  unused since the flow registry took over callback resumption.
+- `bot.cancel_conversation(bot:, key:)`, which took the opaque `Bot` no caller
+  can hold. `telega.cancel_conversation` and `bot.cancel_conversation_in` stay.
+- `encoder.bot_command_scope_to_json`: use the generated
+  `encoder.encode_bot_command_scope`.
+
 ### Fixed
 
 - **The request queue retried on top of the client.** A call that failed after
