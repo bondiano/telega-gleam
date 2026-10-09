@@ -173,7 +173,11 @@ fn handle_request(bot: Telega(s, e, d), req: Request) -> Response {
 `GET /healthz` answers `200` with
 `{"status":"healthy","in_flight":3,"chat_instances":41}` when the bot is
 serving, and `503` with `draining`, `overloaded` or `unavailable` otherwise.
-`telega_mist.handle_health` is the same function for mist.
+`telega_mist.handle_health` is the same function for mist. Both adapters are a
+few lines over `telega/webhook`: `health_probe` answers the probe and `admit`
+decides whether a request on the webhook path is processed (`401` on a wrong
+secret, `503` while unhealthy), so an adapter for another HTTP server uses the
+same two functions and behaves the same.
 
 A **polling** bot has no HTTP server, but it can still be probed: expose the
 same endpoint from any small server, or check liveness from a cron job through

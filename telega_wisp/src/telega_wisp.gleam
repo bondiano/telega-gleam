@@ -1,18 +1,12 @@
-import gleam/bool
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic
 import gleam/erlang/process
-import gleam/http
 import gleam/http/request
-import gleam/result
-import gleam/string
-import telega/error
 
 import wisp.{type Request as WispRequest, type Response as WispResponse}
 
 import telega.{type Telega}
 import telega/update
-
-const secret_header = "x-telegram-bot-api-secret-token"
+import telega/webhook
 
 /// A middleware function to handle incoming requests from the Telegram API.
 /// Handles a request to the bot webhook endpoint, decodes the incoming message,
@@ -35,19 +29,18 @@ pub fn handle_bot(
 ) -> WispResponse {
   use json <- accept_bot_request(telega, req, handler)
 
-  // Telegram will wait response from the server, before sending the next update
-  // So we need to handle it in a separate process and return response immediately.
-  process.spawn(fn() {
-    case update.decode_raw(json) {
-      Ok(message) -> {
+  case update.decode_raw(json) {
+    Ok(message) -> {
+      // Telegram waits for the response before sending the next update, so
+      // the update is handled in its own process and answered right away.
+      process.spawn(fn() {
         telega.handle_update(telega, message)
         Nil
-      }
-      Error(e) -> panic as { "Failed to decode update" <> error.to_string(e) }
+      })
+      wisp.ok()
     }
-  })
-
-  wisp.ok()
+    Error(_) -> wisp.response(400)
+  }
 }
 
 /// Like `handle_bot`, but lets the handler answer the update directly in the
@@ -81,18 +74,11 @@ pub fn handle_bot_with_reply(
 }
 
 /// The path `handle_health` answers on by default.
-pub const default_health_path = "healthz"
+pub const default_health_path = webhook.default_health_path
 
 /// Answer a health probe on `path` (no leading slash), and let every other
-/// request through to `next`.
-///
-/// `GET /healthz` answers `200` with
-/// `{"status":"healthy","in_flight":3,"chat_instances":41}` while the bot
-/// actor is alive, accepting updates, and below the cap set by
-/// `telega.with_max_in_flight`; `503` with the same shape (`draining`,
-/// `overloaded`, `unavailable`) otherwise. That is what a load balancer, a
-/// Kubernetes readiness probe or a fly.io health check wants: a deploy drains
-/// out of rotation instead of black-holing updates.
+/// request through to `next`. See `telega/webhook.health_probe` for what is
+/// answered and why.
 ///
 /// ```gleam
 /// fn handle_request(bot: Telega(s, e, d), req: Request) -> Response {
@@ -107,74 +93,33 @@ pub fn handle_health(
   path path: String,
   next handler: fn() -> WispResponse,
 ) -> WispResponse {
-  use <- bool.lazy_guard(!is_health_request(req, path), handler)
-
-  let health = telega.health(telega)
-  wisp.json_response(
-    telega.health_to_json(health),
-    telega.health_status_code(health),
-  )
-}
-
-fn is_health_request(req: WispRequest, path: String) -> Bool {
-  req.method == http.Get
-  && wisp.path_segments(req) == string.split(normalize_path(path), "/")
-}
-
-fn normalize_path(path: String) -> String {
-  path |> string.trim |> trim_slashes
-}
-
-fn trim_slashes(path: String) -> String {
-  case string.starts_with(path, "/") {
-    True -> trim_slashes(string.drop_start(path, 1))
-    False ->
-      case string.ends_with(path, "/") {
-        True -> trim_slashes(string.drop_end(path, 1))
-        False -> path
-      }
+  case webhook.health_probe(telega, req.method, wisp.path_segments(req), path) {
+    Ok(#(status, body)) -> wisp.json_response(body, status)
+    Error(Nil) -> handler()
   }
 }
 
-/// Common webhook gate shared by `handle_bot` and `handle_bot_with_reply`:
-/// non-webhook paths go to `next`, then the JSON body is required, the secret
-/// token validated (401), and updates are rejected with 503 unless the bot is
-/// healthy — draining (graceful shutdown), over the `with_max_in_flight` cap,
-/// or not answering at all — so Telegram retries them after the deploy or the
-/// spike instead of them being lost.
+/// The gate shared by `handle_bot` and `handle_bot_with_reply`
+/// (`telega/webhook.admit`): other paths go to `next`, a wrong secret is `401`,
+/// an unhealthy bot `503`, and only then is the JSON body read.
 fn accept_bot_request(
   telega: Telega(session, error, dependencies),
   req: WispRequest,
   next: fn() -> WispResponse,
-  run: fn(Dynamic) -> WispResponse,
+  run: fn(dynamic.Dynamic) -> WispResponse,
 ) -> WispResponse {
-  use <- bool.lazy_guard(!is_bot_request(telega, req), next)
-  use json <- wisp.require_json(req)
-  use <- bool.lazy_guard(!is_secret_token_valid(telega, req), fn() {
-    wisp.response(401)
-  })
-  use <- bool.lazy_guard(!telega.is_healthy(telega.health(telega)), fn() {
-    wisp.response(503)
-  })
-
-  run(json)
-}
-
-fn is_secret_token_valid(
-  telega: Telega(session, error, dependencies),
-  req,
-) -> Bool {
-  let secret_header_value =
-    request.get_header(req, secret_header)
-    |> result.unwrap("")
-
-  telega.is_secret_token_valid(telega, secret_header_value)
-}
-
-fn is_bot_request(
-  telega: Telega(session, error, dependencies),
-  req: WispRequest,
-) -> Bool {
-  let path = wisp.path_segments(req) |> string.join("/")
-  telega.is_webhook_path(telega, path)
+  case
+    webhook.admit(
+      telega,
+      wisp.path_segments(req),
+      request.get_header(req, webhook.secret_header),
+    )
+  {
+    webhook.NotWebhook -> next()
+    webhook.Rejected(status) -> wisp.response(status)
+    webhook.Admitted -> {
+      use json <- wisp.require_json(req)
+      run(json)
+    }
+  }
 }

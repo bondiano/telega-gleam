@@ -13,6 +13,10 @@ under the release that shipped them.
 
 ### Added
 
+- **`telega/webhook`**, the gate every webhook adapter runs a request through:
+  `admit` (not ours / `401` / `503` / process) and `health_probe`, plus the
+  `secret_header` and `default_health_path` constants. `telega_wisp` and
+  `telega_mist` are rewritten on it and no longer carry a copy each.
 - **`telega/testing/storage.check`**, the contract every `KeyValueStorage`
   backend must meet (get/set/delete, a literal `scan` prefix, TTL expiry), run
   by the ETS, SQLite, Postgres and Redis suites alike.
@@ -90,6 +94,12 @@ under the release that shipped them.
 
 ### Fixed
 
+- **`telega_wisp` read and parsed the body before checking the secret**, so a
+  request with a wrong token got `400`/`415` instead of `401` and cost a parse.
+  Both adapters now check path, secret and health before touching the body.
+- **Both webhook adapters panicked on an update that would not decode**, in a
+  spawned process, losing the update with only a crash report. They answer
+  `400` like `handle_bot_with_reply` always did.
 - **The request queue retried on top of the client.** A call that failed after
   the client's own retry loop was re-queued up to three more times, each time
   running the whole loop again (up to 16 HTTP attempts), and the queue did not
