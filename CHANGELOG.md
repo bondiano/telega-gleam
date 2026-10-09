@@ -13,6 +13,12 @@ under the release that shipped them.
 
 ### Added
 
+- **`update.message_thread_id`, `update.business_connection_id`,
+  `update.direct_messages_topic_id`.** Where a reply to the update belongs:
+  the forum topic the message was sent in (only a topic message, not the
+  reply chain of a plain supergroup), the business connection it came
+  through, and the direct-messages topic of a channel's direct messages chat.
+  A callback query answers for the message under the pressed button.
 - **`telega/webhook`**, the gate every webhook adapter runs a request through:
   `admit` (not ours / `401` / `503` / process) and `health_probe`, plus the
   `secret_header` and `default_health_path` constants. `telega_wisp` and

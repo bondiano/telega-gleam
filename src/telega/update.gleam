@@ -637,6 +637,53 @@ pub fn message(update: Update) -> Option(Message) {
   }
 }
 
+/// The message a reply to this update lands next to: the update's own
+/// message, or, for a callback query, the message the pressed button sits on.
+fn target_message(update: Update) -> Option(Message) {
+  case update {
+    CallbackQueryUpdate(query:, ..) ->
+      case query.message {
+        Some(MessageMaybeInaccessibleMessage(message)) -> Some(message)
+        _ -> None
+      }
+    _ -> message(update)
+  }
+}
+
+/// The forum topic the update's message was sent in, when it was sent in one.
+///
+/// `None` in a plain chat, in a forum's General topic and for an update that
+/// carries no message. A reply in a non-forum supergroup also has a
+/// `message_thread_id` (the root of its reply chain), which the Bot API
+/// rejects on a send, so this answers only for a topic message. For a
+/// callback query it is the topic of the message the button sits on.
+///
+/// Every `reply.*` send passes it on, so a reply lands in the topic it was
+/// asked in rather than in General.
+pub fn message_thread_id(update: Update) -> Option(Int) {
+  use message <- option.then(target_message(update))
+  case message.is_topic_message {
+    Some(True) -> message.message_thread_id
+    _ -> None
+  }
+}
+
+/// The business connection the update's message came through, when it came
+/// through one. A message in a business chat can only be sent or edited with
+/// it; every `reply.*` call passes it on.
+pub fn business_connection_id(update: Update) -> Option(String) {
+  use message <- option.then(target_message(update))
+  message.business_connection_id
+}
+
+/// The topic of a channel's direct messages chat the update's message is in,
+/// when it is in one. A send to such a chat has to name it; every `reply.*`
+/// send passes it on.
+pub fn direct_messages_topic_id(update: Update) -> Option(Int) {
+  use message <- option.then(target_message(update))
+  option.map(message.direct_messages_topic, fn(topic) { topic.topic_id })
+}
+
 pub fn to_string(update: Update) -> String {
   case update {
     CommandUpdate(command:, from_id:, ..) ->
