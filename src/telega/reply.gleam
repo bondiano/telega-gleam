@@ -47,11 +47,13 @@
 //// back as a stub `Message` without that id — wrap such a call in
 //// `webhook_reply.without_claim` when you need the real one.
 
+import gleam/bool
 import gleam/erlang/atom.{type Atom}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/string
 import gleam/yielder.{type Yielder}
 
 import telega/api
@@ -89,6 +91,27 @@ pub fn with_text(
     ctx.config.api_client,
     parameters: base_message_parameters(ctx, text),
   )
+}
+
+/// The most text one message can carry — Telegram counts UTF-16 code units,
+/// so an emoji is two. `with_long_text` and the stream split on it.
+pub const max_text_length = 4096
+
+/// Send `text` as as many messages as it takes, in order.
+///
+/// Each piece is cut at the last line break before the limit, failing that
+/// the last space, failing that at the limit itself. The messages come back
+/// in the order they were sent; the first failure stops the rest.
+///
+/// A parse mode set on the client is not split-aware: a `<b>` opened in one
+/// piece and closed in the next is rejected by Telegram. Send such text
+/// with `with_entities`, or split it yourself at a safe point.
+pub fn with_long_text(
+  ctx ctx: Context(session, error, dependencies),
+  text text: String,
+) -> Result(List(Message), error.TelegaError) {
+  split_text(text, max_text_length)
+  |> list.try_map(fn(piece) { with_text(ctx:, text: piece) })
 }
 
 /// Use this method to send text messages with keyboard markup.
@@ -1047,6 +1070,10 @@ const stream_cursor = "▌"
 /// text the failed one would have. The first send and the final edit are not —
 /// their failure is returned. An empty stream sends nothing and is an error,
 /// since Telegram has no empty message to return.
+///
+/// Text past `max_text_length` continues in a new message: the full one is
+/// finished at its last line break (or space) and the rest streams on below
+/// it. The returned `Message` is the last one.
 pub fn stream_text(
   ctx ctx: Context(session, error, dependencies),
   chunks chunks: Yielder(String),
@@ -1072,9 +1099,11 @@ pub fn stream_into(
 }
 
 /// What the stream knows between chunks: where it is writing, what it has
-/// collected so far, and when it last flushed.
+/// collected so far (and how much of the message limit that is, in UTF-16
+/// units, so the limit is not re-measured per token), and when it last
+/// flushed.
 type Stream {
-  Stream(message_id: Option(Int), text: String, last_flush_ms: Int)
+  Stream(message_id: Option(Int), text: String, units: Int, last_flush_ms: Int)
 }
 
 fn stream(
@@ -1086,7 +1115,12 @@ fn stream(
   // Dated one window into the past, so the first chunk shows up at once
   // instead of after `every_ms` of silence.
   let initial =
-    Stream(message_id:, text: "", last_flush_ms: monotonic_ms() - every_ms)
+    Stream(
+      message_id:,
+      text: "",
+      units: 0,
+      last_flush_ms: monotonic_ms() - every_ms,
+    )
 
   // Under `handle_bot_with_reply` the first eligible send of an update is
   // answered through the webhook response itself and comes back as a stub with
@@ -1109,13 +1143,44 @@ fn push_chunk(
   chunk: String,
   every_ms: Int,
 ) -> Result(Stream, error.TelegaError) {
-  let stream = Stream(..stream, text: stream.text <> chunk)
+  let stream =
+    Stream(
+      ..stream,
+      text: stream.text <> chunk,
+      units: stream.units + utf16_length(chunk),
+    )
   let now = monotonic_ms()
+  use stream <- result.try(roll_over(ctx, stream, now))
 
   case stream.text == "" || now - stream.last_flush_ms < every_ms {
     True -> Ok(stream)
     False -> flush(ctx, stream, now)
   }
+}
+
+/// A message that would no longer fit (with its cursor) is finished where it
+/// is and the rest starts a new one. Repeats for a chunk larger than a
+/// message.
+fn roll_over(
+  ctx: Context(session, error, dependencies),
+  stream: Stream,
+  now: Int,
+) -> Result(Stream, error.TelegaError) {
+  let limit = max_text_length - utf16_length(stream_cursor)
+  use <- bool.guard(when: stream.units <= limit, return: Ok(stream))
+  let #(full, rest) = split_to_fit(stream.text, limit)
+  use _ <- result.try(finish_stream(ctx, Stream(..stream, text: full)))
+  let rest = option.unwrap(rest, "")
+  roll_over(
+    ctx,
+    Stream(
+      message_id: None,
+      text: rest,
+      units: utf16_length(rest),
+      last_flush_ms: now,
+    ),
+    now,
+  )
 }
 
 /// Show what has accumulated so far, with the cursor.
@@ -1187,6 +1252,90 @@ fn edit_stream_message(
       rich_message: None,
     ),
   )
+}
+
+// Long text
+//
+// Telegram measures a message in UTF-16 code units and refuses one past
+// `max_text_length`, so text is cut to fit — at a line break where there is
+// one, so a list or a paragraph is not torn mid-line.
+
+/// `text` in pieces that each fit `limit` UTF-16 units.
+fn split_text(text: String, limit: Int) -> List(String) {
+  case split_to_fit(text, limit) {
+    #(piece, None) -> [piece]
+    #(piece, Some(rest)) -> [piece, ..split_text(rest, limit)]
+  }
+}
+
+/// `text` cut so the head fits `limit` UTF-16 units: at the last line break
+/// before the limit, failing that the last space, failing that right at it.
+/// The separator itself is dropped. `None` when the whole text fits.
+fn split_to_fit(text: String, limit: Int) -> #(String, Option(String)) {
+  let codepoints = string.to_utf_codepoints(text)
+  case cut_point(codepoints, limit, 0, 0, None, None) {
+    None -> #(text, None)
+    Some(#(at, dropped)) -> {
+      let #(head, rest) = list.split(codepoints, at)
+      #(
+        string.from_utf_codepoints(head),
+        Some(string.from_utf_codepoints(list.drop(rest, dropped))),
+      )
+    }
+  }
+}
+
+/// Where to cut `codepoints`: the index to cut at and how many codepoints
+/// (the separator) to drop there. `None` when they fit.
+fn cut_point(
+  codepoints: List(UtfCodepoint),
+  limit: Int,
+  index: Int,
+  units: Int,
+  newline: Option(Int),
+  space: Option(Int),
+) -> Option(#(Int, Int)) {
+  case codepoints {
+    [] -> None
+    [codepoint, ..rest] -> {
+      let units = units + utf16_units(codepoint)
+      case units > limit {
+        True ->
+          Some(case newline, space {
+            Some(at), _ -> #(at, 1)
+            None, Some(at) -> #(at, 1)
+            // No separator to cut at: take what fits, and at least one
+            // codepoint so a piece is never empty.
+            None, None -> #(int.max(index, 1), 0)
+          })
+        False -> {
+          let #(newline, space) = case
+            string.utf_codepoint_to_int(codepoint),
+            index > 0
+          {
+            10, True -> #(Some(index), space)
+            32, True -> #(newline, Some(index))
+            _, _ -> #(newline, space)
+          }
+          cut_point(rest, limit, index + 1, units, newline, space)
+        }
+      }
+    }
+  }
+}
+
+fn utf16_length(text: String) -> Int {
+  string.to_utf_codepoints(text)
+  |> list.fold(0, fn(units, codepoint) { units + utf16_units(codepoint) })
+}
+
+/// A codepoint beyond the Basic Multilingual Plane (an emoji, most of them)
+/// is a surrogate pair in UTF-16.
+fn utf16_units(codepoint: UtfCodepoint) -> Int {
+  case string.utf_codepoint_to_int(codepoint) > 0xFFFF {
+    True -> 2
+    False -> 1
+  }
 }
 
 @external(erlang, "erlang", "monotonic_time")

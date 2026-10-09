@@ -128,4 +128,25 @@ the failed one would have. The first send and the final edit are not — their
 failure is returned. A stream that produces no text sends nothing and is an
 error, since Telegram has no empty message to return.
 
+Text past the limit of one message (`reply.max_text_length`, 4096 UTF-16
+units) continues in a new one: the full message is finished at its last line
+break — or space — and the rest streams on below it. The returned `Message` is
+the last one.
+
 Working example: [`examples/07-streaming-bot`](../examples/07-streaming-bot).
+
+## Long text
+
+A message cannot carry more than `reply.max_text_length` characters — Telegram
+counts UTF-16 units, so an emoji is two — and `sendMessage` refuses a longer
+one outright. `reply.with_long_text` sends the text as as many messages as it
+takes, cutting each at the last line break before the limit, failing that the
+last space, failing that at the limit, and returns the messages in order:
+
+```gleam
+use _messages <- result.try(reply.with_long_text(ctx, report))
+```
+
+A parse mode set on the client is not split-aware: an entity opened in one
+piece and closed in the next is rejected. Send such text with
+`reply.with_entities`, or split it yourself at a safe point.

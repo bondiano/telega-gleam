@@ -13,6 +13,12 @@ under the release that shipped them.
 
 ### Added
 
+- **`reply.with_long_text` and a stream that rolls over.** Telegram refuses
+  a message past 4096 UTF-16 units, and neither `with_text` nor `stream_text`
+  split. `with_long_text` sends text as as many messages as it takes, cut at
+  the last line break (then space) before the limit, and `stream_text` /
+  `stream_into` finish a full message and continue in a new one instead of
+  failing the final edit. `reply.max_text_length` is the limit.
 - **`update.message_thread_id`, `update.business_connection_id`,
   `update.direct_messages_topic_id`.** Where a reply to the update belongs:
   the forum topic the message was sent in (only a topic message, not the

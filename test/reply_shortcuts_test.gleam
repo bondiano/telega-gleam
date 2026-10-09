@@ -303,6 +303,72 @@ fn bool_client() -> #(client.TelegramClient, process.Subject(mock.ApiCall)) {
   })
 }
 
+// Long text
+
+pub fn with_long_text_cuts_at_the_last_line_break_before_the_limit_test() {
+  let #(tg_client, calls) = mock.message_client()
+  let first = string.repeat("a", 3000)
+  let second = string.repeat("b", 3000)
+
+  let assert Ok(messages) =
+    reply.with_long_text(text_context(tg_client), first <> "\n" <> second)
+
+  list.length(messages) |> should.equal(2)
+  let assert [one, two] = bodies(mock.get_calls(calls), "sendMessage")
+  one |> string.contains("\"text\":\"" <> first <> "\"") |> should.be_true
+  two |> string.contains("\"text\":\"" <> second <> "\"") |> should.be_true
+}
+
+pub fn with_long_text_counts_utf16_units_like_telegram_test() {
+  let #(tg_client, calls) = mock.message_client()
+  // 2048 emoji are exactly the limit; one more has to go to a second message.
+  let emoji = string.repeat("😀", 2049)
+
+  let assert Ok(_) = reply.with_long_text(text_context(tg_client), emoji)
+
+  let assert [one, two] = bodies(mock.get_calls(calls), "sendMessage")
+  one
+  |> string.contains("\"text\":\"" <> string.repeat("😀", 2048) <> "\"")
+  |> should.be_true
+  two |> string.contains("\"text\":\"😀\"") |> should.be_true
+}
+
+pub fn with_long_text_sends_short_text_once_test() {
+  let #(tg_client, calls) = mock.message_client()
+
+  let assert Ok([_]) = reply.with_long_text(text_context(tg_client), "short")
+
+  let assert [_] = bodies(mock.get_calls(calls), "sendMessage")
+}
+
+pub fn stream_text_past_the_limit_continues_in_a_new_message_test() {
+  let #(tg_client, calls) = mock.message_client()
+  let line = string.repeat("x", 999) <> "\n"
+
+  let assert Ok(_) =
+    reply.stream_text(
+      text_context(tg_client),
+      // 5000 characters: the first message is finished at a line break
+      // before 4096 and the rest streams into a second one.
+      yielder.from_list(list.repeat(line, 5)),
+      every_ms: 0,
+    )
+
+  let calls = mock.get_calls(calls)
+  let assert [_first, second] = bodies(calls, "sendMessage")
+  // The second message starts with the line the first could not fit; the
+  // line break is JSON-escaped in the body.
+  second
+  |> string.contains(string.repeat("x", 999) <> "\\n▌")
+  |> should.be_true
+
+  let edits = bodies(calls, "editMessageText")
+  // The first message's last edit is its finished text, with the cursor
+  // gone and nothing longer than the limit.
+  let finished = list.filter(edits, fn(body) { !string.contains(body, "▌") })
+  list.length(finished) |> should.equal(2)
+}
+
 pub fn answer_callback_once_answers_a_press_exactly_once_test() {
   let #(tg_client, calls) = bool_client()
   let ctx = callback_context(tg_client)
