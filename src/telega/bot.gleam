@@ -467,7 +467,7 @@ pub fn cancel_conversation_for(
 pub fn cancel_conversation_in(
   ctx ctx: Context(session, error, dependencies),
 ) -> Nil {
-  actor.send(ctx.chat_subject, CancelContinuationChatInstanceMessage)
+  scope.put(ctx.scope, pending_wait_key(), ClearWait)
 }
 
 fn bot_loop(
@@ -864,12 +864,8 @@ pub opaque type ChatInstanceMessage(session, error, dependencies) {
     /// What the pre-router middleware attached to this update.
     annotations: Dict(String, Dynamic),
   )
-  WaitHandlerChatInstanceMessage(
-    handler: Handler(session, error, dependencies),
-    handle_else: Option(Handler(session, error, dependencies)),
-    timeout: Option(Int),
-  )
-  /// Forget the suspended `wait_*` handler, keep serving updates.
+  /// Forget the suspended `wait_*` handler, keep serving updates. Sent by the
+  /// bot for `cancel_conversation`; a handler uses `cancel_conversation_in`.
   CancelContinuationChatInstanceMessage
   /// Self-sent tick that checks how long this instance has been idle.
   IdleCheckChatInstanceMessage
@@ -885,6 +881,42 @@ type Continuation(session, error, dependencies) {
     handle_else: Option(Handler(session, error, dependencies)),
     ttl: Option(Timestamp),
   )
+}
+
+/// What a handler asked to happen to the continuation once it returns.
+///
+/// Handlers run inside the chat instance's own process, so `wait_*` cannot
+/// arm the continuation by messaging that process: an update already queued
+/// behind the one being handled would be routed before the message arrived,
+/// and bypass the wait. The request is parked in the update's scope instead
+/// and applied by the loop as soon as the handler is done, before the next
+/// update is looked at.
+type PendingWait(session, error, dependencies) {
+  ArmWait(Continuation(session, error, dependencies))
+  ClearWait
+}
+
+fn pending_wait_key() -> scope.Key(PendingWait(session, error, dependencies)) {
+  scope.Key("bot/pending_wait")
+}
+
+/// The continuation to carry after this update, honouring what the handler
+/// asked for; `clear` is what happens when it asked for nothing.
+fn settle_continuation(
+  chat: ChatInstance(session, error, dependencies),
+  context: Context(session, error, dependencies),
+  clear clear: Bool,
+) -> ChatInstance(session, error, dependencies) {
+  let continuation = case scope.get(context.scope, pending_wait_key()) {
+    Ok(ArmWait(continuation)) -> Some(continuation)
+    Ok(ClearWait) -> None
+    Error(Nil) ->
+      case clear {
+        True -> None
+        False -> chat.continuation
+      }
+  }
+  ChatInstance(..chat, continuation:)
 }
 
 type ChatInstance(session, error, dependencies) {
@@ -1041,17 +1073,6 @@ fn loop_chat_instance(
     }
     FlushMediaGroupChatInstanceMessage(media_group_id:, epoch:) ->
       flush_media_group(chat, media_group_id, epoch)
-    WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:) ->
-      ChatInstance(
-        ..touch(chat),
-        continuation: Continuation(handler:, handle_else:, ttl: {
-            use timeout <- option.map(timeout)
-            timestamp.system_time()
-            |> timestamp.add(duration.milliseconds(timeout))
-          })
-          |> Some,
-      )
-      |> actor.continue
     CancelContinuationChatInstanceMessage ->
       ChatInstance(..touch(chat), continuation: None)
       |> actor.continue
@@ -1422,18 +1443,7 @@ fn route_update(
             ack_with:,
             failure_label: "Error in session persistence: ",
           )
-        Error(e) -> {
-          case chat.catch_handler(context, e) {
-            Ok(_) -> {
-              ack_with(False)
-              actor.continue(chat)
-            }
-            Error(e) -> {
-              log.error_d("Error in catch handler: ", e)
-              stop_chat_instance(chat, ack_with, "catch_handler_failed")
-            }
-          }
-        }
+        Error(e) -> handle_handler_error(chat, context, e, ack_with)
       }
   }
 }
@@ -1523,11 +1533,9 @@ fn persist_and_continue(
   case persist_session(chat, new_session) {
     Ok(session) -> {
       ack_with(True)
-      let chat = ChatInstance(..chat, session:, dirty: False)
-      actor.continue(case clear_continuation {
-        True -> ChatInstance(..chat, continuation: None)
-        False -> chat
-      })
+      ChatInstance(..chat, session:, dirty: False)
+      |> settle_continuation(context, clear: clear_continuation)
+      |> actor.continue
     }
     Error(e) ->
       // Keep the handler's session in memory and remember that storage is
@@ -1536,9 +1544,9 @@ fn persist_and_continue(
       case chat.catch_handler(context, e) {
         Ok(_) -> {
           ack_with(False)
-          actor.continue(
-            ChatInstance(..chat, session: new_session, dirty: True),
-          )
+          ChatInstance(..chat, session: new_session, dirty: True)
+          |> settle_continuation(context, clear: clear_continuation)
+          |> actor.continue
         }
         Error(e) -> {
           log.error_d(failure_label, e)
@@ -1652,18 +1660,7 @@ fn do_handle_continuation(
         ack_with:,
         failure_label: "Error in session persistence after continuation: ",
       )
-    Some(Error(e)) -> {
-      case chat.catch_handler(context, e) {
-        Ok(_) -> {
-          ack_with(False)
-          actor.continue(chat)
-        }
-        Error(e) -> {
-          log.error_d("Error in catch handler: ", e)
-          stop_chat_instance(chat, ack_with, "catch_handler_failed")
-        }
-      }
-    }
+    Some(Error(e)) -> handle_handler_error(chat, context, e, ack_with)
     None -> {
       case continuation.handle_else {
         Some(handler) ->
@@ -1677,18 +1674,7 @@ fn do_handle_continuation(
                 ack_with:,
                 failure_label: "Error in session persistence after handle_else: ",
               )
-            Some(Error(e)) -> {
-              case chat.catch_handler(context, e) {
-                Ok(_) -> {
-                  ack_with(False)
-                  actor.continue(chat)
-                }
-                Error(e) -> {
-                  log.error_d("Error in catch else handler: ", e)
-                  stop_chat_instance(chat, ack_with, "catch_handler_failed")
-                }
-              }
-            }
+            Some(Error(e)) -> handle_handler_error(chat, context, e, ack_with)
             None -> unmatched_while_waiting(context:, update:, chat:, ack_with:)
           }
         None -> unmatched_while_waiting(context:, update:, chat:, ack_with:)
@@ -1768,7 +1754,7 @@ fn handle_handler_error(
   case chat.catch_handler(context, error) {
     Ok(_) -> {
       ack_with(False)
-      actor.continue(chat)
+      settle_continuation(chat, context, clear: False) |> actor.continue
     }
     Error(e) -> {
       log.error_d("Error in catch handler: ", e)
@@ -2154,9 +2140,14 @@ pub fn wait_handler(
   timeout timeout: Option(Int),
 ) -> Result(Context(session, error, dependencies), error) {
   warn_if_inside_flow_step(ctx)
-  actor.send(
-    ctx.chat_subject,
-    WaitHandlerChatInstanceMessage(handler:, handle_else:, timeout:),
+  let ttl = {
+    use timeout <- option.map(timeout)
+    timestamp.system_time() |> timestamp.add(duration.milliseconds(timeout))
+  }
+  scope.put(
+    ctx.scope,
+    pending_wait_key(),
+    ArmWait(Continuation(handler:, handle_else:, ttl:)),
   )
   Ok(ctx)
 }

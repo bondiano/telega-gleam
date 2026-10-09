@@ -19,7 +19,8 @@ import telega/internal/multipart
 import telega/media_group
 import telega/model/types
 
-const message_with_photo = "{\"ok\":true,\"result\":{\"message_id\":7,\"date\":0,\"chat\":{\"id\":123,\"type\":\"private\"},\"photo\":[{\"file_id\":\"MINTED_FILE_ID\",\"file_unique_id\":\"u1\",\"width\":90,\"height\":90}]}}"
+const message_with_photo =
+  "{\"ok\":true,\"result\":{\"message_id\":7,\"date\":0,\"chat\":{\"id\":123,\"type\":\"private\"},\"photo\":[{\"file_id\":\"MINTED_FILE_ID\",\"file_unique_id\":\"u1\",\"width\":90,\"height\":90}]}}"
 
 pub fn multipart_encode_shape_test() {
   let boundary = multipart.new_boundary()

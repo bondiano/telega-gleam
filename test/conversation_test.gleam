@@ -544,3 +544,51 @@ pub fn pre_checkout_query_reaches_the_router_during_a_wait_test() {
   )
   process.receive(seen, 500) |> should.equal(Ok("paid"))
 }
+
+// A `wait_*` must bind before the next queued update is looked at ------------
+
+pub fn update_queued_behind_the_arming_handler_reaches_the_wait_test() {
+  let seen = process.new_subject()
+
+  let handlers = [
+    bot.HandleCommand("setname", fn(ctx, _command) {
+      // Long enough for the second update to be queued behind this one.
+      process.sleep(100)
+      bot.wait_handler(
+        ctx:,
+        handler: bot.HandleText(fn(ctx, name) {
+          process.send(seen, "name:" <> name)
+          Ok(ctx)
+        }),
+        handle_else: None,
+        timeout: None,
+      )
+    }),
+    bot.HandleText(fn(ctx, text) {
+      process.send(seen, "router:" <> text)
+      Ok(ctx)
+    }),
+  ]
+
+  let session_settings =
+    context.session_settings(default: fn() { TestSession(name: "") })
+  let bot_subject =
+    build_test_bot(handlers_to_router_handler(handlers), session_settings)
+
+  let first = process.new_subject()
+  let second = process.new_subject()
+  bot.dispatch_update(
+    bot_subject,
+    factory.command_update(command: "setname"),
+    reply_with: first,
+  )
+  bot.dispatch_update(
+    bot_subject,
+    factory.text_update(text: "John"),
+    reply_with: second,
+  )
+  process.receive(first, 1000) |> should.equal(Ok(True))
+  process.receive(second, 1000) |> should.equal(Ok(True))
+
+  process.receive(seen, 200) |> should.equal(Ok("name:John"))
+}

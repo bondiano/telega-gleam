@@ -25,6 +25,11 @@ under the release that shipped them.
 
 ### Fixed
 
+- **An update queued behind the handler that armed a `wait_*` skipped the
+  wait.** The continuation was armed by a message to the chat instance's own
+  mailbox, so an update already waiting there was routed first. This hit every
+  quick double reply and the re-arming helpers (`wait_number`, `wait_email`,
+  `wait_choice`). The wait is now bound as soon as the handler returns.
 - **The default catch handler stopped the chat instance.** `bot.CatchHandler`
   documented a default of `Ok(Nil)`, but without `with_catch_handler` the bot
   used `Error(err)`: one failing handler killed that chat's instance and the
