@@ -13,6 +13,11 @@ under the release that shipped them.
 
 ### Added
 
+- **`router.with_timeout`.** A deadline on a handler: past `ms` it is killed
+  and `on_timeout` answers the update, so a hung HTTP call no longer holds
+  the chat instance — and one `in_flight` slot — for good. The handler runs
+  in a process of its own, linked to the instance; the update's scope travels
+  with it both ways. Emits `telega.handler.timeout`.
 - **`reply.with_long_text` and a stream that rolls over.** Telegram refuses
   a message past 4096 UTF-16 units, and neither `with_text` nor `stream_text`
   split. `with_long_text` sends text as as many messages as it takes, cut at

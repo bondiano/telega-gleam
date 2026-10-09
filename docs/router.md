@@ -276,7 +276,27 @@ router
 |> router.use_middleware(rate_limit_middleware)   // innermost, closest to the handler
 ```
 
-Built-ins: `with_logging`, `with_filter`, `with_recovery`, and `with_rate_limit`.
+Built-ins: `with_logging`, `with_filter`, `with_recovery`, `with_rate_limit`
+and `with_timeout`.
+
+`with_timeout` is the one to add to any bot that calls out to the network
+from a handler. A handler that never returns holds its chat instance — every
+later update of that chat waits behind it, and one `in_flight` slot of the
+bot is gone for good. With a deadline the handler is killed and `on_timeout`
+answers instead:
+
+```gleam
+router
+|> router.use_middleware(router.with_timeout(
+  ms: 30_000,
+  on_timeout: fn(ctx) { reply.text(ctx, "That took too long — try again.") },
+))
+```
+
+The handler runs in a process of its own; the update's scope travels with it,
+so annotations are readable inside and `reply.answer_callback_once` still
+sees a toast it showed. A `wait_*` is not cut short: it returns at once and
+its continuation runs outside the deadline.
 
 ## Pre-router middleware
 

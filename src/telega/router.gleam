@@ -281,6 +281,7 @@
 
 import gleam/bool
 import gleam/dict.{type Dict}
+import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -292,6 +293,7 @@ import telega/bot.{type Context}
 import telega/internal/log
 import telega/internal/rate_limiter
 import telega/internal/routing
+import telega/internal/scope as dictionary
 import telega/keyboard.{type KeyboardCallbackData}
 import telega/model/types.{
   type Audio, type CallbackQuery, type ChatBoostRemoved, type ChatBoostUpdated,
@@ -2394,6 +2396,76 @@ pub fn with_rate_limit(
             ),
           ])
           on_limit(ctx)
+        }
+      }
+    }
+  }
+}
+
+/// Bound how long a handler may run: `ms` milliseconds, after which it is
+/// killed and `on_timeout` answers the update instead.
+///
+/// A handler that hangs — an HTTP call without a timeout of its own, a lock
+/// never released — holds its chat instance, and with it every later update
+/// of that chat and one `in_flight` slot of the bot, for good. With a
+/// deadline the chat goes on.
+///
+/// The handler runs in a process of its own, linked to the chat instance so
+/// a crash is still a crash. The update's scope travels with it both ways:
+/// a pre-handler's annotations are readable inside, and a toast the handler
+/// showed is still known to `reply.answer_callback_once` afterwards. A
+/// `wait_*` returns at once and parks its continuation, which later runs
+/// outside this deadline. Every timeout logs, and emits
+/// `telega.handler.timeout`.
+///
+/// ```gleam
+/// router.new("bot")
+/// |> router.use_middleware(router.with_timeout(
+///   ms: 30_000,
+///   on_timeout: fn(ctx) { reply.text(ctx, "That took too long — try again.") },
+/// ))
+/// ```
+pub fn with_timeout(
+  ms ms: Int,
+  on_timeout on_timeout: fn(Context(session, error, dependencies)) ->
+    Result(Context(session, error, dependencies), error),
+) -> Middleware(session, error, dependencies) {
+  fn(handler) {
+    fn(ctx: Context(session, error, dependencies), update_param: Update) {
+      let entries = dictionary.entries()
+      let reply = process.new_subject()
+      let worker =
+        process.spawn(fn() {
+          dictionary.restore(entries)
+          let result = handler(ctx, update_param)
+          process.send(reply, #(result, dictionary.entries()))
+        })
+
+      case process.receive(reply, ms) {
+        Ok(#(result, entries)) -> {
+          dictionary.restore(entries)
+          result
+        }
+        Error(Nil) -> {
+          // Unlinked first: killing a linked process would take us with it.
+          process.unlink(worker)
+          process.kill(worker)
+          log.error(
+            "Handler for "
+            <> update.to_string(update_param)
+            <> " did not finish within "
+            <> int.to_string(ms)
+            <> "ms and was killed",
+          )
+          telemetry.execute(telemetry.handler_timeout, [#("timeout", ms)], [
+            #("chat_id", telemetry.IntValue(update_param.chat_id)),
+            #("from_id", telemetry.IntValue(update_param.from_id)),
+            #(
+              "update_type",
+              telemetry.StringValue(update.to_string(update_param)),
+            ),
+          ])
+          on_timeout(ctx)
         }
       }
     }

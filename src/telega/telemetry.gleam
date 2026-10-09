@@ -19,6 +19,7 @@
 //// | `telega.api_call.retry` | `retry_after` (ms) | `method`, `attempt` |
 //// | `telega.request_queue.depth` | `depth` | `rule_id`, `priority` |
 //// | `telega.rate_limit.hit` | `count` | `update_type`, `chat_id`, `from_id` |
+//// | `telega.handler.timeout` | `timeout` (ms) | `update_type`, `chat_id`, `from_id` |
 //// | `telega.chat_instance.spawn` | `count` | `chat_id`, `from_id` |
 //// | `telega.chat_instance.terminate` | `count` | `key`, `reason` |
 //// | `telega.chat_instance.down` | `unanswered` | `key` |
@@ -213,6 +214,8 @@ pub const api_call_retry = ["telega", "api_call", "retry"]
 pub const request_queue_depth = ["telega", "request_queue", "depth"]
 
 pub const rate_limit_hit = ["telega", "rate_limit", "hit"]
+
+pub const handler_timeout = ["telega", "handler", "timeout"]
 
 pub const chat_instance_spawn = ["telega", "chat_instance", "spawn"]
 

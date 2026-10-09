@@ -20,3 +20,12 @@ pub fn get(key: String) -> Dynamic
 
 @external(erlang, "erlang", "erase")
 pub fn erase(key: String) -> Dynamic
+
+/// Every scope entry this process holds — what has to travel with a handler
+/// that runs in a process of its own (`router.with_timeout`).
+@external(erlang, "telega_process_ffi", "scope_entries")
+pub fn entries() -> List(#(String, Dynamic))
+
+/// Put `entries` into this process, over whatever it holds under those keys.
+@external(erlang, "telega_process_ffi", "restore_scope_entries")
+pub fn restore(entries: List(#(String, Dynamic))) -> Nil
