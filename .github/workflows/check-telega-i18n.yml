@@ -7,9 +7,15 @@ on:
       - main
     paths:
       - "telega_i18n/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
   pull_request:
     paths:
       - "telega_i18n/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
 
 jobs:
   test:

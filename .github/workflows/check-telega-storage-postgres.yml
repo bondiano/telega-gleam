@@ -7,9 +7,15 @@ on:
       - main
     paths:
       - "telega_storage_postgres/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
   pull_request:
     paths:
       - "telega_storage_postgres/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
 
 jobs:
   test:

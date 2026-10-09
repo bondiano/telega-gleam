@@ -7,9 +7,15 @@ on:
       - main
     paths:
       - "telega_mist/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
   pull_request:
     paths:
       - "telega_mist/**"
+      - "src/**"
+      - "gleam.toml"
+      - "manifest.toml"
 
 jobs:
   test:
