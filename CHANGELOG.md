@@ -11,17 +11,23 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-17
+
 ### Fixed
 
-- **The API wrappers whose call returns more than a `Message`.** `copy_message`
-  and `copy_messages` returned `Result(Message, _)`, but Telegram answers them
-  with a `MessageId` and an array of `MessageId`; a successful copy decoded as
-  `JsonDecodeError`, so a caller retrying on error sent the message twice.
-  They now return `Result(types.MessageId, _)` and `Result(List(types.MessageId), _)`
-  (breaking change). The same audit of `codegen/api.json` fixed `forward_messages`
-  (array of `MessageId`), `get_custom_emoji_stickers` and `get_game_high_scores`
-  (arrays, previously decoded as a single object) and `send_message_draft`
-  (`True`, previously decoded as a `MessageId`).
+- **The API wrappers whose success value is not a `Message` now decode what
+  Telegram actually sends.** `api.copy_message` returns
+  `Result(MessageId, _)` and `api.copy_messages` / `api.forward_messages`
+  return `Result(List(MessageId), _)`; previously all three decoded the
+  response as a `Message`, so a successful call failed with `JsonDecodeError`
+  and a caller retrying on error could send the message twice. Read the id
+  with `message_id.message_id` (or map over the list); the copied message
+  still arrives in the chat as an update.
+- **`api.get_custom_emoji_stickers` and `api.get_game_high_scores`** return
+  `Result(List(Sticker), _)` / `Result(List(GameHighScore), _)`; the spec sends
+  arrays, and decoding one as an object failed.
+- **`api.send_message_draft`** returns `Result(Bool, _)` (the spec's `True`),
+  not a `MessageId`; the old decoder failed on every successful call.
 
 ## [4.0.0] - 2026-10-09
 
@@ -510,7 +516,8 @@ released at `3.0.0` alongside the core and requires it.
 [commit history](https://github.com/bondiano/telega-gleam/commits/master) and
 the [release tags](https://github.com/bondiano/telega-gleam/tags).
 
-[Unreleased]: https://github.com/bondiano/telega-gleam/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/bondiano/telega-gleam/compare/v4.0.1...HEAD
+[4.0.1]: https://github.com/bondiano/telega-gleam/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/bondiano/telega-gleam/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/bondiano/telega-gleam/compare/v2.4.1...v3.0.0
 [2.4.1]: https://github.com/bondiano/telega-gleam/compare/v2.4.0...v2.4.1
