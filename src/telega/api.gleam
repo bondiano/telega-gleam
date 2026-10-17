@@ -317,7 +317,7 @@ pub fn get_updates(
 pub fn forward_messages(
   client client: client.TelegramClient,
   parameters parameters: ForwardMessagesParameters,
-) -> Result(Message, error.TelegaError) {
+) -> Result(List(types.MessageId), error.TelegaError) {
   let body_json = encoder.encode_forward_messages_parameters(parameters)
 
   new_post_request(
@@ -326,7 +326,7 @@ pub fn forward_messages(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_decoder())
+  |> map_response(decode.list(decoder.message_id_decoder()))
 }
 
 /// Use this method to copy messages of any kind. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
@@ -335,7 +335,7 @@ pub fn forward_messages(
 pub fn copy_message(
   client client: client.TelegramClient,
   parameters parameters: CopyMessageParameters,
-) -> Result(Message, error.TelegaError) {
+) -> Result(types.MessageId, error.TelegaError) {
   let body_json = encoder.encode_copy_message_parameters(parameters)
 
   new_post_request(
@@ -344,7 +344,7 @@ pub fn copy_message(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_decoder())
+  |> map_response(decoder.message_id_decoder())
 }
 
 /// Use this method to copy messages of any kind. If some of the specified messages can't be found or copied, they are skipped. Service messages, paid media messages, giveaway messages, giveaway winners messages, and invoice messages can't be copied. A quiz [poll](https://core.telegram.org/bots/api#poll) can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method [forwardMessage](https://core.telegram.org/bots/api#forwardmessage), but the copied message doesn't have a link to the original message. Returns the [MessageId](https://core.telegram.org/bots/api#messageid) of the sent message on success.
@@ -353,7 +353,7 @@ pub fn copy_message(
 pub fn copy_messages(
   client client: client.TelegramClient,
   parameters parameters: CopyMessagesParameters,
-) -> Result(Message, error.TelegaError) {
+) -> Result(List(types.MessageId), error.TelegaError) {
   let body_json = encoder.encode_copy_messages_parameters(parameters)
 
   new_post_request(
@@ -362,7 +362,7 @@ pub fn copy_messages(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_decoder())
+  |> map_response(decode.list(decoder.message_id_decoder()))
 }
 
 /// Use this method to send photos. On success, the sent [Message](https://core.telegram.org/bots/api#message) is returned.
@@ -2572,7 +2572,7 @@ pub fn get_sticker_set(
 pub fn get_custom_emoji_stickers(
   client client: client.TelegramClient,
   parameters parameters: GetCustomEmojiStickersParameters,
-) -> Result(Sticker, error.TelegaError) {
+) -> Result(List(Sticker), error.TelegaError) {
   let body_json =
     encoder.encode_get_custom_emoji_stickers_parameters(parameters)
 
@@ -2582,7 +2582,7 @@ pub fn get_custom_emoji_stickers(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.sticker_decoder())
+  |> map_response(decode.list(decoder.sticker_decoder()))
 }
 
 /// Use this method to upload a file with a sticker for later use in the [createNewStickerSet](https://core.telegram.org/bots/api#createnewstickerset), [addStickerToSet](https://core.telegram.org/bots/api#addstickertoset), or [replaceStickerInSet](https://core.telegram.org/bots/api#replacestickerinset) methods (the file can be used multiple times). Returns the uploaded [File](https://core.telegram.org/bots/api#file) on success.
@@ -3029,7 +3029,7 @@ pub fn set_game_score(
 pub fn get_game_high_scores(
   client client: client.TelegramClient,
   parameters parameters: GetGameHighScoresParameters,
-) -> Result(GameHighScore, error.TelegaError) {
+) -> Result(List(GameHighScore), error.TelegaError) {
   let body_json = encoder.encode_get_game_high_scores_parameters(parameters)
 
   new_post_request(
@@ -3038,16 +3038,16 @@ pub fn get_game_high_scores(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.game_high_score_decoder())
+  |> map_response(decode.list(decoder.game_high_score_decoder()))
 }
 
-/// Use this method to send a draft message created by the user in a chat managed by the bot. Requires the `can_post_messages` administrator right. Returns `MessageId` on success.
+/// Use this method to send a draft message created by the user in a chat managed by the bot. Requires the `can_post_messages` administrator right. Returns `True` on success.
 ///
 /// **Official reference:** https://core.telegram.org/bots/api#sendmessagedraft
 pub fn send_message_draft(
   client client: client.TelegramClient,
   parameters parameters: SendMessageDraftParameters,
-) -> Result(types.MessageId, error.TelegaError) {
+) -> Result(Bool, error.TelegaError) {
   let body_json = encoder.encode_send_message_draft_parameters(parameters)
 
   new_post_request(
@@ -3056,7 +3056,7 @@ pub fn send_message_draft(
     body: json.to_string(body_json),
   )
   |> fetch(client)
-  |> map_response(decoder.message_id_decoder())
+  |> map_response(decode.bool)
 }
 
 /// Use this method to get the list of gifts owned by a user. Requires no authorization if the user's gift list is public. Returns an [OwnedGifts](https://core.telegram.org/bots/api#ownedgifts) object.

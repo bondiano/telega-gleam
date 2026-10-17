@@ -182,6 +182,145 @@ pub fn every_spec_method_reachable_test() {
   last_path() |> should.equal("/bottest-token/setChatMemberTag")
 }
 
+pub fn copy_message_decodes_a_message_id_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": {\"message_id\": 42}}")
+
+  api.copy_message(
+    client:,
+    parameters: types.CopyMessageParameters(
+      chat_id: types.Int(1),
+      message_thread_id: None,
+      from_chat_id: types.Int(2),
+      message_id: 3,
+      video_start_timestamp: None,
+      caption: None,
+      parse_mode: None,
+      caption_entities: None,
+      show_caption_above_media: None,
+      disable_notification: None,
+      protect_content: None,
+      allow_paid_broadcast: None,
+      reply_parameters: None,
+      reply_markup: None,
+      direct_messages_topic_id: None,
+      message_effect_id: None,
+      suggested_post_parameters: None,
+    ),
+  )
+  |> should.equal(Ok(types.MessageId(message_id: 42)))
+
+  last_path() |> should.equal("/bottest-token/copyMessage")
+}
+
+pub fn copy_messages_decodes_message_ids_test() {
+  let #(client, last_path) =
+    recording_client(
+      "{\"ok\": true, \"result\": [{\"message_id\": 42}, {\"message_id\": 43}]}",
+    )
+
+  api.copy_messages(
+    client:,
+    parameters: types.CopyMessagesParameters(
+      chat_id: types.Int(1),
+      message_thread_id: None,
+      from_chat_id: types.Int(2),
+      message_ids: [3, 4],
+      disable_notification: None,
+      protect_content: None,
+      remove_caption: None,
+      direct_messages_topic_id: None,
+    ),
+  )
+  |> should.equal(
+    Ok([types.MessageId(message_id: 42), types.MessageId(message_id: 43)]),
+  )
+
+  last_path() |> should.equal("/bottest-token/copyMessages")
+}
+
+pub fn forward_messages_decodes_message_ids_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": [{\"message_id\": 42}]}")
+
+  api.forward_messages(
+    client:,
+    parameters: types.ForwardMessagesParameters(
+      chat_id: types.Int(1),
+      message_thread_id: None,
+      from_chat_id: types.Int(2),
+      message_ids: [3],
+      disable_notification: None,
+      protect_content: None,
+      direct_messages_topic_id: None,
+    ),
+  )
+  |> should.equal(Ok([types.MessageId(message_id: 42)]))
+
+  last_path() |> should.equal("/bottest-token/forwardMessages")
+}
+
+pub fn get_custom_emoji_stickers_decodes_an_array_test() {
+  let #(client, last_path) =
+    recording_client(
+      "{\"ok\": true, \"result\": [{\"file_id\": \"file\", \"file_unique_id\": \"unique\", \"type\": \"custom_emoji\", \"width\": 1, \"height\": 1, \"is_animated\": false, \"is_video\": false}]}",
+    )
+
+  let assert Ok([sticker]) =
+    api.get_custom_emoji_stickers(
+      client:,
+      parameters: types.GetCustomEmojiStickersParameters(custom_emoji_ids: [
+        "emoji",
+      ]),
+    )
+
+  sticker.file_id |> should.equal("file")
+  last_path() |> should.equal("/bottest-token/getCustomEmojiStickers")
+}
+
+pub fn get_game_high_scores_decodes_an_array_test() {
+  let #(client, last_path) =
+    recording_client(
+      "{\"ok\": true, \"result\": [{\"position\": 1, \"user\": {\"id\": 1, \"is_bot\": false, \"first_name\": \"U\"}, \"score\": 10}]}",
+    )
+
+  let assert Ok([score]) =
+    api.get_game_high_scores(
+      client:,
+      parameters: types.GetGameHighScoresParameters(
+        user_id: 1,
+        chat_id: None,
+        message_id: None,
+        inline_message_id: None,
+      ),
+    )
+
+  score.position |> should.equal(1)
+  last_path() |> should.equal("/bottest-token/getGameHighScores")
+}
+
+pub fn send_message_draft_decodes_true_test() {
+  let #(client, last_path) =
+    recording_client("{\"ok\": true, \"result\": true}")
+
+  api.send_message_draft(
+    client:,
+    parameters: types.SendMessageDraftParameters(
+      chat_id: 1,
+      draft_id: 2,
+      text: "partial",
+      message_thread_id: None,
+      parse_mode: None,
+      entities: None,
+      can_stop: None,
+      keep_on_stop: None,
+    ),
+  )
+  |> should.equal(Ok(True))
+
+  last_path() |> should.equal("/bottest-token/sendMessageDraft")
+}
+
 pub fn managed_bot_token_decodes_a_bare_string_test() {
   let #(client, last_path) =
     recording_client("{\"ok\": true, \"result\": \"123:ABC\"}")

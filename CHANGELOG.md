@@ -11,6 +11,18 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The API wrappers whose call returns more than a `Message`.** `copy_message`
+  and `copy_messages` returned `Result(Message, _)`, but Telegram answers them
+  with a `MessageId` and an array of `MessageId`; a successful copy decoded as
+  `JsonDecodeError`, so a caller retrying on error sent the message twice.
+  They now return `Result(types.MessageId, _)` and `Result(List(types.MessageId), _)`
+  (breaking change). The same audit of `codegen/api.json` fixed `forward_messages`
+  (array of `MessageId`), `get_custom_emoji_stickers` and `get_game_high_scores`
+  (arrays, previously decoded as a single object) and `send_message_draft`
+  (`True`, previously decoded as a `MessageId`).
+
 ## [4.0.0] - 2026-10-09
 
 The storage contract, router composition, pre-handler annotations and the
