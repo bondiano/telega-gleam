@@ -9,4 +9,5 @@ telega = { path = "../.." }
 telega_httpc = { path = "../../telega_httpc" }
 
 [dev-dependencies]
+gleam_json = ">= 3.0.2 and < 4.0.0"
 gleeunit = ">= 1.0.0 and < 2.0.0"

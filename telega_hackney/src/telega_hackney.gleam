@@ -1,6 +1,6 @@
 //// hackney adapter for the Telega Telegram Bot Library.
 ////
-//// Provides a `TelegramClient` that uses `gleam_hackney` as the HTTP backend.
+//// Provides a `TelegramClient` that uses `hackney` as the HTTP backend.
 ////
 //// ```gleam
 //// import telega
@@ -133,7 +133,7 @@ type HackneyError {
   Other(reason: Dynamic)
 }
 
-fn normalise_header(header: http.Header) -> http.Header {
+fn normalise_header(header: #(String, String)) -> #(String, String) {
   #(string.lowercase(header.0), header.1)
 }
 
@@ -141,7 +141,7 @@ fn normalise_header(header: http.Header) -> http.Header {
 fn ffi_send(
   method: String,
   url: String,
-  headers: List(http.Header),
+  headers: List(#(String, String)),
   body: BytesTree,
   connect_timeout: Int,
   recv_timeout: Int,

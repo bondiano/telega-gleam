@@ -1,9 +1,6 @@
 %% Direct hackney call with the timeouts Telega needs.
 %%
-%% `gleam_hackney` passes only `{with_body, true}`, which leaves hackney's
-%% 5-second `recv_timeout` in force — shorter than a 30-second long poll, so
-%% every empty `getUpdates` ends in a timeout and the bot silently degrades to
-%% 5-second polling.
+%% Explicit timeouts keep hackney's 5-second default from aborting long polls.
 -module(telega_hackney_ffi).
 
 -export([send/6]).

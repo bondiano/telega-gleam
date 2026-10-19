@@ -15,6 +15,10 @@ under the release that shipped them.
 
 - Synchronize all eleven example lockfiles with `telega` 4.0.1 so
   `gleam deps download` no longer rejects the local dependency after the release.
+- Use tuple headers in `telega_hackney` and depend directly on `hackney` instead
+  of the unused `gleam_hackney` wrapper, removing their deprecated-type warnings.
+- Declare `gleam_json` and `gleam_erlang` as direct test dependencies of the
+  media-group example and Hackney adapter respectively.
 
 ## [4.0.1] - 2026-10-17
 
