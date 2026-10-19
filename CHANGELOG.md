@@ -11,6 +11,11 @@ under the release that shipped them.
 
 ## [Unreleased]
 
+### Fixed
+
+- Synchronize all eleven example lockfiles with `telega` 4.0.1 so
+  `gleam deps download` no longer rejects the local dependency after the release.
+
 ## [4.0.1] - 2026-10-17
 
 ### Fixed
